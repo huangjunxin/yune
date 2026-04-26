@@ -280,6 +280,192 @@ impl Translator for EchoTranslator {
     }
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct TableEntry {
+    pub code: String,
+    pub text: String,
+    pub weight: f32,
+}
+
+impl TableEntry {
+    #[must_use]
+    pub fn new(code: impl Into<String>, text: impl Into<String>, weight: f32) -> Self {
+        Self {
+            code: normalize_table_code(&code.into()),
+            text: text.into(),
+            weight,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct TableDictionary {
+    entries: Vec<TableEntry>,
+}
+
+impl TableDictionary {
+    #[must_use]
+    pub fn new(entries: impl IntoIterator<Item = TableEntry>) -> Self {
+        Self {
+            entries: entries.into_iter().collect(),
+        }
+    }
+
+    pub fn parse_rime_dict_yaml(input: &str) -> Result<Self, TableDictionaryParseError> {
+        let mut metadata = RimeTableMetadata::default();
+        let mut in_header = false;
+        let mut body_start = None;
+
+        for (line_index, line) in input.lines().enumerate() {
+            let trimmed = line.trim();
+            if !in_header {
+                if trimmed == "---" {
+                    in_header = true;
+                }
+                continue;
+            }
+
+            if trimmed == "..." {
+                body_start = Some(line_index + 1);
+                break;
+            }
+            metadata.read_header_line(line);
+        }
+
+        let body_start = body_start.ok_or_else(|| {
+            TableDictionaryParseError::new("RIME dictionary header is missing terminating '...'")
+        })?;
+        let mut entries = Vec::new();
+        let mut comments_enabled = true;
+
+        for line in input.lines().skip(body_start) {
+            let line = line.trim_end();
+            if line.is_empty() {
+                continue;
+            }
+            if comments_enabled && line.starts_with('#') {
+                if line == "# no comment" {
+                    comments_enabled = false;
+                }
+                continue;
+            }
+
+            if let Some(entry) = metadata.parse_entry(line) {
+                entries.push(entry);
+            }
+        }
+
+        if metadata.sort_by_weight {
+            entries.sort_by(|left, right| {
+                left.code.cmp(&right.code).then_with(|| {
+                    right
+                        .weight
+                        .partial_cmp(&left.weight)
+                        .unwrap_or(std::cmp::Ordering::Equal)
+                })
+            });
+        }
+
+        Ok(Self { entries })
+    }
+
+    #[must_use]
+    pub fn entries(&self) -> &[TableEntry] {
+        &self.entries
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct TableDictionaryParseError {
+    message: String,
+}
+
+impl TableDictionaryParseError {
+    fn new(message: impl Into<String>) -> Self {
+        Self {
+            message: message.into(),
+        }
+    }
+}
+
+impl std::fmt::Display for TableDictionaryParseError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str(&self.message)
+    }
+}
+
+impl std::error::Error for TableDictionaryParseError {}
+
+#[derive(Clone, Debug)]
+struct RimeTableMetadata {
+    columns: Vec<String>,
+    reading_columns: bool,
+    sort_by_weight: bool,
+}
+
+impl Default for RimeTableMetadata {
+    fn default() -> Self {
+        Self {
+            columns: vec!["text".to_owned(), "code".to_owned(), "weight".to_owned()],
+            reading_columns: false,
+            sort_by_weight: true,
+        }
+    }
+}
+
+impl RimeTableMetadata {
+    fn read_header_line(&mut self, line: &str) {
+        let trimmed = line.trim();
+        if trimmed.is_empty() || trimmed.starts_with('#') {
+            return;
+        }
+
+        if self.reading_columns {
+            if let Some(column) = trimmed.strip_prefix("- ") {
+                self.columns.push(column.trim().to_owned());
+                return;
+            }
+            self.reading_columns = false;
+        }
+
+        if trimmed == "columns:" {
+            self.columns.clear();
+            self.reading_columns = true;
+            return;
+        }
+
+        if let Some(sort_order) = trimmed.strip_prefix("sort:") {
+            self.sort_by_weight = sort_order.trim() != "original";
+        }
+    }
+
+    fn parse_entry(&self, line: &str) -> Option<TableEntry> {
+        let fields = line.split('\t').collect::<Vec<_>>();
+        let text_column = self.column_index("text")?;
+        let code_column = self.column_index("code")?;
+        let text = fields.get(text_column)?.trim();
+        let code = fields.get(code_column)?.trim();
+        if text.is_empty() || code.is_empty() {
+            return None;
+        }
+
+        let weight = self
+            .column_index("weight")
+            .and_then(|column| fields.get(column))
+            .and_then(|value| value.trim().parse::<f32>().ok())
+            .unwrap_or(0.0);
+        Some(TableEntry::new(code, text, weight))
+    }
+
+    fn column_index(&self, label: &str) -> Option<usize> {
+        self.columns.iter().position(|column| column == label)
+    }
+}
+
+fn normalize_table_code(code: &str) -> String {
+    code.split_whitespace().collect()
+}
+
 pub struct StaticTableTranslator {
     entries: Vec<(String, Candidate)>,
 }
@@ -304,6 +490,28 @@ impl StaticTableTranslator {
             })
             .collect();
         Self { entries }
+    }
+
+    #[must_use]
+    pub fn from_dictionary(dictionary: TableDictionary) -> Self {
+        let entries = dictionary
+            .entries
+            .into_iter()
+            .map(|entry| {
+                let candidate = Candidate {
+                    text: entry.text,
+                    comment: entry.code.clone(),
+                    source: CandidateSource::Table,
+                    quality: entry.weight,
+                };
+                (entry.code, candidate)
+            })
+            .collect();
+        Self { entries }
+    }
+
+    pub fn parse_rime_dict_yaml(input: &str) -> Result<Self, TableDictionaryParseError> {
+        TableDictionary::parse_rime_dict_yaml(input).map(Self::from_dictionary)
     }
 }
 
@@ -522,7 +730,7 @@ impl Engine {
 mod tests {
     use super::{
         parse_key_sequence, CandidateSource, Engine, KeyCode, PunctuationTranslator,
-        StaticTableTranslator,
+        StaticTableTranslator, TableDictionary,
     };
 
     #[test]
@@ -563,6 +771,85 @@ mod tests {
 
         let commit = engine.process_char(' ');
         assert_eq!(commit.as_deref(), Some("你"));
+    }
+
+    #[test]
+    fn parses_rime_dict_yaml_default_columns_and_weight_order() {
+        let dictionary = TableDictionary::parse_rime_dict_yaml(
+            r#"
+---
+name: sample
+version: "0.1"
+sort: by_weight
+...
+
+巴	ba	3193
+爸	ba	3625
+八	ba	6677
+"#,
+        )
+        .expect("dictionary should parse");
+
+        let entries = dictionary.entries();
+        assert_eq!(entries.len(), 3);
+        assert_eq!(entries[0].text, "八");
+        assert_eq!(entries[1].text, "爸");
+        assert_eq!(entries[2].text, "巴");
+        assert_eq!(entries[0].code, "ba");
+        assert_eq!(entries[0].weight, 6677.0);
+    }
+
+    #[test]
+    fn parses_rime_dict_yaml_custom_columns_for_shape_tables() {
+        let dictionary = TableDictionary::parse_rime_dict_yaml(
+            r#"
+---
+name: cangjie_sample
+version: "0.1"
+sort: original
+columns:
+  - text
+  - code
+  - stem
+...
+
+明	ab
+晭	abgr	ab'gr
+"#,
+        )
+        .expect("dictionary should parse");
+
+        let entries = dictionary.entries();
+        assert_eq!(entries[0].text, "明");
+        assert_eq!(entries[0].code, "ab");
+        assert_eq!(entries[1].text, "晭");
+        assert_eq!(entries[1].code, "abgr");
+    }
+
+    #[test]
+    fn table_translator_can_commit_rime_dictionary_phrase_codes() {
+        let mut engine = Engine::new();
+        let translator = StaticTableTranslator::parse_rime_dict_yaml(
+            r#"
+---
+name: sample
+version: "0.1"
+sort: by_weight
+...
+
+你	ni	1
+你好	ni hao	10
+"#,
+        )
+        .expect("dictionary should parse");
+        engine.add_translator(translator);
+
+        let commits = engine
+            .process_key_sequence("nihao{space}")
+            .expect("key sequence should parse");
+
+        assert_eq!(commits, ["你好"]);
+        assert_eq!(engine.context().last_commit.as_deref(), Some("你好"));
     }
 
     #[test]
