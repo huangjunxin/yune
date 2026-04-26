@@ -589,8 +589,8 @@ fn build_levers_api() -> RimeLeversApi {
         get_schema_description: None,
         get_schema_file_path: None,
         select_schemas: None,
-        get_hotkeys: None,
-        set_hotkeys: None,
+        get_hotkeys: Some(RimeLeversGetHotkeys),
+        set_hotkeys: Some(RimeLeversSetHotkeys),
         user_dict_iterator_init: None,
         user_dict_iterator_destroy: None,
         next_user_dict: None,
@@ -605,6 +605,11 @@ fn build_levers_api() -> RimeLeversApi {
 fn state_label_cache() -> &'static Mutex<Option<CString>> {
     static STATE_LABEL_CACHE: OnceLock<Mutex<Option<CString>>> = OnceLock::new();
     STATE_LABEL_CACHE.get_or_init(|| Mutex::new(None))
+}
+
+fn switcher_hotkeys_cache() -> &'static Mutex<Option<CString>> {
+    static SWITCHER_HOTKEYS_CACHE: OnceLock<Mutex<Option<CString>>> = OnceLock::new();
+    SWITCHER_HOTKEYS_CACHE.get_or_init(|| Mutex::new(None))
 }
 
 fn api_entry() -> *mut RimeApi {
@@ -865,6 +870,44 @@ pub unsafe extern "C" fn RimeLeversGetSelectedSchemaList(
 
     clear_schema_list(list);
     populate_schema_id_list(list, deployed_selected_schema_ids())
+}
+
+/// Returns switcher hotkeys from the deployed default config.
+///
+/// # Safety
+///
+/// `settings` must either be a pointer returned by `RimeSwitcherSettingsInit`
+/// or null.
+#[no_mangle]
+pub unsafe extern "C" fn RimeLeversGetHotkeys(
+    settings: *mut RimeSwitcherSettings,
+) -> *const c_char {
+    if settings.is_null() {
+        return ptr::null();
+    }
+
+    let mut cache = switcher_hotkeys_cache()
+        .lock()
+        .expect("switcher hotkeys cache should not be poisoned");
+    *cache = deployed_switcher_hotkeys().map(|hotkeys| cstring_from_lossless_str(&hotkeys));
+    cache
+        .as_ref()
+        .map(|hotkeys| hotkeys.as_ptr())
+        .unwrap_or(ptr::null())
+}
+
+/// Matches librime's currently unimplemented switcher hotkey mutation path.
+///
+/// # Safety
+///
+/// `settings` must either be a pointer returned by `RimeSwitcherSettingsInit`
+/// or null. `hotkeys`, when non-null, must point to a valid C string.
+#[no_mangle]
+pub unsafe extern "C" fn RimeLeversSetHotkeys(
+    _settings: *mut RimeSwitcherSettings,
+    _hotkeys: *const c_char,
+) -> Bool {
+    FALSE
 }
 
 /// Frees schema-list storage returned by levers schema-list APIs.
@@ -2922,6 +2965,24 @@ fn deployed_selected_schema_ids() -> Vec<String> {
         .collect()
 }
 
+fn deployed_switcher_hotkeys() -> Option<String> {
+    let default_config = load_runtime_config_root("default", ConfigOpenKind::Deployed);
+    let Value::Sequence(hotkeys) = find_config_value(&default_config, "switcher/hotkeys")? else {
+        return None;
+    };
+
+    let hotkeys = hotkeys
+        .iter()
+        .filter_map(Value::as_str)
+        .filter(|hotkey| !hotkey.is_empty())
+        .collect::<Vec<_>>();
+    if hotkeys.is_empty() {
+        None
+    } else {
+        Some(hotkeys.join(", "))
+    }
+}
+
 fn deployed_schema_list_entry(default_config: &Value, entry: &Value) -> Option<String> {
     let Value::Mapping(entry) = entry else {
         return None;
@@ -4736,6 +4797,76 @@ schema_list:
         // SAFETY: settings was allocated by this shim's switcher init function.
         unsafe { drop(Box::from_raw(settings)) };
 
+        let reset_traits = empty_traits();
+        // SAFETY: reset traits points to valid storage.
+        unsafe { RimeSetup(&reset_traits) };
+        fs::remove_dir_all(root).expect("temp dirs should be removed");
+    }
+
+    #[test]
+    fn levers_hotkeys_are_read_from_deployed_default_config() {
+        let _guard = test_guard();
+        let root = unique_temp_dir("levers-hotkeys");
+        let shared = root.join("shared");
+        let user = root.join("user");
+        let staging = user.join("build");
+        fs::create_dir_all(&shared).expect("shared dir should be created");
+        fs::create_dir_all(&staging).expect("staging dir should be created");
+        fs::write(
+            staging.join("default.yaml"),
+            "\
+switcher:
+  hotkeys:
+    - Control+grave
+    - F4
+    - ''
+",
+        )
+        .expect("default config should be written");
+
+        let shared_c = CString::new(shared.to_string_lossy().as_ref()).expect("path is valid");
+        let user_c = CString::new(user.to_string_lossy().as_ref()).expect("path is valid");
+        let mut traits = empty_traits();
+        traits.shared_data_dir = shared_c.as_ptr();
+        traits.user_data_dir = user_c.as_ptr();
+        // SAFETY: traits points to valid storage and strings live for the call.
+        unsafe { RimeSetup(&traits) };
+
+        let settings = super::RimeSwitcherSettingsInit();
+        assert!(!settings.is_null());
+        let levers_name = CString::new("levers").expect("module name should be valid");
+        // SAFETY: lookup name is a valid NUL-terminated string.
+        let module = unsafe { RimeFindModule(levers_name.as_ptr()) };
+        assert!(!module.is_null());
+        // SAFETY: built-in module storage is process-lifetime.
+        let module = unsafe { &*module };
+        let api = module.get_api.expect("levers get_api should be set")().cast::<RimeLeversApi>();
+        assert!(!api.is_null());
+        // SAFETY: levers get_api returns a process-lifetime RimeLeversApi object.
+        let api = unsafe { &*api };
+        let get_hotkeys = api.get_hotkeys.expect("get_hotkeys should be available");
+        let set_hotkeys = api.set_hotkeys.expect("set_hotkeys should be available");
+
+        // SAFETY: settings is a valid pointer returned by the shim.
+        let hotkeys = unsafe { get_hotkeys(settings) };
+        assert!(!hotkeys.is_null());
+        // SAFETY: get_hotkeys returns a process-owned NUL-terminated C string.
+        assert_eq!(
+            unsafe { CStr::from_ptr(hotkeys) }.to_str(),
+            Ok("Control+grave, F4")
+        );
+        // SAFETY: null settings are rejected without dereferencing.
+        assert!(unsafe { get_hotkeys(std::ptr::null_mut()) }.is_null());
+
+        let new_hotkeys = CString::new("Alt+space").expect("hotkeys should be valid");
+        // SAFETY: settings and hotkeys are valid pointers; mutation is currently unsupported.
+        assert_eq!(
+            unsafe { set_hotkeys(settings, new_hotkeys.as_ptr()) },
+            FALSE
+        );
+
+        // SAFETY: settings was allocated by this shim's switcher init function.
+        unsafe { drop(Box::from_raw(settings)) };
         let reset_traits = empty_traits();
         // SAFETY: reset traits points to valid storage.
         unsafe { RimeSetup(&reset_traits) };
