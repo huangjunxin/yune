@@ -123,6 +123,22 @@ pub struct RimeSchemaList {
     pub list: *mut RimeSchemaListItem,
 }
 
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct RimeCustomApi {
+    pub data_size: c_int,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct RimeModule {
+    pub data_size: c_int,
+    pub module_name: *const c_char,
+    pub initialize: Option<extern "C" fn()>,
+    pub finalize: Option<extern "C" fn()>,
+    pub get_api: Option<extern "C" fn() -> *mut RimeCustomApi>,
+}
+
 const XK_BACKSPACE: c_int = 0xff08;
 const XK_RETURN: c_int = 0xff0d;
 const DEFAULT_PAGE_SIZE: usize = 5;
@@ -171,6 +187,11 @@ struct RuntimePaths {
 struct NotificationState {
     handler: Option<RimeNotificationHandler>,
     context_object: usize,
+}
+
+#[derive(Default)]
+struct ModuleRegistry {
+    modules_by_name: HashMap<String, usize>,
 }
 
 impl Default for RuntimePaths {
@@ -243,6 +264,11 @@ fn notification_state() -> &'static Mutex<NotificationState> {
     NOTIFICATION_STATE.get_or_init(|| Mutex::new(NotificationState::default()))
 }
 
+fn module_registry() -> &'static Mutex<ModuleRegistry> {
+    static MODULE_REGISTRY: OnceLock<Mutex<ModuleRegistry>> = OnceLock::new();
+    MODULE_REGISTRY.get_or_init(|| Mutex::new(ModuleRegistry::default()))
+}
+
 #[must_use]
 pub const fn bool_from(value: bool) -> Bool {
     if value {
@@ -278,6 +304,61 @@ pub extern "C" fn RimeSetNotificationHandler(
         .expect("notification state should not be poisoned");
     state.handler = handler;
     state.context_object = context_object as usize;
+}
+
+/// Registers a process-wide module pointer by its module name.
+///
+/// # Safety
+///
+/// `module` must be either null or point to a valid `RimeModule` whose
+/// `module_name`, when non-null, is a valid NUL-terminated C string. The caller
+/// retains ownership and must keep the module storage alive while it may be
+/// returned by `RimeFindModule`.
+#[no_mangle]
+pub unsafe extern "C" fn RimeRegisterModule(module: *mut RimeModule) -> Bool {
+    if module.is_null() {
+        return FALSE;
+    }
+
+    // SAFETY: callers promise `module` points to a valid RimeModule.
+    let module_ref = unsafe { &*module };
+    if module_ref.module_name.is_null() {
+        return FALSE;
+    }
+
+    // SAFETY: callers promise `module_name` is a valid NUL-terminated C string.
+    let module_name = unsafe { CStr::from_ptr(module_ref.module_name) }
+        .to_string_lossy()
+        .into_owned();
+    module_registry()
+        .lock()
+        .expect("module registry should not be poisoned")
+        .modules_by_name
+        .insert(module_name, module as usize);
+    TRUE
+}
+
+/// Finds a registered process-wide module by name.
+///
+/// # Safety
+///
+/// `module_name` must be either null or point to a valid NUL-terminated C
+/// string.
+#[no_mangle]
+pub unsafe extern "C" fn RimeFindModule(module_name: *const c_char) -> *mut RimeModule {
+    if module_name.is_null() {
+        return ptr::null_mut();
+    }
+
+    // SAFETY: callers promise `module_name` is a valid NUL-terminated C string.
+    let module_name = unsafe { CStr::from_ptr(module_name) }.to_string_lossy();
+    module_registry()
+        .lock()
+        .expect("module registry should not be poisoned")
+        .modules_by_name
+        .get(module_name.as_ref())
+        .copied()
+        .map_or(ptr::null_mut(), |module| module as *mut RimeModule)
 }
 
 #[no_mangle]
@@ -1669,21 +1750,23 @@ mod tests {
         bool_from, RimeCandidateListBegin, RimeCandidateListEnd, RimeCandidateListFromIndex,
         RimeCandidateListIterator, RimeCandidateListNext, RimeChangePage, RimeCleanupAllSessions,
         RimeCleanupStaleSessions, RimeClearComposition, RimeCommit, RimeCommitComposition,
-        RimeContext, RimeCreateSession, RimeDeleteCandidate, RimeDeleteCandidateOnCurrentPage,
-        RimeDeployConfigFile, RimeDeploySchema, RimeDeployWorkspace, RimeDeployerInitialize,
-        RimeDestroySession, RimeFinalize, RimeFindSession, RimeFreeCommit, RimeFreeContext,
-        RimeFreeStatus, RimeGetCaretPos, RimeGetCommit, RimeGetContext, RimeGetCurrentSchema,
-        RimeGetInput, RimeGetOption, RimeGetPrebuiltDataDir, RimeGetPrebuiltDataDirSecure,
-        RimeGetProperty, RimeGetSchemaList, RimeGetSharedDataDir, RimeGetSharedDataDirSecure,
-        RimeGetStagingDir, RimeGetStagingDirSecure, RimeGetStatus, RimeGetSyncDir,
-        RimeGetSyncDirSecure, RimeGetUserDataDir, RimeGetUserDataDirSecure, RimeGetUserDataSyncDir,
-        RimeGetUserId, RimeGetVersion, RimeHighlightCandidate, RimeHighlightCandidateOnCurrentPage,
-        RimeInitialize, RimeIsMaintenancing, RimeJoinMaintenanceThread, RimePrebuildAllSchemas,
-        RimeProcessKey, RimeRunTask, RimeSelectCandidate, RimeSelectCandidateOnCurrentPage,
-        RimeSelectSchema, RimeSetCaretPos, RimeSetInput, RimeSetNotificationHandler, RimeSetOption,
-        RimeSetProperty, RimeSetup, RimeSetupLogging, RimeSimulateKeySequence,
-        RimeStartMaintenance, RimeStartMaintenanceOnWorkspaceChange, RimeStatus, RimeSyncUserData,
-        RimeTraits, FALSE, TRUE,
+        RimeContext, RimeCreateSession, RimeCustomApi, RimeDeleteCandidate,
+        RimeDeleteCandidateOnCurrentPage, RimeDeployConfigFile, RimeDeploySchema,
+        RimeDeployWorkspace, RimeDeployerInitialize, RimeDestroySession, RimeFinalize,
+        RimeFindModule, RimeFindSession, RimeFreeCommit, RimeFreeContext, RimeFreeStatus,
+        RimeGetCaretPos, RimeGetCommit, RimeGetContext, RimeGetCurrentSchema, RimeGetInput,
+        RimeGetOption, RimeGetPrebuiltDataDir, RimeGetPrebuiltDataDirSecure, RimeGetProperty,
+        RimeGetSchemaList, RimeGetSharedDataDir, RimeGetSharedDataDirSecure, RimeGetStagingDir,
+        RimeGetStagingDirSecure, RimeGetStatus, RimeGetSyncDir, RimeGetSyncDirSecure,
+        RimeGetUserDataDir, RimeGetUserDataDirSecure, RimeGetUserDataSyncDir, RimeGetUserId,
+        RimeGetVersion, RimeHighlightCandidate, RimeHighlightCandidateOnCurrentPage,
+        RimeInitialize, RimeIsMaintenancing, RimeJoinMaintenanceThread, RimeModule,
+        RimePrebuildAllSchemas, RimeProcessKey, RimeRegisterModule, RimeRunTask,
+        RimeSelectCandidate, RimeSelectCandidateOnCurrentPage, RimeSelectSchema, RimeSetCaretPos,
+        RimeSetInput, RimeSetNotificationHandler, RimeSetOption, RimeSetProperty, RimeSetup,
+        RimeSetupLogging, RimeSimulateKeySequence, RimeStartMaintenance,
+        RimeStartMaintenanceOnWorkspaceChange, RimeStatus, RimeSyncUserData, RimeTraits, FALSE,
+        TRUE,
     };
 
     #[derive(Debug, PartialEq, Eq)]
@@ -1731,6 +1814,14 @@ mod tests {
                 message_type,
                 message_value,
             });
+    }
+
+    extern "C" fn sample_module_initialize() {}
+
+    extern "C" fn sample_module_finalize() {}
+
+    extern "C" fn sample_module_get_api() -> *mut RimeCustomApi {
+        std::ptr::null_mut()
     }
 
     fn empty_context() -> RimeContext {
@@ -1948,6 +2039,73 @@ mod tests {
         assert_eq!(RimeFindSession(session_id), TRUE);
         assert_eq!(RimeSyncUserData(), TRUE);
         assert_eq!(RimeFindSession(session_id), FALSE);
+    }
+
+    #[test]
+    fn registers_and_finds_modules_by_name() {
+        let _guard = test_guard();
+        super::module_registry()
+            .lock()
+            .expect("module registry should not be poisoned")
+            .modules_by_name
+            .clear();
+        let module_name = CString::new("sample_module_abi").expect("module name should be valid");
+        let replacement_name =
+            CString::new("sample_module_abi").expect("module name should be valid");
+        let missing_name = CString::new("missing_module_abi").expect("module name should be valid");
+        let mut module = RimeModule {
+            data_size: std::mem::size_of::<RimeModule>() as i32,
+            module_name: module_name.as_ptr(),
+            initialize: Some(sample_module_initialize),
+            finalize: Some(sample_module_finalize),
+            get_api: Some(sample_module_get_api),
+        };
+        let mut replacement = RimeModule {
+            data_size: std::mem::size_of::<RimeModule>() as i32,
+            module_name: replacement_name.as_ptr(),
+            initialize: None,
+            finalize: None,
+            get_api: None,
+        };
+        let mut unnamed = RimeModule {
+            data_size: std::mem::size_of::<RimeModule>() as i32,
+            module_name: std::ptr::null(),
+            initialize: None,
+            finalize: None,
+            get_api: None,
+        };
+
+        // SAFETY: module names point to valid NUL-terminated strings and the
+        // module storage lives through the lookups below.
+        assert_eq!(unsafe { RimeRegisterModule(&mut module) }, TRUE);
+        // SAFETY: lookup names are valid NUL-terminated strings.
+        assert_eq!(
+            unsafe { RimeFindModule(module_name.as_ptr()) },
+            std::ptr::addr_of_mut!(module)
+        );
+        // SAFETY: lookup name is a valid NUL-terminated string.
+        assert!(unsafe { RimeFindModule(missing_name.as_ptr()) }.is_null());
+
+        // SAFETY: replacement module uses the same valid NUL-terminated name.
+        assert_eq!(unsafe { RimeRegisterModule(&mut replacement) }, TRUE);
+        // SAFETY: lookup name is a valid NUL-terminated string.
+        assert_eq!(
+            unsafe { RimeFindModule(replacement_name.as_ptr()) },
+            std::ptr::addr_of_mut!(replacement)
+        );
+
+        // SAFETY: null inputs are explicitly rejected without dereferencing.
+        assert_eq!(unsafe { RimeRegisterModule(std::ptr::null_mut()) }, FALSE);
+        // SAFETY: unnamed points to a valid module with a null module_name.
+        assert_eq!(unsafe { RimeRegisterModule(&mut unnamed) }, FALSE);
+        // SAFETY: null lookup names are explicitly rejected without dereferencing.
+        assert!(unsafe { RimeFindModule(std::ptr::null()) }.is_null());
+
+        super::module_registry()
+            .lock()
+            .expect("module registry should not be poisoned")
+            .modules_by_name
+            .clear();
     }
 
     #[test]
