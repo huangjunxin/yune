@@ -256,7 +256,47 @@ pub trait Translator: Send + Sync {
 pub trait CandidateRanker: Send + Sync {
     fn name(&self) -> &'static str;
 
-    fn rerank(&self, context: &Context, candidates: &mut Vec<Candidate>);
+    fn try_rerank(&self, context: &Context, candidates: &[Candidate]) -> RerankResult;
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum RerankResult {
+    Pending,
+    Ready(Vec<Candidate>),
+}
+
+pub struct MockAiRanker {
+    preferred_texts: Vec<String>,
+}
+
+impl MockAiRanker {
+    #[must_use]
+    pub fn new(preferred_texts: impl IntoIterator<Item = impl Into<String>>) -> Self {
+        Self {
+            preferred_texts: preferred_texts.into_iter().map(Into::into).collect(),
+        }
+    }
+}
+
+impl CandidateRanker for MockAiRanker {
+    fn name(&self) -> &'static str {
+        "mock_ai_ranker"
+    }
+
+    fn try_rerank(&self, _context: &Context, candidates: &[Candidate]) -> RerankResult {
+        if self.preferred_texts.is_empty() || candidates.is_empty() {
+            return RerankResult::Pending;
+        }
+
+        let mut ranked = candidates.to_vec();
+        ranked.sort_by_key(|candidate| {
+            self.preferred_texts
+                .iter()
+                .position(|text| text == &candidate.text)
+                .unwrap_or(self.preferred_texts.len())
+        });
+        RerankResult::Ready(ranked)
+    }
 }
 
 #[derive(Default)]
@@ -719,7 +759,9 @@ impl Engine {
             .flat_map(|translator| translator.translate(input))
             .collect::<Vec<_>>();
         for ranker in &self.rankers {
-            ranker.rerank(&self.context, &mut candidates);
+            if let RerankResult::Ready(ranked) = ranker.try_rerank(&self.context, &candidates) {
+                candidates = ranked;
+            }
         }
         self.context.candidates = candidates;
         self.context.highlighted = 0;
@@ -729,8 +771,8 @@ impl Engine {
 #[cfg(test)]
 mod tests {
     use super::{
-        parse_key_sequence, CandidateSource, Engine, KeyCode, PunctuationTranslator,
-        StaticTableTranslator, TableDictionary,
+        parse_key_sequence, CandidateRanker, CandidateSource, Context, Engine, KeyCode,
+        MockAiRanker, PunctuationTranslator, RerankResult, StaticTableTranslator, TableDictionary,
     };
 
     #[test]
@@ -850,6 +892,78 @@ sort: by_weight
 
         assert_eq!(commits, ["你好"]);
         assert_eq!(engine.context().last_commit.as_deref(), Some("你好"));
+    }
+
+    #[test]
+    fn mock_ai_ranker_can_reorder_ready_candidates() {
+        let mut engine = Engine::new();
+        let translator = StaticTableTranslator::parse_rime_dict_yaml(
+            r#"
+---
+name: sample
+version: "0.1"
+sort: by_weight
+...
+
+把	ba	100
+吧	ba	50
+八	ba	10
+"#,
+        )
+        .expect("dictionary should parse");
+        engine.add_translator(translator);
+        engine.add_ranker(MockAiRanker::new(["吧"]));
+
+        engine
+            .process_key_sequence("ba")
+            .expect("keys should parse");
+
+        assert_eq!(engine.context().candidates[0].text, "吧");
+        assert_eq!(engine.context().candidates[1].text, "把");
+        assert_eq!(engine.context().candidates[2].text, "八");
+    }
+
+    #[test]
+    fn pending_ranker_keeps_classic_candidate_order() {
+        struct PendingRanker;
+
+        impl CandidateRanker for PendingRanker {
+            fn name(&self) -> &'static str {
+                "pending_ranker"
+            }
+
+            fn try_rerank(
+                &self,
+                _context: &Context,
+                _candidates: &[super::Candidate],
+            ) -> RerankResult {
+                RerankResult::Pending
+            }
+        }
+
+        let mut engine = Engine::new();
+        let translator = StaticTableTranslator::parse_rime_dict_yaml(
+            r#"
+---
+name: sample
+version: "0.1"
+sort: by_weight
+...
+
+把	ba	100
+吧	ba	50
+"#,
+        )
+        .expect("dictionary should parse");
+        engine.add_translator(translator);
+        engine.add_ranker(PendingRanker);
+
+        engine
+            .process_key_sequence("ba")
+            .expect("keys should parse");
+
+        assert_eq!(engine.context().candidates[0].text, "把");
+        assert_eq!(engine.context().candidates[1].text, "吧");
     }
 
     #[test]
