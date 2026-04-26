@@ -1647,8 +1647,14 @@ pub extern "C" fn RimeFinalize() {
 }
 
 #[no_mangle]
-pub extern "C" fn RimeStartMaintenance(_full_check: Bool) -> Bool {
+pub extern "C" fn RimeStartMaintenance(full_check: Bool) -> Bool {
     if !clean_old_log_files() {
+        return FALSE;
+    }
+    if !run_installation_update() {
+        return FALSE;
+    }
+    if full_check == FALSE && !detect_modifications() {
         return FALSE;
     }
     TRUE
@@ -4197,6 +4203,71 @@ fn clean_old_log_files() -> bool {
     success
 }
 
+fn detect_modifications() -> bool {
+    let (shared_data_dir, user_data_dir) = {
+        let paths = runtime_paths()
+            .lock()
+            .expect("runtime paths should not be poisoned");
+        (
+            PathBuf::from(paths.shared_data_dir.to_string_lossy().into_owned()),
+            PathBuf::from(paths.user_data_dir.to_string_lossy().into_owned()),
+        )
+    };
+
+    let Some(last_modified) =
+        latest_workspace_modified_time([user_data_dir.as_path(), shared_data_dir.as_path()])
+    else {
+        return true;
+    };
+    last_modified > user_last_build_time(&user_data_dir)
+}
+
+fn latest_workspace_modified_time<const N: usize>(data_dirs: [&Path; N]) -> Option<u64> {
+    let mut last_modified = 0;
+    for data_dir in data_dirs {
+        last_modified = last_modified.max(file_modified_secs(data_dir)?);
+        if data_dir.is_dir() {
+            let entries = fs::read_dir(data_dir).ok()?;
+            for entry in entries.filter_map(Result::ok) {
+                let path = entry.path();
+                if !path.is_file() || !is_workspace_yaml_file(&path) {
+                    continue;
+                }
+                last_modified = last_modified.max(file_modified_secs(&path)?);
+            }
+        }
+    }
+    Some(last_modified)
+}
+
+fn file_modified_secs(path: &Path) -> Option<u64> {
+    fs::metadata(path)
+        .ok()?
+        .modified()
+        .ok()?
+        .duration_since(UNIX_EPOCH)
+        .ok()
+        .map(|duration| duration.as_secs())
+}
+
+fn user_last_build_time(user_data_dir: &Path) -> u64 {
+    let user_config_path = user_data_dir.join("user.yaml");
+    fs::read_to_string(user_config_path)
+        .ok()
+        .and_then(|text| serde_yaml::from_str::<Value>(&text).ok())
+        .and_then(|root| {
+            find_config_value(&root, "var/last_build_time")
+                .and_then(Value::as_i64)
+                .and_then(|value| u64::try_from(value).ok())
+        })
+        .unwrap_or(0)
+}
+
+fn is_workspace_yaml_file(path: &Path) -> bool {
+    path.extension().and_then(|extension| extension.to_str()) == Some("yaml")
+        && path.file_name().and_then(|file_name| file_name.to_str()) != Some("user.yaml")
+}
+
 fn current_log_date_marker() -> String {
     let days_since_epoch = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -6392,6 +6463,8 @@ backup_config_files: false
         traits.shared_data_dir = shared.as_ptr();
         traits.user_data_dir = user_c.as_ptr();
 
+        // SAFETY: traits points to a valid RimeTraits object with valid strings.
+        unsafe { RimeSetup(&traits) };
         RimeSetupLogging(task_name.as_ptr());
         assert_eq!(RimeStartMaintenance(TRUE), TRUE);
         assert_eq!(RimeStartMaintenanceOnWorkspaceChange(), TRUE);
@@ -6872,6 +6945,46 @@ schema:
             .expect("maintenance log fixture should be written");
         assert_eq!(RimeStartMaintenance(TRUE), TRUE);
         assert!(!logs.join("rime_test.19991231.log").exists());
+
+        let reset_traits = empty_traits();
+        // SAFETY: reset traits points to valid storage.
+        unsafe { RimeSetup(&reset_traits) };
+        fs::remove_dir_all(root).expect("temp dirs should be removed");
+    }
+
+    #[test]
+    fn maintenance_on_workspace_change_detects_yaml_modifications() {
+        let _guard = test_guard();
+        RimeCleanupAllSessions();
+        let root = unique_temp_dir("detect-modifications");
+        let shared = root.join("shared");
+        let user = root.join("user");
+        fs::create_dir_all(&shared).expect("shared dir should be created");
+        fs::create_dir_all(&user).expect("user dir should be created");
+        fs::write(
+            shared.join("default.yaml"),
+            "config_version: test\nschema_list:\n  - schema: default\n",
+        )
+        .expect("default config should be written");
+        fs::write(
+            user.join("user.yaml"),
+            "var:\n  last_build_time: 2147483647\n",
+        )
+        .expect("user config should be written");
+        let shared_c =
+            CString::new(shared.to_string_lossy().as_ref()).expect("path should be valid");
+        let user_c = CString::new(user.to_string_lossy().as_ref()).expect("path should be valid");
+        let mut traits = empty_traits();
+        traits.shared_data_dir = shared_c.as_ptr();
+        traits.user_data_dir = user_c.as_ptr();
+
+        // SAFETY: traits points to a valid RimeTraits object with valid strings.
+        unsafe { RimeSetup(&traits) };
+        assert_eq!(RimeStartMaintenanceOnWorkspaceChange(), FALSE);
+
+        fs::write(user.join("user.yaml"), "var:\n  last_build_time: 0\n")
+            .expect("user config should be updated");
+        assert_eq!(RimeStartMaintenanceOnWorkspaceChange(), TRUE);
 
         let reset_traits = empty_traits();
         // SAFETY: reset traits points to valid storage.
