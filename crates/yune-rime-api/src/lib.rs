@@ -4483,7 +4483,7 @@ fn deploy_config_file(file_name: &str, version_key: &str) -> bool {
     let user_copy = user_data_dir.join(file_name);
     let trash_dir = user_data_dir.join("trash");
     let _ = trash_deprecated_user_copy(&source, &user_copy, version_key, &trash_dir);
-    if !deployed_config_needs_update(&destination, &shared_data_dir) {
+    if !deployed_config_needs_update(&destination, file_name, &shared_data_dir, &user_data_dir) {
         return true;
     }
     if let Some(parent) = destination.parent() {
@@ -4491,13 +4491,18 @@ fn deploy_config_file(file_name: &str, version_key: &str) -> bool {
             return false;
         }
     }
-    match deployed_config_yaml_with_build_info(&source, file_name) {
+    match deployed_config_yaml_with_build_info(&source, file_name, &user_data_dir) {
         Some(yaml) => fs::write(destination, yaml).is_ok(),
         None => fs::copy(source, destination).is_ok(),
     }
 }
 
-fn deployed_config_needs_update(destination: &Path, shared_data_dir: &Path) -> bool {
+fn deployed_config_needs_update(
+    destination: &Path,
+    file_name: &str,
+    shared_data_dir: &Path,
+    user_data_dir: &Path,
+) -> bool {
     let root = match fs::read_to_string(destination)
         .ok()
         .and_then(|yaml| serde_yaml::from_str::<Value>(&yaml).ok())
@@ -4509,6 +4514,16 @@ fn deployed_config_needs_update(destination: &Path, shared_data_dir: &Path) -> b
     else {
         return true;
     };
+    let resource_id = normalize_config_resource_id(file_name);
+    if !timestamps.contains_key(Value::String(resource_id.clone())) {
+        return true;
+    }
+    let custom_resource_id = custom_patch_resource_id(&resource_id);
+    if !timestamps.contains_key(Value::String(custom_resource_id.clone()))
+        && config_resource_path(shared_data_dir, user_data_dir, &custom_resource_id).exists()
+    {
+        return true;
+    }
     for (resource_id, recorded_time) in timestamps {
         let Some(resource_id) = resource_id.as_str() else {
             return true;
@@ -4516,7 +4531,7 @@ fn deployed_config_needs_update(destination: &Path, shared_data_dir: &Path) -> b
         let Some(recorded_time) = recorded_time.as_i64() else {
             return true;
         };
-        let source = shared_data_dir.join(format!("{resource_id}.yaml"));
+        let source = config_resource_path(shared_data_dir, user_data_dir, resource_id);
         if !source.exists() {
             if recorded_time != 0 {
                 return true;
@@ -4533,17 +4548,65 @@ fn deployed_config_needs_update(destination: &Path, shared_data_dir: &Path) -> b
     false
 }
 
-fn deployed_config_yaml_with_build_info(source: &Path, file_name: &str) -> Option<String> {
+fn deployed_config_yaml_with_build_info(
+    source: &Path,
+    file_name: &str,
+    user_data_dir: &Path,
+) -> Option<String> {
     let mut root = fs::read_to_string(source)
         .ok()
         .and_then(|yaml| serde_yaml::from_str::<Value>(&yaml).ok())?;
+    let resource_id = normalize_config_resource_id(file_name);
     let timestamp = source_modified_secs(source).unwrap_or(0);
-    set_build_info(
-        &mut root,
-        &normalize_config_resource_id(file_name),
-        timestamp,
-    )?;
+    set_build_info(&mut root, &resource_id, timestamp)?;
+
+    let custom_resource_id = custom_patch_resource_id(&resource_id);
+    let custom_path = user_data_dir.join(format!("{custom_resource_id}.yaml"));
+    if let Some(custom_root) = fs::read_to_string(&custom_path)
+        .ok()
+        .and_then(|yaml| serde_yaml::from_str::<Value>(&yaml).ok())
+    {
+        apply_custom_patch(&mut root, &custom_root)?;
+        set_build_info(
+            &mut root,
+            &custom_resource_id,
+            source_modified_secs(&custom_path).unwrap_or(0),
+        )?;
+    } else {
+        set_build_info(&mut root, &custom_resource_id, 0)?;
+    }
     serde_yaml::to_string(&root).ok()
+}
+
+fn custom_patch_resource_id(resource_id: &str) -> String {
+    let base = resource_id.strip_suffix(".schema").unwrap_or(resource_id);
+    format!("{base}.custom")
+}
+
+fn config_resource_path(
+    shared_data_dir: &Path,
+    user_data_dir: &Path,
+    resource_id: &str,
+) -> PathBuf {
+    let root = if resource_id.ends_with(".custom") {
+        user_data_dir
+    } else {
+        shared_data_dir
+    };
+    root.join(format!("{resource_id}.yaml"))
+}
+
+fn apply_custom_patch(root: &mut Value, custom_root: &Value) -> Option<()> {
+    let Some(Value::Mapping(patch)) = find_config_value(custom_root, "patch") else {
+        return Some(());
+    };
+    for (key, value) in patch {
+        let key = key.as_str()?;
+        if !set_config_value(root, key, value.clone()) {
+            return None;
+        }
+    }
+    Some(())
 }
 
 fn source_modified_secs(source: &Path) -> Option<c_int> {
@@ -5440,12 +5503,22 @@ fn set_config_value(root: &mut Value, key: &str, value: Value) -> bool {
 
     let mut current = root;
     for segment in parents {
-        let Value::Mapping(mapping) = ensure_mapping(current) else {
-            return false;
-        };
-        current = mapping
-            .entry(Value::String((*segment).to_owned()))
-            .or_insert_with(|| Value::Mapping(Mapping::new()));
+        if let Some(index) = list_index(segment) {
+            let Value::Sequence(sequence) = current else {
+                return false;
+            };
+            let Some(next) = sequence.get_mut(index) else {
+                return false;
+            };
+            current = next;
+        } else {
+            let Value::Mapping(mapping) = ensure_mapping(current) else {
+                return false;
+            };
+            current = mapping
+                .entry(Value::String((*segment).to_owned()))
+                .or_insert_with(|| Value::Mapping(Mapping::new()));
+        }
     }
 
     if let Some(index) = list_index(last) {
@@ -6904,6 +6977,113 @@ backup_config_files: false
                 .and_then(Value::as_i64)
                 .is_some_and(|timestamp| timestamp > 0)
         );
+
+        let reset_traits = empty_traits();
+        // SAFETY: reset traits points to valid storage.
+        unsafe { RimeSetup(&reset_traits) };
+        fs::remove_dir_all(root).expect("temp dirs should be removed");
+    }
+
+    #[test]
+    fn deploy_config_file_applies_custom_patch_and_tracks_freshness() {
+        let _guard = test_guard();
+        RimeCleanupAllSessions();
+        let root = unique_temp_dir("deploy-config-custom-patch");
+        let shared = root.join("shared");
+        let user = root.join("user");
+        let staging = user.join("build");
+        fs::create_dir_all(&shared).expect("shared dir should be created");
+        fs::create_dir_all(&user).expect("user dir should be created");
+        fs::write(
+            shared.join("default.yaml"),
+            "\
+config_version: '2.0'
+menu:
+  page_size: 5
+switches:
+  - name: ascii_mode
+    reset: false
+",
+        )
+        .expect("shared config should be written");
+        fs::write(
+            user.join("default.custom.yaml"),
+            "\
+patch:
+  menu/page_size: 9
+  switches/@0/reset: true
+  new/value: patched
+",
+        )
+        .expect("custom patch should be written");
+        let shared_c =
+            CString::new(shared.to_string_lossy().as_ref()).expect("path should be valid");
+        let user_c = CString::new(user.to_string_lossy().as_ref()).expect("path should be valid");
+        let config_file = CString::new("default.yaml").expect("file should be valid");
+        let version_key = CString::new("config_version").expect("key should be valid");
+        let mut traits = empty_traits();
+        traits.shared_data_dir = shared_c.as_ptr();
+        traits.user_data_dir = user_c.as_ptr();
+
+        // SAFETY: traits points to a valid RimeTraits object with valid strings.
+        unsafe { RimeDeployerInitialize(&traits) };
+        assert_eq!(
+            RimeDeployConfigFile(config_file.as_ptr(), version_key.as_ptr()),
+            TRUE
+        );
+        let destination = staging.join("default.yaml");
+        let staged: Value = serde_yaml::from_str(
+            &fs::read_to_string(&destination).expect("staged config should be readable"),
+        )
+        .expect("staged config should parse");
+        assert_eq!(
+            find_config_value(&staged, "menu/page_size").and_then(Value::as_i64),
+            Some(9)
+        );
+        assert_eq!(
+            find_config_value(&staged, "switches/@0/reset").and_then(Value::as_bool),
+            Some(true)
+        );
+        assert_eq!(
+            find_config_value(&staged, "new/value").and_then(Value::as_str),
+            Some("patched")
+        );
+        assert!(
+            find_config_value(&staged, "__build_info/timestamps/default.custom")
+                .and_then(Value::as_i64)
+                .is_some_and(|timestamp| timestamp > 0)
+        );
+
+        fs::write(
+            user.join("default.custom.yaml"),
+            "\
+patch:
+  menu/page_size: 7
+",
+        )
+        .expect("custom patch should be updated");
+        let mut stale = staged;
+        super::set_build_info(&mut stale, "default.custom", 0)
+            .expect("custom build info should be marked stale");
+        fs::write(
+            &destination,
+            serde_yaml::to_string(&stale).expect("stale staged config should serialize"),
+        )
+        .expect("stale staged config should be written");
+
+        assert_eq!(
+            RimeDeployConfigFile(config_file.as_ptr(), version_key.as_ptr()),
+            TRUE
+        );
+        let rebuilt: Value = serde_yaml::from_str(
+            &fs::read_to_string(&destination).expect("rebuilt config should be readable"),
+        )
+        .expect("rebuilt config should parse");
+        assert_eq!(
+            find_config_value(&rebuilt, "menu/page_size").and_then(Value::as_i64),
+            Some(7)
+        );
+        assert!(find_config_value(&rebuilt, "new/value").is_none());
 
         let reset_traits = empty_traits();
         // SAFETY: reset traits points to valid storage.
