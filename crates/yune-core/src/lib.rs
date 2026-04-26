@@ -628,6 +628,7 @@ pub struct Engine {
     context: Context,
     status: Status,
     options: HashMap<String, bool>,
+    properties: HashMap<String, String>,
     translators: Vec<Box<dyn Translator>>,
     rankers: Vec<Box<dyn CandidateRanker>>,
 }
@@ -640,6 +641,7 @@ impl Default for Engine {
             context: Context::default(),
             status: Status::default(),
             options: HashMap::new(),
+            properties: HashMap::new(),
             translators: vec![Box::new(EchoTranslator)],
             rankers: Vec::new(),
         }
@@ -697,6 +699,15 @@ impl Engine {
             "ascii_punct" => self.status.is_ascii_punct,
             _ => self.options.get(option).copied().unwrap_or(false),
         }
+    }
+
+    pub fn set_property(&mut self, property: impl Into<String>, value: impl Into<String>) {
+        self.properties.insert(property.into(), value.into());
+    }
+
+    #[must_use]
+    pub fn get_property(&self, property: &str) -> Option<&str> {
+        self.properties.get(property).map(String::as_str)
     }
 
     pub fn process_char(&mut self, ch: char) -> Option<String> {
@@ -1150,6 +1161,19 @@ sort: by_weight
         assert!(!engine.status().is_ascii_mode);
         assert!(!engine.get_option("ascii_mode"));
         assert!(!engine.get_option("unknown_toggle"));
+    }
+
+    #[test]
+    fn runtime_properties_store_session_strings() {
+        let mut engine = Engine::new();
+
+        assert_eq!(engine.get_property("client_app"), None);
+
+        engine.set_property("client_app", "sample_console");
+        engine.set_property("inline_preedit", "");
+
+        assert_eq!(engine.get_property("client_app"), Some("sample_console"));
+        assert_eq!(engine.get_property("inline_preedit"), Some(""));
     }
 
     #[test]

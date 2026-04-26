@@ -2,7 +2,7 @@ use std::{
     collections::HashMap,
     ffi::{c_void, CStr, CString},
     os::raw::{c_char, c_int},
-    ptr,
+    ptr, slice,
     sync::{Mutex, OnceLock},
 };
 
@@ -360,6 +360,75 @@ pub unsafe extern "C" fn RimeGetOption(session_id: RimeSessionId, option: *const
     let option = unsafe { CStr::from_ptr(option) };
     with_session(session_id, |session| {
         session.engine.get_option(&option.to_string_lossy())
+    })
+}
+
+/// Sets a session-scoped string property.
+///
+/// # Safety
+///
+/// `property` and `value` must be either null or point to valid,
+/// nul-terminated C strings. Null inputs are ignored.
+#[no_mangle]
+pub unsafe extern "C" fn RimeSetProperty(
+    session_id: RimeSessionId,
+    property: *const c_char,
+    value: *const c_char,
+) {
+    if property.is_null() || value.is_null() {
+        return;
+    }
+    // SAFETY: callers promise that both pointers are valid nul-terminated
+    // strings.
+    let property = unsafe { CStr::from_ptr(property) }
+        .to_string_lossy()
+        .into_owned();
+    let value = unsafe { CStr::from_ptr(value) }
+        .to_string_lossy()
+        .into_owned();
+    let _ = with_session(session_id, |session| {
+        session.engine.set_property(property, value);
+        true
+    });
+}
+
+/// Copies a session-scoped string property into caller-provided storage.
+///
+/// # Safety
+///
+/// `property` must point to a valid nul-terminated C string, and `value` must
+/// point to writable storage of `buffer_size` bytes. Null or empty values are
+/// rejected.
+#[no_mangle]
+pub unsafe extern "C" fn RimeGetProperty(
+    session_id: RimeSessionId,
+    property: *const c_char,
+    value: *mut c_char,
+    buffer_size: usize,
+) -> Bool {
+    if property.is_null() || value.is_null() || buffer_size == 0 {
+        return FALSE;
+    }
+    // SAFETY: callers promise that `property` is a valid nul-terminated string.
+    let property = unsafe { CStr::from_ptr(property) };
+
+    with_session(session_id, |session| {
+        let Some(property_value) = session.engine.get_property(&property.to_string_lossy()) else {
+            return false;
+        };
+        if property_value.is_empty() {
+            return false;
+        }
+
+        let bytes = property_value.as_bytes();
+        let copy_len = bytes.len().min(buffer_size.saturating_sub(1));
+        // SAFETY: `value` points to writable storage of `buffer_size` bytes,
+        // and `copy_len` is bounded to leave room for a trailing NUL.
+        unsafe {
+            ptr::copy_nonoverlapping(bytes.as_ptr().cast::<c_char>(), value, copy_len);
+            slice::from_raw_parts_mut(value.cast::<u8>(), buffer_size)[copy_len] = 0;
+        }
+        true
     })
 }
 
@@ -1011,6 +1080,7 @@ fn free_candidate_fields(candidate: &mut RimeCandidate) {
 #[cfg(test)]
 mod tests {
     use std::ffi::{CStr, CString};
+    use std::os::raw::c_char;
     use std::sync::{Mutex, MutexGuard, OnceLock};
 
     use yune_core::StaticTableTranslator;
@@ -1020,10 +1090,11 @@ mod tests {
         RimeCandidateListIterator, RimeCandidateListNext, RimeChangePage, RimeCleanupAllSessions,
         RimeClearComposition, RimeCommit, RimeCommitComposition, RimeContext, RimeCreateSession,
         RimeDestroySession, RimeFindSession, RimeFreeCommit, RimeFreeContext, RimeFreeStatus,
-        RimeGetCaretPos, RimeGetCommit, RimeGetContext, RimeGetInput, RimeGetOption, RimeGetStatus,
-        RimeHighlightCandidate, RimeHighlightCandidateOnCurrentPage, RimeProcessKey,
-        RimeSelectCandidate, RimeSelectCandidateOnCurrentPage, RimeSetCaretPos, RimeSetInput,
-        RimeSetOption, RimeSimulateKeySequence, RimeStatus, FALSE, TRUE,
+        RimeGetCaretPos, RimeGetCommit, RimeGetContext, RimeGetInput, RimeGetOption,
+        RimeGetProperty, RimeGetStatus, RimeHighlightCandidate,
+        RimeHighlightCandidateOnCurrentPage, RimeProcessKey, RimeSelectCandidate,
+        RimeSelectCandidateOnCurrentPage, RimeSetCaretPos, RimeSetInput, RimeSetOption,
+        RimeSetProperty, RimeSimulateKeySequence, RimeStatus, FALSE, TRUE,
     };
 
     fn test_guard() -> MutexGuard<'static, ()> {
@@ -1641,6 +1712,98 @@ mod tests {
         assert_eq!(unsafe { RimeGetOption(0, ascii_mode.as_ptr()) }, FALSE);
         assert_eq!(
             unsafe { RimeGetOption(session_id, std::ptr::null()) },
+            FALSE
+        );
+
+        assert_eq!(RimeDestroySession(session_id), TRUE);
+    }
+
+    #[test]
+    fn sets_and_gets_runtime_properties() {
+        let _guard = test_guard();
+        RimeCleanupAllSessions();
+        let session_id = RimeCreateSession();
+        let property = CString::new("client_app").expect("property name should be valid");
+        let value = CString::new("sample_console").expect("property value should be valid");
+        let empty_value = CString::new("").expect("property value should be valid");
+        let mut buffer = vec![0 as c_char; 32];
+
+        // SAFETY: property name is valid and buffer points to writable storage.
+        assert_eq!(
+            unsafe {
+                RimeGetProperty(
+                    session_id,
+                    property.as_ptr(),
+                    buffer.as_mut_ptr(),
+                    buffer.len(),
+                )
+            },
+            FALSE
+        );
+
+        // SAFETY: property name and value are valid nul-terminated C strings.
+        unsafe { RimeSetProperty(session_id, property.as_ptr(), value.as_ptr()) };
+        // SAFETY: property name is valid and buffer points to writable storage.
+        assert_eq!(
+            unsafe {
+                RimeGetProperty(
+                    session_id,
+                    property.as_ptr(),
+                    buffer.as_mut_ptr(),
+                    buffer.len(),
+                )
+            },
+            TRUE
+        );
+        // SAFETY: `RimeGetProperty` returned true and wrote a trailing NUL into
+        // the caller-owned buffer.
+        let copied_value = unsafe { CStr::from_ptr(buffer.as_ptr()) };
+        assert_eq!(copied_value.to_str(), Ok("sample_console"));
+
+        let mut short_buffer = vec![0 as c_char; 7];
+        // SAFETY: property name is valid and buffer points to writable storage.
+        assert_eq!(
+            unsafe {
+                RimeGetProperty(
+                    session_id,
+                    property.as_ptr(),
+                    short_buffer.as_mut_ptr(),
+                    short_buffer.len(),
+                )
+            },
+            TRUE
+        );
+        // SAFETY: the shim always NUL-terminates non-empty buffers.
+        let truncated_value = unsafe { CStr::from_ptr(short_buffer.as_ptr()) };
+        assert_eq!(truncated_value.to_str(), Ok("sample"));
+
+        // SAFETY: empty properties are accepted on set but rejected on get, as
+        // librime treats empty property values as absent.
+        unsafe { RimeSetProperty(session_id, property.as_ptr(), empty_value.as_ptr()) };
+        assert_eq!(
+            unsafe {
+                RimeGetProperty(
+                    session_id,
+                    property.as_ptr(),
+                    buffer.as_mut_ptr(),
+                    buffer.len(),
+                )
+            },
+            FALSE
+        );
+        assert_eq!(
+            unsafe {
+                RimeGetProperty(
+                    session_id,
+                    property.as_ptr(),
+                    std::ptr::null_mut(),
+                    buffer.len(),
+                )
+            },
+            FALSE
+        );
+        assert_eq!(
+            unsafe { RimeGetProperty(session_id, std::ptr::null(), buffer.as_mut_ptr(), 0) },
             FALSE
         );
 
