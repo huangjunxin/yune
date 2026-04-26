@@ -1,0 +1,24 @@
+{
+  "schema_id": "sample",
+  "sequence": "nihao ",
+  "commits": ["你好"],
+  "context": {
+    "input": "",
+    "caret": 0,
+    "preedit": "",
+    "highlighted": 0,
+    "last_commit": "你好",
+    "candidates": []
+  },
+  "status": {
+    "schema_id": "sample",
+    "schema_name": "Sample",
+    "is_disabled": false,
+    "is_composing": false,
+    "is_ascii_mode": false,
+    "is_full_shape": false,
+    "is_simplified": false,
+    "is_traditional": false,
+    "is_ascii_punct": false
+  }
+}

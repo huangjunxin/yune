@@ -1,0 +1,21 @@
+[workspace]
+members = [
+  "crates/yune-core",
+  "crates/yune-schema",
+  "crates/yune-rime-api",
+  "crates/yune-cli",
+]
+resolver = "2"
+
+[workspace.package]
+edition = "2021"
+license = "BSD-3-Clause"
+repository = "https://github.com/yune-ime/yune"
+rust-version = "1.76"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = "warn"
+pedantic = "warn"
