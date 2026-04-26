@@ -1662,6 +1662,9 @@ pub extern "C" fn RimePrebuildAllSchemas() -> Bool {
 
 #[no_mangle]
 pub extern "C" fn RimeDeployWorkspace() -> Bool {
+    if !run_installation_update() {
+        return FALSE;
+    }
     notify(0, "deploy", "start");
     notify(0, "deploy", "success");
     TRUE
@@ -1683,9 +1686,10 @@ pub extern "C" fn RimeDeployConfigFile(
 #[no_mangle]
 pub extern "C" fn RimeSyncUserData() -> Bool {
     RimeCleanupAllSessions();
+    let installation_synced = run_installation_update();
     let configs_synced = backup_config_files();
     let user_dicts_synced = sync_all_user_dicts();
-    bool_from(configs_synced && user_dicts_synced)
+    bool_from(installation_synced && configs_synced && user_dicts_synced)
 }
 
 #[no_mangle]
@@ -1698,6 +1702,9 @@ pub extern "C" fn RimeRunTask(task_name: *const c_char) -> Bool {
     }
     if task_name == "backup_config_files" {
         return bool_from(backup_config_files());
+    }
+    if task_name == "installation_update" {
+        return bool_from(run_installation_update());
     }
     TRUE
 }
@@ -3874,6 +3881,128 @@ fn sync_all_user_dicts() -> bool {
     success
 }
 
+fn run_installation_update() -> bool {
+    let (user_data_dir, current_sync_dir, distribution_code_name, distribution_version) = {
+        let paths = runtime_paths()
+            .lock()
+            .expect("runtime paths should not be poisoned");
+        (
+            PathBuf::from(paths.user_data_dir.to_string_lossy().into_owned()),
+            paths.sync_dir.to_string_lossy().into_owned(),
+            paths.distribution_code_name.to_string_lossy().into_owned(),
+            paths.distribution_version.to_string_lossy().into_owned(),
+        )
+    };
+
+    if fs::create_dir_all(&user_data_dir).is_err() {
+        return false;
+    }
+
+    let installation_path = user_data_dir.join("installation.yaml");
+    let mut root = fs::read_to_string(&installation_path)
+        .ok()
+        .and_then(|text| serde_yaml::from_str::<Value>(&text).ok())
+        .and_then(|value| match value {
+            Value::Mapping(root) => Some(root),
+            _ => None,
+        })
+        .unwrap_or_default();
+
+    let installation_key = Value::String("installation_id".to_owned());
+    let sync_key = Value::String("sync_dir".to_owned());
+    let backup_key = Value::String("backup_config_files".to_owned());
+
+    let existing_installation_id = root
+        .get(&installation_key)
+        .and_then(Value::as_str)
+        .filter(|value| !value.is_empty())
+        .map(ToOwned::to_owned);
+    let installation_id = existing_installation_id.unwrap_or_else(|| {
+        let generated = generate_installation_id();
+        root.insert(installation_key.clone(), Value::String(generated.clone()));
+        root.insert(
+            Value::String("install_time".to_owned()),
+            Value::String(current_unix_time_string()),
+        );
+        generated
+    });
+
+    let sync_dir = root
+        .get(&sync_key)
+        .and_then(Value::as_str)
+        .filter(|value| !value.is_empty())
+        .map(ToOwned::to_owned)
+        .unwrap_or_else(|| {
+            if current_sync_dir != "sync" {
+                current_sync_dir
+            } else {
+                user_data_dir.join("sync").to_string_lossy().into_owned()
+            }
+        });
+    let backup_config_files = root
+        .get(&backup_key)
+        .and_then(Value::as_bool)
+        .unwrap_or(true);
+
+    if root.contains_key(Value::String("install_time".to_owned())) {
+        root.insert(
+            Value::String("update_time".to_owned()),
+            Value::String(current_unix_time_string()),
+        );
+    }
+    if !distribution_code_name.is_empty() {
+        root.insert(
+            Value::String("distribution_code_name".to_owned()),
+            Value::String(distribution_code_name.clone()),
+        );
+    }
+    if !distribution_version.is_empty() {
+        root.insert(
+            Value::String("distribution_version".to_owned()),
+            Value::String(distribution_version.clone()),
+        );
+    }
+    root.insert(
+        Value::String("rime_version".to_owned()),
+        Value::String(
+            String::from_utf8_lossy(&RIME_VERSION_BYTES[..RIME_VERSION_BYTES.len() - 1])
+                .into_owned(),
+        ),
+    );
+
+    let yaml = match serde_yaml::to_string(&Value::Mapping(root)) {
+        Ok(yaml) => yaml,
+        Err(_) => return false,
+    };
+    if fs::write(&installation_path, yaml).is_err() {
+        return false;
+    }
+
+    let user_data_sync_dir = path_join(&sync_dir, &installation_id);
+    let mut paths = runtime_paths()
+        .lock()
+        .expect("runtime paths should not be poisoned");
+    paths.user_id = cstring_from_lossless_str(&installation_id);
+    paths.sync_dir = cstring_from_lossless_str(&sync_dir);
+    paths.user_data_sync_dir = cstring_from_lossless_str(&user_data_sync_dir);
+    paths.backup_config_files = backup_config_files;
+    true
+}
+
+fn generate_installation_id() -> String {
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |duration| duration.as_nanos());
+    format!("yune-{nanos}-{}", std::process::id())
+}
+
+fn current_unix_time_string() -> String {
+    SystemTime::now().duration_since(UNIX_EPOCH).map_or_else(
+        |_| "0".to_owned(),
+        |duration| duration.as_secs().to_string(),
+    )
+}
+
 fn backup_config_files() -> bool {
     let (user_data_dir, backup_enabled) = {
         let paths = runtime_paths()
@@ -5763,16 +5892,88 @@ backup_config_files: false
     }
 
     #[test]
+    fn installation_update_creates_metadata_and_refreshes_runtime_paths() {
+        let _guard = test_guard();
+        RimeCleanupAllSessions();
+        let root = unique_temp_dir("installation-update");
+        let user = root.join("user");
+        let user_c = CString::new(user.to_string_lossy().as_ref()).expect("path should be valid");
+        let distribution_code =
+            CString::new("yune-test").expect("distribution code should be valid");
+        let distribution_version =
+            CString::new("2026.04").expect("distribution version should be valid");
+        let mut traits = empty_traits();
+        traits.user_data_dir = user_c.as_ptr();
+        traits.distribution_code_name = distribution_code.as_ptr();
+        traits.distribution_version = distribution_version.as_ptr();
+        // SAFETY: traits points to valid storage and strings live for the call.
+        unsafe { RimeSetup(&traits) };
+
+        let task_name = CString::new("installation_update").expect("task name should be valid");
+        assert_eq!(RimeRunTask(task_name.as_ptr()), TRUE);
+
+        let metadata = fs::read_to_string(user.join("installation.yaml"))
+            .expect("installation metadata should be written");
+        let metadata: Value =
+            serde_yaml::from_str(&metadata).expect("installation metadata should parse");
+        let installation_id = find_config_value(&metadata, "installation_id")
+            .and_then(Value::as_str)
+            .expect("installation id should be recorded");
+        assert!(installation_id.starts_with("yune-"));
+        assert_eq!(
+            find_config_value(&metadata, "distribution_code_name").and_then(Value::as_str),
+            Some("yune-test")
+        );
+        assert_eq!(
+            find_config_value(&metadata, "distribution_version").and_then(Value::as_str),
+            Some("2026.04")
+        );
+        assert!(find_config_value(&metadata, "rime_version").is_some());
+
+        // SAFETY: runtime path getters return stable process-owned C strings.
+        let user_id = unsafe { CStr::from_ptr(RimeGetUserId()) };
+        assert_eq!(user_id.to_str(), Ok(installation_id));
+        // SAFETY: runtime path getters return stable process-owned C strings.
+        let sync_dir = unsafe { CStr::from_ptr(RimeGetSyncDir()) };
+        assert_eq!(
+            sync_dir.to_str(),
+            Ok(user.join("sync").to_string_lossy().as_ref())
+        );
+        let mut buffer = vec![0 as c_char; 256];
+        // SAFETY: buffer points to writable storage.
+        unsafe { RimeGetUserDataSyncDir(buffer.as_mut_ptr(), buffer.len()) };
+        // SAFETY: secure getter wrote a trailing NUL into the buffer.
+        let user_sync_dir = unsafe { CStr::from_ptr(buffer.as_ptr()) };
+        assert_eq!(
+            user_sync_dir.to_str(),
+            Ok(user
+                .join("sync")
+                .join(installation_id)
+                .to_string_lossy()
+                .as_ref())
+        );
+
+        let reset_traits = empty_traits();
+        // SAFETY: reset traits points to valid storage.
+        unsafe { RimeSetup(&reset_traits) };
+        fs::remove_dir_all(root).expect("temp dirs should be removed");
+    }
+
+    #[test]
     fn maintenance_and_deployment_shims_are_deterministic() {
         let _guard = test_guard();
         RimeCleanupAllSessions();
+        let root = unique_temp_dir("deployer-shims");
+        let user = root.join("user");
         let shared = CString::new("/tmp/yune-deployer-shared").expect("path should be valid");
+        let user_c = CString::new(user.to_string_lossy().as_ref()).expect("path should be valid");
         let schema_file = CString::new("default.schema.yaml").expect("file should be valid");
         let config_file = CString::new("default.yaml").expect("file should be valid");
         let version_key = CString::new("config_version").expect("key should be valid");
         let task_name = CString::new("workspace_update").expect("task should be valid");
         let mut traits = empty_traits();
         traits.shared_data_dir = shared.as_ptr();
+        traits.user_data_dir = user_c.as_ptr();
 
         RimeSetupLogging(task_name.as_ptr());
         assert_eq!(RimeStartMaintenance(TRUE), TRUE);
@@ -5807,6 +6008,11 @@ backup_config_files: false
         assert_eq!(RimeFindSession(session_id), TRUE);
         assert_eq!(RimeSyncUserData(), TRUE);
         assert_eq!(RimeFindSession(session_id), FALSE);
+
+        let reset_traits = empty_traits();
+        // SAFETY: reset traits points to valid storage.
+        unsafe { RimeSetup(&reset_traits) };
+        fs::remove_dir_all(root).expect("temp dirs should be removed");
     }
 
     #[test]
@@ -6352,7 +6558,7 @@ schema:
         let _guard = test_guard();
         let root = unique_temp_dir("rime-sync-user-data");
         let user = root.join("user");
-        let peer_sync = root.join("sync").join("peer");
+        let peer_sync = user.join("sync").join("peer");
         fs::create_dir_all(&user).expect("user dir should be created");
         fs::create_dir_all(&peer_sync).expect("peer sync dir should be created");
         struct CurrentDirGuard(PathBuf);
@@ -6396,15 +6602,18 @@ schema:
             fs::read_to_string(user.join("luna_pinyin.userdb")).expect("dict should be readable");
         assert_eq!(merged, "ni hao\t你好\t1\nzhong guo\t中国\t2\n");
 
-        let backup = fs::read_to_string(
-            root.join("sync")
-                .join("unknown")
-                .join("luna_pinyin.userdb.txt"),
-        )
-        .expect("current user snapshot should be written");
+        let installation_metadata = fs::read_to_string(user.join("installation.yaml"))
+            .expect("installation metadata should be written during sync");
+        let installation_metadata: Value = serde_yaml::from_str(&installation_metadata)
+            .expect("installation metadata should parse");
+        let installation_id = find_config_value(&installation_metadata, "installation_id")
+            .and_then(Value::as_str)
+            .expect("installation id should be available");
+        let sync_user_dir = user.join("sync").join(installation_id);
+        let backup = fs::read_to_string(sync_user_dir.join("luna_pinyin.userdb.txt"))
+            .expect("current user snapshot should be written");
         assert_eq!(backup, merged);
 
-        let sync_user_dir = root.join("sync").join("unknown");
         assert_eq!(
             fs::read_to_string(sync_user_dir.join("default.yaml"))
                 .expect("user config backup should be readable"),
@@ -6711,6 +6920,13 @@ switcher:
     fn notification_handler_receives_runtime_events_and_can_be_cleared() {
         let _guard = test_guard();
         RimeCleanupAllSessions();
+        let root = unique_temp_dir("notification-events");
+        let user = root.join("user");
+        let user_c = CString::new(user.to_string_lossy().as_ref()).expect("path should be valid");
+        let mut traits = empty_traits();
+        traits.user_data_dir = user_c.as_ptr();
+        // SAFETY: traits points to valid storage and strings live for the call.
+        unsafe { RimeSetup(&traits) };
         notification_events()
             .lock()
             .expect("notification events should not be poisoned")
@@ -6792,6 +7008,10 @@ switcher:
         );
 
         assert_eq!(RimeDestroySession(session_id), TRUE);
+        let reset_traits = empty_traits();
+        // SAFETY: reset traits points to valid storage.
+        unsafe { RimeSetup(&reset_traits) };
+        fs::remove_dir_all(root).expect("temp dirs should be removed");
     }
 
     #[test]
