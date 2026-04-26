@@ -419,6 +419,14 @@ struct ConfigIteratorState {
     path_cache: Option<CString>,
 }
 
+struct LeverCustomSettings {
+    config_id: String,
+    generator_id: String,
+    config: ConfigState,
+    custom_config: ConfigState,
+    modified: bool,
+}
+
 struct LeverSchemaInfo {
     schema_id: CString,
     name: CString,
@@ -576,17 +584,17 @@ fn levers_api_entry() -> *mut RimeLeversApi {
 fn build_levers_api() -> RimeLeversApi {
     RimeLeversApi {
         data_size: (std::mem::size_of::<RimeLeversApi>() - std::mem::size_of::<c_int>()) as c_int,
-        custom_settings_init: None,
-        custom_settings_destroy: None,
-        load_settings: None,
-        save_settings: None,
-        customize_bool: None,
-        customize_int: None,
-        customize_double: None,
-        customize_string: None,
-        is_first_run: None,
-        settings_is_modified: None,
-        settings_get_config: None,
+        custom_settings_init: Some(RimeLeversCustomSettingsInit),
+        custom_settings_destroy: Some(RimeLeversCustomSettingsDestroy),
+        load_settings: Some(RimeLeversLoadSettings),
+        save_settings: Some(RimeLeversSaveSettings),
+        customize_bool: Some(RimeLeversCustomizeBool),
+        customize_int: Some(RimeLeversCustomizeInt),
+        customize_double: Some(RimeLeversCustomizeDouble),
+        customize_string: Some(RimeLeversCustomizeString),
+        is_first_run: Some(RimeLeversIsFirstRun),
+        settings_is_modified: Some(RimeLeversSettingsIsModified),
+        settings_get_config: Some(RimeLeversSettingsGetConfig),
         switcher_settings_init: Some(RimeSwitcherSettingsInit),
         get_available_schema_list: Some(RimeLeversGetAvailableSchemaList),
         get_selected_schema_list: Some(RimeLeversGetSelectedSchemaList),
@@ -607,7 +615,7 @@ fn build_levers_api() -> RimeLeversApi {
         restore_user_dict: None,
         export_user_dict: None,
         import_user_dict: None,
-        customize_item: None,
+        customize_item: Some(RimeLeversCustomizeItem),
     }
 }
 
@@ -856,6 +864,263 @@ pub unsafe extern "C" fn RimeFindModule(module_name: *const c_char) -> *mut Rime
 #[no_mangle]
 pub extern "C" fn RimeSwitcherSettingsInit() -> *mut RimeSwitcherSettings {
     Box::into_raw(Box::new(RimeSwitcherSettings { placeholder: 0 }))
+}
+
+/// Initializes levers custom settings for a deployed config id.
+///
+/// # Safety
+///
+/// `config_id` and `generator_id` must be valid NUL-terminated C strings.
+#[no_mangle]
+pub unsafe extern "C" fn RimeLeversCustomSettingsInit(
+    config_id: *const c_char,
+    generator_id: *const c_char,
+) -> *mut RimeCustomSettings {
+    let Some(config_id) = (unsafe { c_string_key(config_id) }) else {
+        return ptr::null_mut();
+    };
+    let Some(generator_id) = (unsafe { c_string_key(generator_id) }) else {
+        return ptr::null_mut();
+    };
+
+    Box::into_raw(Box::new(LeverCustomSettings {
+        config_id,
+        generator_id,
+        config: ConfigState::default(),
+        custom_config: ConfigState {
+            root: Value::Null,
+            cstring_cache: None,
+        },
+        modified: false,
+    }))
+    .cast::<RimeCustomSettings>()
+}
+
+/// Releases levers custom settings storage.
+///
+/// # Safety
+///
+/// `settings` must be null or a pointer returned by
+/// `RimeLeversCustomSettingsInit`.
+#[no_mangle]
+pub unsafe extern "C" fn RimeLeversCustomSettingsDestroy(settings: *mut RimeCustomSettings) {
+    if settings.is_null() {
+        return;
+    }
+    // SAFETY: settings pointers are allocated by `RimeLeversCustomSettingsInit`.
+    unsafe { drop(Box::from_raw(settings.cast::<LeverCustomSettings>())) };
+}
+
+/// Loads deployed and user custom config data for levers custom settings.
+///
+/// # Safety
+///
+/// `settings` must be null or a pointer returned by
+/// `RimeLeversCustomSettingsInit`.
+#[no_mangle]
+pub unsafe extern "C" fn RimeLeversLoadSettings(settings: *mut RimeCustomSettings) -> Bool {
+    let Some(settings) = (unsafe { levers_custom_settings_mut(settings) }) else {
+        return FALSE;
+    };
+
+    settings.config.root = load_runtime_config_root(&settings.config_id, ConfigOpenKind::Deployed);
+    settings.config.cstring_cache = None;
+    settings.modified = false;
+
+    let path = custom_config_path(&settings.config_id);
+    let loaded = fs::read_to_string(path)
+        .ok()
+        .and_then(|yaml| serde_yaml::from_str::<Value>(&yaml).ok());
+    match loaded {
+        Some(root) => {
+            settings.custom_config.root = root;
+            settings.custom_config.cstring_cache = None;
+            TRUE
+        }
+        None => {
+            settings.custom_config.root = Value::Null;
+            settings.custom_config.cstring_cache = None;
+            FALSE
+        }
+    }
+}
+
+/// Saves modified levers custom settings to `<config>.custom.yaml`.
+///
+/// # Safety
+///
+/// `settings` must be null or a pointer returned by
+/// `RimeLeversCustomSettingsInit`.
+#[no_mangle]
+pub unsafe extern "C" fn RimeLeversSaveSettings(settings: *mut RimeCustomSettings) -> Bool {
+    let Some(settings) = (unsafe { levers_custom_settings_mut(settings) }) else {
+        return FALSE;
+    };
+    if !settings.modified {
+        return FALSE;
+    }
+
+    write_config_signature(
+        &mut settings.custom_config.root,
+        "customization",
+        &settings.generator_id,
+    );
+    let path = custom_config_path(&settings.config_id);
+    let Some(parent) = path.parent() else {
+        return FALSE;
+    };
+    if fs::create_dir_all(parent).is_err() {
+        return FALSE;
+    }
+    let Ok(yaml) = serde_yaml::to_string(&settings.custom_config.root) else {
+        return FALSE;
+    };
+    if fs::write(path, yaml).is_err() {
+        return FALSE;
+    }
+
+    settings.modified = false;
+    TRUE
+}
+
+/// Writes a boolean levers custom setting under the literal `patch` key.
+///
+/// # Safety
+///
+/// `settings` and `key` must be valid pointers.
+#[no_mangle]
+pub unsafe extern "C" fn RimeLeversCustomizeBool(
+    settings: *mut RimeCustomSettings,
+    key: *const c_char,
+    value: Bool,
+) -> Bool {
+    unsafe { levers_customize_value(settings, key, Value::Bool(value != FALSE)) }
+}
+
+/// Writes an integer levers custom setting under the literal `patch` key.
+///
+/// # Safety
+///
+/// `settings` and `key` must be valid pointers.
+#[no_mangle]
+pub unsafe extern "C" fn RimeLeversCustomizeInt(
+    settings: *mut RimeCustomSettings,
+    key: *const c_char,
+    value: c_int,
+) -> Bool {
+    unsafe { levers_customize_value(settings, key, Value::Number(Number::from(value))) }
+}
+
+/// Writes a floating-point levers custom setting under the literal `patch` key.
+///
+/// # Safety
+///
+/// `settings` and `key` must be valid pointers.
+#[no_mangle]
+pub unsafe extern "C" fn RimeLeversCustomizeDouble(
+    settings: *mut RimeCustomSettings,
+    key: *const c_char,
+    value: f64,
+) -> Bool {
+    let Ok(value) = serde_yaml::to_value(value) else {
+        return FALSE;
+    };
+    unsafe { levers_customize_value(settings, key, value) }
+}
+
+/// Writes a string levers custom setting under the literal `patch` key.
+///
+/// # Safety
+///
+/// `settings`, `key`, and `value` must be valid pointers.
+#[no_mangle]
+pub unsafe extern "C" fn RimeLeversCustomizeString(
+    settings: *mut RimeCustomSettings,
+    key: *const c_char,
+    value: *const c_char,
+) -> Bool {
+    let Some(value) = (unsafe { c_string_key(value) }) else {
+        return FALSE;
+    };
+    unsafe { levers_customize_value(settings, key, Value::String(value)) }
+}
+
+/// Writes a list/map config item as a levers custom setting.
+///
+/// # Safety
+///
+/// `settings` and `key` must be valid pointers. `value` may be null or
+/// uninitialized, in which case a null item is written.
+#[no_mangle]
+pub unsafe extern "C" fn RimeLeversCustomizeItem(
+    settings: *mut RimeCustomSettings,
+    key: *const c_char,
+    value: *mut RimeConfig,
+) -> Bool {
+    let item = if value.is_null() {
+        Value::Null
+    } else {
+        match unsafe { config_state_mut(value) } {
+            Some(value_state) => value_state.root.clone(),
+            None => Value::Null,
+        }
+    };
+    unsafe { levers_customize_value(settings, key, item) }
+}
+
+/// Reports whether the custom settings file has not yet been customized.
+///
+/// # Safety
+///
+/// `settings` must be null or a pointer returned by
+/// `RimeLeversCustomSettingsInit`.
+#[no_mangle]
+pub unsafe extern "C" fn RimeLeversIsFirstRun(settings: *mut RimeCustomSettings) -> Bool {
+    let Some(settings) = (unsafe { levers_custom_settings_mut(settings) }) else {
+        return FALSE;
+    };
+    let root = fs::read_to_string(custom_config_path(&settings.config_id))
+        .ok()
+        .and_then(|yaml| serde_yaml::from_str::<Value>(&yaml).ok());
+    bool_from(
+        root.as_ref()
+            .and_then(|root| find_config_value(root, "customization"))
+            .and_then(Value::as_mapping)
+            .is_none(),
+    )
+}
+
+/// Reports whether custom settings have unsaved mutations.
+///
+/// # Safety
+///
+/// `settings` must be null or a pointer returned by
+/// `RimeLeversCustomSettingsInit`.
+#[no_mangle]
+pub unsafe extern "C" fn RimeLeversSettingsIsModified(settings: *mut RimeCustomSettings) -> Bool {
+    let Some(settings) = (unsafe { levers_custom_settings_mut(settings) }) else {
+        return FALSE;
+    };
+    bool_from(settings.modified)
+}
+
+/// Copies the loaded deployed config into a caller-owned `RimeConfig`.
+///
+/// # Safety
+///
+/// `settings` and `config` must be valid pointers.
+#[no_mangle]
+pub unsafe extern "C" fn RimeLeversSettingsGetConfig(
+    settings: *mut RimeCustomSettings,
+    config: *mut RimeConfig,
+) -> Bool {
+    if config.is_null() {
+        return FALSE;
+    }
+    let Some(settings) = (unsafe { levers_custom_settings_mut(settings) }) else {
+        return FALSE;
+    };
+    unsafe { install_config_root(config, settings.config.root.clone()) }
 }
 
 /// Returns the deployed schema list through the librime levers module API.
@@ -2995,6 +3260,13 @@ fn open_runtime_config(config_id: &str, kind: ConfigOpenKind, config: *mut RimeC
     }
 
     let root = load_runtime_config_root(config_id, kind);
+    unsafe { install_config_root(config, root) }
+}
+
+unsafe fn install_config_root(config: *mut RimeConfig, root: Value) -> Bool {
+    if config.is_null() {
+        return FALSE;
+    }
     let state = Box::new(ConfigState {
         root,
         cstring_cache: None,
@@ -3621,6 +3893,85 @@ unsafe fn c_string_key(key: *const c_char) -> Option<String> {
     )
 }
 
+unsafe fn levers_custom_settings_mut(
+    settings: *mut RimeCustomSettings,
+) -> Option<&'static mut LeverCustomSettings> {
+    if settings.is_null() {
+        return None;
+    }
+    // SAFETY: levers custom settings pointers are allocated by
+    // `RimeLeversCustomSettingsInit`.
+    Some(unsafe { &mut *settings.cast::<LeverCustomSettings>() })
+}
+
+unsafe fn levers_customize_value(
+    settings: *mut RimeCustomSettings,
+    key: *const c_char,
+    value: Value,
+) -> Bool {
+    let Some(settings) = (unsafe { levers_custom_settings_mut(settings) }) else {
+        return FALSE;
+    };
+    let Some(key) = (unsafe { c_string_key(key) }) else {
+        return FALSE;
+    };
+
+    let Value::Mapping(root) = ensure_mapping(&mut settings.custom_config.root) else {
+        return FALSE;
+    };
+    let patch_key = Value::String("patch".to_owned());
+    if !matches!(root.get(&patch_key), Some(Value::Mapping(_))) {
+        root.insert(patch_key.clone(), Value::Mapping(Mapping::new()));
+    }
+    let Some(Value::Mapping(patch)) = root.get_mut(&patch_key) else {
+        return FALSE;
+    };
+    patch.insert(Value::String(key), value);
+    settings.custom_config.cstring_cache = None;
+    settings.modified = true;
+    TRUE
+}
+
+fn custom_config_path(config_id: &str) -> PathBuf {
+    let config_name = config_id.strip_suffix(".schema").unwrap_or(config_id);
+    let paths = runtime_paths()
+        .lock()
+        .expect("runtime paths should not be poisoned");
+    Path::new(paths.user_data_dir.to_string_lossy().as_ref())
+        .join(format!("{config_name}.custom.yaml"))
+}
+
+fn write_config_signature(root: &mut Value, key: &str, generator: &str) {
+    let modified_time = SystemTime::now().duration_since(UNIX_EPOCH).map_or_else(
+        |_| "0".to_owned(),
+        |duration| duration.as_secs().to_string(),
+    );
+    let rime_version =
+        String::from_utf8_lossy(&RIME_VERSION_BYTES[..RIME_VERSION_BYTES.len() - 1]).into_owned();
+    let (distribution_code_name, distribution_version) = {
+        let paths = runtime_paths()
+            .lock()
+            .expect("runtime paths should not be poisoned");
+        (
+            paths.distribution_code_name.to_string_lossy().into_owned(),
+            paths.distribution_version.to_string_lossy().into_owned(),
+        )
+    };
+
+    for (path, value) in [
+        (format!("{key}/generator"), generator.to_owned()),
+        (format!("{key}/modified_time"), modified_time),
+        (
+            format!("{key}/distribution_code_name"),
+            distribution_code_name,
+        ),
+        (format!("{key}/distribution_version"), distribution_version),
+        (format!("{key}/rime_version"), rime_version),
+    ] {
+        let _ = set_config_value(root, &path, Value::String(value));
+    }
+}
+
 unsafe fn config_iterator_begin(
     iterator: *mut RimeConfigIterator,
     entries: Vec<(String, String)>,
@@ -3789,26 +4140,27 @@ mod tests {
     use std::sync::{Mutex, MutexGuard, OnceLock};
     use std::time::{SystemTime, UNIX_EPOCH};
 
+    use serde_yaml::Value;
     use yune_core::StaticTableTranslator;
 
     use super::{
-        bool_from, rime_get_api, RimeApi, RimeCandidateListBegin, RimeCandidateListEnd,
-        RimeCandidateListFromIndex, RimeCandidateListIterator, RimeCandidateListNext,
-        RimeChangePage, RimeCleanupAllSessions, RimeCleanupStaleSessions, RimeClearComposition,
-        RimeCommit, RimeCommitComposition, RimeConfig, RimeConfigBeginList, RimeConfigBeginMap,
-        RimeConfigClear, RimeConfigClose, RimeConfigCreateList, RimeConfigCreateMap, RimeConfigEnd,
-        RimeConfigGetBool, RimeConfigGetCString, RimeConfigGetDouble, RimeConfigGetInt,
-        RimeConfigGetItem, RimeConfigGetString, RimeConfigInit, RimeConfigIterator,
-        RimeConfigListSize, RimeConfigLoadString, RimeConfigNext, RimeConfigOpen,
-        RimeConfigSetBool, RimeConfigSetDouble, RimeConfigSetInt, RimeConfigSetItem,
-        RimeConfigSetString, RimeConfigUpdateSignature, RimeContext, RimeCreateSession,
-        RimeCustomApi, RimeDeleteCandidate, RimeDeleteCandidateOnCurrentPage, RimeDeployConfigFile,
-        RimeDeploySchema, RimeDeployWorkspace, RimeDeployerInitialize, RimeDestroySession,
-        RimeFinalize, RimeFindModule, RimeFindSession, RimeFreeCommit, RimeFreeContext,
-        RimeFreeStatus, RimeGetCaretPos, RimeGetCommit, RimeGetContext, RimeGetCurrentSchema,
-        RimeGetInput, RimeGetOption, RimeGetPrebuiltDataDir, RimeGetPrebuiltDataDirSecure,
-        RimeGetProperty, RimeGetSchemaList, RimeGetSharedDataDir, RimeGetSharedDataDirSecure,
-        RimeGetStagingDir, RimeGetStagingDirSecure, RimeGetStateLabel,
+        bool_from, find_config_value, rime_get_api, RimeApi, RimeCandidateListBegin,
+        RimeCandidateListEnd, RimeCandidateListFromIndex, RimeCandidateListIterator,
+        RimeCandidateListNext, RimeChangePage, RimeCleanupAllSessions, RimeCleanupStaleSessions,
+        RimeClearComposition, RimeCommit, RimeCommitComposition, RimeConfig, RimeConfigBeginList,
+        RimeConfigBeginMap, RimeConfigClear, RimeConfigClose, RimeConfigCreateList,
+        RimeConfigCreateMap, RimeConfigEnd, RimeConfigGetBool, RimeConfigGetCString,
+        RimeConfigGetDouble, RimeConfigGetInt, RimeConfigGetItem, RimeConfigGetString,
+        RimeConfigInit, RimeConfigIterator, RimeConfigListSize, RimeConfigLoadString,
+        RimeConfigNext, RimeConfigOpen, RimeConfigSetBool, RimeConfigSetDouble, RimeConfigSetInt,
+        RimeConfigSetItem, RimeConfigSetString, RimeConfigUpdateSignature, RimeContext,
+        RimeCreateSession, RimeCustomApi, RimeDeleteCandidate, RimeDeleteCandidateOnCurrentPage,
+        RimeDeployConfigFile, RimeDeploySchema, RimeDeployWorkspace, RimeDeployerInitialize,
+        RimeDestroySession, RimeFinalize, RimeFindModule, RimeFindSession, RimeFreeCommit,
+        RimeFreeContext, RimeFreeStatus, RimeGetCaretPos, RimeGetCommit, RimeGetContext,
+        RimeGetCurrentSchema, RimeGetInput, RimeGetOption, RimeGetPrebuiltDataDir,
+        RimeGetPrebuiltDataDirSecure, RimeGetProperty, RimeGetSchemaList, RimeGetSharedDataDir,
+        RimeGetSharedDataDirSecure, RimeGetStagingDir, RimeGetStagingDirSecure, RimeGetStateLabel,
         RimeGetStateLabelAbbreviated, RimeGetStatus, RimeGetSyncDir, RimeGetSyncDirSecure,
         RimeGetUserDataDir, RimeGetUserDataDirSecure, RimeGetUserDataSyncDir, RimeGetUserId,
         RimeGetVersion, RimeHighlightCandidate, RimeHighlightCandidateOnCurrentPage,
@@ -4972,6 +5324,18 @@ schema:
             api.data_size,
             (std::mem::size_of::<RimeLeversApi>() - std::mem::size_of::<i32>()) as i32
         );
+        assert!(api.custom_settings_init.is_some());
+        assert!(api.custom_settings_destroy.is_some());
+        assert!(api.load_settings.is_some());
+        assert!(api.save_settings.is_some());
+        assert!(api.customize_bool.is_some());
+        assert!(api.customize_int.is_some());
+        assert!(api.customize_double.is_some());
+        assert!(api.customize_string.is_some());
+        assert!(api.customize_item.is_some());
+        assert!(api.is_first_run.is_some());
+        assert!(api.settings_is_modified.is_some());
+        assert!(api.settings_get_config.is_some());
         assert!(api.switcher_settings_init.is_some());
         assert!(api.get_available_schema_list.is_some());
         assert!(api.get_selected_schema_list.is_some());
@@ -5097,6 +5461,206 @@ schema:
         // SAFETY: settings was allocated by this shim's switcher init function.
         unsafe { drop(Box::from_raw(settings)) };
 
+        let reset_traits = empty_traits();
+        // SAFETY: reset traits points to valid storage.
+        unsafe { RimeSetup(&reset_traits) };
+        fs::remove_dir_all(root).expect("temp dirs should be removed");
+    }
+
+    #[test]
+    fn levers_custom_settings_load_modify_and_save_custom_yaml() {
+        let _guard = test_guard();
+        let root = unique_temp_dir("levers-custom-settings");
+        let shared = root.join("shared");
+        let user = root.join("user");
+        let staging = user.join("build");
+        fs::create_dir_all(&shared).expect("shared dir should be created");
+        fs::create_dir_all(&staging).expect("staging dir should be created");
+        fs::write(
+            staging.join("luna_pinyin.schema.yaml"),
+            "\
+schema:
+  schema_id: luna_pinyin
+  name: Luna Pinyin
+menu:
+  page_size: 5
+",
+        )
+        .expect("schema config should be written");
+
+        let shared_c = CString::new(shared.to_string_lossy().as_ref()).expect("path is valid");
+        let user_c = CString::new(user.to_string_lossy().as_ref()).expect("path is valid");
+        let mut traits = empty_traits();
+        traits.shared_data_dir = shared_c.as_ptr();
+        traits.user_data_dir = user_c.as_ptr();
+        traits.distribution_code_name = c"test_dist".as_ptr();
+        traits.distribution_version = c"2026.04".as_ptr();
+        // SAFETY: traits points to valid storage and strings live for the call.
+        unsafe { RimeSetup(&traits) };
+
+        let levers_name = CString::new("levers").expect("module name should be valid");
+        // SAFETY: lookup name is a valid NUL-terminated string.
+        let module = unsafe { RimeFindModule(levers_name.as_ptr()) };
+        assert!(!module.is_null());
+        // SAFETY: built-in module storage is process-lifetime.
+        let module = unsafe { &*module };
+        let api = module.get_api.expect("levers get_api should be set")().cast::<RimeLeversApi>();
+        assert!(!api.is_null());
+        // SAFETY: levers get_api returns a process-lifetime RimeLeversApi object.
+        let api = unsafe { &*api };
+
+        let config_id = CString::new("luna_pinyin.schema").expect("config id should be valid");
+        let generator = CString::new("yune_test").expect("generator should be valid");
+        let init = api
+            .custom_settings_init
+            .expect("custom settings init should be available");
+        let destroy = api
+            .custom_settings_destroy
+            .expect("custom settings destroy should be available");
+        let load = api
+            .load_settings
+            .expect("load_settings should be available");
+        let save = api
+            .save_settings
+            .expect("save_settings should be available");
+        let is_first_run = api.is_first_run.expect("is_first_run should be available");
+        let is_modified = api
+            .settings_is_modified
+            .expect("settings_is_modified should be available");
+        let get_config = api
+            .settings_get_config
+            .expect("settings_get_config should be available");
+
+        // SAFETY: config id and generator are valid C strings.
+        let settings = unsafe { init(config_id.as_ptr(), generator.as_ptr()) };
+        assert!(!settings.is_null());
+        // SAFETY: settings is valid for each call.
+        assert_eq!(unsafe { load(settings) }, FALSE);
+        assert_eq!(unsafe { is_first_run(settings) }, TRUE);
+        assert_eq!(unsafe { is_modified(settings) }, FALSE);
+
+        let mut loaded_config = empty_config();
+        // SAFETY: settings and config output are valid.
+        assert_eq!(unsafe { get_config(settings, &mut loaded_config) }, TRUE);
+        assert_eq!(
+            config_string(&mut loaded_config, "schema/name").as_deref(),
+            Some("Luna Pinyin")
+        );
+
+        let custom_bool_key =
+            CString::new("switches/@0/reset").expect("custom key should be valid");
+        let custom_int_key = CString::new("menu/page_size").expect("custom key should be valid");
+        let custom_double_key = CString::new("weights/bias").expect("custom key should be valid");
+        let custom_string_key = CString::new("schema/name").expect("custom key should be valid");
+        let custom_string_value = CString::new("Custom Luna").expect("value should be valid");
+        let customize_bool = api
+            .customize_bool
+            .expect("customize_bool should be available");
+        let customize_int = api
+            .customize_int
+            .expect("customize_int should be available");
+        let customize_double = api
+            .customize_double
+            .expect("customize_double should be available");
+        let customize_string = api
+            .customize_string
+            .expect("customize_string should be available");
+        // SAFETY: settings and keys are valid for each customization call.
+        assert_eq!(
+            unsafe { customize_bool(settings, custom_bool_key.as_ptr(), TRUE) },
+            TRUE
+        );
+        assert_eq!(
+            unsafe { customize_int(settings, custom_int_key.as_ptr(), 9) },
+            TRUE
+        );
+        assert_eq!(
+            unsafe { customize_double(settings, custom_double_key.as_ptr(), 0.25) },
+            TRUE
+        );
+        assert_eq!(
+            unsafe {
+                customize_string(
+                    settings,
+                    custom_string_key.as_ptr(),
+                    custom_string_value.as_ptr(),
+                )
+            },
+            TRUE
+        );
+
+        let mut item_config = empty_config();
+        let item_yaml = CString::new("- Control+grave\n- F4\n").expect("yaml should be valid");
+        // SAFETY: item_config and YAML string are valid.
+        assert_eq!(
+            unsafe { RimeConfigLoadString(&mut item_config, item_yaml.as_ptr()) },
+            TRUE
+        );
+        let customize_item = api
+            .customize_item
+            .expect("customize_item should be available");
+        let item_key = CString::new("switcher/hotkeys").expect("item key should be valid");
+        // SAFETY: settings, key, and item config are valid.
+        assert_eq!(
+            unsafe { customize_item(settings, item_key.as_ptr(), &mut item_config) },
+            TRUE
+        );
+        assert_eq!(unsafe { is_modified(settings) }, TRUE);
+        assert_eq!(unsafe { save(settings) }, TRUE);
+        assert_eq!(unsafe { is_modified(settings) }, FALSE);
+        assert_eq!(unsafe { save(settings) }, FALSE);
+        assert_eq!(unsafe { is_first_run(settings) }, FALSE);
+
+        let saved = fs::read_to_string(user.join("luna_pinyin.custom.yaml"))
+            .expect("custom settings should be saved without .schema suffix");
+        let saved_root: Value = serde_yaml::from_str(&saved).expect("saved YAML should parse");
+        let patch = find_config_value(&saved_root, "patch")
+            .and_then(Value::as_mapping)
+            .expect("patch map should be present");
+        assert_eq!(
+            patch
+                .get(Value::String("switches/@0/reset".to_owned()))
+                .and_then(Value::as_bool),
+            Some(true)
+        );
+        assert_eq!(
+            patch
+                .get(Value::String("menu/page_size".to_owned()))
+                .and_then(Value::as_i64),
+            Some(9)
+        );
+        assert_eq!(
+            patch
+                .get(Value::String("weights/bias".to_owned()))
+                .and_then(Value::as_f64),
+            Some(0.25)
+        );
+        assert_eq!(
+            patch
+                .get(Value::String("schema/name".to_owned()))
+                .and_then(Value::as_str),
+            Some("Custom Luna")
+        );
+        assert!(matches!(
+            patch.get(Value::String("switcher/hotkeys".to_owned())),
+            Some(Value::Sequence(values)) if values.len() == 2
+        ));
+        assert_eq!(
+            find_config_value(&saved_root, "customization/generator").and_then(Value::as_str),
+            Some("yune_test")
+        );
+        assert_eq!(
+            find_config_value(&saved_root, "customization/distribution_code_name")
+                .and_then(Value::as_str),
+            Some("test_dist")
+        );
+
+        // SAFETY: configs and settings were initialized by this API.
+        unsafe {
+            assert_eq!(RimeConfigClose(&mut loaded_config), TRUE);
+            assert_eq!(RimeConfigClose(&mut item_config), TRUE);
+            destroy(settings);
+        }
         let reset_traits = empty_traits();
         // SAFETY: reset traits points to valid storage.
         unsafe { RimeSetup(&reset_traits) };
