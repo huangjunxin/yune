@@ -727,6 +727,36 @@ impl Engine {
         self.commit_candidate_at_page_index(index)
     }
 
+    pub fn highlight_candidate(&mut self, index: usize) -> bool {
+        if index >= self.context.candidates.len() {
+            return false;
+        }
+        self.context.highlighted = index;
+        true
+    }
+
+    pub fn highlight_candidate_on_current_page(&mut self, index: usize) -> bool {
+        if index >= DEFAULT_PAGE_SIZE {
+            return false;
+        }
+        let page_start = (self.context.highlighted / DEFAULT_PAGE_SIZE) * DEFAULT_PAGE_SIZE;
+        self.highlight_candidate(page_start + index)
+    }
+
+    pub fn change_page(&mut self, backward: bool) -> bool {
+        if self.context.candidates.is_empty() {
+            return false;
+        }
+
+        let current_index = self.context.highlighted;
+        let next_index = if backward {
+            current_index.saturating_sub(DEFAULT_PAGE_SIZE)
+        } else {
+            current_index + DEFAULT_PAGE_SIZE
+        };
+        self.highlight_candidate(next_index)
+    }
+
     pub fn clear_composition(&mut self) {
         self.context.composition = Composition::default();
         self.context.candidates.clear();
@@ -902,6 +932,41 @@ mod tests {
             Some("八")
         );
         assert_eq!(engine.context().last_commit.as_deref(), Some("八"));
+    }
+
+    #[test]
+    fn direct_candidate_highlighting_moves_selection_without_committing() {
+        let mut engine = Engine::new();
+        engine.add_translator(StaticTableTranslator::new([
+            ("ba", "八"),
+            ("ba", "吧"),
+            ("ba", "爸"),
+            ("ba", "巴"),
+            ("ba", "把"),
+            ("ba", "拔"),
+        ]));
+
+        engine
+            .process_key_sequence("ba")
+            .expect("key sequence should parse");
+        assert!(engine.highlight_candidate(1));
+        assert_eq!(engine.context().highlighted, 1);
+        assert_eq!(engine.context().last_commit, None);
+        assert!(!engine.highlight_candidate(99));
+        assert_eq!(engine.context().highlighted, 1);
+
+        assert!(engine.change_page(false));
+        assert_eq!(engine.context().highlighted, 6);
+        assert!(engine.highlight_candidate_on_current_page(0));
+        assert_eq!(engine.context().highlighted, 5);
+        assert!(!engine.highlight_candidate_on_current_page(5));
+        assert_eq!(engine.context().highlighted, 5);
+        assert!(engine.change_page(true));
+        assert_eq!(engine.context().highlighted, 0);
+        assert!(engine.change_page(true));
+        assert_eq!(engine.context().highlighted, 0);
+
+        assert_eq!(engine.commit_composition().as_deref(), Some("八"));
     }
 
     #[test]

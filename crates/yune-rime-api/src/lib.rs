@@ -336,6 +336,30 @@ pub extern "C" fn RimeSelectCandidateOnCurrentPage(
     })
 }
 
+#[no_mangle]
+pub extern "C" fn RimeHighlightCandidate(session_id: RimeSessionId, index: usize) -> Bool {
+    with_session(session_id, |session| {
+        session.engine.highlight_candidate(index)
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn RimeHighlightCandidateOnCurrentPage(
+    session_id: RimeSessionId,
+    index: usize,
+) -> Bool {
+    with_session(session_id, |session| {
+        session.engine.highlight_candidate_on_current_page(index)
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn RimeChangePage(session_id: RimeSessionId, backward: Bool) -> Bool {
+    with_session(session_id, |session| {
+        session.engine.change_page(backward != FALSE)
+    })
+}
+
 /// Copies the unread commit text for a session into a caller-provided commit.
 ///
 /// # Safety
@@ -768,6 +792,21 @@ fn commit_selected_candidate(
     TRUE
 }
 
+fn with_session(session_id: RimeSessionId, action: impl FnOnce(&mut SessionState) -> bool) -> Bool {
+    if session_id == 0 {
+        return FALSE;
+    }
+
+    let mut registry = sessions()
+        .lock()
+        .expect("session registry should not be poisoned");
+    let Some(session) = registry.sessions.get_mut(&session_id) else {
+        return FALSE;
+    };
+
+    bool_from(action(session))
+}
+
 fn clear_commit(commit: *mut RimeCommit) {
     // SAFETY: callers only pass non-null pointers to this helper; fields are
     // plain integers/pointers and assigning null mirrors librime's clear macro.
@@ -897,12 +936,13 @@ mod tests {
 
     use super::{
         bool_from, RimeCandidateListBegin, RimeCandidateListEnd, RimeCandidateListFromIndex,
-        RimeCandidateListIterator, RimeCandidateListNext, RimeCleanupAllSessions,
+        RimeCandidateListIterator, RimeCandidateListNext, RimeChangePage, RimeCleanupAllSessions,
         RimeClearComposition, RimeCommit, RimeCommitComposition, RimeContext, RimeCreateSession,
         RimeDestroySession, RimeFindSession, RimeFreeCommit, RimeFreeContext, RimeFreeStatus,
         RimeGetCaretPos, RimeGetCommit, RimeGetContext, RimeGetInput, RimeGetStatus,
-        RimeProcessKey, RimeSelectCandidate, RimeSelectCandidateOnCurrentPage, RimeSetCaretPos,
-        RimeSetInput, RimeStatus, FALSE, TRUE,
+        RimeHighlightCandidate, RimeHighlightCandidateOnCurrentPage, RimeProcessKey,
+        RimeSelectCandidate, RimeSelectCandidateOnCurrentPage, RimeSetCaretPos, RimeSetInput,
+        RimeStatus, FALSE, TRUE,
     };
 
     fn test_guard() -> MutexGuard<'static, ()> {
@@ -1087,6 +1127,80 @@ mod tests {
         assert_eq!(RimeProcessKey(session_id, 'b' as i32, 0), TRUE);
         assert_eq!(RimeProcessKey(session_id, 'a' as i32, 0), TRUE);
         assert_eq!(RimeSelectCandidateOnCurrentPage(session_id, 0), TRUE);
+        // SAFETY: `commit` points to valid writable storage for this test.
+        assert_eq!(unsafe { RimeGetCommit(session_id, &mut commit) }, TRUE);
+        // SAFETY: `RimeGetCommit` returned true and populated `text`.
+        let text = unsafe { CStr::from_ptr(commit.text) };
+        assert_eq!(text.to_str(), Ok("八"));
+        // SAFETY: `commit.text` was returned by `RimeGetCommit` above.
+        assert_eq!(unsafe { RimeFreeCommit(&mut commit) }, TRUE);
+
+        assert_eq!(RimeDestroySession(session_id), TRUE);
+    }
+
+    #[test]
+    fn highlight_candidate_apis_move_selection_without_commit() {
+        let _guard = test_guard();
+        RimeCleanupAllSessions();
+        let session_id = RimeCreateSession();
+        {
+            let mut registry = super::sessions()
+                .lock()
+                .expect("session registry should not be poisoned");
+            let session = registry
+                .sessions
+                .get_mut(&session_id)
+                .expect("session should exist");
+            session.engine.add_translator(StaticTableTranslator::new([
+                ("ba", "八"),
+                ("ba", "吧"),
+                ("ba", "爸"),
+                ("ba", "巴"),
+                ("ba", "把"),
+                ("ba", "拔"),
+            ]));
+        }
+        let mut commit = RimeCommit {
+            data_size: 0,
+            text: std::ptr::null_mut(),
+        };
+        let mut context = empty_context();
+
+        assert_eq!(RimeHighlightCandidate(session_id, 0), FALSE);
+        assert_eq!(RimeProcessKey(session_id, 'b' as i32, 0), TRUE);
+        assert_eq!(RimeProcessKey(session_id, 'a' as i32, 0), TRUE);
+        assert_eq!(RimeHighlightCandidate(session_id, 1), TRUE);
+        // SAFETY: `commit` points to valid writable storage for this test.
+        assert_eq!(unsafe { RimeGetCommit(session_id, &mut commit) }, FALSE);
+        // SAFETY: `context` points to writable storage initialized with a
+        // positive `data_size`.
+        assert_eq!(unsafe { RimeGetContext(session_id, &mut context) }, TRUE);
+        assert_eq!(context.menu.page_no, 0);
+        assert_eq!(context.menu.highlighted_candidate_index, 1);
+        // SAFETY: nested pointers were allocated by `RimeGetContext` above.
+        assert_eq!(unsafe { RimeFreeContext(&mut context) }, TRUE);
+
+        assert_eq!(RimeChangePage(session_id, FALSE), TRUE);
+        // SAFETY: `context` points to writable storage initialized with a
+        // positive `data_size`.
+        assert_eq!(unsafe { RimeGetContext(session_id, &mut context) }, TRUE);
+        assert_eq!(context.menu.page_no, 1);
+        assert_eq!(context.menu.highlighted_candidate_index, 1);
+        // SAFETY: nested pointers were allocated by `RimeGetContext` above.
+        assert_eq!(unsafe { RimeFreeContext(&mut context) }, TRUE);
+
+        assert_eq!(RimeHighlightCandidateOnCurrentPage(session_id, 0), TRUE);
+        assert_eq!(RimeHighlightCandidateOnCurrentPage(session_id, 5), FALSE);
+        // SAFETY: `context` points to writable storage initialized with a
+        // positive `data_size`.
+        assert_eq!(unsafe { RimeGetContext(session_id, &mut context) }, TRUE);
+        assert_eq!(context.menu.page_no, 1);
+        assert_eq!(context.menu.highlighted_candidate_index, 0);
+        // SAFETY: nested pointers were allocated by `RimeGetContext` above.
+        assert_eq!(unsafe { RimeFreeContext(&mut context) }, TRUE);
+
+        assert_eq!(RimeChangePage(session_id, TRUE), TRUE);
+        assert_eq!(RimeSelectCandidate(session_id, 0), TRUE);
         // SAFETY: `commit` points to valid writable storage for this test.
         assert_eq!(unsafe { RimeGetCommit(session_id, &mut commit) }, TRUE);
         // SAFETY: `RimeGetCommit` returned true and populated `text`.
