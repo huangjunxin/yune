@@ -1,5 +1,5 @@
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     ffi::{c_void, CStr, CString},
     fs,
     os::raw::{c_char, c_int},
@@ -1426,21 +1426,7 @@ pub unsafe extern "C" fn RimeLeversBackupUserDict(dict_name: *const c_char) -> B
     let Some(dict_name) = optional_c_string(dict_name) else {
         return FALSE;
     };
-    if dict_name.is_empty() {
-        return FALSE;
-    }
-
-    let source = user_dict_path(&dict_name);
-    if !source.is_file() {
-        return FALSE;
-    }
-    let snapshot = user_dict_snapshot_path(&dict_name);
-    if let Some(parent) = snapshot.parent() {
-        if fs::create_dir_all(parent).is_err() {
-            return FALSE;
-        }
-    }
-    bool_from(fs::copy(source, snapshot).is_ok())
+    bool_from(backup_plain_user_dict(&dict_name))
 }
 
 /// Restores a plain user dictionary snapshot into the user data directory.
@@ -1637,12 +1623,18 @@ pub extern "C" fn RimeDeployConfigFile(
 #[no_mangle]
 pub extern "C" fn RimeSyncUserData() -> Bool {
     RimeCleanupAllSessions();
-    TRUE
+    bool_from(sync_all_user_dicts())
 }
 
 #[no_mangle]
 pub extern "C" fn RimeRunTask(task_name: *const c_char) -> Bool {
-    bool_from(!task_name.is_null())
+    let Some(task_name) = optional_c_string(task_name) else {
+        return FALSE;
+    };
+    if task_name == "user_dict_sync" {
+        return bool_from(sync_all_user_dicts());
+    }
+    TRUE
 }
 
 #[no_mangle]
@@ -3787,6 +3779,93 @@ fn user_dict_path(dict_name: &str) -> PathBuf {
 
 fn user_dict_snapshot_path(dict_name: &str) -> PathBuf {
     runtime_user_data_sync_dir().join(format!("{dict_name}.userdb.txt"))
+}
+
+fn backup_plain_user_dict(dict_name: &str) -> bool {
+    if dict_name.is_empty() {
+        return false;
+    }
+
+    let source = user_dict_path(dict_name);
+    if !source.is_file() {
+        return false;
+    }
+    let snapshot = user_dict_snapshot_path(dict_name);
+    if let Some(parent) = snapshot.parent() {
+        if fs::create_dir_all(parent).is_err() {
+            return false;
+        }
+    }
+    fs::copy(source, snapshot).is_ok()
+}
+
+fn sync_all_user_dicts() -> bool {
+    let mut success = true;
+    for dict_name in deployed_user_dict_names() {
+        if !sync_plain_user_dict(&dict_name) {
+            success = false;
+        }
+    }
+    success
+}
+
+fn sync_plain_user_dict(dict_name: &str) -> bool {
+    let mut success = true;
+    for snapshot in peer_user_dict_snapshots(dict_name) {
+        if merge_plain_user_dict_snapshot(dict_name, &snapshot).is_err() {
+            success = false;
+        }
+    }
+    backup_plain_user_dict(dict_name) && success
+}
+
+fn peer_user_dict_snapshots(dict_name: &str) -> Vec<PathBuf> {
+    let paths = runtime_paths()
+        .lock()
+        .expect("runtime paths should not be poisoned");
+    let sync_dir = PathBuf::from(paths.sync_dir.to_string_lossy().into_owned());
+    drop(paths);
+
+    let Ok(entries) = fs::read_dir(sync_dir) else {
+        return Vec::new();
+    };
+    let snapshot_name = format!("{dict_name}.userdb.txt");
+    let mut snapshots = entries
+        .filter_map(Result::ok)
+        .map(|entry| entry.path())
+        .filter(|path| path.is_dir())
+        .map(|path| path.join(&snapshot_name))
+        .filter(|path| path.is_file())
+        .collect::<Vec<_>>();
+    snapshots.sort();
+    snapshots
+}
+
+fn merge_plain_user_dict_snapshot(dict_name: &str, snapshot: &Path) -> Result<(), std::io::Error> {
+    let destination = user_dict_path(dict_name);
+    if !destination.is_file() {
+        fs::copy(snapshot, destination)?;
+        return Ok(());
+    }
+
+    let destination_text = fs::read_to_string(&destination)?;
+    let snapshot_text = fs::read_to_string(snapshot)?;
+    let mut seen = destination_text
+        .lines()
+        .map(ToOwned::to_owned)
+        .collect::<HashSet<_>>();
+    let mut merged = destination_text;
+    for line in snapshot_text.lines() {
+        if line.trim().is_empty() || !seen.insert(line.to_owned()) {
+            continue;
+        }
+        if !merged.is_empty() && !merged.ends_with('\n') {
+            merged.push('\n');
+        }
+        merged.push_str(line);
+        merged.push('\n');
+    }
+    fs::write(destination, merged)
 }
 
 fn snapshot_dict_name(snapshot_file: &Path) -> Option<String> {
@@ -6074,6 +6153,65 @@ schema:
             unsafe { import_user_dict(imported_name.as_ptr(), std::ptr::null()) },
             -1
         );
+
+        let reset_traits = empty_traits();
+        // SAFETY: reset traits points to valid storage.
+        unsafe { RimeSetup(&reset_traits) };
+        drop(current_dir_guard);
+        fs::remove_dir_all(root).expect("temp dirs should be removed");
+    }
+
+    #[test]
+    fn sync_user_data_merges_plain_userdb_snapshots_and_backs_up_current_state() {
+        let _guard = test_guard();
+        let root = unique_temp_dir("rime-sync-user-data");
+        let user = root.join("user");
+        let peer_sync = root.join("sync").join("peer");
+        fs::create_dir_all(&user).expect("user dir should be created");
+        fs::create_dir_all(&peer_sync).expect("peer sync dir should be created");
+        struct CurrentDirGuard(PathBuf);
+        impl Drop for CurrentDirGuard {
+            fn drop(&mut self) {
+                let _ = env::set_current_dir(&self.0);
+            }
+        }
+        let current_dir_guard =
+            CurrentDirGuard(env::current_dir().expect("current dir should be available"));
+        env::set_current_dir(&root).expect("test cwd should move under temp root");
+
+        fs::write(user.join("luna_pinyin.userdb"), "ni hao\t你好\t1\n")
+            .expect("local user dict should be written");
+        fs::write(
+            peer_sync.join("luna_pinyin.userdb.txt"),
+            "ni hao\t你好\t1\nzhong guo\t中国\t2\n",
+        )
+        .expect("peer snapshot should be written");
+
+        let user_c = CString::new(user.to_string_lossy().as_ref()).expect("path is valid");
+        let mut traits = empty_traits();
+        traits.user_data_dir = user_c.as_ptr();
+        // SAFETY: traits points to valid storage and strings live for the call.
+        unsafe { RimeSetup(&traits) };
+
+        let session_id = RimeCreateSession();
+        assert_eq!(RimeFindSession(session_id), TRUE);
+        assert_eq!(RimeSyncUserData(), TRUE);
+        assert_eq!(RimeFindSession(session_id), FALSE);
+
+        let merged =
+            fs::read_to_string(user.join("luna_pinyin.userdb")).expect("dict should be readable");
+        assert_eq!(merged, "ni hao\t你好\t1\nzhong guo\t中国\t2\n");
+
+        let backup = fs::read_to_string(
+            root.join("sync")
+                .join("unknown")
+                .join("luna_pinyin.userdb.txt"),
+        )
+        .expect("current user snapshot should be written");
+        assert_eq!(backup, merged);
+
+        let task_name = CString::new("user_dict_sync").expect("task name should be valid");
+        assert_eq!(RimeRunTask(task_name.as_ptr()), TRUE);
 
         let reset_traits = empty_traits();
         // SAFETY: reset traits points to valid storage.
