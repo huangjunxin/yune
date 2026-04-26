@@ -304,8 +304,6 @@ pub struct RimeApi {
 const XK_BACKSPACE: c_int = 0xff08;
 const XK_RETURN: c_int = 0xff0d;
 const DEFAULT_PAGE_SIZE: usize = 5;
-const DEFAULT_SCHEMA_ID: &str = "default";
-const DEFAULT_SCHEMA_NAME: &str = "Default";
 const RIME_VERSION_BYTES: &[u8] =
     concat!("yune-rime-api ", env!("CARGO_PKG_VERSION"), "\0").as_bytes();
 
@@ -1250,17 +1248,27 @@ pub unsafe extern "C" fn RimeGetSchemaList(schema_list: *mut RimeSchemaList) -> 
 
     clear_schema_list(schema_list);
 
-    let Ok(schema_id) = CString::new(DEFAULT_SCHEMA_ID) else {
+    let entries = deployed_schema_list_entries();
+    if entries.is_empty() {
         return FALSE;
-    };
-    let Ok(name) = CString::new(DEFAULT_SCHEMA_NAME) else {
-        return FALSE;
-    };
-    let mut list = vec![RimeSchemaListItem {
-        schema_id: schema_id.into_raw(),
-        name: name.into_raw(),
-        reserved: ptr::null_mut(),
-    }];
+    }
+
+    let mut list = Vec::with_capacity(entries.len());
+    for (schema_id, name) in entries {
+        let Ok(schema_id) = CString::new(schema_id) else {
+            free_schema_list_items(&mut list);
+            return FALSE;
+        };
+        let Ok(name) = CString::new(name) else {
+            free_schema_list_items(&mut list);
+            return FALSE;
+        };
+        list.push(RimeSchemaListItem {
+            schema_id: schema_id.into_raw(),
+            name: name.into_raw(),
+            reserved: ptr::null_mut(),
+        });
+    }
     let size = list.len();
     let list_ptr = list.as_mut_ptr();
     std::mem::forget(list);
@@ -2638,6 +2646,61 @@ fn config_file_path(root: &str, resource_id: &str) -> PathBuf {
     Path::new(root).join(format!("{resource_id}.yaml"))
 }
 
+fn deployed_schema_list_entries() -> Vec<(String, String)> {
+    let default_config = load_runtime_config_root("default", ConfigOpenKind::Deployed);
+    let Some(schema_list) = find_config_value(&default_config, "schema_list") else {
+        return Vec::new();
+    };
+    let Value::Sequence(schema_list) = schema_list else {
+        return Vec::new();
+    };
+
+    schema_list
+        .iter()
+        .filter_map(|entry| deployed_schema_list_entry(&default_config, entry))
+        .map(|schema_id| {
+            let schema_config =
+                load_runtime_config_root(&format!("{schema_id}.schema"), ConfigOpenKind::Deployed);
+            let name = find_config_value(&schema_config, "schema/name")
+                .and_then(Value::as_str)
+                .unwrap_or(&schema_id)
+                .to_owned();
+            (schema_id, name)
+        })
+        .collect()
+}
+
+fn deployed_schema_list_entry(default_config: &Value, entry: &Value) -> Option<String> {
+    let Value::Mapping(entry) = entry else {
+        return None;
+    };
+    if !schema_list_entry_conditions_match(default_config, entry) {
+        return None;
+    }
+    entry
+        .get(Value::String("schema".to_owned()))
+        .and_then(Value::as_str)
+        .map(ToOwned::to_owned)
+}
+
+fn schema_list_entry_conditions_match(default_config: &Value, entry: &Mapping) -> bool {
+    let Some(conditions) = entry.get(Value::String("case".to_owned())) else {
+        return true;
+    };
+    let Value::Sequence(conditions) = conditions else {
+        return true;
+    };
+
+    conditions.iter().all(|condition| {
+        let Some(path) = condition.as_str() else {
+            return false;
+        };
+        find_config_value(default_config, path)
+            .and_then(Value::as_bool)
+            .unwrap_or(false)
+    })
+}
+
 fn state_label_for_session(
     session_id: RimeSessionId,
     option_name: &str,
@@ -2893,14 +2956,24 @@ fn free_schema_list_fields(schema_list: *mut RimeSchemaList) {
             return;
         }
         let size = (*schema_list).size;
-        let list = Vec::from_raw_parts((*schema_list).list, size, size);
-        for item in list {
-            if !item.schema_id.is_null() {
-                drop(CString::from_raw(item.schema_id));
-            }
-            if !item.name.is_null() {
-                drop(CString::from_raw(item.name));
-            }
+        let mut list = Vec::from_raw_parts((*schema_list).list, size, size);
+        free_schema_list_items(&mut list);
+    }
+}
+
+fn free_schema_list_items(list: &mut [RimeSchemaListItem]) {
+    for item in list {
+        if !item.schema_id.is_null() {
+            // SAFETY: schema ids are allocated by `CString::into_raw` in
+            // `RimeGetSchemaList` and are released at most once here.
+            unsafe { drop(CString::from_raw(item.schema_id)) };
+            item.schema_id = ptr::null_mut();
+        }
+        if !item.name.is_null() {
+            // SAFETY: names are allocated by `CString::into_raw` in
+            // `RimeGetSchemaList` and are released at most once here.
+            unsafe { drop(CString::from_raw(item.name)) };
+            item.name = ptr::null_mut();
         }
     }
 }
@@ -5177,24 +5250,89 @@ schema:\n  schema_id: luna_pinyin\n  name: Luna Pinyin\nswitches:\n  - name: asc
     fn gets_and_frees_available_schema_list() {
         let _guard = test_guard();
         RimeCleanupAllSessions();
+        let root = unique_temp_dir("schema-list");
+        let shared = root.join("shared");
+        let user = root.join("user");
+        let prebuilt = shared.join("build");
+        let staging = user.join("build");
+        fs::create_dir_all(&prebuilt).expect("prebuilt dir should be created");
+        fs::create_dir_all(&staging).expect("staging dir should be created");
+        fs::write(
+            prebuilt.join("default.yaml"),
+            "\
+schema_list:
+  - schema: prebuilt_only
+",
+        )
+        .expect("prebuilt default config should be written");
+        fs::write(
+            staging.join("default.yaml"),
+            "\
+schema_list:
+  - schema: luna_pinyin
+  - schema: cangjie5
+    case: [conditions/include_cangjie]
+  - schema: hidden
+    case: [conditions/include_hidden]
+  - schema: missing_name
+  - not_schema: ignored
+conditions:
+  include_cangjie: true
+  include_hidden: false
+",
+        )
+        .expect("staging default config should be written");
+        fs::write(
+            staging.join("luna_pinyin.schema.yaml"),
+            "schema:\n  schema_id: luna_pinyin\n  name: Luna Pinyin\n",
+        )
+        .expect("luna schema config should be written");
+        fs::write(
+            prebuilt.join("cangjie5.schema.yaml"),
+            "schema:\n  schema_id: cangjie5\n  name: Cangjie 5\n",
+        )
+        .expect("cangjie schema config should be written");
+
+        let shared_c = CString::new(shared.to_string_lossy().as_ref()).expect("path is valid");
+        let user_c = CString::new(user.to_string_lossy().as_ref()).expect("path is valid");
+        let mut traits = empty_traits();
+        traits.shared_data_dir = shared_c.as_ptr();
+        traits.user_data_dir = user_c.as_ptr();
+        // SAFETY: traits points to valid storage and strings live for the call.
+        unsafe { RimeSetup(&traits) };
+
         let mut schema_list = empty_schema_list();
 
         // SAFETY: schema_list points to valid writable storage.
         assert_eq!(unsafe { RimeGetSchemaList(&mut schema_list) }, TRUE);
-        assert_eq!(schema_list.size, 1);
+        assert_eq!(schema_list.size, 3);
         assert!(!schema_list.list.is_null());
 
-        // SAFETY: `RimeGetSchemaList` returned true and populated one item.
-        let item = unsafe { *schema_list.list };
-        // SAFETY: schema strings are valid NUL-terminated strings owned by the
-        // schema-list object.
-        let schema_id = unsafe { CStr::from_ptr(item.schema_id) };
-        // SAFETY: schema strings are valid NUL-terminated strings owned by the
-        // schema-list object.
-        let name = unsafe { CStr::from_ptr(item.name) };
-        assert_eq!(schema_id.to_str(), Ok("default"));
-        assert_eq!(name.to_str(), Ok("Default"));
-        assert!(item.reserved.is_null());
+        let mut actual = Vec::new();
+        for index in 0..schema_list.size {
+            // SAFETY: `RimeGetSchemaList` returned true and populated `size`
+            // initialized schema-list items.
+            let item = unsafe { *schema_list.list.add(index) };
+            // SAFETY: schema strings are valid NUL-terminated strings owned by
+            // the schema-list object.
+            let schema_id = unsafe { CStr::from_ptr(item.schema_id) };
+            // SAFETY: schema strings are valid NUL-terminated strings owned by
+            // the schema-list object.
+            let name = unsafe { CStr::from_ptr(item.name) };
+            actual.push((
+                schema_id.to_string_lossy().into_owned(),
+                name.to_string_lossy().into_owned(),
+            ));
+            assert!(item.reserved.is_null());
+        }
+        assert_eq!(
+            actual,
+            vec![
+                ("luna_pinyin".to_owned(), "Luna Pinyin".to_owned()),
+                ("cangjie5".to_owned(), "Cangjie 5".to_owned()),
+                ("missing_name".to_owned(), "missing_name".to_owned()),
+            ]
+        );
 
         // SAFETY: nested pointers were allocated by `RimeGetSchemaList` above.
         unsafe { super::RimeFreeSchemaList(&mut schema_list) };
@@ -5204,6 +5342,43 @@ schema:\n  schema_id: luna_pinyin\n  name: Luna Pinyin\nswitches:\n  - name: asc
         // SAFETY: null pointers are explicitly rejected/no-oped.
         assert_eq!(unsafe { RimeGetSchemaList(std::ptr::null_mut()) }, FALSE);
         unsafe { super::RimeFreeSchemaList(std::ptr::null_mut()) };
+
+        let reset_traits = empty_traits();
+        // SAFETY: reset traits points to valid storage.
+        unsafe { RimeSetup(&reset_traits) };
+        fs::remove_dir_all(root).expect("temp dirs should be removed");
+    }
+
+    #[test]
+    fn schema_list_returns_false_when_default_config_has_no_schema_list() {
+        let _guard = test_guard();
+        let root = unique_temp_dir("schema-list-empty");
+        let shared = root.join("shared");
+        let user = root.join("user");
+        let staging = user.join("build");
+        fs::create_dir_all(&shared).expect("shared dir should be created");
+        fs::create_dir_all(&staging).expect("staging dir should be created");
+        fs::write(staging.join("default.yaml"), "config_version: test\n")
+            .expect("default config should be written");
+
+        let shared_c = CString::new(shared.to_string_lossy().as_ref()).expect("path is valid");
+        let user_c = CString::new(user.to_string_lossy().as_ref()).expect("path is valid");
+        let mut traits = empty_traits();
+        traits.shared_data_dir = shared_c.as_ptr();
+        traits.user_data_dir = user_c.as_ptr();
+        // SAFETY: traits points to valid storage and strings live for the call.
+        unsafe { RimeSetup(&traits) };
+
+        let mut schema_list = empty_schema_list();
+        // SAFETY: schema_list points to valid writable storage.
+        assert_eq!(unsafe { RimeGetSchemaList(&mut schema_list) }, FALSE);
+        assert_eq!(schema_list.size, 0);
+        assert!(schema_list.list.is_null());
+
+        let reset_traits = empty_traits();
+        // SAFETY: reset traits points to valid storage.
+        unsafe { RimeSetup(&reset_traits) };
+        fs::remove_dir_all(root).expect("temp dirs should be removed");
     }
 
     #[test]
