@@ -4562,6 +4562,7 @@ fn deployed_config_yaml_with_build_info(
     let resource_id = normalize_config_resource_id(file_name);
     let timestamp = source_modified_secs(source).unwrap_or(0);
     let mut patch_dependencies = Vec::new();
+    apply_root_include_directive(&mut root, shared_data_dir, &mut patch_dependencies)?;
     let apply_auto_custom_patch =
         apply_root_patch_directive(&mut root, shared_data_dir, &mut patch_dependencies)?;
     set_build_info(&mut root, &resource_id, timestamp)?;
@@ -4612,6 +4613,57 @@ fn source_uses_auto_custom_patch(source: &Path) -> bool {
         .ok()
         .and_then(|yaml| serde_yaml::from_str::<Value>(&yaml).ok())
         .map_or(true, |root| find_config_value(&root, "__patch").is_none())
+}
+
+fn apply_root_include_directive(
+    root: &mut Value,
+    shared_data_dir: &Path,
+    patch_dependencies: &mut Vec<(String, c_int)>,
+) -> Option<()> {
+    let include = {
+        let Value::Mapping(mapping) = root else {
+            return Some(());
+        };
+        mapping.remove(Value::String("__include".to_owned()))
+    };
+    let Some(Value::String(reference)) = include else {
+        return include.is_none().then_some(());
+    };
+    apply_include_reference(root, &reference, shared_data_dir, patch_dependencies)
+}
+
+fn apply_include_reference(
+    root: &mut Value,
+    reference: &str,
+    shared_data_dir: &Path,
+    patch_dependencies: &mut Vec<(String, c_int)>,
+) -> Option<()> {
+    let (reference, optional) = reference
+        .strip_suffix('?')
+        .map_or((reference, false), |reference| (reference, true));
+    let (resource, path) = if let Some((resource, path)) = reference.split_once(':') {
+        (resource, path)
+    } else {
+        ("", reference)
+    };
+    let included = if resource.is_empty() {
+        find_config_value(root, path).cloned()
+    } else {
+        load_external_config_reference(
+            resource,
+            path,
+            optional,
+            shared_data_dir,
+            patch_dependencies,
+        )?
+    };
+    let Some(included) = included else {
+        return optional.then_some(());
+    };
+    let Value::Mapping(overrides) = std::mem::replace(root, included) else {
+        return Some(());
+    };
+    merge_config_value(root, Value::Mapping(overrides)).then_some(())
 }
 
 fn apply_root_patch_directive(
@@ -4668,14 +4720,20 @@ fn apply_patch_reference(
         ("", reference)
     };
     if !resource.is_empty() {
-        return apply_external_patch_reference(
-            root,
+        let Some(referenced) = load_external_config_reference(
             resource,
             path,
             optional,
             shared_data_dir,
             patch_dependencies,
-        );
+        )?
+        else {
+            return Some(());
+        };
+        return match referenced {
+            Value::Mapping(patch) => apply_patch_map(root, &patch),
+            _ => None,
+        };
     }
     match find_config_value(root, path).cloned() {
         Some(Value::Mapping(patch)) => apply_patch_map(root, &patch),
@@ -4684,14 +4742,13 @@ fn apply_patch_reference(
     }
 }
 
-fn apply_external_patch_reference(
-    root: &mut Value,
+fn load_external_config_reference(
     resource: &str,
     path: &str,
     optional: bool,
     shared_data_dir: &Path,
     patch_dependencies: &mut Vec<(String, c_int)>,
-) -> Option<()> {
+) -> Option<Option<Value>> {
     let resource_id = normalize_config_resource_id(resource);
     let resource_path = shared_data_dir.join(format!("{resource_id}.yaml"));
     let timestamp = if resource_path.exists() {
@@ -4704,12 +4761,11 @@ fn apply_external_patch_reference(
         .ok()
         .and_then(|yaml| serde_yaml::from_str::<Value>(&yaml).ok())
     else {
-        return optional.then_some(());
+        return optional.then_some(None);
     };
     match find_config_value(&resource_root, path).cloned() {
-        Some(Value::Mapping(patch)) => apply_patch_map(root, &patch),
-        Some(_) => None,
-        None => optional.then_some(()),
+        Some(value) => Some(Some(value)),
+        None => optional.then_some(None),
     }
 }
 
@@ -7657,6 +7713,131 @@ preset:
         assert_eq!(
             find_config_value(&rebuilt, "external_marker").and_then(Value::as_str),
             Some("patched")
+        );
+
+        let reset_traits = empty_traits();
+        // SAFETY: reset traits points to valid storage.
+        unsafe { RimeSetup(&reset_traits) };
+        fs::remove_dir_all(root).expect("temp dirs should be removed");
+    }
+
+    #[test]
+    fn deploy_config_file_applies_external_root_include_reference() {
+        let _guard = test_guard();
+        RimeCleanupAllSessions();
+        let root = unique_temp_dir("deploy-config-external-include-ref");
+        let shared = root.join("shared");
+        let user = root.join("user");
+        let staging = user.join("build");
+        fs::create_dir_all(&shared).expect("shared dir should be created");
+        fs::create_dir_all(&user).expect("user dir should be created");
+        fs::write(
+            shared.join("default.yaml"),
+            "\
+__include: base.yaml:/
+config_version: '2.0'
+menu:
+  page_size: 8
+schema_list/+:
+  - schema: override
+",
+        )
+        .expect("shared config should be written");
+        fs::write(
+            shared.join("base.yaml"),
+            "\
+config_version: '1.0'
+menu:
+  page_size: 5
+  alternative_select_keys: ABC
+schema_list:
+  - schema: base
+",
+        )
+        .expect("included config should be written");
+        let shared_c =
+            CString::new(shared.to_string_lossy().as_ref()).expect("path should be valid");
+        let user_c = CString::new(user.to_string_lossy().as_ref()).expect("path should be valid");
+        let config_file = CString::new("default.yaml").expect("file should be valid");
+        let version_key = CString::new("config_version").expect("key should be valid");
+        let mut traits = empty_traits();
+        traits.shared_data_dir = shared_c.as_ptr();
+        traits.user_data_dir = user_c.as_ptr();
+
+        // SAFETY: traits points to a valid RimeTraits object with valid strings.
+        unsafe { RimeDeployerInitialize(&traits) };
+        assert_eq!(
+            RimeDeployConfigFile(config_file.as_ptr(), version_key.as_ptr()),
+            TRUE
+        );
+        let destination = staging.join("default.yaml");
+        let mut staged: Value = serde_yaml::from_str(
+            &fs::read_to_string(&destination).expect("staged config should be readable"),
+        )
+        .expect("staged config should parse");
+        assert_eq!(
+            find_config_value(&staged, "config_version").and_then(Value::as_str),
+            Some("2.0")
+        );
+        assert_eq!(
+            find_config_value(&staged, "menu/page_size").and_then(Value::as_i64),
+            Some(8)
+        );
+        assert_eq!(
+            find_config_value(&staged, "menu/alternative_select_keys").and_then(Value::as_str),
+            Some("ABC")
+        );
+        assert_eq!(
+            find_config_value(&staged, "schema_list/@1/schema").and_then(Value::as_str),
+            Some("override")
+        );
+        assert!(find_config_value(&staged, "__include").is_none());
+        assert!(find_config_value(&staged, "__build_info/timestamps/base")
+            .and_then(Value::as_i64)
+            .is_some_and(|timestamp| timestamp > 0));
+
+        super::set_config_value(
+            &mut staged,
+            "local_marker",
+            Value::String("fresh".to_owned()),
+        );
+        fs::write(
+            &destination,
+            serde_yaml::to_string(&staged).expect("fresh staged config should serialize"),
+        )
+        .expect("fresh staged config should be written");
+        assert_eq!(
+            RimeDeployConfigFile(config_file.as_ptr(), version_key.as_ptr()),
+            TRUE
+        );
+        let unchanged: Value = serde_yaml::from_str(
+            &fs::read_to_string(&destination).expect("unchanged config should be readable"),
+        )
+        .expect("unchanged config should parse");
+        assert_eq!(
+            find_config_value(&unchanged, "local_marker").and_then(Value::as_str),
+            Some("fresh")
+        );
+
+        let mut stale = unchanged;
+        super::set_build_info(&mut stale, "base", 0).expect("base timestamp should be updated");
+        fs::write(
+            &destination,
+            serde_yaml::to_string(&stale).expect("stale staged config should serialize"),
+        )
+        .expect("stale staged config should be written");
+        assert_eq!(
+            RimeDeployConfigFile(config_file.as_ptr(), version_key.as_ptr()),
+            TRUE
+        );
+        let rebuilt: Value = serde_yaml::from_str(
+            &fs::read_to_string(&destination).expect("rebuilt config should be readable"),
+        )
+        .expect("rebuilt config should parse");
+        assert!(find_config_value(&rebuilt, "local_marker").is_none());
+        assert_eq!(
+            find_config_value(&rebuilt, "schema_list/@1/schema").and_then(Value::as_str),
+            Some("override")
         );
 
         let reset_traits = empty_traits();
