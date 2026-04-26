@@ -419,6 +419,15 @@ struct ConfigIteratorState {
     path_cache: Option<CString>,
 }
 
+struct LeverSchemaInfo {
+    schema_id: CString,
+    name: CString,
+    version: Option<CString>,
+    author: Option<CString>,
+    description: Option<CString>,
+    file_path: Option<CString>,
+}
+
 struct StateLabel {
     value: String,
     length: usize,
@@ -582,12 +591,12 @@ fn build_levers_api() -> RimeLeversApi {
         get_available_schema_list: Some(RimeLeversGetAvailableSchemaList),
         get_selected_schema_list: Some(RimeLeversGetSelectedSchemaList),
         schema_list_destroy: Some(RimeLeversSchemaListDestroy),
-        get_schema_id: None,
-        get_schema_name: None,
-        get_schema_version: None,
-        get_schema_author: None,
-        get_schema_description: None,
-        get_schema_file_path: None,
+        get_schema_id: Some(RimeLeversGetSchemaId),
+        get_schema_name: Some(RimeLeversGetSchemaName),
+        get_schema_version: Some(RimeLeversGetSchemaVersion),
+        get_schema_author: Some(RimeLeversGetSchemaAuthor),
+        get_schema_description: Some(RimeLeversGetSchemaDescription),
+        get_schema_file_path: Some(RimeLeversGetSchemaFilePath),
         select_schemas: None,
         get_hotkeys: Some(RimeLeversGetHotkeys),
         set_hotkeys: Some(RimeLeversSetHotkeys),
@@ -730,6 +739,21 @@ pub const fn bool_from(value: bool) -> Bool {
     }
 }
 
+unsafe fn levers_schema_info_ptr(
+    info: *mut RimeSchemaInfo,
+    getter: impl FnOnce(&LeverSchemaInfo) -> Option<*const c_char>,
+) -> *const c_char {
+    if info.is_null() {
+        return ptr::null();
+    }
+
+    // SAFETY: callers pass the opaque pointer stored in a levers schema-list
+    // item's `reserved` field. That pointer is allocated as `LeverSchemaInfo`
+    // and remains valid until the schema list is destroyed.
+    let info = unsafe { &*info.cast::<LeverSchemaInfo>() };
+    getter(info).unwrap_or(ptr::null())
+}
+
 #[no_mangle]
 pub extern "C" fn rime_get_api() -> *mut RimeApi {
     api_entry()
@@ -850,7 +874,7 @@ pub unsafe extern "C" fn RimeLeversGetAvailableSchemaList(
     }
 
     clear_schema_list(list);
-    populate_schema_list(list, deployed_schema_list_entries())
+    populate_levers_schema_list(list, deployed_levers_schema_infos())
 }
 
 /// Returns the deployed switcher selection through the librime levers module API.
@@ -870,6 +894,85 @@ pub unsafe extern "C" fn RimeLeversGetSelectedSchemaList(
 
     clear_schema_list(list);
     populate_schema_id_list(list, deployed_selected_schema_ids())
+}
+
+/// Returns the schema id from a levers schema-info pointer.
+///
+/// # Safety
+///
+/// `info` must be either null or a pointer returned in a levers available
+/// schema-list item's `reserved` field while that list is still alive.
+#[no_mangle]
+pub unsafe extern "C" fn RimeLeversGetSchemaId(info: *mut RimeSchemaInfo) -> *const c_char {
+    unsafe { levers_schema_info_ptr(info, |info| Some(info.schema_id.as_ptr())) }
+}
+
+/// Returns the schema name from a levers schema-info pointer.
+///
+/// # Safety
+///
+/// `info` follows the same lifetime rules as `RimeLeversGetSchemaId`.
+#[no_mangle]
+pub unsafe extern "C" fn RimeLeversGetSchemaName(info: *mut RimeSchemaInfo) -> *const c_char {
+    unsafe { levers_schema_info_ptr(info, |info| Some(info.name.as_ptr())) }
+}
+
+/// Returns the schema version from a levers schema-info pointer.
+///
+/// # Safety
+///
+/// `info` follows the same lifetime rules as `RimeLeversGetSchemaId`.
+#[no_mangle]
+pub unsafe extern "C" fn RimeLeversGetSchemaVersion(info: *mut RimeSchemaInfo) -> *const c_char {
+    unsafe {
+        levers_schema_info_ptr(info, |info| {
+            info.version.as_ref().map(|value| value.as_ptr())
+        })
+    }
+}
+
+/// Returns the schema author from a levers schema-info pointer.
+///
+/// # Safety
+///
+/// `info` follows the same lifetime rules as `RimeLeversGetSchemaId`.
+#[no_mangle]
+pub unsafe extern "C" fn RimeLeversGetSchemaAuthor(info: *mut RimeSchemaInfo) -> *const c_char {
+    unsafe {
+        levers_schema_info_ptr(info, |info| {
+            info.author.as_ref().map(|value| value.as_ptr())
+        })
+    }
+}
+
+/// Returns the schema description from a levers schema-info pointer.
+///
+/// # Safety
+///
+/// `info` follows the same lifetime rules as `RimeLeversGetSchemaId`.
+#[no_mangle]
+pub unsafe extern "C" fn RimeLeversGetSchemaDescription(
+    info: *mut RimeSchemaInfo,
+) -> *const c_char {
+    unsafe {
+        levers_schema_info_ptr(info, |info| {
+            info.description.as_ref().map(|value| value.as_ptr())
+        })
+    }
+}
+
+/// Returns the schema config file path from a levers schema-info pointer.
+///
+/// # Safety
+///
+/// `info` follows the same lifetime rules as `RimeLeversGetSchemaId`.
+#[no_mangle]
+pub unsafe extern "C" fn RimeLeversGetSchemaFilePath(info: *mut RimeSchemaInfo) -> *const c_char {
+    unsafe {
+        levers_schema_info_ptr(info, |info| {
+            info.file_path.as_ref().map(|value| value.as_ptr())
+        })
+    }
 }
 
 /// Returns switcher hotkeys from the deployed default config.
@@ -1509,6 +1612,38 @@ fn populate_schema_list(schema_list: *mut RimeSchemaList, entries: Vec<(String, 
             schema_id: schema_id.into_raw(),
             name: name.into_raw(),
             reserved: ptr::null_mut(),
+        });
+    }
+    let size = list.len();
+    let list_ptr = list.as_mut_ptr();
+    std::mem::forget(list);
+
+    // SAFETY: `schema_list` is non-null and points to caller-owned writable
+    // storage; `list_ptr` owns `size` initialized schema-list items.
+    unsafe {
+        (*schema_list).size = size;
+        (*schema_list).list = list_ptr;
+    }
+    TRUE
+}
+
+fn populate_levers_schema_list(
+    schema_list: *mut RimeSchemaList,
+    entries: Vec<LeverSchemaInfo>,
+) -> Bool {
+    if entries.is_empty() {
+        return FALSE;
+    }
+
+    let mut list = Vec::with_capacity(entries.len());
+    for entry in entries {
+        let schema_id = entry.schema_id.as_c_str().to_owned().into_raw();
+        let name = entry.name.as_c_str().to_owned().into_raw();
+        let info = Box::into_raw(Box::new(entry)).cast::<c_void>();
+        list.push(RimeSchemaListItem {
+            schema_id,
+            name,
+            reserved: info,
         });
     }
     let size = list.len();
@@ -2878,33 +3013,46 @@ fn open_runtime_config(config_id: &str, kind: ConfigOpenKind, config: *mut RimeC
 }
 
 fn load_runtime_config_root(config_id: &str, kind: ConfigOpenKind) -> Value {
-    let roots = {
-        let paths = runtime_paths()
-            .lock()
-            .expect("runtime paths should not be poisoned");
-        match kind {
-            ConfigOpenKind::Deployed => vec![
-                paths.staging_dir.to_string_lossy().into_owned(),
-                paths.prebuilt_data_dir.to_string_lossy().into_owned(),
-            ],
-            ConfigOpenKind::User => vec![paths.user_data_dir.to_string_lossy().into_owned()],
-        }
-    };
     let resource_id = normalize_config_resource_id(config_id);
-    let selected_path = roots
-        .iter()
-        .map(|root| config_file_path(root, &resource_id))
-        .find(|path| path.exists())
-        .or_else(|| {
-            roots
-                .first()
-                .map(|root| config_file_path(root, &resource_id))
-        });
+    let selected_path = selected_runtime_config_path(&resource_id, kind);
 
     selected_path
         .and_then(|path| fs::read_to_string(path).ok())
         .and_then(|yaml| serde_yaml::from_str::<Value>(&yaml).ok())
         .unwrap_or(Value::Null)
+}
+
+fn runtime_config_roots(kind: ConfigOpenKind) -> Vec<String> {
+    let paths = runtime_paths()
+        .lock()
+        .expect("runtime paths should not be poisoned");
+    match kind {
+        ConfigOpenKind::Deployed => vec![
+            paths.staging_dir.to_string_lossy().into_owned(),
+            paths.prebuilt_data_dir.to_string_lossy().into_owned(),
+        ],
+        ConfigOpenKind::User => vec![paths.user_data_dir.to_string_lossy().into_owned()],
+    }
+}
+
+fn selected_runtime_config_path(resource_id: &str, kind: ConfigOpenKind) -> Option<PathBuf> {
+    let roots = runtime_config_roots(kind);
+    roots
+        .iter()
+        .map(|root| config_file_path(root, resource_id))
+        .find(|path| path.exists())
+        .or_else(|| {
+            roots
+                .first()
+                .map(|root| config_file_path(root, resource_id))
+        })
+}
+
+fn existing_runtime_config_path(resource_id: &str, kind: ConfigOpenKind) -> Option<PathBuf> {
+    runtime_config_roots(kind)
+        .iter()
+        .map(|root| config_file_path(root, resource_id))
+        .find(|path| path.exists())
 }
 
 fn normalize_config_resource_id(config_id: &str) -> String {
@@ -2940,6 +3088,78 @@ fn deployed_schema_list_entries() -> Vec<(String, String)> {
             (schema_id, name)
         })
         .collect()
+}
+
+fn deployed_levers_schema_infos() -> Vec<LeverSchemaInfo> {
+    let default_config = load_runtime_config_root("default", ConfigOpenKind::Deployed);
+    let Some(schema_list) = find_config_value(&default_config, "schema_list") else {
+        return Vec::new();
+    };
+    let Value::Sequence(schema_list) = schema_list else {
+        return Vec::new();
+    };
+
+    schema_list
+        .iter()
+        .filter_map(|entry| deployed_schema_list_entry(&default_config, entry))
+        .map(|schema_id| {
+            let resource_id = normalize_config_resource_id(&format!("{schema_id}.schema"));
+            let file_path = existing_runtime_config_path(&resource_id, ConfigOpenKind::Deployed);
+            let schema_config = load_runtime_config_root(&resource_id, ConfigOpenKind::Deployed);
+            levers_schema_info(schema_id, schema_config, file_path)
+        })
+        .collect()
+}
+
+fn levers_schema_info(
+    schema_id: String,
+    schema_config: Value,
+    file_path: Option<PathBuf>,
+) -> LeverSchemaInfo {
+    let name = find_config_value(&schema_config, "schema/name")
+        .and_then(Value::as_str)
+        .unwrap_or(&schema_id)
+        .to_owned();
+    let version = find_config_value(&schema_config, "schema/version")
+        .and_then(Value::as_str)
+        .map(cstring_from_lossless_str);
+    let author =
+        levers_schema_author(&schema_config).map(|author| cstring_from_lossless_str(&author));
+    let description = find_config_value(&schema_config, "schema/description")
+        .and_then(Value::as_str)
+        .map(cstring_from_lossless_str);
+    let file_path =
+        file_path.map(|path| cstring_from_lossless_str(path.to_string_lossy().as_ref()));
+
+    LeverSchemaInfo {
+        schema_id: cstring_from_lossless_str(&schema_id),
+        name: cstring_from_lossless_str(&name),
+        version,
+        author,
+        description,
+        file_path,
+    }
+}
+
+fn levers_schema_author(schema_config: &Value) -> Option<String> {
+    let author = find_config_value(schema_config, "schema/author")?;
+    match author {
+        Value::Sequence(authors) => {
+            let joined = authors
+                .iter()
+                .filter_map(Value::as_str)
+                .filter(|author| !author.is_empty())
+                .collect::<Vec<_>>()
+                .join("\n");
+            if joined.is_empty() {
+                None
+            } else {
+                Some(joined)
+            }
+        }
+        Value::String(author) if !author.is_empty() => Some(author.clone()),
+        _ => None,
+    }
 }
 
 fn deployed_selected_schema_ids() -> Vec<String> {
@@ -3287,6 +3507,13 @@ fn free_schema_list_items(list: &mut [RimeSchemaListItem]) {
             // `RimeGetSchemaList` and are released at most once here.
             unsafe { drop(CString::from_raw(item.name)) };
             item.name = ptr::null_mut();
+        }
+        if !item.reserved.is_null() {
+            // SAFETY: levers available-schema lists store opaque
+            // `LeverSchemaInfo` boxes in `reserved`; other schema-list APIs
+            // keep this field null.
+            unsafe { drop(Box::from_raw(item.reserved.cast::<LeverSchemaInfo>())) };
+            item.reserved = ptr::null_mut();
         }
     }
 }
@@ -4708,7 +4935,16 @@ schema_list:
         .expect("default config should be written");
         fs::write(
             staging.join("luna_pinyin.schema.yaml"),
-            "schema:\n  schema_id: luna_pinyin\n  name: Luna Pinyin\n",
+            "\
+schema:
+  schema_id: luna_pinyin
+  name: Luna Pinyin
+  version: '1.0'
+  author:
+    - Author One
+    - Author Two
+  description: Sample schema
+",
         )
         .expect("schema config should be written");
 
@@ -4740,6 +4976,12 @@ schema_list:
         assert!(api.get_available_schema_list.is_some());
         assert!(api.get_selected_schema_list.is_some());
         assert!(api.schema_list_destroy.is_some());
+        assert!(api.get_schema_id.is_some());
+        assert!(api.get_schema_name.is_some());
+        assert!(api.get_schema_version.is_some());
+        assert!(api.get_schema_author.is_some());
+        assert!(api.get_schema_description.is_some());
+        assert!(api.get_schema_file_path.is_some());
 
         let settings = (api
             .switcher_settings_init
@@ -4760,6 +5002,64 @@ schema_list:
         let name = unsafe { CStr::from_ptr(item.name) };
         assert_eq!(schema_id.to_str(), Ok("luna_pinyin"));
         assert_eq!(name.to_str(), Ok("Luna Pinyin"));
+        assert!(!item.reserved.is_null());
+
+        let get_schema_id = api.get_schema_id.expect("schema id getter should be set");
+        let get_schema_name = api
+            .get_schema_name
+            .expect("schema name getter should be set");
+        let get_schema_version = api
+            .get_schema_version
+            .expect("schema version getter should be set");
+        let get_schema_author = api
+            .get_schema_author
+            .expect("schema author getter should be set");
+        let get_schema_description = api
+            .get_schema_description
+            .expect("schema description getter should be set");
+        let get_schema_file_path = api
+            .get_schema_file_path
+            .expect("schema file path getter should be set");
+        let schema_info = item.reserved.cast();
+        // SAFETY: item.reserved points to levers-owned schema info while the
+        // schema list is alive.
+        assert_eq!(
+            unsafe { CStr::from_ptr(get_schema_id(schema_info)) }.to_str(),
+            Ok("luna_pinyin")
+        );
+        // SAFETY: item.reserved points to levers-owned schema info while the
+        // schema list is alive.
+        assert_eq!(
+            unsafe { CStr::from_ptr(get_schema_name(schema_info)) }.to_str(),
+            Ok("Luna Pinyin")
+        );
+        // SAFETY: item.reserved points to levers-owned schema info while the
+        // schema list is alive.
+        assert_eq!(
+            unsafe { CStr::from_ptr(get_schema_version(schema_info)) }.to_str(),
+            Ok("1.0")
+        );
+        // SAFETY: item.reserved points to levers-owned schema info while the
+        // schema list is alive.
+        assert_eq!(
+            unsafe { CStr::from_ptr(get_schema_author(schema_info)) }.to_str(),
+            Ok("Author One\nAuthor Two")
+        );
+        // SAFETY: item.reserved points to levers-owned schema info while the
+        // schema list is alive.
+        assert_eq!(
+            unsafe { CStr::from_ptr(get_schema_description(schema_info)) }.to_str(),
+            Ok("Sample schema")
+        );
+        // SAFETY: item.reserved points to levers-owned schema info while the
+        // schema list is alive.
+        let file_path = unsafe { CStr::from_ptr(get_schema_file_path(schema_info)) };
+        assert_eq!(
+            file_path.to_string_lossy(),
+            staging.join("luna_pinyin.schema.yaml").to_string_lossy()
+        );
+        // SAFETY: null schema info is explicitly rejected.
+        assert!(unsafe { get_schema_id(std::ptr::null_mut()) }.is_null());
 
         let mut selected_list = empty_schema_list();
         let get_selected = api
