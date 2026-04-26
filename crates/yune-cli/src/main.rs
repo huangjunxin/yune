@@ -17,13 +17,13 @@ fn main() -> ExitCode {
 fn run(args: Vec<String>) -> Result<(), String> {
     match args.first().map(String::as_str) {
         None => {
-            let output = run_sequence(DEFAULT_SEQUENCE);
+            let output = run_sequence(DEFAULT_SEQUENCE)?;
             println!("{}", output.to_json());
             Ok(())
         }
         Some("run") => {
             let sequence = args.get(1).map_or(DEFAULT_SEQUENCE, String::as_str);
-            let output = run_sequence(sequence);
+            let output = run_sequence(sequence)?;
             println!("{}", output.to_json());
             Ok(())
         }
@@ -41,7 +41,7 @@ fn run(args: Vec<String>) -> Result<(), String> {
     }
 }
 
-fn run_sequence(sequence: &str) -> FixtureOutput {
+fn run_sequence(sequence: &str) -> Result<FixtureOutput, String> {
     let mut engine = Engine::new();
     engine.set_schema("sample", "Sample");
     engine.add_translator(StaticTableTranslator::new([
@@ -49,21 +49,23 @@ fn run_sequence(sequence: &str) -> FixtureOutput {
         ("hao", "好"),
         ("nihao", "你好"),
     ]));
-    let commits = engine.process_sequence(sequence);
+    let commits = engine
+        .process_key_sequence(sequence)
+        .map_err(|error| format!("invalid key sequence: {error}"))?;
 
-    FixtureOutput {
+    Ok(FixtureOutput {
         schema_id: "sample".to_owned(),
         sequence: sequence.to_owned(),
         commits,
         snapshot: engine.snapshot(),
-    }
+    })
 }
 
 fn check_fixture(path: &Path) -> Result<(), String> {
     let expected = fs::read_to_string(path)
         .map_err(|error| format!("failed to read {}: {error}", path.display()))?;
     let sequence = sequence_from_fixture(&expected)?;
-    let actual = run_sequence(&sequence).to_json();
+    let actual = run_sequence(&sequence)?.to_json();
     if normalize_json(&expected) == normalize_json(&actual) {
         println!("ok {}", path.display());
         return Ok(());

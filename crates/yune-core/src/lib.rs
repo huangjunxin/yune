@@ -24,6 +24,177 @@ impl CandidateSource {
     }
 }
 
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct KeyModifiers {
+    pub shift: bool,
+    pub lock: bool,
+    pub control: bool,
+    pub alt: bool,
+    pub super_key: bool,
+    pub hyper: bool,
+    pub meta: bool,
+    pub release: bool,
+}
+
+impl KeyModifiers {
+    #[must_use]
+    pub const fn is_empty(self) -> bool {
+        !self.shift
+            && !self.lock
+            && !self.control
+            && !self.alt
+            && !self.super_key
+            && !self.hyper
+            && !self.meta
+            && !self.release
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum KeyCode {
+    Character(char),
+    Backspace,
+    Return,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct KeyEvent {
+    pub code: KeyCode,
+    pub modifiers: KeyModifiers,
+}
+
+impl KeyEvent {
+    #[must_use]
+    pub const fn character(ch: char) -> Self {
+        Self {
+            code: KeyCode::Character(ch),
+            modifiers: KeyModifiers {
+                shift: false,
+                lock: false,
+                control: false,
+                alt: false,
+                super_key: false,
+                hyper: false,
+                meta: false,
+                release: false,
+            },
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct KeySequenceParseError {
+    message: String,
+}
+
+impl KeySequenceParseError {
+    fn new(message: impl Into<String>) -> Self {
+        Self {
+            message: message.into(),
+        }
+    }
+}
+
+impl std::fmt::Display for KeySequenceParseError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str(&self.message)
+    }
+}
+
+impl std::error::Error for KeySequenceParseError {}
+
+pub fn parse_key_sequence(input: &str) -> Result<Vec<KeyEvent>, KeySequenceParseError> {
+    let mut events = Vec::new();
+    let mut index = 0;
+
+    while index < input.len() {
+        let ch = input[index..]
+            .chars()
+            .next()
+            .expect("index should be at a character boundary");
+        if ch == '{' && index + ch.len_utf8() < input.len() {
+            let start = index + ch.len_utf8();
+            let end = input[start..].find('}').map(|offset| start + offset);
+            let end = end.ok_or_else(|| {
+                KeySequenceParseError::new(format!(
+                    "unmatched '{{' in key sequence at byte offset {index}"
+                ))
+            })?;
+            let repr = &input[start..end];
+            events.push(parse_key_event_repr(repr)?);
+            index = end + '}'.len_utf8();
+        } else {
+            events.push(KeyEvent::character(ch));
+            index += ch.len_utf8();
+        }
+    }
+
+    Ok(events)
+}
+
+fn parse_key_event_repr(repr: &str) -> Result<KeyEvent, KeySequenceParseError> {
+    if repr.is_empty() {
+        return Err(KeySequenceParseError::new("empty key name in key sequence"));
+    }
+    if repr.chars().count() == 1 {
+        return Ok(KeyEvent::character(repr.chars().next().expect(
+            "single-character key representation should contain a char",
+        )));
+    }
+
+    let mut tokens = repr.split('+').peekable();
+    let mut modifiers = KeyModifiers::default();
+    while let Some(token) = tokens.next() {
+        if tokens.peek().is_none() {
+            let code = key_code_from_name(token)?;
+            return Ok(KeyEvent { code, modifiers });
+        }
+        apply_modifier(&mut modifiers, token)?;
+    }
+
+    Err(KeySequenceParseError::new("empty key representation"))
+}
+
+fn apply_modifier(modifiers: &mut KeyModifiers, token: &str) -> Result<(), KeySequenceParseError> {
+    match token {
+        "Shift" => modifiers.shift = true,
+        "Lock" => modifiers.lock = true,
+        "Control" => modifiers.control = true,
+        "Alt" => modifiers.alt = true,
+        "Super" => modifiers.super_key = true,
+        "Hyper" => modifiers.hyper = true,
+        "Meta" => modifiers.meta = true,
+        "Release" => modifiers.release = true,
+        _ => {
+            return Err(KeySequenceParseError::new(format!(
+                "unrecognized key modifier: {token}"
+            )));
+        }
+    }
+    Ok(())
+}
+
+fn key_code_from_name(name: &str) -> Result<KeyCode, KeySequenceParseError> {
+    let code = match name {
+        "space" => KeyCode::Character(' '),
+        "BackSpace" => KeyCode::Backspace,
+        "Return" => KeyCode::Return,
+        "braceleft" => KeyCode::Character('{'),
+        "braceright" => KeyCode::Character('}'),
+        "plus" => KeyCode::Character('+'),
+        "comma" => KeyCode::Character(','),
+        "period" => KeyCode::Character('.'),
+        "minus" => KeyCode::Character('-'),
+        "underscore" => KeyCode::Character('_'),
+        _ => {
+            return Err(KeySequenceParseError::new(format!(
+                "unrecognized key name: {name}"
+            )));
+        }
+    };
+    Ok(code)
+}
+
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Composition {
     pub input: String,
@@ -207,11 +378,33 @@ impl Engine {
         }
     }
 
+    pub fn process_key_event(&mut self, key_event: KeyEvent) -> Option<String> {
+        if !key_event.modifiers.is_empty() {
+            return None;
+        }
+
+        match key_event.code {
+            KeyCode::Character(ch) => self.process_char(ch),
+            KeyCode::Backspace => self.backspace(),
+            KeyCode::Return => self.commit_highlighted(),
+        }
+    }
+
     pub fn process_sequence(&mut self, input: &str) -> Vec<String> {
         input
             .chars()
             .filter_map(|ch| self.process_char(ch))
             .collect()
+    }
+
+    pub fn process_key_sequence(
+        &mut self,
+        input: &str,
+    ) -> Result<Vec<String>, KeySequenceParseError> {
+        Ok(parse_key_sequence(input)?
+            .into_iter()
+            .filter_map(|key_event| self.process_key_event(key_event))
+            .collect())
     }
 
     #[must_use]
@@ -272,7 +465,31 @@ impl Engine {
 
 #[cfg(test)]
 mod tests {
-    use super::{CandidateSource, Engine, StaticTableTranslator};
+    use super::{parse_key_sequence, CandidateSource, Engine, KeyCode, StaticTableTranslator};
+
+    #[test]
+    fn parses_librime_style_key_sequence_names() {
+        let keys = parse_key_sequence("zyx 123{Shift+space}ABC{Control+Alt+Return}")
+            .expect("key sequence should parse");
+
+        assert_eq!(keys.len(), 12);
+        assert_eq!(keys[3].code, KeyCode::Character(' '));
+        assert!(!keys[3].modifiers.shift);
+        assert_eq!(keys[7].code, KeyCode::Character(' '));
+        assert!(keys[7].modifiers.shift);
+        assert_eq!(keys[11].code, KeyCode::Return);
+        assert!(keys[11].modifiers.control);
+        assert!(keys[11].modifiers.alt);
+    }
+
+    #[test]
+    fn parses_named_braces_for_literal_brace_keys() {
+        let keys =
+            parse_key_sequence("{braceleft}{braceright}").expect("key sequence should parse");
+
+        assert_eq!(keys[0].code, KeyCode::Character('{'));
+        assert_eq!(keys[1].code, KeyCode::Character('}'));
+    }
 
     #[test]
     fn commits_table_candidate_before_echo_candidate() {
@@ -315,5 +532,18 @@ mod tests {
         assert_eq!(snapshot.context.last_commit.as_deref(), Some("你"));
         assert_eq!(snapshot.status.schema_id, "sample");
         assert!(!snapshot.status.is_composing);
+    }
+
+    #[test]
+    fn key_sequence_processes_named_backspace_and_space() {
+        let mut engine = Engine::new();
+
+        let commits = engine
+            .process_key_sequence("ni{BackSpace}{space}")
+            .expect("key sequence should parse");
+
+        assert_eq!(commits, ["n"]);
+        assert_eq!(engine.context().last_commit.as_deref(), Some("n"));
+        assert!(!engine.status().is_composing);
     }
 }
