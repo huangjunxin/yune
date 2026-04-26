@@ -1683,7 +1683,13 @@ pub extern "C" fn RimeDeployConfigFile(
     file_name: *const c_char,
     version_key: *const c_char,
 ) -> Bool {
-    bool_from(!file_name.is_null() && !version_key.is_null())
+    let Some(file_name) = optional_c_string(file_name) else {
+        return FALSE;
+    };
+    let Some(version_key) = optional_c_string(version_key) else {
+        return FALSE;
+    };
+    bool_from(deploy_config_file(&file_name, &version_key))
 }
 
 #[no_mangle]
@@ -4077,6 +4083,36 @@ fn cleanup_trash() -> bool {
     success
 }
 
+fn deploy_config_file(file_name: &str, version_key: &str) -> bool {
+    if file_name.is_empty() || version_key.is_empty() {
+        return false;
+    }
+
+    let (shared_data_dir, staging_dir) = {
+        let paths = runtime_paths()
+            .lock()
+            .expect("runtime paths should not be poisoned");
+        (
+            PathBuf::from(paths.shared_data_dir.to_string_lossy().into_owned()),
+            PathBuf::from(paths.staging_dir.to_string_lossy().into_owned()),
+        )
+    };
+    let source = shared_data_dir.join(file_name);
+    let destination = staging_dir.join(file_name);
+    if !source.is_file() {
+        return false;
+    }
+    if source == destination {
+        return true;
+    }
+    if let Some(parent) = destination.parent() {
+        if fs::create_dir_all(parent).is_err() {
+            return false;
+        }
+    }
+    fs::copy(source, destination).is_ok()
+}
+
 fn should_cleanup_trash_file(path: &Path) -> bool {
     let Some(file_name) = path.file_name().and_then(|file_name| file_name.to_str()) else {
         return false;
@@ -6013,8 +6049,13 @@ backup_config_files: false
         let _guard = test_guard();
         RimeCleanupAllSessions();
         let root = unique_temp_dir("deployer-shims");
+        let shared_path = root.join("shared");
         let user = root.join("user");
-        let shared = CString::new("/tmp/yune-deployer-shared").expect("path should be valid");
+        fs::create_dir_all(&shared_path).expect("shared dir should be created");
+        fs::write(shared_path.join("default.yaml"), "config_version: test\n")
+            .expect("shared config should be written");
+        let shared =
+            CString::new(shared_path.to_string_lossy().as_ref()).expect("path should be valid");
         let user_c = CString::new(user.to_string_lossy().as_ref()).expect("path should be valid");
         let schema_file = CString::new("default.schema.yaml").expect("file should be valid");
         let config_file = CString::new("default.yaml").expect("file should be valid");
@@ -6034,7 +6075,10 @@ backup_config_files: false
         unsafe { RimeDeployerInitialize(&traits) };
         // SAFETY: runtime path getters return stable process-owned C strings.
         let shared_dir = unsafe { CStr::from_ptr(RimeGetSharedDataDir()) };
-        assert_eq!(shared_dir.to_str(), Ok("/tmp/yune-deployer-shared"));
+        assert_eq!(
+            shared_dir.to_str(),
+            Ok(shared_path.to_string_lossy().as_ref())
+        );
 
         assert_eq!(RimePrebuildAllSchemas(), TRUE);
         assert_eq!(RimeDeployWorkspace(), TRUE);
@@ -6057,6 +6101,67 @@ backup_config_files: false
         assert_eq!(RimeFindSession(session_id), TRUE);
         assert_eq!(RimeSyncUserData(), TRUE);
         assert_eq!(RimeFindSession(session_id), FALSE);
+
+        let reset_traits = empty_traits();
+        // SAFETY: reset traits points to valid storage.
+        unsafe { RimeSetup(&reset_traits) };
+        fs::remove_dir_all(root).expect("temp dirs should be removed");
+    }
+
+    #[test]
+    fn deploy_config_file_copies_shared_yaml_to_staging() {
+        let _guard = test_guard();
+        RimeCleanupAllSessions();
+        let root = unique_temp_dir("deploy-config-file");
+        let shared = root.join("shared");
+        let user = root.join("user");
+        fs::create_dir_all(shared.join("build")).expect("prebuilt dir should be created");
+        fs::write(
+            shared.join("default.yaml"),
+            "config_version: '2.0'\ndeployed_value: from_shared\n",
+        )
+        .expect("shared config should be written");
+        fs::write(
+            shared.join("build").join("default.yaml"),
+            "config_version: '1.0'\ndeployed_value: from_prebuilt\n",
+        )
+        .expect("prebuilt config should be written");
+        let shared_c =
+            CString::new(shared.to_string_lossy().as_ref()).expect("path should be valid");
+        let user_c = CString::new(user.to_string_lossy().as_ref()).expect("path should be valid");
+        let config_file = CString::new("default.yaml").expect("file should be valid");
+        let version_key = CString::new("config_version").expect("key should be valid");
+        let mut traits = empty_traits();
+        traits.shared_data_dir = shared_c.as_ptr();
+        traits.user_data_dir = user_c.as_ptr();
+
+        // SAFETY: traits points to a valid RimeTraits object with valid strings.
+        unsafe { RimeDeployerInitialize(&traits) };
+        assert_eq!(
+            RimeDeployConfigFile(config_file.as_ptr(), version_key.as_ptr()),
+            TRUE
+        );
+        assert!(user.join("build").join("default.yaml").is_file());
+
+        let config_id = CString::new("default").expect("config id should be valid");
+        let mut config = empty_config();
+        // SAFETY: config id and config pointer are valid for the call.
+        assert_eq!(
+            unsafe { RimeConfigOpen(config_id.as_ptr(), &mut config) },
+            TRUE
+        );
+        assert_eq!(
+            config_string(&mut config, "deployed_value").as_deref(),
+            Some("from_shared")
+        );
+        // SAFETY: config was opened by the config API.
+        assert_eq!(unsafe { RimeConfigClose(&mut config) }, TRUE);
+
+        let missing = CString::new("missing.yaml").expect("file should be valid");
+        assert_eq!(
+            RimeDeployConfigFile(missing.as_ptr(), version_key.as_ptr()),
+            FALSE
+        );
 
         let reset_traits = empty_traits();
         // SAFETY: reset traits points to valid storage.
