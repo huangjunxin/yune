@@ -4483,6 +4483,9 @@ fn deploy_config_file(file_name: &str, version_key: &str) -> bool {
     let user_copy = user_data_dir.join(file_name);
     let trash_dir = user_data_dir.join("trash");
     let _ = trash_deprecated_user_copy(&source, &user_copy, version_key, &trash_dir);
+    if !deployed_config_needs_update(&destination, &shared_data_dir) {
+        return true;
+    }
     if let Some(parent) = destination.parent() {
         if fs::create_dir_all(parent).is_err() {
             return false;
@@ -4494,24 +4497,62 @@ fn deploy_config_file(file_name: &str, version_key: &str) -> bool {
     }
 }
 
+fn deployed_config_needs_update(destination: &Path, shared_data_dir: &Path) -> bool {
+    let root = match fs::read_to_string(destination)
+        .ok()
+        .and_then(|yaml| serde_yaml::from_str::<Value>(&yaml).ok())
+    {
+        Some(root) => root,
+        None => return true,
+    };
+    let Some(Value::Mapping(timestamps)) = find_config_value(&root, "__build_info/timestamps")
+    else {
+        return true;
+    };
+    for (resource_id, recorded_time) in timestamps {
+        let Some(resource_id) = resource_id.as_str() else {
+            return true;
+        };
+        let Some(recorded_time) = recorded_time.as_i64() else {
+            return true;
+        };
+        let source = shared_data_dir.join(format!("{resource_id}.yaml"));
+        if !source.exists() {
+            if recorded_time != 0 {
+                return true;
+            }
+            continue;
+        }
+        let Some(source_time) = source_modified_secs(&source) else {
+            return true;
+        };
+        if recorded_time != i64::from(source_time) {
+            return true;
+        }
+    }
+    false
+}
+
 fn deployed_config_yaml_with_build_info(source: &Path, file_name: &str) -> Option<String> {
     let mut root = fs::read_to_string(source)
         .ok()
         .and_then(|yaml| serde_yaml::from_str::<Value>(&yaml).ok())?;
-    let timestamp = source
-        .metadata()
-        .ok()
-        .and_then(|metadata| metadata.modified().ok())
-        .and_then(|modified| modified.duration_since(UNIX_EPOCH).ok())
-        .map_or(0, |duration| {
-            c_int::try_from(duration.as_secs()).unwrap_or(c_int::MAX)
-        });
+    let timestamp = source_modified_secs(source).unwrap_or(0);
     set_build_info(
         &mut root,
         &normalize_config_resource_id(file_name),
         timestamp,
     )?;
     serde_yaml::to_string(&root).ok()
+}
+
+fn source_modified_secs(source: &Path) -> Option<c_int> {
+    source
+        .metadata()
+        .ok()
+        .and_then(|metadata| metadata.modified().ok())
+        .and_then(|modified| modified.duration_since(UNIX_EPOCH).ok())
+        .map(|duration| c_int::try_from(duration.as_secs()).unwrap_or(c_int::MAX))
 }
 
 fn set_build_info(root: &mut Value, resource_id: &str, timestamp: c_int) -> Option<()> {
@@ -6767,6 +6808,101 @@ backup_config_files: false
         assert_eq!(
             RimeDeployConfigFile(missing.as_ptr(), version_key.as_ptr()),
             FALSE
+        );
+
+        let reset_traits = empty_traits();
+        // SAFETY: reset traits points to valid storage.
+        unsafe { RimeSetup(&reset_traits) };
+        fs::remove_dir_all(root).expect("temp dirs should be removed");
+    }
+
+    #[test]
+    fn deploy_config_file_uses_build_info_freshness() {
+        let _guard = test_guard();
+        RimeCleanupAllSessions();
+        let root = unique_temp_dir("deploy-config-freshness");
+        let shared = root.join("shared");
+        let user = root.join("user");
+        let staging = user.join("build");
+        fs::create_dir_all(&shared).expect("shared dir should be created");
+        fs::create_dir_all(&staging).expect("staging dir should be created");
+        let source = shared.join("default.yaml");
+        let destination = staging.join("default.yaml");
+        fs::write(
+            &source,
+            "config_version: '2.0'\ndeployed_value: from_shared\n",
+        )
+        .expect("shared config should be written");
+
+        let mut staged_root: Value = serde_yaml::from_str(
+            "config_version: '2.0'\ndeployed_value: already_staged\nlocal_marker: keep\n",
+        )
+        .expect("staged config should parse");
+        super::set_build_info(
+            &mut staged_root,
+            "default",
+            super::source_modified_secs(&source).expect("source mtime should be readable"),
+        )
+        .expect("build info should be stamped");
+        fs::write(
+            &destination,
+            serde_yaml::to_string(&staged_root).expect("staged config should serialize"),
+        )
+        .expect("staged config should be written");
+
+        let shared_c =
+            CString::new(shared.to_string_lossy().as_ref()).expect("path should be valid");
+        let user_c = CString::new(user.to_string_lossy().as_ref()).expect("path should be valid");
+        let config_file = CString::new("default.yaml").expect("file should be valid");
+        let version_key = CString::new("config_version").expect("key should be valid");
+        let mut traits = empty_traits();
+        traits.shared_data_dir = shared_c.as_ptr();
+        traits.user_data_dir = user_c.as_ptr();
+
+        // SAFETY: traits points to a valid RimeTraits object with valid strings.
+        unsafe { RimeDeployerInitialize(&traits) };
+        assert_eq!(
+            RimeDeployConfigFile(config_file.as_ptr(), version_key.as_ptr()),
+            TRUE
+        );
+        let unchanged: Value = serde_yaml::from_str(
+            &fs::read_to_string(&destination).expect("staged config should be readable"),
+        )
+        .expect("staged config should parse");
+        assert_eq!(
+            find_config_value(&unchanged, "deployed_value").and_then(Value::as_str),
+            Some("already_staged")
+        );
+        assert_eq!(
+            find_config_value(&unchanged, "local_marker").and_then(Value::as_str),
+            Some("keep")
+        );
+
+        let mut stale_root = unchanged;
+        super::set_build_info(&mut stale_root, "default", 0).expect("build info should be updated");
+        fs::write(
+            &destination,
+            serde_yaml::to_string(&stale_root).expect("stale config should serialize"),
+        )
+        .expect("stale config should be written");
+
+        assert_eq!(
+            RimeDeployConfigFile(config_file.as_ptr(), version_key.as_ptr()),
+            TRUE
+        );
+        let rebuilt: Value = serde_yaml::from_str(
+            &fs::read_to_string(&destination).expect("rebuilt config should be readable"),
+        )
+        .expect("rebuilt config should parse");
+        assert_eq!(
+            find_config_value(&rebuilt, "deployed_value").and_then(Value::as_str),
+            Some("from_shared")
+        );
+        assert!(find_config_value(&rebuilt, "local_marker").is_none());
+        assert!(
+            find_config_value(&rebuilt, "__build_info/timestamps/default")
+                .and_then(Value::as_i64)
+                .is_some_and(|timestamp| timestamp > 0)
         );
 
         let reset_traits = empty_traits();
