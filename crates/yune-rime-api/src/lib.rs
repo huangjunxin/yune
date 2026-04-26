@@ -4488,7 +4488,60 @@ fn deploy_config_file(file_name: &str, version_key: &str) -> bool {
             return false;
         }
     }
-    fs::copy(source, destination).is_ok()
+    match deployed_config_yaml_with_build_info(&source, file_name) {
+        Some(yaml) => fs::write(destination, yaml).is_ok(),
+        None => fs::copy(source, destination).is_ok(),
+    }
+}
+
+fn deployed_config_yaml_with_build_info(source: &Path, file_name: &str) -> Option<String> {
+    let mut root = fs::read_to_string(source)
+        .ok()
+        .and_then(|yaml| serde_yaml::from_str::<Value>(&yaml).ok())?;
+    let timestamp = source
+        .metadata()
+        .ok()
+        .and_then(|metadata| metadata.modified().ok())
+        .and_then(|modified| modified.duration_since(UNIX_EPOCH).ok())
+        .map_or(0, |duration| {
+            c_int::try_from(duration.as_secs()).unwrap_or(c_int::MAX)
+        });
+    set_build_info(
+        &mut root,
+        &normalize_config_resource_id(file_name),
+        timestamp,
+    )?;
+    serde_yaml::to_string(&root).ok()
+}
+
+fn set_build_info(root: &mut Value, resource_id: &str, timestamp: c_int) -> Option<()> {
+    let Value::Mapping(root) = root else {
+        return None;
+    };
+    let build_info = root
+        .entry(Value::String("__build_info".to_owned()))
+        .or_insert_with(|| Value::Mapping(Mapping::new()));
+    let Value::Mapping(build_info) = ensure_mapping(build_info) else {
+        return None;
+    };
+    build_info.insert(
+        Value::String("rime_version".to_owned()),
+        Value::String(
+            String::from_utf8_lossy(&RIME_VERSION_BYTES[..RIME_VERSION_BYTES.len() - 1])
+                .into_owned(),
+        ),
+    );
+    let timestamps = build_info
+        .entry(Value::String("timestamps".to_owned()))
+        .or_insert_with(|| Value::Mapping(Mapping::new()));
+    let Value::Mapping(timestamps) = ensure_mapping(timestamps) else {
+        return None;
+    };
+    timestamps.insert(
+        Value::String(resource_id.to_owned()),
+        Value::Number(Number::from(timestamp)),
+    );
+    Some(())
 }
 
 fn trash_deprecated_user_copy(
@@ -6693,8 +6746,22 @@ backup_config_files: false
             config_string(&mut config, "deployed_value").as_deref(),
             Some("from_shared")
         );
+        assert!(config_string(&mut config, "__build_info/rime_version")
+            .as_deref()
+            .is_some_and(|version| version.starts_with("yune-rime-api ")));
         // SAFETY: config was opened by the config API.
         assert_eq!(unsafe { RimeConfigClose(&mut config) }, TRUE);
+
+        let staged_root: Value = serde_yaml::from_str(
+            &fs::read_to_string(user.join("build").join("default.yaml"))
+                .expect("staged config should be readable"),
+        )
+        .expect("staged config should be valid YAML");
+        assert!(
+            find_config_value(&staged_root, "__build_info/timestamps/default")
+                .and_then(Value::as_i64)
+                .is_some_and(|timestamp| timestamp > 0)
+        );
 
         let missing = CString::new("missing.yaml").expect("file should be valid");
         assert_eq!(
@@ -6774,7 +6841,17 @@ backup_config_files: false
         );
         let staged_default = fs::read_to_string(user.join("build").join("default.yaml"))
             .expect("shared config should be staged");
-        assert_eq!(staged_default, "config_version: '2.0'\nsource: shared\n");
+        let staged_default: Value =
+            serde_yaml::from_str(&staged_default).expect("staged default should be valid YAML");
+        assert_eq!(
+            find_config_value(&staged_default, "source").and_then(Value::as_str),
+            Some("shared")
+        );
+        assert!(
+            find_config_value(&staged_default, "__build_info/timestamps/default")
+                .and_then(Value::as_i64)
+                .is_some_and(|timestamp| timestamp > 0)
+        );
 
         let reset_traits = empty_traits();
         // SAFETY: reset traits points to valid storage.
