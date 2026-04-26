@@ -73,6 +73,21 @@ pub struct RimeContext {
     pub select_labels: *mut *mut c_char,
 }
 
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct RimeStatus {
+    pub data_size: c_int,
+    pub schema_id: *mut c_char,
+    pub schema_name: *mut c_char,
+    pub is_disabled: Bool,
+    pub is_composing: Bool,
+    pub is_ascii_mode: Bool,
+    pub is_full_shape: Bool,
+    pub is_simplified: Bool,
+    pub is_traditional: Bool,
+    pub is_ascii_punct: Bool,
+}
+
 const XK_BACKSPACE: c_int = 0xff08;
 const XK_RETURN: c_int = 0xff0d;
 const DEFAULT_PAGE_SIZE: usize = 5;
@@ -312,6 +327,56 @@ pub unsafe extern "C" fn RimeGetContext(
     TRUE
 }
 
+/// Copies current session status into caller storage.
+///
+/// # Safety
+///
+/// `status` must be either null or a valid, writable pointer to a
+/// `RimeStatus` initialized with a positive `data_size`. When this function
+/// returns `TRUE`, the caller must release nested strings by passing the same
+/// status object to `RimeFreeStatus`.
+#[no_mangle]
+pub unsafe extern "C" fn RimeGetStatus(session_id: RimeSessionId, status: *mut RimeStatus) -> Bool {
+    if status.is_null() {
+        return FALSE;
+    }
+    // SAFETY: `status` is non-null and points to caller-owned storage.
+    if unsafe { (*status).data_size } <= 0 {
+        return FALSE;
+    }
+
+    clear_status(status);
+
+    let registry = sessions()
+        .lock()
+        .expect("session registry should not be poisoned");
+    let Some(session) = registry.sessions.get(&session_id) else {
+        return FALSE;
+    };
+    let snapshot = session.engine.status();
+    let Ok(schema_id) = CString::new(snapshot.schema_id) else {
+        return FALSE;
+    };
+    let Ok(schema_name) = CString::new(snapshot.schema_name) else {
+        return FALSE;
+    };
+
+    // SAFETY: `status` is non-null and points to caller-owned writable storage;
+    // schema strings are converted into owned C storage for the caller.
+    unsafe {
+        (*status).schema_id = schema_id.into_raw();
+        (*status).schema_name = schema_name.into_raw();
+        (*status).is_disabled = bool_from(snapshot.is_disabled);
+        (*status).is_composing = bool_from(snapshot.is_composing);
+        (*status).is_ascii_mode = bool_from(snapshot.is_ascii_mode);
+        (*status).is_full_shape = bool_from(snapshot.is_full_shape);
+        (*status).is_simplified = bool_from(snapshot.is_simplified);
+        (*status).is_traditional = bool_from(snapshot.is_traditional);
+        (*status).is_ascii_punct = bool_from(snapshot.is_ascii_punct);
+    }
+    TRUE
+}
+
 /// Frees nested allocations populated by `RimeGetContext`.
 ///
 /// # Safety
@@ -331,6 +396,28 @@ pub unsafe extern "C" fn RimeFreeContext(context: *mut RimeContext) -> Bool {
 
     free_context_fields(context);
     clear_context(context);
+    TRUE
+}
+
+/// Frees nested allocations populated by `RimeGetStatus`.
+///
+/// # Safety
+///
+/// `status` must be either null or a valid, writable pointer to a
+/// `RimeStatus`. Nested pointers, when non-null, must have been returned by
+/// `RimeGetStatus` and not already freed.
+#[no_mangle]
+pub unsafe extern "C" fn RimeFreeStatus(status: *mut RimeStatus) -> Bool {
+    if status.is_null() {
+        return FALSE;
+    }
+    // SAFETY: `status` is non-null and points to caller-owned storage.
+    if unsafe { (*status).data_size } <= 0 {
+        return FALSE;
+    }
+
+    free_status_fields(status);
+    clear_status(status);
     TRUE
 }
 
@@ -406,6 +493,22 @@ fn clear_context(context: *mut RimeContext) {
     }
 }
 
+fn clear_status(status: *mut RimeStatus) {
+    // SAFETY: callers only pass non-null pointers to this helper; this mirrors
+    // librime's versioned struct clear by preserving `data_size`.
+    unsafe {
+        (*status).schema_id = ptr::null_mut();
+        (*status).schema_name = ptr::null_mut();
+        (*status).is_disabled = FALSE;
+        (*status).is_composing = FALSE;
+        (*status).is_ascii_mode = FALSE;
+        (*status).is_full_shape = FALSE;
+        (*status).is_simplified = FALSE;
+        (*status).is_traditional = FALSE;
+        (*status).is_ascii_punct = FALSE;
+    }
+}
+
 fn free_context_fields(context: *mut RimeContext) {
     // SAFETY: `context` is non-null and nested pointers are owned by this API
     // when populated by `RimeGetContext`.
@@ -437,6 +540,19 @@ fn free_context_fields(context: *mut RimeContext) {
     }
 }
 
+fn free_status_fields(status: *mut RimeStatus) {
+    // SAFETY: `status` is non-null and nested pointers are owned by this API
+    // when populated by `RimeGetStatus`.
+    unsafe {
+        if !(*status).schema_id.is_null() {
+            drop(CString::from_raw((*status).schema_id));
+        }
+        if !(*status).schema_name.is_null() {
+            drop(CString::from_raw((*status).schema_name));
+        }
+    }
+}
+
 fn free_rime_candidates(candidates: &mut Vec<RimeCandidate>) {
     for candidate in candidates.drain(..) {
         if !candidate.text.is_null() {
@@ -463,8 +579,8 @@ mod tests {
 
     use super::{
         bool_from, RimeCleanupAllSessions, RimeCommit, RimeContext, RimeCreateSession,
-        RimeDestroySession, RimeFindSession, RimeFreeCommit, RimeFreeContext, RimeGetCommit,
-        RimeGetContext, RimeProcessKey, FALSE, TRUE,
+        RimeDestroySession, RimeFindSession, RimeFreeCommit, RimeFreeContext, RimeFreeStatus,
+        RimeGetCommit, RimeGetContext, RimeGetStatus, RimeProcessKey, RimeStatus, FALSE, TRUE,
     };
 
     fn test_guard() -> MutexGuard<'static, ()> {
@@ -496,6 +612,21 @@ mod tests {
             },
             commit_text_preview: std::ptr::null_mut(),
             select_labels: std::ptr::null_mut(),
+        }
+    }
+
+    fn empty_status() -> RimeStatus {
+        RimeStatus {
+            data_size: (std::mem::size_of::<RimeStatus>() - std::mem::size_of::<i32>()) as i32,
+            schema_id: std::ptr::null_mut(),
+            schema_name: std::ptr::null_mut(),
+            is_disabled: FALSE,
+            is_composing: FALSE,
+            is_ascii_mode: FALSE,
+            is_full_shape: FALSE,
+            is_simplified: FALSE,
+            is_traditional: FALSE,
+            is_ascii_punct: FALSE,
         }
     }
 
@@ -595,6 +726,40 @@ mod tests {
     }
 
     #[test]
+    fn returns_status_with_schema_and_composing_flags() {
+        let _guard = test_guard();
+        RimeCleanupAllSessions();
+        let session_id = RimeCreateSession();
+        let mut status = empty_status();
+
+        // SAFETY: `status` points to valid writable storage initialized with a
+        // positive `data_size`.
+        assert_eq!(unsafe { RimeGetStatus(session_id, &mut status) }, TRUE);
+        // SAFETY: `RimeGetStatus` returned true and populated owned C strings.
+        let schema_id = unsafe { CStr::from_ptr(status.schema_id) };
+        // SAFETY: `RimeGetStatus` returned true and populated owned C strings.
+        let schema_name = unsafe { CStr::from_ptr(status.schema_name) };
+        assert_eq!(schema_id.to_str(), Ok("default"));
+        assert_eq!(schema_name.to_str(), Ok("Default"));
+        assert_eq!(status.is_composing, FALSE);
+        assert_eq!(status.is_ascii_mode, FALSE);
+        // SAFETY: nested pointers were allocated by `RimeGetStatus` above.
+        assert_eq!(unsafe { RimeFreeStatus(&mut status) }, TRUE);
+        assert!(status.schema_id.is_null());
+        assert!(status.schema_name.is_null());
+
+        assert_eq!(RimeProcessKey(session_id, 'n' as i32, 0), TRUE);
+        // SAFETY: `status` points to valid writable storage initialized with a
+        // positive `data_size`.
+        assert_eq!(unsafe { RimeGetStatus(session_id, &mut status) }, TRUE);
+        assert_eq!(status.is_composing, TRUE);
+        // SAFETY: nested pointers were allocated by `RimeGetStatus` above.
+        assert_eq!(unsafe { RimeFreeStatus(&mut status) }, TRUE);
+
+        assert_eq!(RimeDestroySession(session_id), TRUE);
+    }
+
+    #[test]
     fn rejects_invalid_context_requests() {
         let _guard = test_guard();
         RimeCleanupAllSessions();
@@ -613,6 +778,29 @@ mod tests {
         // SAFETY: `context` points to writable storage but has invalid
         // librime-style data_size metadata.
         assert_eq!(unsafe { RimeFreeContext(&mut context) }, FALSE);
+
+        assert_eq!(RimeDestroySession(session_id), TRUE);
+    }
+
+    #[test]
+    fn rejects_invalid_status_requests() {
+        let _guard = test_guard();
+        RimeCleanupAllSessions();
+        let session_id = RimeCreateSession();
+        let mut status = empty_status();
+        status.data_size = 0;
+
+        // SAFETY: `status` points to writable storage but has invalid
+        // librime-style data_size metadata.
+        assert_eq!(unsafe { RimeGetStatus(session_id, &mut status) }, FALSE);
+        // SAFETY: null pointers are explicitly rejected.
+        assert_eq!(
+            unsafe { RimeGetStatus(session_id, std::ptr::null_mut()) },
+            FALSE
+        );
+        // SAFETY: `status` points to writable storage but has invalid
+        // librime-style data_size metadata.
+        assert_eq!(unsafe { RimeFreeStatus(&mut status) }, FALSE);
 
         assert_eq!(RimeDestroySession(session_id), TRUE);
     }
