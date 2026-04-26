@@ -1,6 +1,8 @@
 use std::{env, fs, path::Path, process::ExitCode};
 
-use yune_core::{Candidate, Context, Engine, Snapshot, StaticTableTranslator, Status};
+use yune_core::{
+    Candidate, Context, Engine, PunctuationTranslator, Snapshot, StaticTableTranslator, Status,
+};
 
 const DEFAULT_SEQUENCE: &str = "nihao ";
 
@@ -44,6 +46,7 @@ fn run(args: Vec<String>) -> Result<(), String> {
 fn run_sequence(sequence: &str) -> Result<FixtureOutput, String> {
     let mut engine = Engine::new();
     engine.set_schema("sample", "Sample");
+    engine.add_translator(PunctuationTranslator::default_half_shape());
     engine.add_translator(StaticTableTranslator::new([
         ("ni", "你"),
         ("hao", "好"),

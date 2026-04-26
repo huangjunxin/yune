@@ -9,6 +9,7 @@ pub struct Candidate {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum CandidateSource {
     Echo,
+    Punctuation,
     Table,
     Ai,
 }
@@ -18,6 +19,7 @@ impl CandidateSource {
     pub const fn as_str(&self) -> &'static str {
         match self {
             Self::Echo => "echo",
+            Self::Punctuation => "punct",
             Self::Table => "table",
             Self::Ai => "ai",
         }
@@ -319,6 +321,59 @@ impl Translator for StaticTableTranslator {
     }
 }
 
+pub struct PunctuationTranslator {
+    entries: Vec<(String, Candidate)>,
+}
+
+impl PunctuationTranslator {
+    #[must_use]
+    pub fn new(entries: impl IntoIterator<Item = (impl Into<String>, impl Into<String>)>) -> Self {
+        let entries = entries
+            .into_iter()
+            .map(|(key, text)| {
+                let key = key.into();
+                let text = text.into();
+                (
+                    key.clone(),
+                    Candidate {
+                        text,
+                        comment: "punct".to_owned(),
+                        source: CandidateSource::Punctuation,
+                        quality: 1.0,
+                    },
+                )
+            })
+            .collect();
+        Self { entries }
+    }
+
+    #[must_use]
+    pub fn default_half_shape() -> Self {
+        Self::new([
+            (",", "，"),
+            (".", "。"),
+            ("?", "？"),
+            ("!", "！"),
+            (";", "；"),
+            (":", "："),
+        ])
+    }
+}
+
+impl Translator for PunctuationTranslator {
+    fn name(&self) -> &'static str {
+        "punct_translator"
+    }
+
+    fn translate(&self, input: &str) -> Vec<Candidate> {
+        self.entries
+            .iter()
+            .filter(|(key, _)| key == input)
+            .map(|(_, candidate)| candidate.clone())
+            .collect()
+    }
+}
+
 pub struct Engine {
     context: Context,
     status: Status,
@@ -465,7 +520,10 @@ impl Engine {
 
 #[cfg(test)]
 mod tests {
-    use super::{parse_key_sequence, CandidateSource, Engine, KeyCode, StaticTableTranslator};
+    use super::{
+        parse_key_sequence, CandidateSource, Engine, KeyCode, PunctuationTranslator,
+        StaticTableTranslator,
+    };
 
     #[test]
     fn parses_librime_style_key_sequence_names() {
@@ -505,6 +563,36 @@ mod tests {
 
         let commit = engine.process_char(' ');
         assert_eq!(commit.as_deref(), Some("你"));
+    }
+
+    #[test]
+    fn punctuation_translator_offers_half_shape_candidates_before_echo() {
+        let mut engine = Engine::new();
+        engine.add_translator(PunctuationTranslator::default_half_shape());
+
+        engine.process_char('.');
+
+        assert_eq!(engine.context().composition.input, ".");
+        assert_eq!(engine.context().candidates[0].text, "。");
+        assert_eq!(
+            engine.context().candidates[0].source,
+            CandidateSource::Punctuation
+        );
+        assert_eq!(engine.context().candidates[1].text, ".");
+    }
+
+    #[test]
+    fn punctuation_candidate_commits_through_selection_key() {
+        let mut engine = Engine::new();
+        engine.add_translator(PunctuationTranslator::default_half_shape());
+
+        let commits = engine
+            .process_key_sequence(".{space}")
+            .expect("key sequence should parse");
+
+        assert_eq!(commits, ["。"]);
+        assert_eq!(engine.context().last_commit.as_deref(), Some("。"));
+        assert!(!engine.status().is_composing);
     }
 
     #[test]
