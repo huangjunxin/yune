@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap,
-    ffi::CString,
+    ffi::{c_void, CString},
     os::raw::{c_char, c_int},
     ptr,
     sync::{Mutex, OnceLock},
@@ -88,6 +88,14 @@ pub struct RimeStatus {
     pub is_ascii_punct: Bool,
 }
 
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct RimeCandidateListIterator {
+    pub ptr: *mut c_void,
+    pub index: c_int,
+    pub candidate: RimeCandidate,
+}
+
 const XK_BACKSPACE: c_int = 0xff08;
 const XK_RETURN: c_int = 0xff0d;
 const DEFAULT_PAGE_SIZE: usize = 5;
@@ -111,6 +119,10 @@ impl SessionRegistry {
 struct SessionState {
     engine: Engine,
     unread_commit: Option<String>,
+}
+
+struct CandidateListState {
+    candidates: Vec<yune_core::Candidate>,
 }
 
 fn sessions() -> &'static Mutex<SessionRegistry> {
@@ -411,6 +423,151 @@ pub unsafe extern "C" fn RimeGetStatus(session_id: RimeSessionId, status: *mut R
     TRUE
 }
 
+/// Initializes an iterator over the current candidate list from the first item.
+///
+/// # Safety
+///
+/// `iterator` must be either null or a valid, writable pointer to a
+/// `RimeCandidateListIterator`. When this function returns `TRUE`, the caller
+/// must eventually pass the same iterator to `RimeCandidateListEnd`.
+#[no_mangle]
+pub unsafe extern "C" fn RimeCandidateListBegin(
+    session_id: RimeSessionId,
+    iterator: *mut RimeCandidateListIterator,
+) -> Bool {
+    // SAFETY: forwarded preconditions are identical to
+    // `RimeCandidateListFromIndex` with a zero start index.
+    unsafe { RimeCandidateListFromIndex(session_id, iterator, 0) }
+}
+
+/// Initializes an iterator over the current candidate list from `index`.
+///
+/// # Safety
+///
+/// `iterator` must be either null or a valid, writable pointer to a
+/// `RimeCandidateListIterator`. When this function returns `TRUE`, the caller
+/// must eventually pass the same iterator to `RimeCandidateListEnd`.
+#[no_mangle]
+pub unsafe extern "C" fn RimeCandidateListFromIndex(
+    session_id: RimeSessionId,
+    iterator: *mut RimeCandidateListIterator,
+    index: c_int,
+) -> Bool {
+    if iterator.is_null() {
+        return FALSE;
+    }
+
+    let registry = sessions()
+        .lock()
+        .expect("session registry should not be poisoned");
+    let Some(session) = registry.sessions.get(&session_id) else {
+        return FALSE;
+    };
+    let candidates = session.engine.context().candidates.clone();
+    if candidates.is_empty() {
+        return FALSE;
+    }
+
+    let state = Box::new(CandidateListState { candidates });
+    // SAFETY: `iterator` is non-null and points to caller-owned writable
+    // storage. The boxed state is released by `RimeCandidateListEnd`.
+    unsafe {
+        (*iterator).ptr = Box::into_raw(state).cast::<c_void>();
+        (*iterator).index = index.saturating_sub(1);
+        (*iterator).candidate = RimeCandidate {
+            text: ptr::null_mut(),
+            comment: ptr::null_mut(),
+            reserved: ptr::null_mut(),
+        };
+    }
+    TRUE
+}
+
+/// Advances a candidate list iterator and copies the current candidate.
+///
+/// # Safety
+///
+/// `iterator` must be either null or a valid pointer previously initialized by
+/// `RimeCandidateListBegin` or `RimeCandidateListFromIndex`.
+#[no_mangle]
+pub unsafe extern "C" fn RimeCandidateListNext(iterator: *mut RimeCandidateListIterator) -> Bool {
+    if iterator.is_null() {
+        return FALSE;
+    }
+    // SAFETY: `iterator` is non-null and points to caller-owned storage.
+    let state = unsafe { (*iterator).ptr.cast::<CandidateListState>().as_ref() };
+    let Some(state) = state else {
+        return FALSE;
+    };
+
+    // SAFETY: `iterator` is non-null and any current candidate strings were
+    // allocated by this API during an earlier successful `Next`.
+    unsafe {
+        free_candidate_fields(&mut (*iterator).candidate);
+        (*iterator).index = (*iterator).index.saturating_add(1);
+        if (*iterator).index < 0 {
+            return FALSE;
+        }
+    }
+
+    // SAFETY: index was checked non-negative above.
+    let candidate_index = unsafe { (*iterator).index as usize };
+    let Some(candidate) = state.candidates.get(candidate_index) else {
+        return FALSE;
+    };
+    let Ok(text) = CString::new(candidate.text.as_str()) else {
+        return FALSE;
+    };
+    let comment = if candidate.comment.is_empty() {
+        ptr::null_mut()
+    } else {
+        let Ok(comment) = CString::new(candidate.comment.as_str()) else {
+            return FALSE;
+        };
+        comment.into_raw()
+    };
+
+    // SAFETY: `iterator` is non-null and points to caller-owned writable
+    // storage; strings are now owned by the iterator until next/end.
+    unsafe {
+        (*iterator).candidate = RimeCandidate {
+            text: text.into_raw(),
+            comment,
+            reserved: ptr::null_mut(),
+        };
+    }
+    TRUE
+}
+
+/// Frees a candidate list iterator initialized by this API.
+///
+/// # Safety
+///
+/// `iterator` must be either null or a valid pointer. Any non-null nested
+/// pointers must have been returned by candidate-list iterator APIs.
+#[no_mangle]
+pub unsafe extern "C" fn RimeCandidateListEnd(iterator: *mut RimeCandidateListIterator) {
+    if iterator.is_null() {
+        return;
+    }
+
+    // SAFETY: `iterator` is non-null and nested pointers are owned by this API
+    // when populated by candidate-list iterator calls.
+    unsafe {
+        if !(*iterator).ptr.is_null() {
+            drop(Box::from_raw((*iterator).ptr.cast::<CandidateListState>()));
+        }
+        free_candidate_fields(&mut (*iterator).candidate);
+        (*iterator).ptr = ptr::null_mut();
+        (*iterator).index = 0;
+        (*iterator).candidate = RimeCandidate {
+            text: ptr::null_mut(),
+            comment: ptr::null_mut(),
+            reserved: ptr::null_mut(),
+        };
+    }
+}
+
 /// Frees nested allocations populated by `RimeGetContext`.
 ///
 /// # Safety
@@ -588,22 +745,29 @@ fn free_status_fields(status: *mut RimeStatus) {
 }
 
 fn free_rime_candidates(candidates: &mut Vec<RimeCandidate>) {
-    for candidate in candidates.drain(..) {
-        if !candidate.text.is_null() {
-            // SAFETY: candidate text pointers were returned by CString::into_raw
-            // while populating a RimeContext.
-            unsafe {
-                drop(CString::from_raw(candidate.text));
-            }
-        }
-        if !candidate.comment.is_null() {
-            // SAFETY: candidate comment pointers were returned by
-            // CString::into_raw while populating a RimeContext.
-            unsafe {
-                drop(CString::from_raw(candidate.comment));
-            }
-        }
+    for mut candidate in candidates.drain(..) {
+        free_candidate_fields(&mut candidate);
     }
+}
+
+fn free_candidate_fields(candidate: &mut RimeCandidate) {
+    if !candidate.text.is_null() {
+        // SAFETY: candidate text pointers were returned by CString::into_raw
+        // while populating a RimeContext or candidate-list iterator.
+        unsafe {
+            drop(CString::from_raw(candidate.text));
+        }
+        candidate.text = ptr::null_mut();
+    }
+    if !candidate.comment.is_null() {
+        // SAFETY: candidate comment pointers were returned by CString::into_raw
+        // while populating a RimeContext or candidate-list iterator.
+        unsafe {
+            drop(CString::from_raw(candidate.comment));
+        }
+        candidate.comment = ptr::null_mut();
+    }
+    candidate.reserved = ptr::null_mut();
 }
 
 #[cfg(test)]
@@ -614,10 +778,11 @@ mod tests {
     use yune_core::StaticTableTranslator;
 
     use super::{
-        bool_from, RimeCleanupAllSessions, RimeClearComposition, RimeCommit, RimeCommitComposition,
-        RimeContext, RimeCreateSession, RimeDestroySession, RimeFindSession, RimeFreeCommit,
-        RimeFreeContext, RimeFreeStatus, RimeGetCommit, RimeGetContext, RimeGetStatus,
-        RimeProcessKey, RimeStatus, FALSE, TRUE,
+        bool_from, RimeCandidateListBegin, RimeCandidateListEnd, RimeCandidateListFromIndex,
+        RimeCandidateListIterator, RimeCandidateListNext, RimeCleanupAllSessions,
+        RimeClearComposition, RimeCommit, RimeCommitComposition, RimeContext, RimeCreateSession,
+        RimeDestroySession, RimeFindSession, RimeFreeCommit, RimeFreeContext, RimeFreeStatus,
+        RimeGetCommit, RimeGetContext, RimeGetStatus, RimeProcessKey, RimeStatus, FALSE, TRUE,
     };
 
     fn test_guard() -> MutexGuard<'static, ()> {
@@ -664,6 +829,18 @@ mod tests {
             is_simplified: FALSE,
             is_traditional: FALSE,
             is_ascii_punct: FALSE,
+        }
+    }
+
+    fn empty_candidate_list_iterator() -> RimeCandidateListIterator {
+        RimeCandidateListIterator {
+            ptr: std::ptr::null_mut(),
+            index: 0,
+            candidate: super::RimeCandidate {
+                text: std::ptr::null_mut(),
+                comment: std::ptr::null_mut(),
+                reserved: std::ptr::null_mut(),
+            },
         }
     }
 
@@ -864,6 +1041,96 @@ mod tests {
         assert!(context.composition.preedit.is_null());
         assert!(context.menu.candidates.is_null());
         assert_eq!(context.menu.num_candidates, 0);
+
+        assert_eq!(RimeDestroySession(session_id), TRUE);
+    }
+
+    #[test]
+    fn iterates_candidate_list_from_current_context() {
+        let _guard = test_guard();
+        RimeCleanupAllSessions();
+        let session_id = RimeCreateSession();
+        {
+            let mut registry = super::sessions()
+                .lock()
+                .expect("session registry should not be poisoned");
+            let session = registry
+                .sessions
+                .get_mut(&session_id)
+                .expect("session should exist");
+            session
+                .engine
+                .add_translator(StaticTableTranslator::new([("ba", "八"), ("ba", "吧")]));
+        }
+        let mut iterator = empty_candidate_list_iterator();
+
+        assert_eq!(RimeProcessKey(session_id, 'b' as i32, 0), TRUE);
+        assert_eq!(RimeProcessKey(session_id, 'a' as i32, 0), TRUE);
+        // SAFETY: `iterator` points to valid writable storage.
+        assert_eq!(
+            unsafe { RimeCandidateListBegin(session_id, &mut iterator) },
+            TRUE
+        );
+        // SAFETY: `iterator` was initialized by `RimeCandidateListBegin`.
+        assert_eq!(unsafe { RimeCandidateListNext(&mut iterator) }, TRUE);
+        // SAFETY: `RimeCandidateListNext` populated a valid C string.
+        let first_text = unsafe { CStr::from_ptr(iterator.candidate.text) };
+        assert_eq!(first_text.to_str(), Ok("八"));
+        // SAFETY: current candidate includes a non-null comment.
+        let first_comment = unsafe { CStr::from_ptr(iterator.candidate.comment) };
+        assert_eq!(first_comment.to_str(), Ok("ba"));
+        // SAFETY: `iterator` remains valid and owns the current candidate.
+        assert_eq!(unsafe { RimeCandidateListNext(&mut iterator) }, TRUE);
+        // SAFETY: `RimeCandidateListNext` populated a valid C string.
+        let second_text = unsafe { CStr::from_ptr(iterator.candidate.text) };
+        assert_eq!(second_text.to_str(), Ok("吧"));
+        // SAFETY: `iterator` was initialized by this API and can be ended once.
+        unsafe { RimeCandidateListEnd(&mut iterator) };
+        assert!(iterator.ptr.is_null());
+        assert!(iterator.candidate.text.is_null());
+        assert!(iterator.candidate.comment.is_null());
+
+        assert_eq!(RimeDestroySession(session_id), TRUE);
+    }
+
+    #[test]
+    fn candidate_list_can_start_from_index_and_rejects_empty_menu() {
+        let _guard = test_guard();
+        RimeCleanupAllSessions();
+        let session_id = RimeCreateSession();
+        {
+            let mut registry = super::sessions()
+                .lock()
+                .expect("session registry should not be poisoned");
+            let session = registry
+                .sessions
+                .get_mut(&session_id)
+                .expect("session should exist");
+            session
+                .engine
+                .add_translator(StaticTableTranslator::new([("ba", "八"), ("ba", "吧")]));
+        }
+        let mut iterator = empty_candidate_list_iterator();
+
+        // SAFETY: `iterator` points to valid writable storage.
+        assert_eq!(
+            unsafe { RimeCandidateListBegin(session_id, &mut iterator) },
+            FALSE
+        );
+        assert_eq!(RimeProcessKey(session_id, 'b' as i32, 0), TRUE);
+        assert_eq!(RimeProcessKey(session_id, 'a' as i32, 0), TRUE);
+        // SAFETY: `iterator` points to valid writable storage.
+        assert_eq!(
+            unsafe { RimeCandidateListFromIndex(session_id, &mut iterator, 1) },
+            TRUE
+        );
+        // SAFETY: `iterator` was initialized by `RimeCandidateListFromIndex`.
+        assert_eq!(unsafe { RimeCandidateListNext(&mut iterator) }, TRUE);
+        // SAFETY: `RimeCandidateListNext` populated a valid C string.
+        let text = unsafe { CStr::from_ptr(iterator.candidate.text) };
+        assert_eq!(text.to_str(), Ok("吧"));
+        // SAFETY: `iterator` was initialized by this API and can be ended once.
+        unsafe { RimeCandidateListEnd(&mut iterator) };
 
         assert_eq!(RimeDestroySession(session_id), TRUE);
     }
