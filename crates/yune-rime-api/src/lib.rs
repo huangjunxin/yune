@@ -96,9 +96,26 @@ pub struct RimeCandidateListIterator {
     pub candidate: RimeCandidate,
 }
 
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct RimeSchemaListItem {
+    pub schema_id: *mut c_char,
+    pub name: *mut c_char,
+    pub reserved: *mut c_void,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct RimeSchemaList {
+    pub size: usize,
+    pub list: *mut RimeSchemaListItem,
+}
+
 const XK_BACKSPACE: c_int = 0xff08;
 const XK_RETURN: c_int = 0xff0d;
 const DEFAULT_PAGE_SIZE: usize = 5;
+const DEFAULT_SCHEMA_ID: &str = "default";
+const DEFAULT_SCHEMA_NAME: &str = "Default";
 
 #[derive(Default)]
 struct SessionRegistry {
@@ -474,6 +491,62 @@ pub unsafe extern "C" fn RimeSelectSchema(
         session.unread_commit = None;
         true
     })
+}
+
+/// Returns the currently available schema list.
+///
+/// # Safety
+///
+/// `schema_list` must be either null or point to writable storage. When this
+/// function returns `TRUE`, the caller must release nested allocations with
+/// `RimeFreeSchemaList`.
+#[no_mangle]
+pub unsafe extern "C" fn RimeGetSchemaList(schema_list: *mut RimeSchemaList) -> Bool {
+    if schema_list.is_null() {
+        return FALSE;
+    }
+
+    clear_schema_list(schema_list);
+
+    let Ok(schema_id) = CString::new(DEFAULT_SCHEMA_ID) else {
+        return FALSE;
+    };
+    let Ok(name) = CString::new(DEFAULT_SCHEMA_NAME) else {
+        return FALSE;
+    };
+    let mut list = vec![RimeSchemaListItem {
+        schema_id: schema_id.into_raw(),
+        name: name.into_raw(),
+        reserved: ptr::null_mut(),
+    }];
+    let size = list.len();
+    let list_ptr = list.as_mut_ptr();
+    std::mem::forget(list);
+
+    // SAFETY: `schema_list` is non-null and points to caller-owned writable
+    // storage; `list_ptr` owns `size` initialized schema-list items.
+    unsafe {
+        (*schema_list).size = size;
+        (*schema_list).list = list_ptr;
+    }
+    TRUE
+}
+
+/// Frees nested allocations populated by `RimeGetSchemaList`.
+///
+/// # Safety
+///
+/// `schema_list` must be either null or a valid pointer. Nested pointers, when
+/// non-null, must have been returned by `RimeGetSchemaList` and not already
+/// freed.
+#[no_mangle]
+pub unsafe extern "C" fn RimeFreeSchemaList(schema_list: *mut RimeSchemaList) {
+    if schema_list.is_null() {
+        return;
+    }
+
+    free_schema_list_fields(schema_list);
+    clear_schema_list(schema_list);
 }
 
 /// Processes a librime-style key sequence against a session.
@@ -1051,6 +1124,15 @@ fn clear_status(status: *mut RimeStatus) {
     }
 }
 
+fn clear_schema_list(schema_list: *mut RimeSchemaList) {
+    // SAFETY: callers only pass non-null pointers to this helper; fields are
+    // plain integers/pointers and assigning null mirrors librime cleanup.
+    unsafe {
+        (*schema_list).size = 0;
+        (*schema_list).list = ptr::null_mut();
+    }
+}
+
 fn free_context_fields(context: *mut RimeContext) {
     // SAFETY: `context` is non-null and nested pointers are owned by this API
     // when populated by `RimeGetContext`.
@@ -1077,6 +1159,26 @@ fn free_context_fields(context: *mut RimeContext) {
                 if !label.is_null() {
                     drop(CString::from_raw(label));
                 }
+            }
+        }
+    }
+}
+
+fn free_schema_list_fields(schema_list: *mut RimeSchemaList) {
+    // SAFETY: `schema_list` is non-null and nested pointers are owned by this
+    // API when populated by `RimeGetSchemaList`.
+    unsafe {
+        if (*schema_list).list.is_null() {
+            return;
+        }
+        let size = (*schema_list).size;
+        let list = Vec::from_raw_parts((*schema_list).list, size, size);
+        for item in list {
+            if !item.schema_id.is_null() {
+                drop(CString::from_raw(item.schema_id));
+            }
+            if !item.name.is_null() {
+                drop(CString::from_raw(item.name));
             }
         }
     }
@@ -1146,7 +1248,7 @@ mod tests {
         RimeClearComposition, RimeCommit, RimeCommitComposition, RimeContext, RimeCreateSession,
         RimeDestroySession, RimeFindSession, RimeFreeCommit, RimeFreeContext, RimeFreeStatus,
         RimeGetCaretPos, RimeGetCommit, RimeGetContext, RimeGetCurrentSchema, RimeGetInput,
-        RimeGetOption, RimeGetProperty, RimeGetStatus, RimeHighlightCandidate,
+        RimeGetOption, RimeGetProperty, RimeGetSchemaList, RimeGetStatus, RimeHighlightCandidate,
         RimeHighlightCandidateOnCurrentPage, RimeProcessKey, RimeSelectCandidate,
         RimeSelectCandidateOnCurrentPage, RimeSelectSchema, RimeSetCaretPos, RimeSetInput,
         RimeSetOption, RimeSetProperty, RimeSimulateKeySequence, RimeStatus, FALSE, TRUE,
@@ -1208,6 +1310,13 @@ mod tests {
                 comment: std::ptr::null_mut(),
                 reserved: std::ptr::null_mut(),
             },
+        }
+    }
+
+    fn empty_schema_list() -> super::RimeSchemaList {
+        super::RimeSchemaList {
+            size: 0,
+            list: std::ptr::null_mut(),
         }
     }
 
@@ -1943,6 +2052,39 @@ mod tests {
         );
 
         assert_eq!(RimeDestroySession(session_id), TRUE);
+    }
+
+    #[test]
+    fn gets_and_frees_available_schema_list() {
+        let _guard = test_guard();
+        RimeCleanupAllSessions();
+        let mut schema_list = empty_schema_list();
+
+        // SAFETY: schema_list points to valid writable storage.
+        assert_eq!(unsafe { RimeGetSchemaList(&mut schema_list) }, TRUE);
+        assert_eq!(schema_list.size, 1);
+        assert!(!schema_list.list.is_null());
+
+        // SAFETY: `RimeGetSchemaList` returned true and populated one item.
+        let item = unsafe { *schema_list.list };
+        // SAFETY: schema strings are valid NUL-terminated strings owned by the
+        // schema-list object.
+        let schema_id = unsafe { CStr::from_ptr(item.schema_id) };
+        // SAFETY: schema strings are valid NUL-terminated strings owned by the
+        // schema-list object.
+        let name = unsafe { CStr::from_ptr(item.name) };
+        assert_eq!(schema_id.to_str(), Ok("default"));
+        assert_eq!(name.to_str(), Ok("Default"));
+        assert!(item.reserved.is_null());
+
+        // SAFETY: nested pointers were allocated by `RimeGetSchemaList` above.
+        unsafe { super::RimeFreeSchemaList(&mut schema_list) };
+        assert_eq!(schema_list.size, 0);
+        assert!(schema_list.list.is_null());
+
+        // SAFETY: null pointers are explicitly rejected/no-oped.
+        assert_eq!(unsafe { RimeGetSchemaList(std::ptr::null_mut()) }, FALSE);
+        unsafe { super::RimeFreeSchemaList(std::ptr::null_mut()) };
     }
 
     #[test]
