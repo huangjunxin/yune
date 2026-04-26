@@ -4644,11 +4644,89 @@ fn apply_custom_patch(root: &mut Value, custom_root: &Value) -> Option<()> {
 fn apply_patch_map(root: &mut Value, patch: &Mapping) -> Option<()> {
     for (key, value) in patch {
         let key = key.as_str()?;
-        if !set_config_value(root, key, value.clone()) {
+        if !apply_patch_entry(root, key, value.clone(), false) {
             return None;
         }
     }
     Some(())
+}
+
+fn apply_patch_entry(root: &mut Value, key: &str, value: Value, merge_tree: bool) -> bool {
+    let appending = key == "__append" || key.ends_with("/+");
+    let merging = key == "__merge"
+        || key.ends_with("/+")
+        || (merge_tree && matches!(value, Value::Null | Value::Mapping(_)) && !key.ends_with("/="));
+    let path = if key == "__append" || key == "__merge" {
+        ""
+    } else if appending || merging {
+        key.strip_suffix("/+")
+            .or_else(|| key.strip_suffix("/="))
+            .unwrap_or(key)
+    } else {
+        key.strip_suffix("/=").unwrap_or(key)
+    };
+
+    if appending || merging {
+        if path.is_empty() {
+            if !root.is_null() {
+                return value.is_null()
+                    || (appending && append_config_value(root, value.clone()))
+                    || (merging && merge_config_value(root, value));
+            }
+        } else if find_config_value(root, path).is_some_and(|value| !value.is_null()) {
+            let target = find_config_value_mut(root, path).expect("target was just found");
+            return value.is_null()
+                || (appending && append_config_value(target, value.clone()))
+                || (merging && merge_config_value(target, value));
+        }
+    }
+
+    set_config_value(root, path, value)
+}
+
+fn append_config_value(target: &mut Value, value: Value) -> bool {
+    match target {
+        Value::String(existing) => {
+            let Value::String(value) = value else {
+                return false;
+            };
+            existing.push_str(&value);
+            true
+        }
+        Value::Sequence(existing) => {
+            let Value::Sequence(mut value) = value else {
+                return false;
+            };
+            existing.append(&mut value);
+            true
+        }
+        Value::Null => {
+            *target = value;
+            true
+        }
+        _ => false,
+    }
+}
+
+fn merge_config_value(target: &mut Value, value: Value) -> bool {
+    let Value::Mapping(patch) = value else {
+        return false;
+    };
+    if target.is_null() {
+        *target = Value::Mapping(Mapping::new());
+    }
+    let Value::Mapping(_) = target else {
+        return false;
+    };
+    for (key, value) in patch {
+        let Some(key) = key.as_str() else {
+            return false;
+        };
+        if !apply_patch_entry(target, key, value, true) {
+            return false;
+        }
+    }
+    true
 }
 
 fn source_modified_secs(source: &Path) -> Option<c_int> {
@@ -5523,6 +5601,28 @@ fn find_config_value<'a>(root: &'a Value, key: &str) -> Option<&'a Value> {
                 return None;
             };
             current = mapping.get(Value::String(segment.to_owned()))?;
+        }
+    }
+    Some(current)
+}
+
+fn find_config_value_mut<'a>(root: &'a mut Value, key: &str) -> Option<&'a mut Value> {
+    if key.is_empty() {
+        return Some(root);
+    }
+
+    let mut current = root;
+    for segment in key.split('/').filter(|segment| !segment.is_empty()) {
+        if let Some(index) = list_index(segment) {
+            let Value::Sequence(sequence) = current else {
+                return None;
+            };
+            current = sequence.get_mut(index)?;
+        } else {
+            let Value::Mapping(mapping) = current else {
+                return None;
+            };
+            current = mapping.get_mut(Value::String(segment.to_owned()))?;
         }
     }
     Some(current)
@@ -7046,12 +7146,20 @@ backup_config_files: false
             shared.join("default.yaml"),
             "\
 config_version: '2.0'
+schema:
+  name: Base
 menu:
   page_size: 5
+  options:
+    - alpha
 switches:
   - name: ascii_mode
     reset: false
 schema_list: []
+translator:
+  dictionary: base
+  settings:
+    existing: yes
 ",
         )
         .expect("shared config should be written");
@@ -7059,9 +7167,15 @@ schema_list: []
             user.join("default.custom.yaml"),
             "\
 patch:
+  schema/name/+: ' Extended'
   menu/page_size: 9
+  menu/options/+: [beta, gamma]
   switches/@0/reset: true
   schema_list/@next: {schema: luna_pinyin}
+  translator/+:
+    enable_user_dict: true
+    settings:
+      new: yes
   new/value: patched
 ",
         )
@@ -7091,6 +7205,22 @@ patch:
             Some(9)
         );
         assert_eq!(
+            find_config_value(&staged, "schema/name").and_then(Value::as_str),
+            Some("Base Extended")
+        );
+        assert_eq!(
+            find_config_value(&staged, "menu/options/@0").and_then(Value::as_str),
+            Some("alpha")
+        );
+        assert_eq!(
+            find_config_value(&staged, "menu/options/@1").and_then(Value::as_str),
+            Some("beta")
+        );
+        assert_eq!(
+            find_config_value(&staged, "menu/options/@2").and_then(Value::as_str),
+            Some("gamma")
+        );
+        assert_eq!(
             find_config_value(&staged, "switches/@0/reset").and_then(Value::as_bool),
             Some(true)
         );
@@ -7101,6 +7231,22 @@ patch:
         assert_eq!(
             find_config_value(&staged, "new/value").and_then(Value::as_str),
             Some("patched")
+        );
+        assert_eq!(
+            find_config_value(&staged, "translator/dictionary").and_then(Value::as_str),
+            Some("base")
+        );
+        assert_eq!(
+            find_config_value(&staged, "translator/enable_user_dict").and_then(Value::as_bool),
+            Some(true)
+        );
+        assert_eq!(
+            find_config_value(&staged, "translator/settings/existing").and_then(Value::as_str),
+            Some("yes")
+        );
+        assert_eq!(
+            find_config_value(&staged, "translator/settings/new").and_then(Value::as_str),
+            Some("yes")
         );
         assert!(
             find_config_value(&staged, "__build_info/timestamps/default.custom")
