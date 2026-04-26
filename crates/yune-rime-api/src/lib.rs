@@ -519,8 +519,8 @@ fn build_rime_api() -> RimeApi {
         config_set_int: Some(RimeConfigSetInt),
         config_set_double: Some(RimeConfigSetDouble),
         config_set_string: Some(RimeConfigSetString),
-        config_get_item: None,
-        config_set_item: None,
+        config_get_item: Some(RimeConfigGetItem),
+        config_set_item: Some(RimeConfigSetItem),
         config_clear: Some(RimeConfigClear),
         config_create_list: Some(RimeConfigCreateList),
         config_create_map: Some(RimeConfigCreateMap),
@@ -1545,6 +1545,68 @@ pub unsafe extern "C" fn RimeConfigSetString(
         .to_string_lossy()
         .into_owned();
     unsafe { config_set(config, key, Value::String(value)) }
+}
+
+/// Copies a config subtree into another in-memory config object.
+///
+/// # Safety
+///
+/// `config`, `key`, and `value` must be valid pointers. If `value` is
+/// uninitialized, it is initialized before receiving the copied item.
+#[no_mangle]
+pub unsafe extern "C" fn RimeConfigGetItem(
+    config: *mut RimeConfig,
+    key: *const c_char,
+    value: *mut RimeConfig,
+) -> Bool {
+    if value.is_null() {
+        return FALSE;
+    }
+    let Some(key) = (unsafe { c_string_key(key) }) else {
+        return FALSE;
+    };
+    let Some(source) = (unsafe { config_state_mut(config) }) else {
+        return FALSE;
+    };
+    let item = find_config_value(&source.root, &key)
+        .cloned()
+        .unwrap_or(Value::Null);
+    // SAFETY: `value` is non-null and points to caller-owned storage.
+    if unsafe { (*value).ptr.is_null() && RimeConfigInit(value) == FALSE } {
+        return FALSE;
+    }
+    let Some(destination) = (unsafe { config_state_mut(value) }) else {
+        return FALSE;
+    };
+
+    destination.root = item;
+    destination.cstring_cache = None;
+    TRUE
+}
+
+/// Writes a config subtree from another in-memory config object.
+///
+/// # Safety
+///
+/// `config` and `key` must be valid pointers. `value` may be null or
+/// uninitialized, in which case a null item is written at `key`.
+#[no_mangle]
+pub unsafe extern "C" fn RimeConfigSetItem(
+    config: *mut RimeConfig,
+    key: *const c_char,
+    value: *mut RimeConfig,
+) -> Bool {
+    let item = if value.is_null() {
+        Value::Null
+    } else {
+        // SAFETY: `value` is non-null. A null inner pointer represents a null
+        // item for compatibility with librime's deprecated config API.
+        match unsafe { config_state_mut(value) } {
+            Some(value_state) => value_state.root.clone(),
+            None => Value::Null,
+        }
+    };
+    unsafe { config_set(config, key, item) }
 }
 
 /// Clears a config value by path.
@@ -2758,25 +2820,25 @@ mod tests {
         RimeCommit, RimeCommitComposition, RimeConfig, RimeConfigBeginList, RimeConfigBeginMap,
         RimeConfigClear, RimeConfigClose, RimeConfigCreateList, RimeConfigCreateMap, RimeConfigEnd,
         RimeConfigGetBool, RimeConfigGetCString, RimeConfigGetDouble, RimeConfigGetInt,
-        RimeConfigGetString, RimeConfigInit, RimeConfigIterator, RimeConfigListSize,
-        RimeConfigLoadString, RimeConfigNext, RimeConfigSetBool, RimeConfigSetDouble,
-        RimeConfigSetInt, RimeConfigSetString, RimeContext, RimeCreateSession, RimeCustomApi,
-        RimeDeleteCandidate, RimeDeleteCandidateOnCurrentPage, RimeDeployConfigFile,
-        RimeDeploySchema, RimeDeployWorkspace, RimeDeployerInitialize, RimeDestroySession,
-        RimeFinalize, RimeFindModule, RimeFindSession, RimeFreeCommit, RimeFreeContext,
-        RimeFreeStatus, RimeGetCaretPos, RimeGetCommit, RimeGetContext, RimeGetCurrentSchema,
-        RimeGetInput, RimeGetOption, RimeGetPrebuiltDataDir, RimeGetPrebuiltDataDirSecure,
-        RimeGetProperty, RimeGetSchemaList, RimeGetSharedDataDir, RimeGetSharedDataDirSecure,
-        RimeGetStagingDir, RimeGetStagingDirSecure, RimeGetStatus, RimeGetSyncDir,
-        RimeGetSyncDirSecure, RimeGetUserDataDir, RimeGetUserDataDirSecure, RimeGetUserDataSyncDir,
-        RimeGetUserId, RimeGetVersion, RimeHighlightCandidate, RimeHighlightCandidateOnCurrentPage,
-        RimeInitialize, RimeIsMaintenancing, RimeJoinMaintenanceThread, RimeModule,
-        RimePrebuildAllSchemas, RimeProcessKey, RimeRegisterModule, RimeRunTask,
-        RimeSelectCandidate, RimeSelectCandidateOnCurrentPage, RimeSelectSchema, RimeSetCaretPos,
-        RimeSetInput, RimeSetNotificationHandler, RimeSetOption, RimeSetProperty, RimeSetup,
-        RimeSetupLogging, RimeSimulateKeySequence, RimeStartMaintenance,
-        RimeStartMaintenanceOnWorkspaceChange, RimeStatus, RimeSyncUserData, RimeTraits, FALSE,
-        TRUE,
+        RimeConfigGetItem, RimeConfigGetString, RimeConfigInit, RimeConfigIterator,
+        RimeConfigListSize, RimeConfigLoadString, RimeConfigNext, RimeConfigSetBool,
+        RimeConfigSetDouble, RimeConfigSetInt, RimeConfigSetItem, RimeConfigSetString, RimeContext,
+        RimeCreateSession, RimeCustomApi, RimeDeleteCandidate, RimeDeleteCandidateOnCurrentPage,
+        RimeDeployConfigFile, RimeDeploySchema, RimeDeployWorkspace, RimeDeployerInitialize,
+        RimeDestroySession, RimeFinalize, RimeFindModule, RimeFindSession, RimeFreeCommit,
+        RimeFreeContext, RimeFreeStatus, RimeGetCaretPos, RimeGetCommit, RimeGetContext,
+        RimeGetCurrentSchema, RimeGetInput, RimeGetOption, RimeGetPrebuiltDataDir,
+        RimeGetPrebuiltDataDirSecure, RimeGetProperty, RimeGetSchemaList, RimeGetSharedDataDir,
+        RimeGetSharedDataDirSecure, RimeGetStagingDir, RimeGetStagingDirSecure, RimeGetStatus,
+        RimeGetSyncDir, RimeGetSyncDirSecure, RimeGetUserDataDir, RimeGetUserDataDirSecure,
+        RimeGetUserDataSyncDir, RimeGetUserId, RimeGetVersion, RimeHighlightCandidate,
+        RimeHighlightCandidateOnCurrentPage, RimeInitialize, RimeIsMaintenancing,
+        RimeJoinMaintenanceThread, RimeModule, RimePrebuildAllSchemas, RimeProcessKey,
+        RimeRegisterModule, RimeRunTask, RimeSelectCandidate, RimeSelectCandidateOnCurrentPage,
+        RimeSelectSchema, RimeSetCaretPos, RimeSetInput, RimeSetNotificationHandler, RimeSetOption,
+        RimeSetProperty, RimeSetup, RimeSetupLogging, RimeSimulateKeySequence,
+        RimeStartMaintenance, RimeStartMaintenanceOnWorkspaceChange, RimeStatus, RimeSyncUserData,
+        RimeTraits, FALSE, TRUE,
     };
 
     #[derive(Debug, PartialEq, Eq)]
@@ -2959,6 +3021,8 @@ mod tests {
         assert!(api.config_init.is_some());
         assert!(api.config_load_string.is_some());
         assert!(api.config_get_string.is_some());
+        assert!(api.config_get_item.is_some());
+        assert!(api.config_set_item.is_some());
         assert!(api.config_begin_map.is_some());
         assert!(api.config_begin_list.is_some());
         assert!(api.config_next.is_some());
@@ -3284,6 +3348,110 @@ switches:\n  - name: ascii_mode\n  - name: full_shape\nmenu:\n  page_size: 9\n  
             TRUE
         );
         assert_eq!(unsafe { RimeConfigClose(&mut config) }, TRUE);
+    }
+
+    #[test]
+    fn config_get_and_set_item_copy_subtrees() {
+        let _guard = test_guard();
+        let mut source = empty_config();
+        let mut item = empty_config();
+        let mut destination = empty_config();
+        let yaml = CString::new(
+            "\
+schema:\n  schema_id: luna_pinyin\n  name: Luna Pinyin\nswitches:\n  - name: ascii_mode\n  - name: full_shape\n",
+        )
+        .expect("yaml should be valid");
+        let schema = CString::new("schema").expect("key should be valid");
+        let copied_schema = CString::new("copied/schema").expect("key should be valid");
+        let copied_name = CString::new("copied/schema/name").expect("key should be valid");
+        let source_name = CString::new("schema/name").expect("key should be valid");
+        let missing = CString::new("missing").expect("key should be valid");
+        let mut output = vec![0 as c_char; 32];
+
+        // SAFETY: config pointers and YAML string are valid.
+        assert_eq!(
+            unsafe { RimeConfigLoadString(&mut source, yaml.as_ptr()) },
+            TRUE
+        );
+        // SAFETY: source, key, and destination item pointers are valid.
+        assert_eq!(
+            unsafe { RimeConfigGetItem(&mut source, schema.as_ptr(), &mut item) },
+            TRUE
+        );
+        assert!(!item.ptr.is_null());
+        // SAFETY: configs and keys are valid; item was initialized by get_item.
+        assert_eq!(unsafe { RimeConfigInit(&mut destination) }, TRUE);
+        assert_eq!(
+            unsafe { RimeConfigSetItem(&mut destination, copied_schema.as_ptr(), &mut item) },
+            TRUE
+        );
+        assert_eq!(
+            unsafe {
+                RimeConfigGetString(
+                    &mut destination,
+                    copied_name.as_ptr(),
+                    output.as_mut_ptr(),
+                    output.len(),
+                )
+            },
+            TRUE
+        );
+        // SAFETY: successful string copies are NUL-terminated.
+        assert_eq!(
+            unsafe { CStr::from_ptr(output.as_ptr()) }.to_str(),
+            Ok("Luna Pinyin")
+        );
+
+        assert_eq!(
+            unsafe {
+                RimeConfigSetString(
+                    &mut item,
+                    source_name.as_ptr(),
+                    CString::new("Modified").unwrap().as_ptr(),
+                )
+            },
+            TRUE
+        );
+        assert_eq!(
+            unsafe {
+                RimeConfigGetString(
+                    &mut destination,
+                    copied_name.as_ptr(),
+                    output.as_mut_ptr(),
+                    output.len(),
+                )
+            },
+            TRUE
+        );
+        assert_eq!(
+            unsafe { CStr::from_ptr(output.as_ptr()) }.to_str(),
+            Ok("Luna Pinyin")
+        );
+
+        // SAFETY: missing items copy as null configs and null values can be set.
+        assert_eq!(
+            unsafe { RimeConfigGetItem(&mut source, missing.as_ptr(), &mut item) },
+            TRUE
+        );
+        assert_eq!(
+            unsafe { RimeConfigSetItem(&mut destination, copied_schema.as_ptr(), &mut item) },
+            TRUE
+        );
+        assert_eq!(
+            unsafe {
+                RimeConfigGetString(
+                    &mut destination,
+                    copied_name.as_ptr(),
+                    output.as_mut_ptr(),
+                    output.len(),
+                )
+            },
+            FALSE
+        );
+
+        assert_eq!(unsafe { RimeConfigClose(&mut source) }, TRUE);
+        assert_eq!(unsafe { RimeConfigClose(&mut item) }, TRUE);
+        assert_eq!(unsafe { RimeConfigClose(&mut destination) }, TRUE);
     }
 
     #[test]
