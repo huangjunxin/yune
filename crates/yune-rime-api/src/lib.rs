@@ -419,6 +419,10 @@ struct ConfigIteratorState {
     path_cache: Option<CString>,
 }
 
+struct UserDictListState {
+    names: Vec<CString>,
+}
+
 struct LeverCustomSettings {
     config_id: String,
     generator_id: String,
@@ -614,9 +618,9 @@ fn build_levers_api() -> RimeLeversApi {
         select_schemas: Some(RimeLeversSelectSchemas),
         get_hotkeys: Some(RimeLeversGetHotkeys),
         set_hotkeys: Some(RimeLeversSetHotkeys),
-        user_dict_iterator_init: None,
-        user_dict_iterator_destroy: None,
-        next_user_dict: None,
+        user_dict_iterator_init: Some(RimeLeversUserDictIteratorInit),
+        user_dict_iterator_destroy: Some(RimeLeversUserDictIteratorDestroy),
+        next_user_dict: Some(RimeLeversNextUserDict),
         backup_user_dict: None,
         restore_user_dict: None,
         export_user_dict: None,
@@ -1329,6 +1333,87 @@ pub unsafe extern "C" fn RimeLeversSetHotkeys(
     _hotkeys: *const c_char,
 ) -> Bool {
     FALSE
+}
+
+/// Initializes an iterator over user dictionary names found in `user_data_dir`.
+///
+/// # Safety
+///
+/// `iterator` must be null or point to writable `RimeUserDictIterator` storage.
+#[no_mangle]
+pub unsafe extern "C" fn RimeLeversUserDictIteratorInit(
+    iterator: *mut RimeUserDictIterator,
+) -> Bool {
+    if iterator.is_null() {
+        return FALSE;
+    }
+
+    // SAFETY: `iterator` is non-null and owned by the caller; if it already
+    // holds state from this shim, release it before replacing it.
+    unsafe { clear_user_dict_iterator(iterator) };
+
+    let names = deployed_user_dict_names()
+        .into_iter()
+        .map(|name| cstring_from_lossless_str(&name))
+        .collect::<Vec<_>>();
+    if names.is_empty() {
+        return FALSE;
+    }
+
+    let state = Box::into_raw(Box::new(UserDictListState { names })).cast::<c_void>();
+    // SAFETY: `iterator` is non-null and points to writable storage.
+    unsafe {
+        (*iterator).ptr = state;
+        (*iterator).i = 0;
+    }
+    TRUE
+}
+
+/// Releases a user dictionary iterator initialized by the levers API.
+///
+/// # Safety
+///
+/// `iterator` must be null or point to `RimeUserDictIterator` storage.
+#[no_mangle]
+pub unsafe extern "C" fn RimeLeversUserDictIteratorDestroy(iterator: *mut RimeUserDictIterator) {
+    if iterator.is_null() {
+        return;
+    }
+    // SAFETY: ownership rules match `RimeLeversUserDictIteratorInit`.
+    unsafe { clear_user_dict_iterator(iterator) };
+}
+
+/// Returns the next user dictionary name from an initialized iterator.
+///
+/// # Safety
+///
+/// `iterator` must be null or point to a `RimeUserDictIterator` initialized by
+/// `RimeLeversUserDictIteratorInit`.
+#[no_mangle]
+pub unsafe extern "C" fn RimeLeversNextUserDict(
+    iterator: *mut RimeUserDictIterator,
+) -> *const c_char {
+    if iterator.is_null() {
+        return ptr::null();
+    }
+
+    // SAFETY: `iterator` is non-null and points to caller-owned storage.
+    let state_ptr = unsafe { (*iterator).ptr };
+    if state_ptr.is_null() {
+        return ptr::null();
+    }
+    // SAFETY: non-null iterator state pointers are allocated by this shim.
+    let state = unsafe { &*state_ptr.cast::<UserDictListState>() };
+    // SAFETY: `iterator` is non-null and readable.
+    let index = unsafe { (*iterator).i };
+    let Some(name) = state.names.get(index) else {
+        return ptr::null();
+    };
+    // SAFETY: `iterator` is non-null and writable.
+    unsafe {
+        (*iterator).i = (*iterator).i.saturating_add(1);
+    }
+    name.as_ptr()
 }
 
 /// Frees schema-list storage returned by levers schema-list APIs.
@@ -3528,6 +3613,32 @@ fn deployed_switcher_hotkeys() -> Option<String> {
     }
 }
 
+fn deployed_user_dict_names() -> Vec<String> {
+    let user_data_dir = {
+        let paths = runtime_paths()
+            .lock()
+            .expect("runtime paths should not be poisoned");
+        paths.user_data_dir.to_string_lossy().into_owned()
+    };
+    let Ok(entries) = fs::read_dir(user_data_dir) else {
+        return Vec::new();
+    };
+
+    let mut names = entries
+        .filter_map(Result::ok)
+        .filter_map(|entry| {
+            entry
+                .file_name()
+                .to_string_lossy()
+                .strip_suffix(".userdb")
+                .filter(|name| !name.is_empty())
+                .map(ToOwned::to_owned)
+        })
+        .collect::<Vec<_>>();
+    names.sort();
+    names
+}
+
 fn deployed_schema_list_entry(default_config: &Value, entry: &Value) -> Option<String> {
     let Value::Mapping(entry) = entry else {
         return None;
@@ -3772,6 +3883,21 @@ fn clear_schema_list(schema_list: *mut RimeSchemaList) {
     unsafe {
         (*schema_list).size = 0;
         (*schema_list).list = ptr::null_mut();
+    }
+}
+
+unsafe fn clear_user_dict_iterator(iterator: *mut RimeUserDictIterator) {
+    if iterator.is_null() {
+        return;
+    }
+    // SAFETY: `iterator` is non-null and any non-null state pointer is owned by
+    // this shim after successful iterator initialization.
+    unsafe {
+        if !(*iterator).ptr.is_null() {
+            drop(Box::from_raw((*iterator).ptr.cast::<UserDictListState>()));
+        }
+        (*iterator).ptr = ptr::null_mut();
+        (*iterator).i = 0;
     }
 }
 
@@ -5400,6 +5526,9 @@ schema:
         assert!(api.get_schema_description.is_some());
         assert!(api.get_schema_file_path.is_some());
         assert!(api.select_schemas.is_some());
+        assert!(api.user_dict_iterator_init.is_some());
+        assert!(api.user_dict_iterator_destroy.is_some());
+        assert!(api.next_user_dict.is_some());
 
         let settings = (api
             .switcher_settings_init
@@ -5561,6 +5690,97 @@ schema:
         assert!(schema_list.list.is_null());
         // SAFETY: settings was allocated by this shim's switcher init function.
         unsafe { drop(Box::from_raw(settings)) };
+
+        let reset_traits = empty_traits();
+        // SAFETY: reset traits points to valid storage.
+        unsafe { RimeSetup(&reset_traits) };
+        fs::remove_dir_all(root).expect("temp dirs should be removed");
+    }
+
+    #[test]
+    fn levers_user_dict_iterator_lists_userdb_entries() {
+        let _guard = test_guard();
+        let root = unique_temp_dir("levers-user-dicts");
+        let user = root.join("user");
+        fs::create_dir_all(user.join("luna_pinyin.userdb"))
+            .expect("leveldb-style user dict dir should be created");
+        fs::write(user.join("essay.userdb"), "").expect("user dict file should be written");
+        fs::write(user.join("legacy.userdb.txt"), "")
+            .expect("plain legacy user dict should not match current userdb extension");
+        fs::write(user.join("default.yaml"), "").expect("unrelated file should be ignored");
+
+        let user_c = CString::new(user.to_string_lossy().as_ref()).expect("path is valid");
+        let mut traits = empty_traits();
+        traits.user_data_dir = user_c.as_ptr();
+        // SAFETY: traits points to valid storage and strings live for the call.
+        unsafe { RimeSetup(&traits) };
+
+        let levers_name = CString::new("levers").expect("module name should be valid");
+        // SAFETY: lookup name is a valid NUL-terminated string.
+        let module = unsafe { RimeFindModule(levers_name.as_ptr()) };
+        assert!(!module.is_null());
+        // SAFETY: built-in module storage is process-lifetime.
+        let module = unsafe { &*module };
+        let api = module.get_api.expect("levers get_api should be set")().cast::<RimeLeversApi>();
+        assert!(!api.is_null());
+        // SAFETY: levers get_api returns a process-lifetime RimeLeversApi object.
+        let api = unsafe { &*api };
+        let iterator_init = api
+            .user_dict_iterator_init
+            .expect("user dict iterator init should be available");
+        let iterator_destroy = api
+            .user_dict_iterator_destroy
+            .expect("user dict iterator destroy should be available");
+        let next_user_dict = api
+            .next_user_dict
+            .expect("next user dict should be available");
+
+        let mut iterator = super::RimeUserDictIterator {
+            ptr: std::ptr::null_mut(),
+            i: 0,
+        };
+        // SAFETY: iterator points to writable storage.
+        assert_eq!(unsafe { iterator_init(&mut iterator) }, TRUE);
+        assert!(!iterator.ptr.is_null());
+        assert_eq!(iterator.i, 0);
+
+        // SAFETY: iterator was initialized by the levers API.
+        let first = unsafe { next_user_dict(&mut iterator) };
+        assert!(!first.is_null());
+        // SAFETY: returned pointer is owned by the iterator and valid until destroy.
+        assert_eq!(unsafe { CStr::from_ptr(first) }.to_str(), Ok("essay"));
+        // SAFETY: iterator remains initialized.
+        let second = unsafe { next_user_dict(&mut iterator) };
+        assert!(!second.is_null());
+        // SAFETY: returned pointer is owned by the iterator and valid until destroy.
+        assert_eq!(
+            unsafe { CStr::from_ptr(second) }.to_str(),
+            Ok("luna_pinyin")
+        );
+        // SAFETY: iterator is exhausted but valid.
+        assert!(unsafe { next_user_dict(&mut iterator) }.is_null());
+
+        // SAFETY: iterator was initialized by this shim.
+        unsafe { iterator_destroy(&mut iterator) };
+        assert!(iterator.ptr.is_null());
+        assert_eq!(iterator.i, 0);
+
+        // SAFETY: null inputs are explicitly rejected/no-oped.
+        assert_eq!(unsafe { iterator_init(std::ptr::null_mut()) }, FALSE);
+        assert!(unsafe { next_user_dict(std::ptr::null_mut()) }.is_null());
+        unsafe { iterator_destroy(std::ptr::null_mut()) };
+
+        fs::remove_file(user.join("essay.userdb")).expect("user dict file should be removed");
+        fs::remove_dir_all(user.join("luna_pinyin.userdb"))
+            .expect("user dict dir should be removed");
+        let mut empty_iterator = super::RimeUserDictIterator {
+            ptr: std::ptr::null_mut(),
+            i: 7,
+        };
+        // SAFETY: iterator points to writable storage; no .userdb entries remain.
+        assert_eq!(unsafe { iterator_init(&mut empty_iterator) }, FALSE);
+        assert!(empty_iterator.ptr.is_null());
+        assert_eq!(empty_iterator.i, 0);
 
         let reset_traits = empty_traits();
         // SAFETY: reset traits points to valid storage.
