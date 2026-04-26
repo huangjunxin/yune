@@ -580,7 +580,7 @@ fn build_levers_api() -> RimeLeversApi {
         settings_get_config: None,
         switcher_settings_init: Some(RimeSwitcherSettingsInit),
         get_available_schema_list: Some(RimeLeversGetAvailableSchemaList),
-        get_selected_schema_list: None,
+        get_selected_schema_list: Some(RimeLeversGetSelectedSchemaList),
         schema_list_destroy: Some(RimeLeversSchemaListDestroy),
         get_schema_id: None,
         get_schema_name: None,
@@ -846,6 +846,25 @@ pub unsafe extern "C" fn RimeLeversGetAvailableSchemaList(
 
     clear_schema_list(list);
     populate_schema_list(list, deployed_schema_list_entries())
+}
+
+/// Returns the deployed switcher selection through the librime levers module API.
+///
+/// # Safety
+///
+/// `settings` must either be a pointer returned by `RimeSwitcherSettingsInit`
+/// or null. `list` must be null or point to writable schema-list storage.
+#[no_mangle]
+pub unsafe extern "C" fn RimeLeversGetSelectedSchemaList(
+    settings: *mut RimeSwitcherSettings,
+    list: *mut RimeSchemaList,
+) -> Bool {
+    if settings.is_null() || list.is_null() {
+        return FALSE;
+    }
+
+    clear_schema_list(list);
+    populate_schema_id_list(list, deployed_selected_schema_ids())
 }
 
 /// Frees schema-list storage returned by levers schema-list APIs.
@@ -1446,6 +1465,36 @@ fn populate_schema_list(schema_list: *mut RimeSchemaList, entries: Vec<(String, 
         list.push(RimeSchemaListItem {
             schema_id: schema_id.into_raw(),
             name: name.into_raw(),
+            reserved: ptr::null_mut(),
+        });
+    }
+    let size = list.len();
+    let list_ptr = list.as_mut_ptr();
+    std::mem::forget(list);
+
+    // SAFETY: `schema_list` is non-null and points to caller-owned writable
+    // storage; `list_ptr` owns `size` initialized schema-list items.
+    unsafe {
+        (*schema_list).size = size;
+        (*schema_list).list = list_ptr;
+    }
+    TRUE
+}
+
+fn populate_schema_id_list(schema_list: *mut RimeSchemaList, schema_ids: Vec<String>) -> Bool {
+    if schema_ids.is_empty() {
+        return FALSE;
+    }
+
+    let mut list = Vec::with_capacity(schema_ids.len());
+    for schema_id in schema_ids {
+        let Ok(schema_id) = CString::new(schema_id) else {
+            free_schema_list_items(&mut list);
+            return FALSE;
+        };
+        list.push(RimeSchemaListItem {
+            schema_id: schema_id.into_raw(),
+            name: ptr::null_mut(),
             reserved: ptr::null_mut(),
         });
     }
@@ -2846,6 +2895,29 @@ fn deployed_schema_list_entries() -> Vec<(String, String)> {
                 .unwrap_or(&schema_id)
                 .to_owned();
             (schema_id, name)
+        })
+        .collect()
+}
+
+fn deployed_selected_schema_ids() -> Vec<String> {
+    let default_config = load_runtime_config_root("default", ConfigOpenKind::Deployed);
+    let Some(schema_list) = find_config_value(&default_config, "schema_list") else {
+        return Vec::new();
+    };
+    let Value::Sequence(schema_list) = schema_list else {
+        return Vec::new();
+    };
+
+    schema_list
+        .iter()
+        .filter_map(|entry| {
+            let Value::Mapping(entry) = entry else {
+                return None;
+            };
+            entry
+                .get(Value::String("schema".to_owned()))
+                .and_then(Value::as_str)
+                .map(ToOwned::to_owned)
         })
         .collect()
 }
@@ -4564,8 +4636,12 @@ schema:\n  schema_id: luna_pinyin\n  name: Luna Pinyin\nswitches:\n  - name: asc
         fs::write(
             staging.join("default.yaml"),
             "\
+show_extra_schema: false
 schema_list:
   - schema: luna_pinyin
+  - schema: extra_schema
+    case:
+      - show_extra_schema
 ",
         )
         .expect("default config should be written");
@@ -4601,6 +4677,7 @@ schema_list:
         );
         assert!(api.switcher_settings_init.is_some());
         assert!(api.get_available_schema_list.is_some());
+        assert!(api.get_selected_schema_list.is_some());
         assert!(api.schema_list_destroy.is_some());
 
         let settings = (api
@@ -4623,6 +4700,28 @@ schema_list:
         assert_eq!(schema_id.to_str(), Ok("luna_pinyin"));
         assert_eq!(name.to_str(), Ok("Luna Pinyin"));
 
+        let mut selected_list = empty_schema_list();
+        let get_selected = api
+            .get_selected_schema_list
+            .expect("selected schema list should be available");
+        // SAFETY: settings and selected_list are valid for the call.
+        assert_eq!(unsafe { get_selected(settings, &mut selected_list) }, TRUE);
+        assert_eq!(selected_list.size, 2);
+        // SAFETY: the levers API populated two selected schema-list items.
+        let selected_first = unsafe { *selected_list.list };
+        // SAFETY: the second item is in bounds because size is 2.
+        let selected_second = unsafe { *selected_list.list.add(1) };
+        // SAFETY: selected schema-list ids are valid NUL-terminated strings.
+        let selected_first_id = unsafe { CStr::from_ptr(selected_first.schema_id) };
+        // SAFETY: selected schema-list ids are valid NUL-terminated strings.
+        let selected_second_id = unsafe { CStr::from_ptr(selected_second.schema_id) };
+        assert_eq!(selected_first_id.to_str(), Ok("luna_pinyin"));
+        assert_eq!(selected_second_id.to_str(), Ok("extra_schema"));
+        assert!(selected_first.name.is_null());
+        assert!(selected_first.reserved.is_null());
+        assert!(selected_second.name.is_null());
+        assert!(selected_second.reserved.is_null());
+
         let destroy = api
             .schema_list_destroy
             .expect("schema-list destroy should be available");
@@ -4630,6 +4729,10 @@ schema_list:
         unsafe { destroy(&mut schema_list) };
         assert_eq!(schema_list.size, 0);
         assert!(schema_list.list.is_null());
+        // SAFETY: selected_list was populated by the levers API above.
+        unsafe { destroy(&mut selected_list) };
+        assert_eq!(selected_list.size, 0);
+        assert!(selected_list.list.is_null());
         // SAFETY: settings was allocated by this shim's switcher init function.
         unsafe { drop(Box::from_raw(settings)) };
 
