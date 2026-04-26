@@ -338,6 +338,12 @@ struct ConfigState {
     cstring_cache: Option<CString>,
 }
 
+struct ConfigIteratorState {
+    entries: Vec<(String, String)>,
+    key_cache: Option<CString>,
+    path_cache: Option<CString>,
+}
+
 impl Default for ConfigState {
     fn default() -> Self {
         Self {
@@ -495,9 +501,9 @@ fn build_rime_api() -> RimeApi {
         config_get_string: Some(RimeConfigGetString),
         config_get_cstring: Some(RimeConfigGetCString),
         config_update_signature: None,
-        config_begin_map: None,
-        config_next: None,
-        config_end: None,
+        config_begin_map: Some(RimeConfigBeginMap),
+        config_next: Some(RimeConfigNext),
+        config_end: Some(RimeConfigEnd),
         simulate_key_sequence: Some(RimeSimulateKeySequence),
         register_module: Some(RimeRegisterModule),
         find_module: Some(RimeFindModule),
@@ -519,7 +525,7 @@ fn build_rime_api() -> RimeApi {
         config_create_list: Some(RimeConfigCreateList),
         config_create_map: Some(RimeConfigCreateMap),
         config_list_size: Some(RimeConfigListSize),
-        config_begin_list: None,
+        config_begin_list: Some(RimeConfigBeginList),
         get_input: Some(RimeGetInput),
         get_caret_pos: Some(RimeGetCaretPos),
         select_candidate: Some(RimeSelectCandidate),
@@ -1594,6 +1600,168 @@ pub unsafe extern "C" fn RimeConfigListSize(config: *mut RimeConfig, key: *const
     }
 }
 
+/// Initializes an iterator over a config list.
+///
+/// # Safety
+///
+/// `iterator`, `config`, and `key` must be valid pointers. The iterator must be
+/// released with `RimeConfigEnd` after a successful begin call.
+#[no_mangle]
+pub unsafe extern "C" fn RimeConfigBeginList(
+    iterator: *mut RimeConfigIterator,
+    config: *mut RimeConfig,
+    key: *const c_char,
+) -> Bool {
+    let Some(key) = (unsafe { c_string_key(key) }) else {
+        return FALSE;
+    };
+    let Some(found) = (unsafe { config_lookup_key(config, &key) }) else {
+        return FALSE;
+    };
+    let Value::Sequence(sequence) = found else {
+        return FALSE;
+    };
+
+    let entries = sequence
+        .iter()
+        .enumerate()
+        .map(|(index, _)| {
+            let entry_key = format!("@{index}");
+            let path = config_child_path(&key, &entry_key);
+            (entry_key, path)
+        })
+        .collect::<Vec<_>>();
+    unsafe { config_iterator_begin(iterator, entries, true) }
+}
+
+/// Initializes an iterator over a config map.
+///
+/// # Safety
+///
+/// `iterator`, `config`, and `key` must be valid pointers. The iterator must be
+/// released with `RimeConfigEnd` after a successful begin call.
+#[no_mangle]
+pub unsafe extern "C" fn RimeConfigBeginMap(
+    iterator: *mut RimeConfigIterator,
+    config: *mut RimeConfig,
+    key: *const c_char,
+) -> Bool {
+    let Some(key) = (unsafe { c_string_key(key) }) else {
+        return FALSE;
+    };
+    let Some(found) = (unsafe { config_lookup_key(config, &key) }) else {
+        return FALSE;
+    };
+    let Value::Mapping(mapping) = found else {
+        return FALSE;
+    };
+
+    let entries = mapping
+        .iter()
+        .filter_map(|(entry_key, _)| match entry_key {
+            Value::String(entry_key) => {
+                let path = config_child_path(&key, entry_key);
+                Some((entry_key.clone(), path))
+            }
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    unsafe { config_iterator_begin(iterator, entries, false) }
+}
+
+/// Advances a config iterator and exposes its current key and full path.
+///
+/// # Safety
+///
+/// `iterator` must be a valid pointer previously initialized by
+/// `RimeConfigBeginList` or `RimeConfigBeginMap`.
+#[no_mangle]
+pub unsafe extern "C" fn RimeConfigNext(iterator: *mut RimeConfigIterator) -> Bool {
+    if iterator.is_null() {
+        return FALSE;
+    }
+
+    // SAFETY: callers promise `iterator` is valid; begin stores exactly one of
+    // these pointers when initialization succeeds.
+    let state_ptr = unsafe {
+        if !(*iterator).list.is_null() {
+            (*iterator).list
+        } else {
+            (*iterator).map
+        }
+    };
+    if state_ptr.is_null() {
+        return FALSE;
+    }
+
+    // SAFETY: non-null iterator state pointers are created by
+    // `config_iterator_begin`.
+    let state = unsafe { &mut *state_ptr.cast::<ConfigIteratorState>() };
+    // SAFETY: `iterator` is non-null and points to writable storage.
+    let next_index = unsafe { (*iterator).index.saturating_add(1) };
+    if next_index < 0 {
+        return FALSE;
+    }
+    let Some((key, path)) = state.entries.get(next_index as usize) else {
+        return FALSE;
+    };
+    let Ok(key_cache) = CString::new(key.as_str()) else {
+        return FALSE;
+    };
+    let Ok(path_cache) = CString::new(path.as_str()) else {
+        return FALSE;
+    };
+    state.key_cache = Some(key_cache);
+    state.path_cache = Some(path_cache);
+
+    // SAFETY: cache pointers remain valid until the next iterator mutation or
+    // `RimeConfigEnd`.
+    unsafe {
+        (*iterator).index = next_index;
+        (*iterator).key = state
+            .key_cache
+            .as_ref()
+            .map_or(ptr::null(), |value| value.as_ptr());
+        (*iterator).path = state
+            .path_cache
+            .as_ref()
+            .map_or(ptr::null(), |value| value.as_ptr());
+    }
+    TRUE
+}
+
+/// Releases a config iterator initialized by this API.
+///
+/// # Safety
+///
+/// `iterator` must be either null or a valid iterator object. Non-null nested
+/// state pointers must have been returned by this API.
+#[no_mangle]
+pub unsafe extern "C" fn RimeConfigEnd(iterator: *mut RimeConfigIterator) {
+    if iterator.is_null() {
+        return;
+    }
+    // SAFETY: `iterator` is non-null and any state pointers were allocated by
+    // `config_iterator_begin`.
+    unsafe {
+        if !(*iterator).list.is_null() {
+            drop(Box::from_raw(
+                (*iterator).list.cast::<ConfigIteratorState>(),
+            ));
+        }
+        if !(*iterator).map.is_null() {
+            drop(Box::from_raw((*iterator).map.cast::<ConfigIteratorState>()));
+        }
+        *iterator = RimeConfigIterator {
+            list: ptr::null_mut(),
+            map: ptr::null_mut(),
+            index: 0,
+            key: ptr::null(),
+            path: ptr::null(),
+        };
+    }
+}
+
 /// Processes a librime-style key sequence against a session.
 ///
 /// # Safety
@@ -2378,8 +2546,12 @@ unsafe fn config_state_mut(config: *mut RimeConfig) -> Option<&'static mut Confi
 
 unsafe fn config_lookup(config: *mut RimeConfig, key: *const c_char) -> Option<Value> {
     let key = unsafe { c_string_key(key) }?;
+    unsafe { config_lookup_key(config, &key) }
+}
+
+unsafe fn config_lookup_key(config: *mut RimeConfig, key: &str) -> Option<Value> {
     let state = unsafe { config_state_mut(config) }?;
-    find_config_value(&state.root, &key).cloned()
+    find_config_value(&state.root, key).cloned()
 }
 
 unsafe fn config_string_value(config: *mut RimeConfig, key: *const c_char) -> Option<String> {
@@ -2410,6 +2582,42 @@ unsafe fn c_string_key(key: *const c_char) -> Option<String> {
             .to_string_lossy()
             .into_owned(),
     )
+}
+
+unsafe fn config_iterator_begin(
+    iterator: *mut RimeConfigIterator,
+    entries: Vec<(String, String)>,
+    is_list: bool,
+) -> Bool {
+    if iterator.is_null() {
+        return FALSE;
+    }
+
+    let state = Box::into_raw(Box::new(ConfigIteratorState {
+        entries,
+        key_cache: None,
+        path_cache: None,
+    }))
+    .cast::<c_void>();
+
+    // SAFETY: `iterator` is non-null and points to caller-owned writable
+    // storage; the boxed state is released by `RimeConfigEnd`.
+    unsafe {
+        (*iterator).list = if is_list { state } else { ptr::null_mut() };
+        (*iterator).map = if is_list { ptr::null_mut() } else { state };
+        (*iterator).index = -1;
+        (*iterator).key = ptr::null();
+        (*iterator).path = ptr::null();
+    }
+    TRUE
+}
+
+fn config_child_path(root_path: &str, child_key: &str) -> String {
+    if root_path.is_empty() || root_path == "/" {
+        child_key.to_owned()
+    } else {
+        format!("{root_path}/{child_key}")
+    }
 }
 
 fn find_config_value<'a>(root: &'a Value, key: &str) -> Option<&'a Value> {
@@ -2547,10 +2755,11 @@ mod tests {
         bool_from, rime_get_api, RimeApi, RimeCandidateListBegin, RimeCandidateListEnd,
         RimeCandidateListFromIndex, RimeCandidateListIterator, RimeCandidateListNext,
         RimeChangePage, RimeCleanupAllSessions, RimeCleanupStaleSessions, RimeClearComposition,
-        RimeCommit, RimeCommitComposition, RimeConfig, RimeConfigClear, RimeConfigClose,
-        RimeConfigCreateList, RimeConfigCreateMap, RimeConfigGetBool, RimeConfigGetCString,
-        RimeConfigGetDouble, RimeConfigGetInt, RimeConfigGetString, RimeConfigInit,
-        RimeConfigListSize, RimeConfigLoadString, RimeConfigSetBool, RimeConfigSetDouble,
+        RimeCommit, RimeCommitComposition, RimeConfig, RimeConfigBeginList, RimeConfigBeginMap,
+        RimeConfigClear, RimeConfigClose, RimeConfigCreateList, RimeConfigCreateMap, RimeConfigEnd,
+        RimeConfigGetBool, RimeConfigGetCString, RimeConfigGetDouble, RimeConfigGetInt,
+        RimeConfigGetString, RimeConfigInit, RimeConfigIterator, RimeConfigListSize,
+        RimeConfigLoadString, RimeConfigNext, RimeConfigSetBool, RimeConfigSetDouble,
         RimeConfigSetInt, RimeConfigSetString, RimeContext, RimeCreateSession, RimeCustomApi,
         RimeDeleteCandidate, RimeDeleteCandidateOnCurrentPage, RimeDeployConfigFile,
         RimeDeploySchema, RimeDeployWorkspace, RimeDeployerInitialize, RimeDestroySession,
@@ -2689,6 +2898,16 @@ mod tests {
         }
     }
 
+    fn empty_config_iterator() -> RimeConfigIterator {
+        RimeConfigIterator {
+            list: std::ptr::null_mut(),
+            map: std::ptr::null_mut(),
+            index: 0,
+            key: std::ptr::null(),
+            path: std::ptr::null(),
+        }
+    }
+
     fn empty_traits() -> RimeTraits {
         RimeTraits {
             data_size: std::mem::size_of::<RimeTraits>() as i32,
@@ -2740,6 +2959,10 @@ mod tests {
         assert!(api.config_init.is_some());
         assert!(api.config_load_string.is_some());
         assert!(api.config_get_string.is_some());
+        assert!(api.config_begin_map.is_some());
+        assert!(api.config_begin_list.is_some());
+        assert!(api.config_next.is_some());
+        assert!(api.config_end.is_some());
         assert!(api.commit_proto.is_none());
         assert!(api.get_state_label.is_none());
 
@@ -2858,6 +3081,95 @@ schema:\n  schema_id: luna_pinyin\n  name: Luna Pinyin\nswitches:\n  - name: asc
         // SAFETY: config was initialized by the API and is still open.
         assert_eq!(unsafe { RimeConfigClose(&mut config) }, TRUE);
         assert!(config.ptr.is_null());
+    }
+
+    #[test]
+    fn config_iterators_expose_list_and_map_paths() {
+        let _guard = test_guard();
+        let mut config = empty_config();
+        let yaml = CString::new(
+            "\
+switches:\n  - name: ascii_mode\n  - name: full_shape\nmenu:\n  page_size: 9\n  alternative_select_keys: ABC\n",
+        )
+        .expect("yaml should be valid");
+        let switches = CString::new("switches").expect("key should be valid");
+        let menu = CString::new("menu").expect("key should be valid");
+        let missing = CString::new("missing").expect("key should be valid");
+        let mut iterator = empty_config_iterator();
+
+        // SAFETY: config points to writable storage and yaml is a valid C string.
+        assert_eq!(
+            unsafe { RimeConfigLoadString(&mut config, yaml.as_ptr()) },
+            TRUE
+        );
+
+        // SAFETY: iterator, config, and key pointers are valid.
+        assert_eq!(
+            unsafe { RimeConfigBeginList(&mut iterator, &mut config, switches.as_ptr()) },
+            TRUE
+        );
+        assert_eq!(iterator.index, -1);
+        assert!(!iterator.list.is_null());
+        assert!(iterator.map.is_null());
+
+        // SAFETY: iterator was initialized by RimeConfigBeginList.
+        assert_eq!(unsafe { RimeConfigNext(&mut iterator) }, TRUE);
+        assert_eq!(iterator.index, 0);
+        // SAFETY: iterator fields point to NUL-terminated strings owned by the iterator.
+        assert_eq!(unsafe { CStr::from_ptr(iterator.key) }.to_str(), Ok("@0"));
+        assert_eq!(
+            unsafe { CStr::from_ptr(iterator.path) }.to_str(),
+            Ok("switches/@0")
+        );
+        // SAFETY: same iterator remains valid.
+        assert_eq!(unsafe { RimeConfigNext(&mut iterator) }, TRUE);
+        assert_eq!(iterator.index, 1);
+        assert_eq!(unsafe { CStr::from_ptr(iterator.key) }.to_str(), Ok("@1"));
+        assert_eq!(
+            unsafe { CStr::from_ptr(iterator.path) }.to_str(),
+            Ok("switches/@1")
+        );
+        assert_eq!(unsafe { RimeConfigNext(&mut iterator) }, FALSE);
+        // SAFETY: iterator was initialized by this API and can be ended once.
+        unsafe { RimeConfigEnd(&mut iterator) };
+        assert!(iterator.list.is_null());
+        assert!(iterator.key.is_null());
+
+        // SAFETY: iterator, config, and key pointers are valid.
+        assert_eq!(
+            unsafe { RimeConfigBeginMap(&mut iterator, &mut config, menu.as_ptr()) },
+            TRUE
+        );
+        // SAFETY: iterator was initialized by RimeConfigBeginMap.
+        assert_eq!(unsafe { RimeConfigNext(&mut iterator) }, TRUE);
+        assert_eq!(
+            unsafe { CStr::from_ptr(iterator.key) }.to_str(),
+            Ok("page_size")
+        );
+        assert_eq!(
+            unsafe { CStr::from_ptr(iterator.path) }.to_str(),
+            Ok("menu/page_size")
+        );
+        assert_eq!(unsafe { RimeConfigNext(&mut iterator) }, TRUE);
+        assert_eq!(
+            unsafe { CStr::from_ptr(iterator.key) }.to_str(),
+            Ok("alternative_select_keys")
+        );
+        assert_eq!(
+            unsafe { CStr::from_ptr(iterator.path) }.to_str(),
+            Ok("menu/alternative_select_keys")
+        );
+        assert_eq!(unsafe { RimeConfigNext(&mut iterator) }, FALSE);
+        unsafe { RimeConfigEnd(&mut iterator) };
+
+        // SAFETY: missing/non-container paths should fail without initializing.
+        assert_eq!(
+            unsafe { RimeConfigBeginList(&mut iterator, &mut config, missing.as_ptr()) },
+            FALSE
+        );
+        assert!(iterator.list.is_null());
+
+        assert_eq!(unsafe { RimeConfigClose(&mut config) }, TRUE);
     }
 
     #[test]
