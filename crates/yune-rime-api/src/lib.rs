@@ -419,15 +419,59 @@ pub unsafe extern "C" fn RimeGetProperty(
         if property_value.is_empty() {
             return false;
         }
+        copy_c_string_to_buffer(property_value, value, buffer_size);
+        true
+    })
+}
 
-        let bytes = property_value.as_bytes();
-        let copy_len = bytes.len().min(buffer_size.saturating_sub(1));
-        // SAFETY: `value` points to writable storage of `buffer_size` bytes,
-        // and `copy_len` is bounded to leave room for a trailing NUL.
-        unsafe {
-            ptr::copy_nonoverlapping(bytes.as_ptr().cast::<c_char>(), value, copy_len);
-            slice::from_raw_parts_mut(value.cast::<u8>(), buffer_size)[copy_len] = 0;
-        }
+/// Copies the current session schema id into caller-provided storage.
+///
+/// # Safety
+///
+/// `schema_id` must point to writable storage of `buffer_size` bytes. Null or
+/// empty buffers are rejected.
+#[no_mangle]
+pub unsafe extern "C" fn RimeGetCurrentSchema(
+    session_id: RimeSessionId,
+    schema_id: *mut c_char,
+    buffer_size: usize,
+) -> Bool {
+    if schema_id.is_null() || buffer_size == 0 {
+        return FALSE;
+    }
+
+    with_session(session_id, |session| {
+        let current_schema = session.engine.status().schema_id;
+        copy_c_string_to_buffer(&current_schema, schema_id, buffer_size);
+        true
+    })
+}
+
+/// Selects the active schema id for a session.
+///
+/// # Safety
+///
+/// `schema_id` must be either null or point to a valid nul-terminated C string.
+/// Null schema ids are rejected.
+#[no_mangle]
+pub unsafe extern "C" fn RimeSelectSchema(
+    session_id: RimeSessionId,
+    schema_id: *const c_char,
+) -> Bool {
+    if schema_id.is_null() {
+        return FALSE;
+    }
+    // SAFETY: callers promise that `schema_id` is a valid nul-terminated
+    // string.
+    let schema_id = unsafe { CStr::from_ptr(schema_id) }
+        .to_string_lossy()
+        .into_owned();
+
+    with_session(session_id, |session| {
+        session.engine.set_schema(schema_id.clone(), schema_id);
+        session.engine.clear_composition();
+        session.input_buffer = None;
+        session.unread_commit = None;
         true
     })
 }
@@ -1077,6 +1121,17 @@ fn free_candidate_fields(candidate: &mut RimeCandidate) {
     candidate.reserved = ptr::null_mut();
 }
 
+fn copy_c_string_to_buffer(value: &str, output: *mut c_char, buffer_size: usize) {
+    let bytes = value.as_bytes();
+    let copy_len = bytes.len().min(buffer_size.saturating_sub(1));
+    // SAFETY: callers pass writable storage of `buffer_size` bytes, and
+    // `copy_len` is bounded to leave room for a trailing NUL.
+    unsafe {
+        ptr::copy_nonoverlapping(bytes.as_ptr().cast::<c_char>(), output, copy_len);
+        slice::from_raw_parts_mut(output.cast::<u8>(), buffer_size)[copy_len] = 0;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::ffi::{CStr, CString};
@@ -1090,11 +1145,11 @@ mod tests {
         RimeCandidateListIterator, RimeCandidateListNext, RimeChangePage, RimeCleanupAllSessions,
         RimeClearComposition, RimeCommit, RimeCommitComposition, RimeContext, RimeCreateSession,
         RimeDestroySession, RimeFindSession, RimeFreeCommit, RimeFreeContext, RimeFreeStatus,
-        RimeGetCaretPos, RimeGetCommit, RimeGetContext, RimeGetInput, RimeGetOption,
-        RimeGetProperty, RimeGetStatus, RimeHighlightCandidate,
+        RimeGetCaretPos, RimeGetCommit, RimeGetContext, RimeGetCurrentSchema, RimeGetInput,
+        RimeGetOption, RimeGetProperty, RimeGetStatus, RimeHighlightCandidate,
         RimeHighlightCandidateOnCurrentPage, RimeProcessKey, RimeSelectCandidate,
-        RimeSelectCandidateOnCurrentPage, RimeSetCaretPos, RimeSetInput, RimeSetOption,
-        RimeSetProperty, RimeSimulateKeySequence, RimeStatus, FALSE, TRUE,
+        RimeSelectCandidateOnCurrentPage, RimeSelectSchema, RimeSetCaretPos, RimeSetInput,
+        RimeSetOption, RimeSetProperty, RimeSimulateKeySequence, RimeStatus, FALSE, TRUE,
     };
 
     fn test_guard() -> MutexGuard<'static, ()> {
@@ -1804,6 +1859,86 @@ mod tests {
         );
         assert_eq!(
             unsafe { RimeGetProperty(session_id, std::ptr::null(), buffer.as_mut_ptr(), 0) },
+            FALSE
+        );
+
+        assert_eq!(RimeDestroySession(session_id), TRUE);
+    }
+
+    #[test]
+    fn gets_and_selects_current_schema() {
+        let _guard = test_guard();
+        RimeCleanupAllSessions();
+        let session_id = RimeCreateSession();
+        let schema_id = CString::new("sample_schema").expect("schema id should be valid");
+        let mut buffer = vec![0 as c_char; 32];
+        let mut short_buffer = vec![0 as c_char; 8];
+        let mut commit = RimeCommit {
+            data_size: 0,
+            text: std::ptr::null_mut(),
+        };
+        let mut context = empty_context();
+        let mut status = empty_status();
+
+        // SAFETY: buffer points to writable storage.
+        assert_eq!(
+            unsafe { RimeGetCurrentSchema(session_id, buffer.as_mut_ptr(), buffer.len()) },
+            TRUE
+        );
+        // SAFETY: `RimeGetCurrentSchema` wrote a trailing NUL into buffer.
+        let current_schema = unsafe { CStr::from_ptr(buffer.as_ptr()) };
+        assert_eq!(current_schema.to_str(), Ok("default"));
+
+        assert_eq!(RimeProcessKey(session_id, 'n' as i32, 0), TRUE);
+        assert_eq!(RimeProcessKey(session_id, 'i' as i32, 0), TRUE);
+        assert_eq!(RimeProcessKey(session_id, ' ' as i32, 0), TRUE);
+        // SAFETY: schema id is a valid nul-terminated C string.
+        assert_eq!(
+            unsafe { RimeSelectSchema(session_id, schema_id.as_ptr()) },
+            TRUE
+        );
+
+        // SAFETY: selecting a schema clears unread composition state.
+        assert_eq!(unsafe { RimeGetCommit(session_id, &mut commit) }, FALSE);
+        // SAFETY: context points to writable storage initialized with a
+        // positive `data_size`.
+        assert_eq!(unsafe { RimeGetContext(session_id, &mut context) }, TRUE);
+        assert_eq!(context.composition.length, 0);
+        assert_eq!(context.menu.num_candidates, 0);
+
+        // SAFETY: buffer points to writable storage.
+        assert_eq!(
+            unsafe {
+                RimeGetCurrentSchema(session_id, short_buffer.as_mut_ptr(), short_buffer.len())
+            },
+            TRUE
+        );
+        // SAFETY: `RimeGetCurrentSchema` wrote a trailing NUL into buffer.
+        let truncated_schema = unsafe { CStr::from_ptr(short_buffer.as_ptr()) };
+        assert_eq!(truncated_schema.to_str(), Ok("sample_"));
+
+        // SAFETY: status points to writable storage initialized with positive
+        // `data_size`.
+        assert_eq!(unsafe { RimeGetStatus(session_id, &mut status) }, TRUE);
+        // SAFETY: `RimeGetStatus` populated owned C strings.
+        let status_schema_id = unsafe { CStr::from_ptr(status.schema_id) };
+        // SAFETY: `RimeGetStatus` populated owned C strings.
+        let status_schema_name = unsafe { CStr::from_ptr(status.schema_name) };
+        assert_eq!(status_schema_id.to_str(), Ok("sample_schema"));
+        assert_eq!(status_schema_name.to_str(), Ok("sample_schema"));
+        // SAFETY: nested pointers were allocated by `RimeGetStatus` above.
+        assert_eq!(unsafe { RimeFreeStatus(&mut status) }, TRUE);
+
+        assert_eq!(
+            unsafe { RimeGetCurrentSchema(session_id, std::ptr::null_mut(), 0) },
+            FALSE
+        );
+        assert_eq!(
+            unsafe { RimeSelectSchema(session_id, std::ptr::null()) },
+            FALSE
+        );
+        assert_eq!(
+            unsafe { RimeSelectSchema(session_id + 1, schema_id.as_ptr()) },
             FALSE
         );
 
