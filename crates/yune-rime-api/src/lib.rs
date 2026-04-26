@@ -4289,6 +4289,7 @@ fn workspace_update() -> bool {
     if !deploy_config_file("default.yaml", "config_version") {
         return false;
     }
+    let _ = symlink_prebuilt_dictionaries();
 
     let default_config = load_runtime_config_root("default", ConfigOpenKind::Deployed);
     let Some(schema_ids) = workspace_schema_ids(&default_config) else {
@@ -4404,6 +4405,56 @@ fn write_last_build_time() -> bool {
 
 fn user_dict_upgrade() -> bool {
     true
+}
+
+fn symlink_prebuilt_dictionaries() -> bool {
+    let (shared_data_dir, user_data_dir) = {
+        let paths = runtime_paths()
+            .lock()
+            .expect("runtime paths should not be poisoned");
+        (
+            PathBuf::from(paths.shared_data_dir.to_string_lossy().into_owned()),
+            PathBuf::from(paths.user_data_dir.to_string_lossy().into_owned()),
+        )
+    };
+    if !shared_data_dir.is_dir() || !user_data_dir.is_dir() {
+        return false;
+    }
+    let Ok(shared_data_dir) = shared_data_dir.canonicalize() else {
+        return false;
+    };
+    if user_data_dir
+        .canonicalize()
+        .is_ok_and(|user_data_dir| user_data_dir == shared_data_dir)
+    {
+        return false;
+    }
+
+    let Ok(entries) = fs::read_dir(&user_data_dir) else {
+        return false;
+    };
+    let mut success = true;
+    for entry in entries.filter_map(Result::ok) {
+        let path = entry.path();
+        let Ok(metadata) = fs::symlink_metadata(&path) else {
+            success = false;
+            continue;
+        };
+        if !metadata.file_type().is_symlink() {
+            continue;
+        }
+
+        let target_path = path.canonicalize();
+        let bad_link = target_path.is_err();
+        let linked_to_shared_data = target_path
+            .ok()
+            .and_then(|target_path| target_path.parent().map(Path::to_path_buf))
+            .is_some_and(|parent| parent == shared_data_dir);
+        if (bad_link || linked_to_shared_data) && fs::remove_file(&path).is_err() {
+            success = false;
+        }
+    }
+    success
 }
 
 fn deploy_config_file(file_name: &str, version_key: &str) -> bool {
@@ -6823,6 +6874,67 @@ schema:
         fs::write(user.join("stale.bin"), "stale").expect("trash fixture should be written");
         assert_eq!(RimeDeployWorkspace(), TRUE);
         assert!(user.join("trash").join("stale.bin").is_file());
+
+        let reset_traits = empty_traits();
+        // SAFETY: reset traits points to valid storage.
+        unsafe { RimeSetup(&reset_traits) };
+        fs::remove_dir_all(root).expect("temp dirs should be removed");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn workspace_update_removes_legacy_shared_data_symlinks() {
+        let _guard = test_guard();
+        RimeCleanupAllSessions();
+        let root = unique_temp_dir("workspace-symlinks");
+        let shared = root.join("shared");
+        let user = root.join("user");
+        fs::create_dir_all(&shared).expect("shared dir should be created");
+        fs::create_dir_all(&user).expect("user dir should be created");
+        fs::write(
+            shared.join("default.yaml"),
+            "config_version: test\nschema_list:\n  - schema: default\n",
+        )
+        .expect("default config should be written");
+        fs::write(
+            shared.join("default.schema.yaml"),
+            "schema:\n  schema_id: default\n  name: Default\n",
+        )
+        .expect("default schema should be written");
+        fs::write(shared.join("legacy.table.bin"), "prebuilt")
+            .expect("shared prebuilt fixture should be written");
+        fs::write(user.join("local.table.bin"), "local").expect("local fixture should be written");
+        std::os::unix::fs::symlink(
+            shared.join("legacy.table.bin"),
+            user.join("legacy.table.bin"),
+        )
+        .expect("shared symlink should be created");
+        std::os::unix::fs::symlink(
+            user.join("local.table.bin"),
+            user.join("local-link.table.bin"),
+        )
+        .expect("local symlink should be created");
+        std::os::unix::fs::symlink(
+            shared.join("missing.table.bin"),
+            user.join("missing.table.bin"),
+        )
+        .expect("dangling symlink should be created");
+        let shared_c =
+            CString::new(shared.to_string_lossy().as_ref()).expect("path should be valid");
+        let user_c = CString::new(user.to_string_lossy().as_ref()).expect("path should be valid");
+        let workspace_task = CString::new("workspace_update").expect("task should be valid");
+        let mut traits = empty_traits();
+        traits.shared_data_dir = shared_c.as_ptr();
+        traits.user_data_dir = user_c.as_ptr();
+
+        // SAFETY: traits points to a valid RimeTraits object with valid strings.
+        unsafe { RimeDeployerInitialize(&traits) };
+        assert_eq!(RimeRunTask(workspace_task.as_ptr()), TRUE);
+
+        assert!(fs::symlink_metadata(user.join("legacy.table.bin")).is_err());
+        assert!(fs::symlink_metadata(user.join("missing.table.bin")).is_err());
+        assert!(user.join("local-link.table.bin").exists());
+        assert!(user.join("build").join("default.schema.yaml").is_file());
 
         let reset_traits = empty_traits();
         // SAFETY: reset traits points to valid storage.
