@@ -1603,7 +1603,8 @@ pub extern "C" fn RimeCleanupStaleSessions() {}
 #[no_mangle]
 pub extern "C" fn RimeProcessKey(session_id: RimeSessionId, keycode: c_int, mask: c_int) -> Bool {
     if session_id == 0
-        || (mask != 0 && !(mask == K_CONTROL_MASK && matches!(keycode, XK_BACKSPACE | XK_DELETE)))
+        || (mask != 0
+            && !(mask == K_CONTROL_MASK && matches!(keycode, XK_BACKSPACE | XK_DELETE | XK_RETURN)))
     {
         return FALSE;
     }

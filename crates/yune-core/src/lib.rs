@@ -772,6 +772,9 @@ impl Engine {
                     self.delete_candidate(self.context.highlighted);
                     return None;
                 }
+                KeyCode::Return => {
+                    return self.commit_raw_input();
+                }
                 _ => {}
             }
         }
@@ -1058,6 +1061,16 @@ impl Engine {
         self.commit_candidate(self.context.highlighted)
     }
 
+    fn commit_raw_input(&mut self) -> Option<String> {
+        if self.context.composition.input.is_empty() {
+            return None;
+        }
+        let text = self.context.composition.input.clone();
+        self.context.last_commit = Some(text.clone());
+        self.clear_composition();
+        Some(text)
+    }
+
     fn commit_candidate_at_page_index(&mut self, page_index: usize) -> Option<String> {
         if page_index >= DEFAULT_PAGE_SIZE {
             return None;
@@ -1286,6 +1299,25 @@ mod tests {
         assert_eq!(commits, vec!["你"]);
         assert_eq!(engine.context().last_commit.as_deref(), Some("你"));
         assert!(!engine.status().is_composing);
+    }
+
+    #[test]
+    fn control_return_commits_raw_input_like_librime_fluid_editor() {
+        let mut engine = Engine::new();
+        engine.add_translator(StaticTableTranslator::new([("ni", "你")]));
+
+        let commits = engine
+            .process_key_sequence("ni{Control+Return}")
+            .expect("key sequence should parse");
+
+        assert_eq!(commits, vec!["ni"]);
+        assert_eq!(engine.context().last_commit.as_deref(), Some("ni"));
+        assert!(!engine.status().is_composing);
+
+        let commits = engine
+            .process_key_sequence("{Control+Return}")
+            .expect("key sequence should parse");
+        assert!(commits.is_empty());
     }
 
     #[test]
