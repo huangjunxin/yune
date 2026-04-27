@@ -131,6 +131,7 @@ impl SessionState {
 
 struct KeyBinderProcessor {
     bindings: HashMap<KeyEvent, Vec<KeyBinding>>,
+    redirecting: bool,
 }
 
 struct KeyBinding {
@@ -147,6 +148,7 @@ enum KeyBindingCondition {
 
 #[derive(Clone)]
 enum KeyBindingAction {
+    Send(Vec<KeyEvent>),
     Toggle(String),
 }
 
@@ -1780,7 +1782,10 @@ pub extern "C" fn RimeProcessKey(session_id: RimeSessionId, keycode: c_int, mask
         return FALSE;
     };
 
-    if process_key_binder_processor(session, key_event) {
+    if let Some(commits) = process_key_binder_processor(session, key_event) {
+        for commit in commits {
+            append_unread_commit(session, commit);
+        }
         return TRUE;
     }
 
@@ -3716,6 +3721,7 @@ fn install_schema_key_binder_processor(session: &mut SessionState, schema_id: &s
 
     let mut processor = KeyBinderProcessor {
         bindings: HashMap::new(),
+        redirecting: false,
     };
     for binding in bindings {
         let Value::Mapping(binding) = binding else {
@@ -3737,20 +3743,35 @@ fn install_schema_key_binder_processor(session: &mut SessionState, schema_id: &s
         let Some(key_event) = parse_single_key_binding_event(&accept) else {
             continue;
         };
-        let Some(toggle) = binding
+        let action = if let Some(send) = binding
+            .get(Value::String("send".to_owned()))
+            .and_then(config_scalar_string)
+        {
+            let Some(target) = parse_single_key_binding_event(&send) else {
+                continue;
+            };
+            KeyBindingAction::Send(vec![target])
+        } else if let Some(send_sequence) = binding
+            .get(Value::String("send_sequence".to_owned()))
+            .and_then(config_scalar_string)
+        {
+            let Ok(targets) = parse_key_sequence(&send_sequence) else {
+                continue;
+            };
+            KeyBindingAction::Send(targets)
+        } else if let Some(toggle) = binding
             .get(Value::String("toggle".to_owned()))
             .and_then(config_scalar_string)
-        else {
+        {
+            KeyBindingAction::Toggle(toggle)
+        } else {
             continue;
         };
         processor
             .bindings
             .entry(key_event)
             .or_default()
-            .push(KeyBinding {
-                condition,
-                action: KeyBindingAction::Toggle(toggle),
-            });
+            .push(KeyBinding { condition, action });
     }
 
     for bindings in processor.bindings.values_mut() {
@@ -4074,8 +4095,11 @@ fn append_punctuation_definition(
 }
 
 fn process_session_key_event(session: &mut SessionState, key_event: KeyEvent) -> Option<String> {
-    if process_key_binder_processor(session, key_event) {
-        return None;
+    if let Some(commits) = process_key_binder_processor(session, key_event) {
+        if commits.is_empty() {
+            return None;
+        }
+        return Some(commits.concat());
     }
     if let Some(result) = process_punctuation_processor(session, key_event) {
         return match result {
@@ -4089,25 +4113,50 @@ fn process_session_key_event(session: &mut SessionState, key_event: KeyEvent) ->
     session.engine.process_key_event(key_event)
 }
 
-fn process_key_binder_processor(session: &mut SessionState, key_event: KeyEvent) -> bool {
+fn process_key_binder_processor(
+    session: &mut SessionState,
+    key_event: KeyEvent,
+) -> Option<Vec<String>> {
     let Some(processor) = session.key_binder.as_ref() else {
-        return false;
+        return None;
+    };
+    if processor.redirecting {
+        return None;
     };
     let Some(bindings) = processor.bindings.get(&key_event) else {
-        return false;
+        return None;
     };
     let Some(binding_index) = bindings
         .iter()
         .position(|binding| key_binding_condition_matches(session, binding.condition))
     else {
-        return false;
+        return None;
     };
 
     let action = bindings[binding_index].action.clone();
     match action {
-        KeyBindingAction::Toggle(option) => toggle_key_binding_option(session, &option),
+        KeyBindingAction::Send(events) => Some(redirect_key_binding_events(session, events)),
+        KeyBindingAction::Toggle(option) => {
+            toggle_key_binding_option(session, &option);
+            Some(Vec::new())
+        }
     }
-    true
+}
+
+fn redirect_key_binding_events(session: &mut SessionState, events: Vec<KeyEvent>) -> Vec<String> {
+    if let Some(processor) = session.key_binder.as_mut() {
+        processor.redirecting = true;
+    }
+    let mut commits = Vec::new();
+    for event in events {
+        if let Some(commit) = process_session_key_event(session, event) {
+            commits.push(commit);
+        }
+    }
+    if let Some(processor) = session.key_binder.as_mut() {
+        processor.redirecting = false;
+    }
+    commits
 }
 
 fn key_binding_condition_matches(session: &SessionState, condition: KeyBindingCondition) -> bool {
