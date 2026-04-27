@@ -1016,8 +1016,14 @@ impl Engine {
     }
 
     fn backspace(&mut self) -> Option<String> {
-        self.context.composition.input.pop();
-        self.context.composition.caret = self.context.composition.input.len();
+        if self.context.composition.caret == 0 {
+            return None;
+        }
+        self.context.composition.caret -= 1;
+        self.context
+            .composition
+            .input
+            .remove(self.context.composition.caret);
         self.context.composition.preedit = self.context.composition.input.clone();
         self.refresh_candidates();
         None
@@ -1214,6 +1220,32 @@ mod tests {
         assert!(commits.is_empty());
         assert_eq!(engine.context().composition.input, "ni");
         assert_eq!(engine.context().composition.caret, 2);
+    }
+
+    #[test]
+    fn backspace_removes_input_before_caret_like_librime_editor_back() {
+        let mut engine = Engine::new();
+        engine.add_translator(StaticTableTranslator::new([("ni", "你")]));
+
+        engine.set_input("nxi");
+        engine.set_caret_pos(2);
+        let commits = engine
+            .process_key_sequence("{BackSpace}{space}")
+            .expect("key sequence should parse");
+
+        assert_eq!(commits, vec!["你"]);
+        assert_eq!(engine.context().last_commit.as_deref(), Some("你"));
+        assert!(!engine.status().is_composing);
+
+        engine.set_input("ni");
+        engine.set_caret_pos(0);
+        let commits = engine
+            .process_key_sequence("{BackSpace}")
+            .expect("key sequence should parse");
+
+        assert!(commits.is_empty());
+        assert_eq!(engine.context().composition.input, "ni");
+        assert_eq!(engine.context().composition.caret, 0);
     }
 
     #[test]
