@@ -110,6 +110,7 @@ struct SessionState {
     unread_commit: Option<String>,
     input_buffer: Option<CString>,
     key_binder: Option<KeyBinderProcessor>,
+    ascii_composer_enabled: bool,
     punctuation_processor: Option<PunctuationProcessor>,
     recognizer_processor: Option<RecognizerProcessor>,
     base_segment_tags: Vec<String>,
@@ -126,6 +127,7 @@ impl SessionState {
             unread_commit: None,
             input_buffer: None,
             key_binder: None,
+            ascii_composer_enabled: false,
             punctuation_processor: None,
             recognizer_processor: None,
             base_segment_tags: vec!["abc".to_owned()],
@@ -193,6 +195,13 @@ struct AffixSegmentor {
 struct RecognizerProcessor {
     use_space: bool,
     patterns: Vec<MatcherPattern>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum AsciiComposerProcessResult {
+    Noop,
+    Accepted,
+    Rejected,
 }
 
 struct MatcherPattern {
@@ -1830,6 +1839,15 @@ pub extern "C" fn RimeProcessKey(session_id: RimeSessionId, keycode: c_int, mask
         return FALSE;
     };
 
+    match process_ascii_composer_processor(session, key_event) {
+        AsciiComposerProcessResult::Noop => {}
+        AsciiComposerProcessResult::Accepted => {
+            update_session_segment_tags(session);
+            return TRUE;
+        }
+        AsciiComposerProcessResult::Rejected => return FALSE,
+    }
+
     if let Some(commits) = process_key_binder_processor(session_id, session, key_event) {
         for commit in commits {
             append_unread_commit(session, commit);
@@ -2174,11 +2192,13 @@ fn apply_schema_to_session(session: &mut SessionState, schema_id: &str) {
     session.engine.reset_translators();
     session.engine.reset_filters();
     session.key_binder = None;
+    session.ascii_composer_enabled = false;
     session.punctuation_processor = None;
     session.recognizer_processor = None;
     session.paging = false;
     apply_schema_switch_resets(session, schema_id);
     install_schema_segment_tags(session, schema_id);
+    install_schema_ascii_composer_processor(session, schema_id);
     install_schema_recognizer_processor(session, schema_id);
     install_schema_key_binder_processor(session, schema_id);
     install_schema_punctuation_processor(session, schema_id);
@@ -4118,6 +4138,20 @@ fn install_schema_segment_tags(session: &mut SessionState, schema_id: &str) {
     update_session_segment_tags(session);
 }
 
+fn install_schema_ascii_composer_processor(session: &mut SessionState, schema_id: &str) {
+    let schema_config =
+        load_runtime_config_root(&format!("{schema_id}.schema"), ConfigOpenKind::Deployed);
+    let Some(Value::Sequence(processors)) = find_config_value(&schema_config, "engine/processors")
+    else {
+        return;
+    };
+    session.ascii_composer_enabled = processors
+        .iter()
+        .filter_map(Value::as_str)
+        .map(schema_component_prescription)
+        .any(|(component_name, _)| component_name == "ascii_composer");
+}
+
 fn install_schema_recognizer_processor(session: &mut SessionState, schema_id: &str) {
     let schema_config =
         load_runtime_config_root(&format!("{schema_id}.schema"), ConfigOpenKind::Deployed);
@@ -4802,6 +4836,42 @@ fn process_session_key_event(
     update_key_binding_paging_state(session, key_event, &before_input, before_highlighted);
     update_session_segment_tags(session);
     commit
+}
+
+fn process_ascii_composer_processor(
+    session: &mut SessionState,
+    key_event: KeyEvent,
+) -> AsciiComposerProcessResult {
+    if !session.ascii_composer_enabled
+        || key_event.modifiers.control
+        || key_event.modifiers.alt
+        || key_event.modifiers.super_key
+        || key_event.modifiers.hyper
+        || key_event.modifiers.meta
+        || key_event.modifiers.release
+    {
+        return AsciiComposerProcessResult::Noop;
+    }
+    if key_event.modifiers.shift && matches!(key_event.code, KeyCode::Character(' ')) {
+        return AsciiComposerProcessResult::Noop;
+    }
+    if !session.engine.status().is_ascii_mode {
+        return AsciiComposerProcessResult::Noop;
+    }
+    let KeyCode::Character(ch) = key_event.code else {
+        return AsciiComposerProcessResult::Noop;
+    };
+    if !(('\u{20}'..'\u{80}').contains(&ch)) {
+        return AsciiComposerProcessResult::Noop;
+    }
+    if session.engine.context().composition.input.is_empty() {
+        return AsciiComposerProcessResult::Rejected;
+    }
+
+    let mut input = session.engine.context().composition.input.clone();
+    input.push(ch);
+    session.engine.set_input(input);
+    AsciiComposerProcessResult::Accepted
 }
 
 fn process_recognizer_processor(session: &mut SessionState, key_event: KeyEvent) -> bool {
