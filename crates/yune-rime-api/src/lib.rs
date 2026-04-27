@@ -2771,7 +2771,8 @@ pub extern "C" fn RimeSelectCandidateOnCurrentPage(
     index: usize,
 ) -> Bool {
     commit_selected_candidate(session_id, |session| {
-        session.engine.select_candidate_on_current_page(index)
+        let global_index = candidate_index_on_current_page(session, index)?;
+        session.engine.select_candidate(global_index)
     })
 }
 
@@ -2786,7 +2787,10 @@ pub extern "C" fn RimeDeleteCandidateOnCurrentPage(
     index: usize,
 ) -> Bool {
     with_session(session_id, |session| {
-        session.engine.delete_candidate_on_current_page(index)
+        let Some(global_index) = candidate_index_on_current_page(session, index) else {
+            return false;
+        };
+        session.engine.delete_candidate(global_index)
     })
 }
 
@@ -2803,14 +2807,28 @@ pub extern "C" fn RimeHighlightCandidateOnCurrentPage(
     index: usize,
 ) -> Bool {
     with_session(session_id, |session| {
-        session.engine.highlight_candidate_on_current_page(index)
+        let Some(global_index) = candidate_index_on_current_page(session, index) else {
+            return false;
+        };
+        session.engine.highlight_candidate(global_index)
     })
 }
 
 #[no_mangle]
 pub extern "C" fn RimeChangePage(session_id: RimeSessionId, backward: Bool) -> Bool {
     with_session(session_id, |session| {
-        session.engine.change_page(backward != FALSE)
+        if session.engine.context().candidates.is_empty() {
+            return false;
+        }
+
+        let page_size = session_menu_page_size(session);
+        let current_index = session.engine.context().highlighted;
+        let next_index = if backward != FALSE {
+            current_index.saturating_sub(page_size)
+        } else {
+            current_index + page_size
+        };
+        session.engine.highlight_candidate(next_index)
     })
 }
 
@@ -3325,6 +3343,20 @@ fn commit_selected_candidate(
 
     session.unread_commit = Some(commit);
     TRUE
+}
+
+fn session_menu_page_size(session: &SessionState) -> usize {
+    context_menu_settings(&session.engine.status().schema_id).page_size
+}
+
+fn candidate_index_on_current_page(session: &SessionState, index: usize) -> Option<usize> {
+    let page_size = session_menu_page_size(session);
+    if index >= page_size || session.engine.context().candidates.is_empty() {
+        return None;
+    }
+
+    let page_start = (session.engine.context().highlighted / page_size) * page_size;
+    Some(page_start + index)
 }
 
 fn with_session(session_id: RimeSessionId, action: impl FnOnce(&mut SessionState) -> bool) -> Bool {
