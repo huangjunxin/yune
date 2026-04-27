@@ -1631,14 +1631,18 @@ impl RimeTableMetadata {
         }
 
         if let Some(name) = trimmed.strip_prefix("name:") {
-            let name = parse_yaml_scalar(name);
-            self.has_name = !name.is_empty();
-            self.name = Some(name);
+            if let Some(name) = parse_yaml_scalar_node(name) {
+                self.has_name = true;
+                self.name = Some(name);
+            } else {
+                self.has_name = false;
+                self.name = None;
+            }
             return;
         }
 
         if let Some(version) = trimmed.strip_prefix("version:") {
-            self.has_version = !parse_yaml_scalar(version).is_empty();
+            self.has_version = parse_yaml_scalar_node(version).is_some();
         }
     }
 
@@ -1712,6 +1716,20 @@ fn parse_yaml_scalar(input: &str) -> String {
         .trim()
         .trim_matches(['"', '\''])
         .to_owned()
+}
+
+fn parse_yaml_scalar_node(input: &str) -> Option<String> {
+    let value = strip_yaml_comment(input).trim();
+    if value.is_empty() {
+        return None;
+    }
+
+    let is_quoted = value.starts_with('"') || value.starts_with('\'');
+    if !is_quoted && (value == "~" || value.eq_ignore_ascii_case("null")) {
+        return None;
+    }
+
+    Some(value.trim_matches(['"', '\'']).to_owned())
 }
 
 fn strip_yaml_comment(input: &str) -> &str {
@@ -4769,6 +4787,27 @@ ba	吧	9
     }
 
     #[test]
+    fn parses_rime_dict_yaml_quoted_empty_required_header_scalars() {
+        let dictionary = TableDictionary::parse_rime_dict_yaml(
+            r#"
+---
+name: ""
+version: ''
+sort: original
+...
+
+八	ba	1
+"#,
+        )
+        .expect("quoted empty required metadata is a present YAML scalar");
+
+        let entries = dictionary.entries();
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].text, "八");
+        assert_eq!(entries[0].code, "ba");
+    }
+
+    #[test]
     fn parses_rime_dict_yaml_import_tables_with_primary_sorting() {
         let dictionary = TableDictionary::parse_rime_dict_yaml_with_imports(
             r#"
@@ -4898,6 +4937,40 @@ sort: by_weight
         .expect_err("dictionary with a blank commented version should be rejected");
         assert_eq!(
             commented_blank_version.to_string(),
+            "RIME dictionary header is missing required name or version"
+        );
+
+        let null_name = TableDictionary::parse_rime_dict_yaml(
+            r#"
+---
+name: null
+version: "0.1"
+sort: by_weight
+...
+
+八	ba	1
+"#,
+        )
+        .expect_err("dictionary with YAML null name should be rejected");
+        assert_eq!(
+            null_name.to_string(),
+            "RIME dictionary header is missing required name or version"
+        );
+
+        let null_version = TableDictionary::parse_rime_dict_yaml(
+            r#"
+---
+name: incomplete_sample
+version: ~
+sort: by_weight
+...
+
+八	ba	1
+"#,
+        )
+        .expect_err("dictionary with YAML null version should be rejected");
+        assert_eq!(
+            null_version.to_string(),
             "RIME dictionary header is missing required name or version"
         );
     }
