@@ -1810,10 +1810,7 @@ fn split_inline_yaml_list_items(items: &str) -> Vec<String> {
 }
 
 fn parse_yaml_scalar(input: &str) -> String {
-    strip_yaml_comment(input)
-        .trim()
-        .trim_matches(['"', '\''])
-        .to_owned()
+    parse_yaml_scalar_value(strip_yaml_comment(input).trim())
 }
 
 fn parse_yaml_scalar_node(input: &str) -> Option<String> {
@@ -1827,7 +1824,50 @@ fn parse_yaml_scalar_node(input: &str) -> Option<String> {
         return None;
     }
 
-    Some(value.trim_matches(['"', '\'']).to_owned())
+    Some(parse_yaml_scalar_value(value))
+}
+
+fn parse_yaml_scalar_value(value: &str) -> String {
+    if let Some(value) = value
+        .strip_prefix('\'')
+        .and_then(|value| value.strip_suffix('\''))
+    {
+        return value.replace("''", "'");
+    }
+
+    if let Some(value) = value
+        .strip_prefix('"')
+        .and_then(|value| value.strip_suffix('"'))
+    {
+        let mut result = String::with_capacity(value.len());
+        let mut escaped = false;
+        for character in value.chars() {
+            if escaped {
+                match character {
+                    '"' => result.push('"'),
+                    '\\' => result.push('\\'),
+                    '/' => result.push('/'),
+                    'b' => result.push('\u{0008}'),
+                    'f' => result.push('\u{000c}'),
+                    'n' => result.push('\n'),
+                    'r' => result.push('\r'),
+                    't' => result.push('\t'),
+                    other => result.push(other),
+                }
+                escaped = false;
+            } else if character == '\\' {
+                escaped = true;
+            } else {
+                result.push(character);
+            }
+        }
+        if escaped {
+            result.push('\\');
+        }
+        return result;
+    }
+
+    value.to_owned()
 }
 
 fn parse_yaml_import_table_scalar(input: &str) -> Option<String> {
@@ -5384,6 +5424,58 @@ sort: original
         assert_eq!(entries[0].text, "八");
         assert_eq!(entries[1].text, "吧");
         assert_eq!(entries[2].text, "爸");
+    }
+
+    #[test]
+    fn parses_rime_dict_yaml_unescapes_quoted_import_table_names() {
+        let mut requested_imports = Vec::new();
+        let dictionary = TableDictionary::parse_rime_dict_yaml_with_imports(
+            r#"
+---
+name: escaped_import_sample
+version: "0.1"
+sort: original
+import_tables: ['sec''ondary', "third\"table"]
+...
+
+primary	pri	1
+"#,
+            |table| {
+                requested_imports.push(table.to_owned());
+                match table {
+                    "sec'ondary" => Some(
+                        r#"
+---
+name: "sec'ondary"
+version: "0.1"
+...
+
+single quote	sq	2
+"#
+                        .to_owned(),
+                    ),
+                    "third\"table" => Some(
+                        r#"
+---
+name: 'third"table'
+version: "0.1"
+...
+
+double quote	dq	3
+"#
+                        .to_owned(),
+                    ),
+                    _ => None,
+                }
+            },
+        )
+        .expect("quoted YAML import table names should be unescaped like yaml-cpp scalars");
+
+        assert_eq!(requested_imports, ["sec'ondary", "third\"table"]);
+        let entries = dictionary.entries();
+        assert_eq!(entries[0].text, "primary");
+        assert_eq!(entries[1].text, "single quote");
+        assert_eq!(entries[2].text, "double quote");
     }
 
     #[test]
