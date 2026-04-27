@@ -1613,7 +1613,8 @@ pub extern "C" fn RimeProcessKey(session_id: RimeSessionId, keycode: c_int, mask
                 || (mask == K_SHIFT_MASK && keycode == XK_RETURN)
                 || (mask == K_SHIFT_MASK && keycode == XK_BACKSPACE)
                 || (mask == K_SHIFT_MASK && keycode == XK_DELETE)
-                || (mask == K_SHIFT_MASK && matches!(keycode, XK_LEFT | XK_RIGHT))
+                || (mask == K_SHIFT_MASK
+                    && matches!(keycode, XK_LEFT | XK_RIGHT | XK_UP | XK_DOWN))
                 || (mask == K_SHIFT_MASK && (0x20..=0x7e).contains(&keycode))
                 || (mask == (K_CONTROL_MASK | K_SHIFT_MASK) && keycode == XK_RETURN)))
     {
@@ -3409,8 +3410,10 @@ fn key_event_from_rime_keycode(keycode: c_int, mask: c_int) -> Option<KeyEvent> 
         XK_ESCAPE => KeyCode::Escape,
         XK_LEFT => KeyCode::MoveCaretLeft,
         XK_RIGHT => KeyCode::MoveCaretRight,
-        XK_UP if mask == K_CONTROL_MASK => KeyCode::MoveCaretLeftBySyllable,
-        XK_DOWN if mask == K_CONTROL_MASK => KeyCode::MoveCaretRightBySyllable,
+        XK_UP if mask == K_CONTROL_MASK || mask == K_SHIFT_MASK => KeyCode::MoveCaretLeftBySyllable,
+        XK_DOWN if mask == K_CONTROL_MASK || mask == K_SHIFT_MASK => {
+            KeyCode::MoveCaretRightBySyllable
+        }
         XK_KP_LEFT => KeyCode::MoveCaretLeftByChar,
         XK_KP_RIGHT => KeyCode::MoveCaretRightByChar,
         XK_UP | XK_KP_UP => KeyCode::PreviousCandidate,
