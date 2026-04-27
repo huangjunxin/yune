@@ -1193,6 +1193,25 @@ const HANGUL_KEY_NAMES: &[(&[u8], c_int)] = &[
     (b"Korean_Won\0", 0x0eff),
 ];
 
+const LATIN9_CURRENCY_KEY_NAMES: &[(&[u8], c_int)] = &[
+    (b"OE\0", 0x13bc),
+    (b"oe\0", 0x13bd),
+    (b"Ydiaeresis\0", 0x13be),
+    (b"EcuSign\0", 0x20a0),
+    (b"ColonSign\0", 0x20a1),
+    (b"CruzeiroSign\0", 0x20a2),
+    (b"FFrancSign\0", 0x20a3),
+    (b"LiraSign\0", 0x20a4),
+    (b"MillSign\0", 0x20a5),
+    (b"NairaSign\0", 0x20a6),
+    (b"PesetaSign\0", 0x20a7),
+    (b"RupeeSign\0", 0x20a8),
+    (b"WonSign\0", 0x20a9),
+    (b"NewSheqelSign\0", 0x20aa),
+    (b"DongSign\0", 0x20ab),
+    (b"EuroSign\0", 0x20ac),
+];
+
 /// Returns the librime modifier bit mask for a modifier name.
 ///
 /// # Safety
@@ -1258,6 +1277,7 @@ fn lookup_keycode(name: &[u8]) -> Option<c_int> {
         .chain(HEBREW_KEY_NAMES)
         .chain(THAI_KEY_NAMES)
         .chain(HANGUL_KEY_NAMES)
+        .chain(LATIN9_CURRENCY_KEY_NAMES)
         .find_map(|(key_name, keycode)| (name == *key_name).then_some(*keycode))
 }
 
@@ -1278,6 +1298,7 @@ fn lookup_key_name(keycode: c_int) -> Option<&'static [u8]> {
         .chain(HEBREW_KEY_NAMES)
         .chain(THAI_KEY_NAMES)
         .chain(HANGUL_KEY_NAMES)
+        .chain(LATIN9_CURRENCY_KEY_NAMES)
         .find_map(|(name, candidate_keycode)| (*candidate_keycode == keycode).then_some(*name))
 }
 

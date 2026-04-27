@@ -371,6 +371,12 @@ fn key_table_exposes_librime_style_modifier_and_key_name_lookup() {
     let hangul_j_yeorinhieuh =
         CString::new("Hangul_J_YeorinHieuh").expect("key name should be valid");
     let korean_won = CString::new("Korean_Won").expect("key name should be valid");
+    let oe_upper = CString::new("OE").expect("key name should be valid");
+    let oe_lower = CString::new("oe").expect("key name should be valid");
+    let ydiaeresis_upper = CString::new("Ydiaeresis").expect("key name should be valid");
+    let ecu_sign = CString::new("EcuSign").expect("key name should be valid");
+    let rupee_sign = CString::new("RupeeSign").expect("key name should be valid");
+    let euro_sign = CString::new("EuroSign").expect("key name should be valid");
     let missing = CString::new("NoSuchKey").expect("key name should be valid");
 
     assert_eq!(unsafe { RimeGetKeycodeByName(space.as_ptr()) }, 0x20);
@@ -588,6 +594,15 @@ fn key_table_exposes_librime_style_modifier_and_key_name_lookup() {
         0xefa
     );
     assert_eq!(unsafe { RimeGetKeycodeByName(korean_won.as_ptr()) }, 0xeff);
+    assert_eq!(unsafe { RimeGetKeycodeByName(oe_upper.as_ptr()) }, 0x13bc);
+    assert_eq!(unsafe { RimeGetKeycodeByName(oe_lower.as_ptr()) }, 0x13bd);
+    assert_eq!(
+        unsafe { RimeGetKeycodeByName(ydiaeresis_upper.as_ptr()) },
+        0x13be
+    );
+    assert_eq!(unsafe { RimeGetKeycodeByName(ecu_sign.as_ptr()) }, 0x20a0);
+    assert_eq!(unsafe { RimeGetKeycodeByName(rupee_sign.as_ptr()) }, 0x20a8);
+    assert_eq!(unsafe { RimeGetKeycodeByName(euro_sign.as_ptr()) }, 0x20ac);
     assert_eq!(
         unsafe { RimeGetKeycodeByName(missing.as_ptr()) },
         0x00ff_ffff
@@ -976,6 +991,30 @@ fn key_table_exposes_librime_style_modifier_and_key_name_lookup() {
     assert_eq!(
         static_c_string(RimeGetKeyName(0xeff)).as_deref(),
         Some("Korean_Won")
+    );
+    assert_eq!(
+        static_c_string(RimeGetKeyName(0x13bc)).as_deref(),
+        Some("OE")
+    );
+    assert_eq!(
+        static_c_string(RimeGetKeyName(0x13bd)).as_deref(),
+        Some("oe")
+    );
+    assert_eq!(
+        static_c_string(RimeGetKeyName(0x13be)).as_deref(),
+        Some("Ydiaeresis")
+    );
+    assert_eq!(
+        static_c_string(RimeGetKeyName(0x20a0)).as_deref(),
+        Some("EcuSign")
+    );
+    assert_eq!(
+        static_c_string(RimeGetKeyName(0x20a8)).as_deref(),
+        Some("RupeeSign")
+    );
+    assert_eq!(
+        static_c_string(RimeGetKeyName(0x20ac)).as_deref(),
+        Some("EuroSign")
     );
     assert_eq!(static_c_string(RimeGetKeyName(0x00ff_ffff)), None);
 }
