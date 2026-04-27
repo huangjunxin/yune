@@ -151,6 +151,7 @@ enum KeyBindingAction {
     Send(Vec<KeyEvent>),
     Toggle(String),
     SetOption { option: String, value: bool },
+    SelectSchema(String),
 }
 
 struct KeyBindingSwitchOption {
@@ -1789,7 +1790,7 @@ pub extern "C" fn RimeProcessKey(session_id: RimeSessionId, keycode: c_int, mask
         return FALSE;
     };
 
-    if let Some(commits) = process_key_binder_processor(session, key_event) {
+    if let Some(commits) = process_key_binder_processor(session_id, session, key_event) {
         for commit in commits {
             append_unread_commit(session, commit);
         }
@@ -1816,7 +1817,7 @@ pub extern "C" fn RimeProcessKey(session_id: RimeSessionId, keycode: c_int, mask
             session.engine.change_page_by(page_size, false);
         }
         _ => {
-            if let Some(commit) = process_session_key_event(session, key_event) {
+            if let Some(commit) = process_session_key_event(session_id, session, key_event) {
                 append_unread_commit(session, commit);
                 return TRUE;
             }
@@ -2096,22 +2097,8 @@ pub unsafe extern "C" fn RimeSelectSchema(
         .to_string_lossy()
         .into_owned();
 
-    let schema_name = deployed_schema_name(&schema_id);
     let selected = with_session(session_id, |session| {
-        session
-            .engine
-            .set_schema(schema_id.clone(), schema_name.clone());
-        session.engine.reset_translators();
-        session.key_binder = None;
-        session.punctuation_processor = None;
-        apply_schema_switch_resets(session, &schema_id);
-        install_schema_key_binder_processor(session, &schema_id);
-        install_schema_punctuation_processor(session, &schema_id);
-        install_schema_punctuation_translator(session, &schema_id);
-        install_schema_dictionary_translator(session, &schema_id);
-        session.engine.clear_composition();
-        session.input_buffer = None;
-        session.unread_commit = None;
+        apply_schema_to_session(session, &schema_id);
         true
     });
     if selected == TRUE {
@@ -2130,6 +2117,22 @@ pub unsafe extern "C" fn RimeSelectSchema(
         }
     }
     selected
+}
+
+fn apply_schema_to_session(session: &mut SessionState, schema_id: &str) {
+    let schema_name = deployed_schema_name(schema_id);
+    session.engine.set_schema(schema_id.to_owned(), schema_name);
+    session.engine.reset_translators();
+    session.key_binder = None;
+    session.punctuation_processor = None;
+    apply_schema_switch_resets(session, schema_id);
+    install_schema_key_binder_processor(session, schema_id);
+    install_schema_punctuation_processor(session, schema_id);
+    install_schema_punctuation_translator(session, schema_id);
+    install_schema_dictionary_translator(session, schema_id);
+    session.engine.clear_composition();
+    session.input_buffer = None;
+    session.unread_commit = None;
 }
 
 /// Returns the currently available schema list.
@@ -3028,7 +3031,7 @@ pub unsafe extern "C" fn RimeSimulateKeySequence(
     };
 
     for key_event in key_events {
-        if let Some(commit) = process_session_key_event(session, key_event) {
+        if let Some(commit) = process_session_key_event(session_id, session, key_event) {
             append_unread_commit(session, commit);
         }
     }
@@ -3787,6 +3790,11 @@ fn install_schema_key_binder_processor(session: &mut SessionState, schema_id: &s
                 option,
                 value: false,
             }
+        } else if let Some(schema) = binding
+            .get(Value::String("select".to_owned()))
+            .and_then(config_scalar_string)
+        {
+            KeyBindingAction::SelectSchema(schema)
         } else {
             continue;
         };
@@ -4117,8 +4125,12 @@ fn append_punctuation_definition(
     }
 }
 
-fn process_session_key_event(session: &mut SessionState, key_event: KeyEvent) -> Option<String> {
-    if let Some(commits) = process_key_binder_processor(session, key_event) {
+fn process_session_key_event(
+    session_id: RimeSessionId,
+    session: &mut SessionState,
+    key_event: KeyEvent,
+) -> Option<String> {
+    if let Some(commits) = process_key_binder_processor(session_id, session, key_event) {
         if commits.is_empty() {
             return None;
         }
@@ -4137,6 +4149,7 @@ fn process_session_key_event(session: &mut SessionState, key_event: KeyEvent) ->
 }
 
 fn process_key_binder_processor(
+    session_id: RimeSessionId,
     session: &mut SessionState,
     key_event: KeyEvent,
 ) -> Option<Vec<String>> {
@@ -4158,7 +4171,9 @@ fn process_key_binder_processor(
 
     let action = bindings[binding_index].action.clone();
     match action {
-        KeyBindingAction::Send(events) => Some(redirect_key_binding_events(session, events)),
+        KeyBindingAction::Send(events) => {
+            Some(redirect_key_binding_events(session_id, session, events))
+        }
         KeyBindingAction::Toggle(option) => {
             toggle_key_binding_option(session, &option);
             Some(Vec::new())
@@ -4167,16 +4182,24 @@ fn process_key_binder_processor(
             set_key_binding_option(session, &option, value);
             Some(Vec::new())
         }
+        KeyBindingAction::SelectSchema(schema) => {
+            select_key_binding_schema(session_id, session, &schema);
+            Some(Vec::new())
+        }
     }
 }
 
-fn redirect_key_binding_events(session: &mut SessionState, events: Vec<KeyEvent>) -> Vec<String> {
+fn redirect_key_binding_events(
+    session_id: RimeSessionId,
+    session: &mut SessionState,
+    events: Vec<KeyEvent>,
+) -> Vec<String> {
     if let Some(processor) = session.key_binder.as_mut() {
         processor.redirecting = true;
     }
     let mut commits = Vec::new();
     for event in events {
-        if let Some(commit) = process_session_key_event(session, event) {
+        if let Some(commit) = process_session_key_event(session_id, session, event) {
             commits.push(commit);
         }
     }
@@ -4226,6 +4249,31 @@ fn set_key_binding_option(session: &mut SessionState, option: &str, value: bool)
     }
 
     session.engine.set_option(option, value);
+}
+
+fn select_key_binding_schema(session_id: RimeSessionId, session: &mut SessionState, schema: &str) {
+    let selected_schema = if schema == ".next" {
+        next_key_binding_schema(session)
+    } else {
+        Some(schema.to_owned())
+    };
+    let Some(selected_schema) = selected_schema else {
+        return;
+    };
+    apply_schema_to_session(session, &selected_schema);
+    let status = session.engine.status();
+    notify(
+        session_id,
+        "schema",
+        &format!("{}/{}", status.schema_id, status.schema_name),
+    );
+}
+
+fn next_key_binding_schema(session: &SessionState) -> Option<String> {
+    let current_schema = &session.engine.status().schema_id;
+    deployed_selected_schema_ids()
+        .into_iter()
+        .find(|schema_id| schema_id != current_schema)
 }
 
 fn select_key_binding_radio_option(
