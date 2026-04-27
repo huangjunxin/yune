@@ -113,6 +113,7 @@ struct SessionState {
     punctuation_processor: Option<PunctuationProcessor>,
     recognizer_processor: Option<RecognizerProcessor>,
     base_segment_tags: Vec<String>,
+    affix_segmentors: Vec<AffixSegmentor>,
     matcher_segmentor: Option<MatcherSegmentor>,
     paging: bool,
     last_active_time: u64,
@@ -128,6 +129,7 @@ impl SessionState {
             punctuation_processor: None,
             recognizer_processor: None,
             base_segment_tags: vec!["abc".to_owned()],
+            affix_segmentors: Vec::new(),
             matcher_segmentor: None,
             paging: false,
             last_active_time: session_activity_now(),
@@ -179,6 +181,13 @@ enum KeyBindingSwitchTarget {
 
 struct MatcherSegmentor {
     patterns: Vec<MatcherPattern>,
+}
+
+struct AffixSegmentor {
+    tag: String,
+    prefix: String,
+    suffix: String,
+    extra_tags: Vec<String>,
 }
 
 struct RecognizerProcessor {
@@ -4085,6 +4094,7 @@ fn install_schema_segment_tags(session: &mut SessionState, schema_id: &str) {
     let schema_config =
         load_runtime_config_root(&format!("{schema_id}.schema"), ConfigOpenKind::Deployed);
     let mut tags = vec!["abc".to_owned()];
+    session.affix_segmentors.clear();
     session.matcher_segmentor = None;
 
     if let Some(Value::Sequence(segmentors)) =
@@ -4101,6 +4111,7 @@ fn install_schema_segment_tags(session: &mut SessionState, schema_id: &str) {
                 "abc_segmentor/extra_tags",
             ));
         }
+        session.affix_segmentors = load_schema_affix_segmentors(&schema_config, segmentors);
         session.matcher_segmentor = load_schema_matcher_segmentor(&schema_config, segmentors);
     }
     session.base_segment_tags = tags;
@@ -4170,6 +4181,46 @@ fn load_schema_matcher_segmentor(
     (!patterns.is_empty()).then_some(MatcherSegmentor { patterns })
 }
 
+fn load_schema_affix_segmentors(
+    schema_config: &Value,
+    segmentors: &[Value],
+) -> Vec<AffixSegmentor> {
+    segmentors
+        .iter()
+        .filter_map(Value::as_str)
+        .map(schema_component_prescription)
+        .filter_map(|(component_name, name_space)| {
+            if component_name != "affix_segmentor" {
+                return None;
+            }
+            let name_space = name_space.unwrap_or("segmentor");
+            if name_space.is_empty() {
+                return None;
+            }
+            let prefix = find_config_value(schema_config, &format!("{name_space}/prefix"))
+                .and_then(config_scalar_string)
+                .unwrap_or_default();
+            if prefix.is_empty() {
+                return None;
+            }
+            let tag = find_config_value(schema_config, &format!("{name_space}/tag"))
+                .and_then(config_scalar_string)
+                .filter(|tag| !tag.is_empty())
+                .unwrap_or_else(|| "abc".to_owned());
+            let suffix = find_config_value(schema_config, &format!("{name_space}/suffix"))
+                .and_then(config_scalar_string)
+                .unwrap_or_default();
+            let extra_tags = schema_string_list(schema_config, &format!("{name_space}/extra_tags"));
+            Some(AffixSegmentor {
+                tag,
+                prefix,
+                suffix,
+                extra_tags,
+            })
+        })
+        .collect()
+}
+
 fn load_schema_recognizer_patterns(schema_config: &Value, name_space: &str) -> Vec<MatcherPattern> {
     let Some(Value::Mapping(patterns)) =
         find_config_value(schema_config, &format!("{name_space}/patterns"))
@@ -4200,8 +4251,35 @@ fn update_session_segment_tags(session: &mut SessionState) {
             }
         }
     }
+    for affix_segmentor in &session.affix_segmentors {
+        if affix_segmentor.matches(input) {
+            if !tags.iter().any(|existing| existing == &affix_segmentor.tag) {
+                tags.push(affix_segmentor.tag.clone());
+            }
+            for extra_tag in &affix_segmentor.extra_tags {
+                if !tags.iter().any(|existing| existing == extra_tag) {
+                    tags.push(extra_tag.clone());
+                }
+            }
+        }
+    }
     if session.engine.context().segment_tags != tags {
         session.engine.set_segment_tags(tags);
+    }
+}
+
+impl AffixSegmentor {
+    fn matches(&self, input: &str) -> bool {
+        let Some(mut code) = input.strip_prefix(&self.prefix) else {
+            return false;
+        };
+        if code.is_empty() {
+            return false;
+        }
+        if !self.suffix.is_empty() {
+            code = code.strip_suffix(&self.suffix).unwrap_or(code);
+        }
+        !code.is_empty()
     }
 }
 
