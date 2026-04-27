@@ -1550,7 +1550,7 @@ impl RimeTableMetadata {
 
         if self.reading_columns {
             if let Some(column) = trimmed.strip_prefix("- ") {
-                self.columns.push(column.trim().to_owned());
+                self.columns.push(parse_yaml_scalar(column));
                 return;
             }
             self.reading_columns = false;
@@ -1569,7 +1569,7 @@ impl RimeTableMetadata {
         }
 
         if let Some(sort_order) = trimmed.strip_prefix("sort:") {
-            self.sort_by_weight = sort_order.trim() != "original";
+            self.sort_by_weight = parse_yaml_scalar(sort_order) != "original";
         }
     }
 
@@ -1604,11 +1604,15 @@ fn parse_inline_yaml_list(input: &str) -> Vec<String> {
         .map(|items| {
             items
                 .split(',')
-                .map(|item| item.trim().trim_matches(['"', '\'']).to_owned())
+                .map(parse_yaml_scalar)
                 .filter(|item| !item.is_empty())
                 .collect()
         })
         .unwrap_or_default()
+}
+
+fn parse_yaml_scalar(input: &str) -> String {
+    input.trim().trim_matches(['"', '\'']).to_owned()
 }
 
 fn normalize_table_code(code: &str) -> String {
@@ -4548,6 +4552,34 @@ ba	吧	9
         assert_eq!(entries[0].weight, 10.0);
         assert_eq!(entries[1].code, "ba");
         assert_eq!(entries[1].text, "吧");
+    }
+
+    #[test]
+    fn parses_rime_dict_yaml_quoted_header_scalars() {
+        let dictionary = TableDictionary::parse_rime_dict_yaml(
+            r#"
+---
+name: quoted_header_sample
+version: "0.1"
+sort: 'original'
+columns:
+  - 'code'
+  - "text"
+  - 'weight'
+...
+
+ba	八	1
+ba	吧	9
+"#,
+        )
+        .expect("dictionary should parse");
+
+        let entries = dictionary.entries();
+        assert_eq!(entries.len(), 2);
+        assert_eq!(entries[0].text, "八");
+        assert_eq!(entries[0].weight, 1.0);
+        assert_eq!(entries[1].text, "吧");
+        assert_eq!(entries[1].weight, 9.0);
     }
 
     #[test]
