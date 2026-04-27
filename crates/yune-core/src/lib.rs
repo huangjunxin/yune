@@ -1482,6 +1482,7 @@ fn parse_rime_dict_yaml_parts(
     let mut body_start = None;
 
     for (line_index, line) in input.lines().enumerate() {
+        let line = strip_utf8_bom(line);
         let trimmed = line.trim();
         if !in_header {
             if trimmed == "---" {
@@ -1774,6 +1775,10 @@ fn rime_header_value<'a>(line: &'a str, key: &str) -> Option<&'a str> {
         }
     }
     None
+}
+
+fn strip_utf8_bom(input: &str) -> &str {
+    input.strip_prefix('\u{feff}').unwrap_or(input)
 }
 
 fn split_inline_yaml_list_items(items: &str) -> Vec<String> {
@@ -5222,6 +5227,20 @@ sort: original
 "#,
         )
         .expect("librime loads dictionary headers as YAML streams without requiring '---'");
+
+        let entries = dictionary.entries();
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].text, "八");
+        assert_eq!(entries[0].code, "ba");
+        assert_eq!(entries[0].weight, 10.0);
+    }
+
+    #[test]
+    fn parses_rime_dict_yaml_header_with_utf8_bom() {
+        let dictionary = TableDictionary::parse_rime_dict_yaml(
+            "\u{feff}name: bom_header_sample\nversion: \"0.1\"\nsort: original\n...\n\n八\tba\t10\n",
+        )
+        .expect("yaml-cpp accepts a leading UTF-8 BOM before the dictionary header");
 
         let entries = dictionary.entries();
         assert_eq!(entries.len(), 1);
