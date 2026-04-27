@@ -6278,6 +6278,100 @@ fn returns_context_with_preedit_and_candidate_page() {
 }
 
 #[test]
+fn rime_context_reads_librime_menu_settings_from_selected_schema() {
+    let _guard = test_guard();
+    RimeCleanupAllSessions();
+    let root = unique_temp_dir("context-menu-settings");
+    let shared = root.join("shared");
+    let user = root.join("user");
+    let staging = user.join("build");
+    fs::create_dir_all(&shared).expect("shared dir should be created");
+    fs::create_dir_all(&staging).expect("staging dir should be created");
+    fs::write(
+        staging.join("luna.schema.yaml"),
+        "\
+schema:\n  schema_id: luna\n  name: Luna\nmenu:\n  page_size: 2\n  alternative_select_keys: AB\n",
+    )
+    .expect("schema config should be written");
+
+    let shared_c = CString::new(shared.to_string_lossy().as_ref()).expect("path is valid");
+    let user_c = CString::new(user.to_string_lossy().as_ref()).expect("path is valid");
+    let mut traits = empty_traits();
+    traits.shared_data_dir = shared_c.as_ptr();
+    traits.user_data_dir = user_c.as_ptr();
+    // SAFETY: traits points to valid storage and strings live for the call.
+    unsafe { RimeSetup(&traits) };
+
+    let session_id = RimeCreateSession();
+    let schema_id = CString::new("luna").expect("schema id should be valid");
+    // SAFETY: schema id is a valid NUL-terminated string.
+    assert_eq!(
+        unsafe { RimeSelectSchema(session_id, schema_id.as_ptr()) },
+        TRUE
+    );
+    {
+        let mut registry = super::sessions()
+            .lock()
+            .expect("session registry should not be poisoned");
+        let session = registry
+            .sessions
+            .get_mut(&session_id)
+            .expect("session should exist");
+        session.engine.add_translator(StaticTableTranslator::new([
+            ("ni", "你"),
+            ("ni", "尼"),
+            ("ni", "呢"),
+            ("ni", "泥"),
+            ("ni", "拟"),
+        ]));
+    }
+    let mut context = empty_context();
+
+    assert_eq!(RimeProcessKey(session_id, 'n' as i32, 0), TRUE);
+    assert_eq!(RimeProcessKey(session_id, 'i' as i32, 0), TRUE);
+    assert_eq!(RimeHighlightCandidate(session_id, 3), TRUE);
+
+    // SAFETY: `context` points to valid writable storage initialized with a
+    // positive `data_size`.
+    assert_eq!(unsafe { RimeGetContext(session_id, &mut context) }, TRUE);
+    assert_eq!(context.menu.page_size, 2);
+    assert_eq!(context.menu.page_no, 1);
+    assert_eq!(context.menu.highlighted_candidate_index, 1);
+    assert_eq!(context.menu.num_candidates, 2);
+    assert!(!context.menu.select_keys.is_null());
+    // SAFETY: `RimeGetContext` returned true and populated a select-key string.
+    let select_keys = unsafe { CStr::from_ptr(context.menu.select_keys) };
+    assert_eq!(select_keys.to_str(), Ok("AB"));
+    // SAFETY: `context.menu.candidates` points to `num_candidates` entries.
+    let candidates = unsafe {
+        std::slice::from_raw_parts(
+            context.menu.candidates,
+            context.menu.num_candidates as usize,
+        )
+    };
+    // SAFETY: candidate texts are valid strings owned by the context object.
+    assert_eq!(
+        unsafe { CStr::from_ptr(candidates[0].text) }.to_str(),
+        Ok("呢")
+    );
+    // SAFETY: candidate texts are valid strings owned by the context object.
+    assert_eq!(
+        unsafe { CStr::from_ptr(candidates[1].text) }.to_str(),
+        Ok("泥")
+    );
+
+    // SAFETY: nested pointers were allocated by `RimeGetContext` above.
+    assert_eq!(unsafe { RimeFreeContext(&mut context) }, TRUE);
+    assert!(context.menu.select_keys.is_null());
+
+    assert_eq!(RimeDestroySession(session_id), TRUE);
+    let reset_traits = empty_traits();
+    // SAFETY: reset traits points to valid storage.
+    unsafe { RimeSetup(&reset_traits) };
+    fs::remove_dir_all(root).expect("temp dirs should be removed");
+}
+
+#[test]
 fn rime_context_includes_librime_commit_text_preview_for_current_selection() {
     let _guard = test_guard();
     RimeCleanupAllSessions();

@@ -79,6 +79,11 @@ struct StateLabel {
     length: usize,
 }
 
+struct ContextMenuSettings {
+    page_size: usize,
+    select_keys: Option<String>,
+}
+
 #[derive(Clone, Copy)]
 enum ConfigOpenKind {
     Deployed,
@@ -2866,14 +2871,23 @@ pub unsafe extern "C" fn RimeGetContext(
 
     clear_context(context);
 
-    let registry = sessions()
-        .lock()
-        .expect("session registry should not be poisoned");
-    let Some(session) = registry.sessions.get(&session_id) else {
-        return FALSE;
+    let snapshot = {
+        let registry = sessions()
+            .lock()
+            .expect("session registry should not be poisoned");
+        let Some(session) = registry.sessions.get(&session_id) else {
+            return FALSE;
+        };
+        session.engine.snapshot()
     };
-
-    let snapshot = session.engine.snapshot();
+    let menu_settings = context_menu_settings(&snapshot.status.schema_id);
+    let select_keys = match menu_settings.select_keys.as_deref() {
+        Some(select_keys) => match CString::new(select_keys) {
+            Ok(select_keys) => Some(select_keys),
+            Err(_) => return FALSE,
+        },
+        None => None,
+    };
     let composition = snapshot.context.composition;
     if !composition.input.is_empty() {
         let Ok(preedit) = CString::new(composition.preedit) else {
@@ -2911,9 +2925,10 @@ pub unsafe extern "C" fn RimeGetContext(
     let candidates = snapshot.context.candidates;
     if !candidates.is_empty() {
         let highlighted = snapshot.context.highlighted;
-        let page_no = highlighted / DEFAULT_PAGE_SIZE;
-        let page_start = page_no * DEFAULT_PAGE_SIZE;
-        let page_end = (page_start + DEFAULT_PAGE_SIZE).min(candidates.len());
+        let page_size = menu_settings.page_size;
+        let page_no = highlighted / page_size;
+        let page_start = page_no * page_size;
+        let page_end = (page_start + page_size).min(candidates.len());
         let page_candidates = &candidates[page_start..page_end];
 
         let mut rime_candidates = Vec::with_capacity(page_candidates.len());
@@ -2945,13 +2960,17 @@ pub unsafe extern "C" fn RimeGetContext(
         // SAFETY: `context` is non-null and points to caller-owned writable
         // storage; `candidates_ptr` owns `num_candidates` initialized entries.
         unsafe {
-            (*context).menu.page_size = DEFAULT_PAGE_SIZE as c_int;
+            (*context).menu.page_size =
+                c_int::try_from(page_size).expect("menu page size should fit in c_int");
             (*context).menu.page_no = page_no as c_int;
             (*context).menu.is_last_page = bool_from(page_end == candidates.len());
             (*context).menu.highlighted_candidate_index =
                 (highlighted - page_start).min(num_candidates.saturating_sub(1)) as c_int;
             (*context).menu.num_candidates = num_candidates as c_int;
             (*context).menu.candidates = candidates_ptr;
+            if let Some(select_keys) = select_keys {
+                (*context).menu.select_keys = select_keys.into_raw();
+            }
         }
     }
 
@@ -4581,6 +4600,26 @@ fn state_label_for_session(
     let schema_config =
         load_runtime_config_root(&format!("{schema_id}.schema"), ConfigOpenKind::Deployed);
     switch_state_label(&schema_config, option_name, state, abbreviated)
+}
+
+fn context_menu_settings(schema_id: &str) -> ContextMenuSettings {
+    let schema_config =
+        load_runtime_config_root(&format!("{schema_id}.schema"), ConfigOpenKind::Deployed);
+    let page_size = find_config_value(&schema_config, "menu/page_size")
+        .and_then(Value::as_i64)
+        .and_then(|page_size| c_int::try_from(page_size).ok())
+        .filter(|page_size| *page_size > 0)
+        .map(|page_size| page_size as usize)
+        .unwrap_or(DEFAULT_PAGE_SIZE);
+    let select_keys = find_config_value(&schema_config, "menu/alternative_select_keys")
+        .and_then(Value::as_str)
+        .filter(|select_keys| !select_keys.is_empty())
+        .map(ToOwned::to_owned);
+
+    ContextMenuSettings {
+        page_size,
+        select_keys,
+    }
 }
 
 fn switch_state_label(
