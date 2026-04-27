@@ -255,3 +255,75 @@ fn frontend_style_api_table_can_iterate_candidates() {
     assert_eq!(destroy_session(session_id), TRUE);
     cleanup_all_sessions();
 }
+
+#[test]
+fn frontend_style_api_table_can_iterate_candidates_from_index() {
+    let _guard = test_guard();
+    let api = rime_get_api();
+    assert!(!api.is_null());
+    let api = unsafe { &*api };
+
+    let cleanup_all_sessions = api
+        .cleanup_all_sessions
+        .expect("frontend requires cleanup_all_sessions");
+    cleanup_all_sessions();
+
+    let create_session = api
+        .create_session
+        .expect("frontend requires create_session");
+    let destroy_session = api
+        .destroy_session
+        .expect("frontend requires destroy_session");
+    let process_key = api.process_key.expect("frontend requires process_key");
+    let candidate_list_from_index = api
+        .candidate_list_from_index
+        .expect("frontend requires candidate_list_from_index");
+    let candidate_list_next = api
+        .candidate_list_next
+        .expect("frontend requires candidate_list_next");
+    let candidate_list_end = api
+        .candidate_list_end
+        .expect("frontend requires candidate_list_end");
+
+    let session_id = create_session();
+    assert_ne!(session_id, 0);
+
+    let mut empty_iterator = empty_candidate_list_iterator();
+    assert_eq!(
+        unsafe { candidate_list_from_index(session_id, &mut empty_iterator, 0) },
+        FALSE
+    );
+    assert!(empty_iterator.ptr.is_null());
+
+    assert_eq!(process_key(session_id, 'n' as i32, 0), TRUE);
+    assert_eq!(process_key(session_id, 'i' as i32, 0), TRUE);
+
+    let mut iterator = empty_candidate_list_iterator();
+    assert_eq!(
+        unsafe { candidate_list_from_index(session_id, &mut iterator, 0) },
+        TRUE
+    );
+    assert_eq!(iterator.index, -1);
+    assert_eq!(unsafe { candidate_list_next(&mut iterator) }, TRUE);
+
+    let text = unsafe { CStr::from_ptr(iterator.candidate.text) };
+    assert_eq!(text.to_str(), Ok("ni"));
+    unsafe { candidate_list_end(&mut iterator) };
+
+    let mut past_end_iterator = empty_candidate_list_iterator();
+    assert_eq!(
+        unsafe { candidate_list_from_index(session_id, &mut past_end_iterator, 1) },
+        TRUE
+    );
+    assert_eq!(past_end_iterator.index, 0);
+    assert_eq!(
+        unsafe { candidate_list_next(&mut past_end_iterator) },
+        FALSE
+    );
+    assert_eq!(past_end_iterator.index, 1);
+    assert!(past_end_iterator.candidate.text.is_null());
+    unsafe { candidate_list_end(&mut past_end_iterator) };
+
+    assert_eq!(destroy_session(session_id), TRUE);
+    cleanup_all_sessions();
+}
