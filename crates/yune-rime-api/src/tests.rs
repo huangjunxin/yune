@@ -7130,6 +7130,53 @@ fn escape_clears_composition_like_librime_editor_cancel_key() {
 }
 
 #[test]
+fn shift_escape_clears_composition_like_librime_editor_cancel_fallback() {
+    let _guard = test_guard();
+    RimeCleanupAllSessions();
+    let escape = CString::new("Escape").expect("key name should be valid");
+    // SAFETY: key name is a valid NUL-terminated string.
+    let escape_keycode = unsafe { RimeGetKeycodeByName(escape.as_ptr()) };
+    assert_eq!(escape_keycode, 0xff1b);
+
+    let session_id = RimeCreateSession();
+    assert_eq!(
+        RimeProcessKey(session_id, escape_keycode, K_SHIFT_MASK),
+        FALSE
+    );
+    assert_eq!(RimeProcessKey(session_id, 'n' as i32, 0), TRUE);
+    assert_eq!(RimeProcessKey(session_id, 'i' as i32, 0), TRUE);
+    assert_eq!(
+        RimeProcessKey(session_id, escape_keycode, K_SHIFT_MASK),
+        TRUE
+    );
+
+    let input = RimeGetInput(session_id);
+    assert!(!input.is_null());
+    // SAFETY: `RimeGetInput` returned a non-null session-owned C string.
+    assert_eq!(unsafe { CStr::from_ptr(input) }.to_str(), Ok(""));
+    let mut commit = RimeCommit {
+        data_size: std::mem::size_of::<RimeCommit>() as i32,
+        text: std::ptr::null_mut(),
+    };
+    // SAFETY: commit points to valid writable storage.
+    assert_eq!(unsafe { RimeGetCommit(session_id, &mut commit) }, FALSE);
+    assert_eq!(RimeDestroySession(session_id), TRUE);
+
+    let sequence_session_id = RimeCreateSession();
+    let sequence = CString::new("ni{Shift+Escape}").expect("sequence should be valid");
+    // SAFETY: sequence is a valid NUL-terminated librime-style key sequence.
+    assert_eq!(
+        unsafe { RimeSimulateKeySequence(sequence_session_id, sequence.as_ptr()) },
+        TRUE
+    );
+    let sequence_input = RimeGetInput(sequence_session_id);
+    assert!(!sequence_input.is_null());
+    // SAFETY: `RimeGetInput` returned a non-null session-owned C string.
+    assert_eq!(unsafe { CStr::from_ptr(sequence_input) }.to_str(), Ok(""));
+    assert_eq!(RimeDestroySession(sequence_session_id), TRUE);
+}
+
+#[test]
 fn backspace_key_removes_input_before_caret_like_librime_editor_back() {
     let _guard = test_guard();
     RimeCleanupAllSessions();

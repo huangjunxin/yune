@@ -803,6 +803,10 @@ impl Engine {
                     self.delete_candidate(self.context.highlighted);
                     return None;
                 }
+                KeyCode::Escape => {
+                    self.clear_composition();
+                    return None;
+                }
                 KeyCode::MoveCaretLeft => {
                     self.move_caret_left_by_syllable();
                     return None;
@@ -1467,6 +1471,22 @@ mod tests {
 
         let commits = engine
             .process_key_sequence("ni{Escape}")
+            .expect("key sequence should parse");
+
+        assert!(commits.is_empty());
+        assert!(engine.context().composition.input.is_empty());
+        assert!(engine.context().candidates.is_empty());
+        assert_eq!(engine.context().last_commit, None);
+        assert!(!engine.status().is_composing);
+    }
+
+    #[test]
+    fn shift_escape_ignores_shift_like_librime_editor_cancel_fallback() {
+        let mut engine = Engine::new();
+        engine.add_translator(StaticTableTranslator::new([("ni", "你")]));
+
+        let commits = engine
+            .process_key_sequence("ni{Shift+Escape}")
             .expect("key sequence should parse");
 
         assert!(commits.is_empty());
