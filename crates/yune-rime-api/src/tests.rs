@@ -2902,9 +2902,11 @@ fn setup_and_initialize_expose_runtime_metadata_paths() {
 
     // SAFETY: buffers point to writable storage.
     unsafe { RimeGetSharedDataDirSecure(short_buffer.as_mut_ptr(), short_buffer.len()) };
-    // SAFETY: secure getter wrote a trailing NUL into the short buffer.
-    let truncated_shared = unsafe { CStr::from_ptr(short_buffer.as_ptr()) };
-    assert_eq!(truncated_shared.to_str(), Ok("/tmp/yune"));
+    // SAFETY: the raw byte view is bounded to the caller-owned buffer.
+    let truncated_shared = unsafe {
+        std::slice::from_raw_parts(short_buffer.as_ptr().cast::<u8>(), short_buffer.len())
+    };
+    assert_eq!(truncated_shared, b"/tmp/yune-");
 
     // SAFETY: buffers point to writable storage.
     unsafe { RimeGetUserDataDirSecure(buffer.as_mut_ptr(), buffer.len()) };
@@ -7006,9 +7008,11 @@ fn sets_and_gets_runtime_properties() {
         },
         TRUE
     );
-    // SAFETY: the shim always NUL-terminates non-empty buffers.
-    let truncated_value = unsafe { CStr::from_ptr(short_buffer.as_ptr()) };
-    assert_eq!(truncated_value.to_str(), Ok("sample"));
+    // SAFETY: the raw byte view is bounded to the caller-owned buffer.
+    let truncated_value = unsafe {
+        std::slice::from_raw_parts(short_buffer.as_ptr().cast::<u8>(), short_buffer.len())
+    };
+    assert_eq!(truncated_value, b"sample_");
 
     // SAFETY: empty properties are accepted on set but rejected on get, as
     // librime treats empty property values as absent.
@@ -7089,9 +7093,11 @@ fn gets_and_selects_current_schema() {
         unsafe { RimeGetCurrentSchema(session_id, short_buffer.as_mut_ptr(), short_buffer.len()) },
         TRUE
     );
-    // SAFETY: `RimeGetCurrentSchema` wrote a trailing NUL into buffer.
-    let truncated_schema = unsafe { CStr::from_ptr(short_buffer.as_ptr()) };
-    assert_eq!(truncated_schema.to_str(), Ok("sample_"));
+    // SAFETY: the raw byte view is bounded to the caller-owned buffer.
+    let truncated_schema = unsafe {
+        std::slice::from_raw_parts(short_buffer.as_ptr().cast::<u8>(), short_buffer.len())
+    };
+    assert_eq!(truncated_schema, b"sample_s");
 
     let mut zero_len_marker = b'?' as c_char;
     // SAFETY: librime's strncpy-based getter accepts a valid output pointer

@@ -4,7 +4,7 @@ use std::{
     fs,
     os::raw::{c_char, c_int},
     path::{Path, PathBuf},
-    ptr, slice,
+    ptr,
     sync::{Mutex, OnceLock},
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -1790,7 +1790,7 @@ pub unsafe extern "C" fn RimeGetProperty(
         if property_value.is_empty() {
             return false;
         }
-        copy_c_string_to_buffer(property_value, value, buffer_size);
+        copy_c_string_with_strncpy_semantics(property_value, value, buffer_size);
         true
     })
 }
@@ -1813,7 +1813,7 @@ pub unsafe extern "C" fn RimeGetCurrentSchema(
 
     with_session(session_id, |session| {
         let current_schema = session.engine.status().schema_id;
-        copy_c_string_to_buffer(&current_schema, schema_id, buffer_size);
+        copy_c_string_with_strncpy_semantics(&current_schema, schema_id, buffer_size);
         true
     })
 }
@@ -4891,7 +4891,7 @@ fn copy_runtime_path_to_buffer(
         .lock()
         .expect("runtime paths should not be poisoned");
     let value = select(&paths).to_string_lossy();
-    copy_c_string_to_buffer(&value, output, buffer_size);
+    copy_c_string_with_strncpy_semantics(&value, output, buffer_size);
 }
 
 fn clear_commit(commit: *mut RimeCommit) {
@@ -5111,20 +5111,6 @@ fn free_candidate_fields(candidate: &mut RimeCandidate) {
         candidate.comment = ptr::null_mut();
     }
     candidate.reserved = ptr::null_mut();
-}
-
-fn copy_c_string_to_buffer(value: &str, output: *mut c_char, buffer_size: usize) {
-    if buffer_size == 0 {
-        return;
-    }
-    let bytes = value.as_bytes();
-    let copy_len = bytes.len().min(buffer_size.saturating_sub(1));
-    // SAFETY: callers pass writable storage of `buffer_size` bytes, and
-    // `copy_len` is bounded to leave room for a trailing NUL.
-    unsafe {
-        ptr::copy_nonoverlapping(bytes.as_ptr().cast::<c_char>(), output, copy_len);
-        slice::from_raw_parts_mut(output.cast::<u8>(), buffer_size)[copy_len] = 0;
-    }
 }
 
 fn copy_c_string_with_strncpy_semantics(value: &str, output: *mut c_char, buffer_size: usize) {
