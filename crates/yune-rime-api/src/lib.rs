@@ -275,6 +275,12 @@ fn switcher_selection_registry() -> &'static Mutex<HashMap<usize, Option<Vec<Str
     SWITCHER_SELECTION_REGISTRY.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
+fn switcher_hotkeys_registry() -> &'static Mutex<HashMap<usize, Option<CString>>> {
+    static SWITCHER_HOTKEYS_REGISTRY: OnceLock<Mutex<HashMap<usize, Option<CString>>>> =
+        OnceLock::new();
+    SWITCHER_HOTKEYS_REGISTRY.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
 fn levers_module() -> *mut RimeModule {
     static LEVERS_MODULE: OnceLock<usize> = OnceLock::new();
     *LEVERS_MODULE.get_or_init(|| {
@@ -335,11 +341,6 @@ fn build_levers_api() -> RimeLeversApi {
 fn state_label_cache() -> &'static Mutex<Option<CString>> {
     static STATE_LABEL_CACHE: OnceLock<Mutex<Option<CString>>> = OnceLock::new();
     STATE_LABEL_CACHE.get_or_init(|| Mutex::new(None))
-}
-
-fn switcher_hotkeys_cache() -> &'static Mutex<Option<CString>> {
-    static SWITCHER_HOTKEYS_CACHE: OnceLock<Mutex<Option<CString>>> = OnceLock::new();
-    SWITCHER_HOTKEYS_CACHE.get_or_init(|| Mutex::new(None))
 }
 
 fn api_entry() -> *mut RimeApi {
@@ -581,6 +582,13 @@ pub extern "C" fn RimeSwitcherSettingsInit() -> *mut RimeSwitcherSettings {
         .lock()
         .expect("switcher selection registry should not be poisoned")
         .insert(settings as usize, None);
+    switcher_hotkeys_registry()
+        .lock()
+        .expect("switcher hotkeys registry should not be poisoned")
+        .insert(
+            settings as usize,
+            deployed_switcher_hotkeys().map(|hotkeys| cstring_from_lossless_str(&hotkeys)),
+        );
     settings
 }
 
@@ -1014,14 +1022,12 @@ pub unsafe extern "C" fn RimeLeversGetHotkeys(
         return ptr::null();
     }
 
-    let mut cache = switcher_hotkeys_cache()
+    switcher_hotkeys_registry()
         .lock()
-        .expect("switcher hotkeys cache should not be poisoned");
-    *cache = deployed_switcher_hotkeys().map(|hotkeys| cstring_from_lossless_str(&hotkeys));
-    cache
-        .as_ref()
-        .map(|hotkeys| hotkeys.as_ptr())
-        .unwrap_or(ptr::null())
+        .expect("switcher hotkeys registry should not be poisoned")
+        .get(&(settings as usize))
+        .and_then(Option::as_ref)
+        .map_or(ptr::null(), |hotkeys| hotkeys.as_ptr())
 }
 
 /// Matches librime's currently unimplemented switcher hotkey mutation path.

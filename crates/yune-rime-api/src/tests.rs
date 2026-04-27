@@ -5809,6 +5809,34 @@ switcher:
         unsafe { CStr::from_ptr(hotkeys) }.to_str(),
         Ok("Control+grave, F4")
     );
+    fs::write(
+        staging.join("default.yaml"),
+        "\
+switcher:
+  hotkeys:
+    - Alt+space
+",
+    )
+    .expect("updated default config should be written");
+    // SAFETY: settings is a valid pointer returned by the shim. librime keeps
+    // the hotkeys loaded into the switcher settings object at init time.
+    let original_hotkeys = unsafe { get_hotkeys(settings) };
+    assert!(!original_hotkeys.is_null());
+    // SAFETY: returned pointer is valid while the settings object is alive.
+    assert_eq!(
+        unsafe { CStr::from_ptr(original_hotkeys) }.to_str(),
+        Ok("Control+grave, F4")
+    );
+    let new_settings = super::RimeSwitcherSettingsInit();
+    assert!(!new_settings.is_null());
+    // SAFETY: new_settings is a valid pointer returned after the config update.
+    let updated_hotkeys = unsafe { get_hotkeys(new_settings) };
+    assert!(!updated_hotkeys.is_null());
+    // SAFETY: returned pointer is valid while the new settings object is alive.
+    assert_eq!(
+        unsafe { CStr::from_ptr(updated_hotkeys) }.to_str(),
+        Ok("Alt+space")
+    );
     // SAFETY: null settings are rejected without dereferencing.
     assert!(unsafe { get_hotkeys(std::ptr::null_mut()) }.is_null());
 
@@ -5819,6 +5847,8 @@ switcher:
         FALSE
     );
 
+    // SAFETY: new_settings was allocated by this shim's switcher init function.
+    unsafe { drop(Box::from_raw(new_settings)) };
     // SAFETY: settings was allocated by this shim's switcher init function.
     unsafe { drop(Box::from_raw(settings)) };
     let reset_traits = empty_traits();
