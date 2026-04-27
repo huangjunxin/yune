@@ -4138,7 +4138,7 @@ fn install_schema_recognizer_processor(session: &mut SessionState, schema_id: &s
         return;
     }
     let use_space = find_config_value(&schema_config, &format!("{name_space}/use_space"))
-        .and_then(Value::as_bool)
+        .and_then(config_scalar_bool)
         .unwrap_or(false);
     session.recognizer_processor = Some(RecognizerProcessor {
         use_space,

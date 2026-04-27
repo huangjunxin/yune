@@ -16702,7 +16702,7 @@ reverse_lookup:
   dictionary: stroke
   prefix: \"`\"
 recognizer:
-  use_space: true
+  use_space: 'true'
   patterns:
     reverse_lookup: \"`[a-z ]*$\"
 processor:
