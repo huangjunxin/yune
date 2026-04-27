@@ -4108,7 +4108,14 @@ fn load_schema_matcher_segmentor(
         .map(schema_component_prescription)
         .find_map(|(component_name, name_space)| {
             (component_name == "matcher")
-                .then(|| name_space.unwrap_or("recognizer"))
+                .then(|| {
+                    let name_space = name_space.unwrap_or("recognizer");
+                    if name_space == "segmentor" {
+                        "recognizer"
+                    } else {
+                        name_space
+                    }
+                })
                 .filter(|name_space| !name_space.is_empty())
         })?;
     let Value::Mapping(patterns) =
