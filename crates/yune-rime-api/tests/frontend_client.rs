@@ -1,7 +1,7 @@
 use std::{
     ffi::{CStr, CString},
     fs, mem,
-    os::raw::c_char,
+    os::raw::{c_char, c_int},
     path::PathBuf,
     ptr,
     sync::{Mutex, MutexGuard, OnceLock},
@@ -10,7 +10,7 @@ use std::{
 
 use yune_rime_api::{
     rime_get_api, RimeCandidate, RimeCandidateListIterator, RimeCommit, RimeComposition,
-    RimeContext, RimeMenu, RimeStatus, RimeTraits, FALSE, TRUE,
+    RimeConfig, RimeConfigIterator, RimeContext, RimeMenu, RimeStatus, RimeTraits, FALSE, TRUE,
 };
 
 fn empty_context() -> RimeContext {
@@ -88,6 +88,22 @@ fn empty_candidate_list_iterator() -> RimeCandidateListIterator {
     }
 }
 
+fn empty_config() -> RimeConfig {
+    RimeConfig {
+        ptr: ptr::null_mut(),
+    }
+}
+
+fn empty_config_iterator() -> RimeConfigIterator {
+    RimeConfigIterator {
+        list: ptr::null_mut(),
+        map: ptr::null_mut(),
+        index: 0,
+        key: ptr::null(),
+        path: ptr::null(),
+    }
+}
+
 fn test_guard() -> MutexGuard<'static, ()> {
     static TEST_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
     TEST_LOCK
@@ -105,6 +121,177 @@ fn unique_temp_dir(label: &str) -> PathBuf {
         "yune-rime-api-frontend-{label}-{}-{nanos}",
         std::process::id()
     ))
+}
+
+#[test]
+fn frontend_style_api_table_can_read_in_memory_configs() {
+    let _guard = test_guard();
+    let api = rime_get_api();
+    assert!(!api.is_null());
+    let api = unsafe { &*api };
+
+    let config_init = api.config_init.expect("frontend requires config_init");
+    let config_load_string = api
+        .config_load_string
+        .expect("frontend requires config_load_string");
+    let config_get_bool = api
+        .config_get_bool
+        .expect("frontend requires config_get_bool");
+    let config_get_int = api
+        .config_get_int
+        .expect("frontend requires config_get_int");
+    let config_get_double = api
+        .config_get_double
+        .expect("frontend requires config_get_double");
+    let config_get_string = api
+        .config_get_string
+        .expect("frontend requires config_get_string");
+    let config_get_cstring = api
+        .config_get_cstring
+        .expect("frontend requires config_get_cstring");
+    let config_list_size = api
+        .config_list_size
+        .expect("frontend requires config_list_size");
+    let config_begin_list = api
+        .config_begin_list
+        .expect("frontend requires config_begin_list");
+    let config_begin_map = api
+        .config_begin_map
+        .expect("frontend requires config_begin_map");
+    let config_next = api.config_next.expect("frontend requires config_next");
+    let config_end = api.config_end.expect("frontend requires config_end");
+    let config_close = api.config_close.expect("frontend requires config_close");
+
+    let mut config = empty_config();
+    let yaml = CString::new(
+        "\
+schema:\n  schema_id: luna_pinyin\n  name: Luna Pinyin\nswitches:\n  - name: ascii_mode\n  - name: full_shape\nmenu:\n  page_size: 9\n  alternative_select_keys: ABC\nweights:\n  bias: 0.75\nenabled: true\n",
+    )
+    .expect("yaml should not contain NUL");
+    let enabled_key = CString::new("enabled").expect("literal should not contain NUL");
+    let page_size_key = CString::new("menu/page_size").expect("literal should not contain NUL");
+    let bias_key = CString::new("weights/bias").expect("literal should not contain NUL");
+    let schema_name_key = CString::new("schema/name").expect("literal should not contain NUL");
+    let schema_id_key = CString::new("schema/schema_id").expect("literal should not contain NUL");
+    let switches_key = CString::new("switches").expect("literal should not contain NUL");
+    let menu_key = CString::new("menu").expect("literal should not contain NUL");
+    let missing_key = CString::new("missing").expect("literal should not contain NUL");
+
+    assert_eq!(unsafe { config_init(&mut config) }, TRUE);
+    assert!(!config.ptr.is_null());
+    assert_eq!(unsafe { config_init(&mut config) }, FALSE);
+    assert_eq!(
+        unsafe { config_load_string(&mut config, yaml.as_ptr()) },
+        TRUE
+    );
+
+    let mut enabled = FALSE;
+    let mut page_size: c_int = 0;
+    let mut bias = 0.0;
+    let mut schema_name_buffer = vec![0 as c_char; 16];
+    assert_eq!(
+        unsafe { config_get_bool(&mut config, enabled_key.as_ptr(), &mut enabled) },
+        TRUE
+    );
+    assert_eq!(enabled, TRUE);
+    assert_eq!(
+        unsafe { config_get_int(&mut config, page_size_key.as_ptr(), &mut page_size) },
+        TRUE
+    );
+    assert_eq!(page_size, 9);
+    assert_eq!(
+        unsafe { config_get_double(&mut config, bias_key.as_ptr(), &mut bias) },
+        TRUE
+    );
+    assert_eq!(bias, 0.75);
+    assert_eq!(
+        unsafe {
+            config_get_string(
+                &mut config,
+                schema_name_key.as_ptr(),
+                schema_name_buffer.as_mut_ptr(),
+                schema_name_buffer.len(),
+            )
+        },
+        TRUE
+    );
+    let schema_name = unsafe { CStr::from_ptr(schema_name_buffer.as_ptr()) };
+    assert_eq!(schema_name.to_str(), Ok("Luna Pinyin"));
+    let schema_id = unsafe { config_get_cstring(&mut config, schema_id_key.as_ptr()) };
+    assert!(!schema_id.is_null());
+    let schema_id = unsafe { CStr::from_ptr(schema_id) };
+    assert_eq!(schema_id.to_str(), Ok("luna_pinyin"));
+    assert_eq!(
+        unsafe { config_list_size(&mut config, switches_key.as_ptr()) },
+        2
+    );
+
+    let mut iterator = empty_config_iterator();
+    assert_eq!(
+        unsafe { config_begin_list(&mut iterator, &mut config, switches_key.as_ptr()) },
+        TRUE
+    );
+    assert_eq!(iterator.index, -1);
+    assert!(!iterator.list.is_null());
+    assert!(iterator.map.is_null());
+    assert_eq!(unsafe { config_next(&mut iterator) }, TRUE);
+    assert_eq!(iterator.index, 0);
+    assert_eq!(unsafe { CStr::from_ptr(iterator.key) }.to_str(), Ok("@0"));
+    assert_eq!(
+        unsafe { CStr::from_ptr(iterator.path) }.to_str(),
+        Ok("switches/@0")
+    );
+    assert_eq!(unsafe { config_next(&mut iterator) }, TRUE);
+    assert_eq!(iterator.index, 1);
+    assert_eq!(unsafe { CStr::from_ptr(iterator.key) }.to_str(), Ok("@1"));
+    assert_eq!(
+        unsafe { CStr::from_ptr(iterator.path) }.to_str(),
+        Ok("switches/@1")
+    );
+    assert_eq!(unsafe { config_next(&mut iterator) }, FALSE);
+    assert_eq!(iterator.index, 2);
+    unsafe { config_end(&mut iterator) };
+    assert!(iterator.list.is_null());
+    assert!(iterator.key.is_null());
+
+    assert_eq!(
+        unsafe { config_begin_map(&mut iterator, &mut config, menu_key.as_ptr()) },
+        TRUE
+    );
+    assert_eq!(unsafe { config_next(&mut iterator) }, TRUE);
+    assert_eq!(
+        unsafe { CStr::from_ptr(iterator.key) }.to_str(),
+        Ok("alternative_select_keys")
+    );
+    assert_eq!(
+        unsafe { CStr::from_ptr(iterator.path) }.to_str(),
+        Ok("menu/alternative_select_keys")
+    );
+    assert_eq!(unsafe { config_next(&mut iterator) }, TRUE);
+    assert_eq!(
+        unsafe { CStr::from_ptr(iterator.key) }.to_str(),
+        Ok("page_size")
+    );
+    assert_eq!(
+        unsafe { CStr::from_ptr(iterator.path) }.to_str(),
+        Ok("menu/page_size")
+    );
+    assert_eq!(unsafe { config_next(&mut iterator) }, FALSE);
+    assert_eq!(iterator.index, 2);
+    unsafe { config_end(&mut iterator) };
+
+    assert_eq!(
+        unsafe { config_begin_list(&mut iterator, &mut config, missing_key.as_ptr()) },
+        FALSE
+    );
+    assert!(iterator.list.is_null());
+    assert!(iterator.map.is_null());
+    assert_eq!(iterator.index, -1);
+    assert!(iterator.key.is_null());
+    assert!(iterator.path.is_null());
+
+    assert_eq!(unsafe { config_close(&mut config) }, TRUE);
+    assert!(config.ptr.is_null());
 }
 
 #[test]
