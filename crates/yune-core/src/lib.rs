@@ -2478,6 +2478,7 @@ pub struct ReverseLookupTranslator {
     reverse_comments: HashMap<String, Vec<String>>,
     prefix: String,
     suffix: String,
+    tag: String,
     enable_completion: bool,
     comment_format: CommentFormat,
 }
@@ -2505,9 +2506,16 @@ impl ReverseLookupTranslator {
             reverse_comments,
             prefix: prefix.into(),
             suffix: suffix.into(),
+            tag: "reverse_lookup".to_owned(),
             enable_completion: false,
             comment_format: CommentFormat::default(),
         }
+    }
+
+    #[must_use]
+    pub fn with_tag(mut self, tag: impl Into<String>) -> Self {
+        self.tag = tag.into();
+        self
     }
 
     #[must_use]
@@ -2520,6 +2528,12 @@ impl ReverseLookupTranslator {
     pub fn with_comment_format(mut self, formulas: &[String]) -> Self {
         self.comment_format = CommentFormat::parse(formulas);
         self
+    }
+
+    fn accepts_segment_tags(&self, segment_tags: &[String]) -> bool {
+        segment_tags
+            .iter()
+            .any(|segment_tag| segment_tag == &self.tag)
     }
 }
 
@@ -2571,6 +2585,19 @@ impl Translator for ReverseLookupTranslator {
                 }
             })
             .collect()
+    }
+
+    fn translate_with_context(
+        &self,
+        input: &str,
+        _status: &Status,
+        _options: &HashMap<String, bool>,
+        context: &Context,
+    ) -> Vec<Candidate> {
+        if !self.accepts_segment_tags(&context.segment_tags) {
+            return Vec::new();
+        }
+        self.translate(input)
     }
 }
 
@@ -6988,6 +7015,68 @@ sort: original
         assert_eq!(candidates.len(), 1);
         assert_eq!(candidates[0].text, "火");
         assert_eq!(candidates[0].comment, "huo");
+    }
+
+    #[test]
+    fn reverse_lookup_translator_honors_librime_segment_tag() {
+        let lookup_dictionary = TableDictionary::parse_rime_dict_yaml(
+            r#"
+---
+name: stroke
+version: "0.1"
+sort: original
+...
+
+火	huo
+"#,
+        )
+        .expect("lookup dictionary should parse");
+
+        let mut engine = Engine::new();
+        engine.add_translator(ReverseLookupTranslator::new(
+            lookup_dictionary.clone(),
+            None,
+            "`",
+            "",
+        ));
+        engine.set_input("`huo");
+        assert!(engine
+            .context()
+            .candidates
+            .iter()
+            .all(|candidate| candidate.source != CandidateSource::ReverseLookup));
+
+        engine.set_segment_tags(["abc", "reverse_lookup"]);
+        let reverse_candidates = engine
+            .context()
+            .candidates
+            .iter()
+            .filter(|candidate| candidate.source == CandidateSource::ReverseLookup)
+            .map(|candidate| candidate.text.as_str())
+            .collect::<Vec<_>>();
+        assert_eq!(reverse_candidates, ["火"]);
+
+        let mut tagged_engine = Engine::new();
+        tagged_engine.add_translator(
+            ReverseLookupTranslator::new(lookup_dictionary, None, "`", "").with_tag("custom"),
+        );
+        tagged_engine.set_segment_tags(["abc", "reverse_lookup"]);
+        tagged_engine.set_input("`huo");
+        assert!(tagged_engine
+            .context()
+            .candidates
+            .iter()
+            .all(|candidate| candidate.source != CandidateSource::ReverseLookup));
+
+        tagged_engine.set_segment_tags(["abc", "custom"]);
+        let reverse_candidates = tagged_engine
+            .context()
+            .candidates
+            .iter()
+            .filter(|candidate| candidate.source == CandidateSource::ReverseLookup)
+            .map(|candidate| candidate.text.as_str())
+            .collect::<Vec<_>>();
+        assert_eq!(reverse_candidates, ["火"]);
     }
 
     #[test]

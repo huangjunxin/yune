@@ -3829,6 +3829,9 @@ fn install_schema_reverse_lookup_translator_from_config(
     let suffix = find_config_value(schema_config, &format!("{name_space}/suffix"))
         .and_then(config_scalar_string)
         .unwrap_or_default();
+    let tag = find_config_value(schema_config, &format!("{name_space}/tag"))
+        .and_then(config_scalar_string)
+        .unwrap_or_else(|| "reverse_lookup".to_owned());
     let enable_completion =
         find_config_value(schema_config, &format!("{name_space}/enable_completion"))
             .and_then(config_scalar_bool)
@@ -3837,6 +3840,7 @@ fn install_schema_reverse_lookup_translator_from_config(
 
     session.engine.add_translator(
         ReverseLookupTranslator::new(dictionary, reverse_dictionary, prefix, suffix)
+            .with_tag(tag)
             .with_completion(enable_completion)
             .with_comment_format(&comment_format),
     );
