@@ -57,6 +57,7 @@ impl KeyModifiers {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum KeyCode {
     Character(char),
+    KeypadDigit(char),
     Backspace,
     Return,
 }
@@ -184,6 +185,16 @@ fn key_code_from_name(name: &str) -> Result<KeyCode, KeySequenceParseError> {
         "BackSpace" => KeyCode::Backspace,
         "Return" => KeyCode::Return,
         "KP_Enter" => KeyCode::Return,
+        "KP_0" => KeyCode::KeypadDigit('0'),
+        "KP_1" => KeyCode::KeypadDigit('1'),
+        "KP_2" => KeyCode::KeypadDigit('2'),
+        "KP_3" => KeyCode::KeypadDigit('3'),
+        "KP_4" => KeyCode::KeypadDigit('4'),
+        "KP_5" => KeyCode::KeypadDigit('5'),
+        "KP_6" => KeyCode::KeypadDigit('6'),
+        "KP_7" => KeyCode::KeypadDigit('7'),
+        "KP_8" => KeyCode::KeypadDigit('8'),
+        "KP_9" => KeyCode::KeypadDigit('9'),
         "braceleft" => KeyCode::Character('{'),
         "braceright" => KeyCode::Character('}'),
         "plus" => KeyCode::Character('+'),
@@ -736,6 +747,10 @@ impl Engine {
 
         match key_event.code {
             KeyCode::Character(ch) => self.process_char(ch),
+            KeyCode::KeypadDigit(ch) if !self.context.candidates.is_empty() => {
+                self.commit_candidate_at_page_index(select_index_from_digit(ch))
+            }
+            KeyCode::KeypadDigit(_) => None,
             KeyCode::Backspace => self.backspace(),
             KeyCode::Return => self.commit_highlighted(),
         }
@@ -926,10 +941,11 @@ mod tests {
 
     #[test]
     fn parses_librime_style_key_sequence_names() {
-        let keys = parse_key_sequence("zyx 123{Shift+space}ABC{Control+Alt+Return}{KP_Enter}")
-            .expect("key sequence should parse");
+        let keys =
+            parse_key_sequence("zyx 123{Shift+space}ABC{Control+Alt+Return}{KP_Enter}{KP_2}")
+                .expect("key sequence should parse");
 
-        assert_eq!(keys.len(), 13);
+        assert_eq!(keys.len(), 14);
         assert_eq!(keys[3].code, KeyCode::Character(' '));
         assert!(!keys[3].modifiers.shift);
         assert_eq!(keys[7].code, KeyCode::Character(' '));
@@ -938,6 +954,7 @@ mod tests {
         assert!(keys[11].modifiers.control);
         assert!(keys[11].modifiers.alt);
         assert_eq!(keys[12].code, KeyCode::Return);
+        assert_eq!(keys[13].code, KeyCode::KeypadDigit('2'));
     }
 
     #[test]
@@ -972,6 +989,20 @@ mod tests {
 
         let commits = engine
             .process_key_sequence("ba2")
+            .expect("key sequence should parse");
+
+        assert_eq!(commits, ["吧"]);
+        assert_eq!(engine.context().last_commit.as_deref(), Some("吧"));
+        assert!(!engine.status().is_composing);
+    }
+
+    #[test]
+    fn keypad_numeric_selection_matches_librime_selector_without_text_input() {
+        let mut engine = Engine::new();
+        engine.add_translator(StaticTableTranslator::new([("ba", "八"), ("ba", "吧")]));
+
+        let commits = engine
+            .process_key_sequence("{KP_1}ba{KP_2}")
             .expect("key sequence should parse");
 
         assert_eq!(commits, ["吧"]);

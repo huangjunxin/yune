@@ -24,6 +24,8 @@ pub use key_table::*;
 const XK_BACKSPACE: c_int = 0xff08;
 const XK_RETURN: c_int = 0xff0d;
 const XK_KP_ENTER: c_int = 0xff8d;
+const XK_KP_0: c_int = 0xffb0;
+const XK_KP_9: c_int = 0xffb9;
 const DEFAULT_PAGE_SIZE: usize = 5;
 const RIME_VERSION_BYTES: &[u8] =
     concat!("yune-rime-api ", env!("CARGO_PKG_VERSION"), "\0").as_bytes();
@@ -3359,6 +3361,9 @@ fn key_event_from_rime_keycode(keycode: c_int) -> Option<KeyEvent> {
     let code = match keycode {
         XK_BACKSPACE => KeyCode::Backspace,
         XK_RETURN | XK_KP_ENTER => KeyCode::Return,
+        XK_KP_0..=XK_KP_9 => {
+            KeyCode::KeypadDigit(char::from_u32(('0' as u32) + (keycode - XK_KP_0) as u32)?)
+        }
         0x20..=0x7e => KeyCode::Character(char::from_u32(keycode as u32)?),
         _ => return None,
     };
