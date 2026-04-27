@@ -5137,6 +5137,35 @@ ba	把	50%
     }
 
     #[test]
+    fn parses_rime_dict_yaml_no_comment_marker_as_literal_hash_entries() {
+        let dictionary = TableDictionary::parse_rime_dict_yaml(
+            r#"
+---
+name: no_comment_sample
+version: "0.1"
+sort: original
+columns: [text, code, weight]
+...
+
+# skipped comment
+# no comment
+#hash	ha	1
+#literal	li	2
+"#,
+        )
+        .expect("RIME dictionary '# no comment' marker should allow literal hash entries");
+
+        let entries = dictionary.entries();
+        assert_eq!(entries.len(), 2);
+        assert_eq!(entries[0].text, "#hash");
+        assert_eq!(entries[0].code, "ha");
+        assert_eq!(entries[0].weight, 1.0);
+        assert_eq!(entries[1].text, "#literal");
+        assert_eq!(entries[1].code, "li");
+        assert_eq!(entries[1].weight, 2.0);
+    }
+
+    #[test]
     fn parses_rime_dict_yaml_header_keys_with_space_before_colon() {
         let dictionary = TableDictionary::parse_rime_dict_yaml_with_imports(
             r#"
