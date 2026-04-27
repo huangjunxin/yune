@@ -1516,10 +1516,13 @@ pub extern "C" fn RimeDeployConfigFile(
 #[no_mangle]
 pub extern "C" fn RimeSyncUserData() -> Bool {
     RimeCleanupAllSessions();
+    notify(0, "deploy", "start");
     let installation_synced = run_installation_update();
     let configs_synced = backup_config_files();
     let user_dicts_synced = sync_all_user_dicts();
-    bool_from(installation_synced && configs_synced && user_dicts_synced)
+    let success = installation_synced && configs_synced && user_dicts_synced;
+    notify(0, "deploy", if success { "success" } else { "failure" });
+    bool_from(success)
 }
 
 #[no_mangle]

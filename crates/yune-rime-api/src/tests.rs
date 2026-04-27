@@ -6855,6 +6855,58 @@ fn notification_handler_receives_runtime_events_and_can_be_cleared() {
 }
 
 #[test]
+fn sync_user_data_emits_librime_deploy_notifications() {
+    let _guard = test_guard();
+    RimeCleanupAllSessions();
+    let root = unique_temp_dir("sync-notification-events");
+    let user = root.join("user");
+    fs::create_dir_all(&user).expect("user dir should be created");
+    fs::write(user.join("default.yaml"), "config_version: test\n")
+        .expect("user config should be written");
+    let user_c = CString::new(user.to_string_lossy().as_ref()).expect("path should be valid");
+    let mut traits = empty_traits();
+    traits.user_data_dir = user_c.as_ptr();
+    // SAFETY: traits points to valid storage and strings live for the call.
+    unsafe { RimeSetup(&traits) };
+    notification_events()
+        .lock()
+        .expect("notification events should not be poisoned")
+        .clear();
+    let context_object = 0x6b_usize as *mut c_void;
+
+    RimeSetNotificationHandler(Some(record_notification), context_object);
+    assert_eq!(RimeSyncUserData(), TRUE);
+
+    let events = notification_events()
+        .lock()
+        .expect("notification events should not be poisoned");
+    assert_eq!(
+        *events,
+        vec![
+            NotificationEvent {
+                context_object: 0x6b,
+                session_id: 0,
+                message_type: "deploy".to_owned(),
+                message_value: "start".to_owned(),
+            },
+            NotificationEvent {
+                context_object: 0x6b,
+                session_id: 0,
+                message_type: "deploy".to_owned(),
+                message_value: "success".to_owned(),
+            },
+        ]
+    );
+    drop(events);
+
+    RimeSetNotificationHandler(None, std::ptr::null_mut());
+    let reset_traits = empty_traits();
+    // SAFETY: reset traits points to valid storage.
+    unsafe { RimeSetup(&reset_traits) };
+    fs::remove_dir_all(root).expect("temp dirs should be removed");
+}
+
+#[test]
 fn creates_finds_and_destroys_sessions() {
     let _guard = test_guard();
     RimeCleanupAllSessions();
