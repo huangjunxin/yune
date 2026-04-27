@@ -1661,7 +1661,7 @@ pub extern "C" fn RimeProcessKey(session_id: RimeSessionId, keycode: c_int, mask
             session.engine.change_page_by(page_size, false);
         }
         _ => {
-            if let Some(commit) = session.engine.process_key_event(key_event) {
+            if let Some(commit) = process_session_key_event(session, key_event) {
                 session.unread_commit = Some(commit);
                 return TRUE;
             }
@@ -2866,7 +2866,7 @@ pub unsafe extern "C" fn RimeSimulateKeySequence(
     };
 
     for key_event in key_events {
-        if let Some(commit) = session.engine.process_key_event(key_event) {
+        if let Some(commit) = process_session_key_event(session, key_event) {
             session.unread_commit = Some(commit);
         }
     }
@@ -3494,6 +3494,46 @@ fn commit_selected_candidate(
 
 fn session_menu_page_size(session: &SessionState) -> usize {
     context_menu_settings(&session.engine.status().schema_id).page_size
+}
+
+fn process_session_key_event(session: &mut SessionState, key_event: KeyEvent) -> Option<String> {
+    if let Some(commit) = process_alternative_select_key(session, key_event) {
+        return commit;
+    }
+    session.engine.process_key_event(key_event)
+}
+
+fn process_alternative_select_key(
+    session: &mut SessionState,
+    key_event: KeyEvent,
+) -> Option<Option<String>> {
+    if key_event.modifiers.control
+        || key_event.modifiers.alt
+        || key_event.modifiers.super_key
+        || key_event.modifiers.release
+        || session.engine.context().candidates.is_empty()
+    {
+        return None;
+    }
+    let KeyCode::Character(ch) = key_event.code else {
+        return None;
+    };
+    if !ch.is_ascii() || !('\u{20}'..='\u{7e}').contains(&ch) {
+        return None;
+    }
+
+    let menu_settings = context_menu_settings(&session.engine.status().schema_id);
+    let select_keys = menu_settings.select_keys.as_deref()?;
+    let index = select_keys
+        .bytes()
+        .position(|select_key| select_key == ch as u8)?;
+    if index >= menu_settings.page_size {
+        return Some(None);
+    }
+
+    let page_start =
+        (session.engine.context().highlighted / menu_settings.page_size) * menu_settings.page_size;
+    Some(session.engine.select_candidate(page_start + index))
 }
 
 fn candidate_index_on_current_page(session: &SessionState, index: usize) -> Option<usize> {

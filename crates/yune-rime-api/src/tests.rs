@@ -6500,6 +6500,108 @@ schema:\n  schema_id: luna\n  name: Luna\nmenu:\n  page_size: 2\n",
 }
 
 #[test]
+fn alternative_select_keys_select_current_page_candidates_like_librime_selector() {
+    let _guard = test_guard();
+    RimeCleanupAllSessions();
+    let root = unique_temp_dir("alternative-select-keys");
+    let shared = root.join("shared");
+    let user = root.join("user");
+    let staging = user.join("build");
+    fs::create_dir_all(&shared).expect("shared dir should be created");
+    fs::create_dir_all(&staging).expect("staging dir should be created");
+    fs::write(
+        staging.join("luna.schema.yaml"),
+        "\
+schema:\n  schema_id: luna\n  name: Luna\nmenu:\n  page_size: 2\n  alternative_select_keys: AB\n",
+    )
+    .expect("schema config should be written");
+
+    let shared_c = CString::new(shared.to_string_lossy().as_ref()).expect("path is valid");
+    let user_c = CString::new(user.to_string_lossy().as_ref()).expect("path is valid");
+    let mut traits = empty_traits();
+    traits.shared_data_dir = shared_c.as_ptr();
+    traits.user_data_dir = user_c.as_ptr();
+    // SAFETY: traits points to valid storage and strings live for the call.
+    unsafe { RimeSetup(&traits) };
+
+    let schema_id = CString::new("luna").expect("schema id should be valid");
+    let mut commit = RimeCommit {
+        data_size: 0,
+        text: std::ptr::null_mut(),
+    };
+
+    let session_id = RimeCreateSession();
+    // SAFETY: schema id is a valid NUL-terminated string.
+    assert_eq!(
+        unsafe { RimeSelectSchema(session_id, schema_id.as_ptr()) },
+        TRUE
+    );
+    {
+        let mut registry = super::sessions()
+            .lock()
+            .expect("session registry should not be poisoned");
+        let session = registry
+            .sessions
+            .get_mut(&session_id)
+            .expect("session should exist");
+        session
+            .engine
+            .add_translator(StaticTableTranslator::new([("ba", "八"), ("ba", "吧")]));
+    }
+
+    assert_eq!(RimeProcessKey(session_id, 'b' as i32, 0), TRUE);
+    assert_eq!(RimeProcessKey(session_id, 'a' as i32, 0), TRUE);
+    assert_eq!(RimeProcessKey(session_id, 'B' as i32, 0), TRUE);
+    // SAFETY: `commit` points to valid writable storage for this test.
+    assert_eq!(unsafe { RimeGetCommit(session_id, &mut commit) }, TRUE);
+    // SAFETY: `RimeGetCommit` returned true and populated `text`.
+    assert_eq!(unsafe { CStr::from_ptr(commit.text) }.to_str(), Ok("吧"));
+    // SAFETY: `commit.text` was returned by `RimeGetCommit` above.
+    assert_eq!(unsafe { RimeFreeCommit(&mut commit) }, TRUE);
+    assert_eq!(RimeDestroySession(session_id), TRUE);
+
+    let sequence_session_id = RimeCreateSession();
+    // SAFETY: schema id is a valid NUL-terminated string.
+    assert_eq!(
+        unsafe { RimeSelectSchema(sequence_session_id, schema_id.as_ptr()) },
+        TRUE
+    );
+    {
+        let mut registry = super::sessions()
+            .lock()
+            .expect("session registry should not be poisoned");
+        let session = registry
+            .sessions
+            .get_mut(&sequence_session_id)
+            .expect("session should exist");
+        session
+            .engine
+            .add_translator(StaticTableTranslator::new([("ba", "八"), ("ba", "吧")]));
+    }
+    let sequence = CString::new("baB").expect("sequence should be valid");
+    // SAFETY: sequence is a valid NUL-terminated librime-style key sequence.
+    assert_eq!(
+        unsafe { RimeSimulateKeySequence(sequence_session_id, sequence.as_ptr()) },
+        TRUE
+    );
+    // SAFETY: `commit` points to valid writable storage for this test.
+    assert_eq!(
+        unsafe { RimeGetCommit(sequence_session_id, &mut commit) },
+        TRUE
+    );
+    // SAFETY: `RimeGetCommit` returned true and populated `text`.
+    assert_eq!(unsafe { CStr::from_ptr(commit.text) }.to_str(), Ok("吧"));
+    // SAFETY: `commit.text` was returned by `RimeGetCommit` above.
+    assert_eq!(unsafe { RimeFreeCommit(&mut commit) }, TRUE);
+    assert_eq!(RimeDestroySession(sequence_session_id), TRUE);
+
+    let reset_traits = empty_traits();
+    // SAFETY: reset traits points to valid storage.
+    unsafe { RimeSetup(&reset_traits) };
+    fs::remove_dir_all(root).expect("temp dirs should be removed");
+}
+
+#[test]
 fn delete_candidate_apis_remove_menu_items_without_commit() {
     let _guard = test_guard();
     RimeCleanupAllSessions();
