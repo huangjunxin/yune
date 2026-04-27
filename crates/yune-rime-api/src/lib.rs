@@ -3897,12 +3897,10 @@ fn install_schema_filter_chain(session: &mut SessionState, schema_id: &str) {
             "uniquifier" => session.engine.add_filter(UniquifierFilter),
             "single_char_filter" => session.engine.add_filter(SingleCharFilter),
             "charset_filter" | "cjk_minifier" => {
-                if name_space.is_none() {
-                    let tags = schema_filter_tags(&schema_config, filter_name);
-                    session
-                        .engine
-                        .add_filter(TaggedFilter::new(CharsetFilter, tags));
-                }
+                let tags = schema_filter_tags(&schema_config, name_space.unwrap_or(filter_name));
+                session
+                    .engine
+                    .add_filter(TaggedFilter::new(CharsetFilter, tags));
             }
             _ => {}
         }
