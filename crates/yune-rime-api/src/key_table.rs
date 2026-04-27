@@ -354,6 +354,66 @@ const LATIN1_KEY_NAMES: &[(&[u8], c_int)] = &[
     (b"ydiaeresis\0", 0x0ff),
 ];
 
+const LATIN2_KEY_NAMES: &[(&[u8], c_int)] = &[
+    (b"Aogonek\0", 0x1a1),
+    (b"breve\0", 0x1a2),
+    (b"Lstroke\0", 0x1a3),
+    (b"Lcaron\0", 0x1a5),
+    (b"Sacute\0", 0x1a6),
+    (b"Scaron\0", 0x1a9),
+    (b"Scedilla\0", 0x1aa),
+    (b"Tcaron\0", 0x1ab),
+    (b"Zacute\0", 0x1ac),
+    (b"Zcaron\0", 0x1ae),
+    (b"Zabovedot\0", 0x1af),
+    (b"aogonek\0", 0x1b1),
+    (b"ogonek\0", 0x1b2),
+    (b"lstroke\0", 0x1b3),
+    (b"lcaron\0", 0x1b5),
+    (b"sacute\0", 0x1b6),
+    (b"caron\0", 0x1b7),
+    (b"scaron\0", 0x1b9),
+    (b"scedilla\0", 0x1ba),
+    (b"tcaron\0", 0x1bb),
+    (b"zacute\0", 0x1bc),
+    (b"doubleacute\0", 0x1bd),
+    (b"zcaron\0", 0x1be),
+    (b"zabovedot\0", 0x1bf),
+    (b"Racute\0", 0x1c0),
+    (b"Abreve\0", 0x1c3),
+    (b"Lacute\0", 0x1c5),
+    (b"Cacute\0", 0x1c6),
+    (b"Ccaron\0", 0x1c8),
+    (b"Eogonek\0", 0x1ca),
+    (b"Ecaron\0", 0x1cc),
+    (b"Dcaron\0", 0x1cf),
+    (b"Dstroke\0", 0x1d0),
+    (b"Nacute\0", 0x1d1),
+    (b"Ncaron\0", 0x1d2),
+    (b"Odoubleacute\0", 0x1d5),
+    (b"Rcaron\0", 0x1d8),
+    (b"Uring\0", 0x1d9),
+    (b"Udoubleacute\0", 0x1db),
+    (b"Tcedilla\0", 0x1de),
+    (b"racute\0", 0x1e0),
+    (b"abreve\0", 0x1e3),
+    (b"lacute\0", 0x1e5),
+    (b"cacute\0", 0x1e6),
+    (b"ccaron\0", 0x1e8),
+    (b"eogonek\0", 0x1ea),
+    (b"ecaron\0", 0x1ec),
+    (b"dcaron\0", 0x1ef),
+    (b"dstroke\0", 0x1f0),
+    (b"nacute\0", 0x1f1),
+    (b"ncaron\0", 0x1f2),
+    (b"odoubleacute\0", 0x1f5),
+    (b"udoubleacute\0", 0x1fb),
+    (b"rcaron\0", 0x1f8),
+    (b"uring\0", 0x1f9),
+    (b"tcedilla\0", 0x1fe),
+    (b"abovedot\0", 0x1ff),
+];
+
 /// Returns the librime modifier bit mask for a modifier name.
 ///
 /// # Safety
@@ -407,6 +467,7 @@ fn lookup_keycode(name: &[u8]) -> Option<c_int> {
         .iter()
         .chain(ASCII_KEY_NAMES)
         .chain(LATIN1_KEY_NAMES)
+        .chain(LATIN2_KEY_NAMES)
         .find_map(|(key_name, keycode)| (name == *key_name).then_some(*keycode))
 }
 
@@ -415,6 +476,7 @@ fn lookup_key_name(keycode: c_int) -> Option<&'static [u8]> {
         .iter()
         .chain(ASCII_KEY_NAMES)
         .chain(LATIN1_KEY_NAMES)
+        .chain(LATIN2_KEY_NAMES)
         .find_map(|(name, candidate_keycode)| (*candidate_keycode == keycode).then_some(*name))
 }
 

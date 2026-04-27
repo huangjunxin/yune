@@ -271,6 +271,11 @@ fn key_table_exposes_librime_style_modifier_and_key_name_lookup() {
     let eth = CString::new("Eth").expect("key name should be valid");
     let thorn = CString::new("thorn").expect("key name should be valid");
     let ydiaeresis = CString::new("ydiaeresis").expect("key name should be valid");
+    let aogonek = CString::new("Aogonek").expect("key name should be valid");
+    let lcaron = CString::new("Lcaron").expect("key name should be valid");
+    let racute = CString::new("Racute").expect("key name should be valid");
+    let tcedilla = CString::new("tcedilla").expect("key name should be valid");
+    let abovedot = CString::new("abovedot").expect("key name should be valid");
     let missing = CString::new("NoSuchKey").expect("key name should be valid");
 
     assert_eq!(unsafe { RimeGetKeycodeByName(space.as_ptr()) }, 0x20);
@@ -293,6 +298,11 @@ fn key_table_exposes_librime_style_modifier_and_key_name_lookup() {
     assert_eq!(unsafe { RimeGetKeycodeByName(eth.as_ptr()) }, 0xd0);
     assert_eq!(unsafe { RimeGetKeycodeByName(thorn.as_ptr()) }, 0xfe);
     assert_eq!(unsafe { RimeGetKeycodeByName(ydiaeresis.as_ptr()) }, 0xff);
+    assert_eq!(unsafe { RimeGetKeycodeByName(aogonek.as_ptr()) }, 0x1a1);
+    assert_eq!(unsafe { RimeGetKeycodeByName(lcaron.as_ptr()) }, 0x1a5);
+    assert_eq!(unsafe { RimeGetKeycodeByName(racute.as_ptr()) }, 0x1c0);
+    assert_eq!(unsafe { RimeGetKeycodeByName(tcedilla.as_ptr()) }, 0x1fe);
+    assert_eq!(unsafe { RimeGetKeycodeByName(abovedot.as_ptr()) }, 0x1ff);
     assert_eq!(
         unsafe { RimeGetKeycodeByName(missing.as_ptr()) },
         0x00ff_ffff
@@ -361,6 +371,26 @@ fn key_table_exposes_librime_style_modifier_and_key_name_lookup() {
     assert_eq!(
         static_c_string(RimeGetKeyName(0xff)).as_deref(),
         Some("ydiaeresis")
+    );
+    assert_eq!(
+        static_c_string(RimeGetKeyName(0x1a1)).as_deref(),
+        Some("Aogonek")
+    );
+    assert_eq!(
+        static_c_string(RimeGetKeyName(0x1a5)).as_deref(),
+        Some("Lcaron")
+    );
+    assert_eq!(
+        static_c_string(RimeGetKeyName(0x1c0)).as_deref(),
+        Some("Racute")
+    );
+    assert_eq!(
+        static_c_string(RimeGetKeyName(0x1fe)).as_deref(),
+        Some("tcedilla")
+    );
+    assert_eq!(
+        static_c_string(RimeGetKeyName(0x1ff)).as_deref(),
+        Some("abovedot")
     );
     assert_eq!(static_c_string(RimeGetKeyName(0x00ff_ffff)), None);
 }
