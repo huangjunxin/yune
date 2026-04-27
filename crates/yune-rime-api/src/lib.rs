@@ -5717,8 +5717,9 @@ fn parse_config_int(value: &str) -> Option<c_int> {
         return None;
     }
     if let Some(hex) = value.strip_prefix("0x") {
-        let parsed = u32::from_str_radix(hex, 16).ok()?;
-        return c_int::try_from(parsed).ok();
+        if let Ok(parsed) = u32::from_str_radix(hex, 16) {
+            return c_int::try_from(parsed).ok();
+        }
     }
     parse_config_i64_prefix(value).and_then(|number| c_int::try_from(number).ok())
 }
@@ -7270,6 +7271,10 @@ hex: '0x10'\nflag: 'FALSE'\ndecimal: '42'\nfloating: '1.5'\nnative_bool: true\nn
         let mut config = empty_config();
         let decimal_suffix = CString::new("decimal_suffix").expect("key should be valid");
         let signed_spaced = CString::new("signed_spaced").expect("key should be valid");
+        let malformed_hex_suffix =
+            CString::new("malformed_hex_suffix").expect("key should be valid");
+        let malformed_hex_empty = CString::new("malformed_hex_empty").expect("key should be valid");
+        let spaced_hex = CString::new("spaced_hex").expect("key should be valid");
         let invalid_int = CString::new("invalid_int").expect("key should be valid");
         let double_suffix = CString::new("double_suffix").expect("key should be valid");
         let exponent_suffix = CString::new("exponent_suffix").expect("key should be valid");
@@ -7279,7 +7284,7 @@ hex: '0x10'\nflag: 'FALSE'\ndecimal: '42'\nfloating: '1.5'\nnative_bool: true\nn
 
         let yaml = CString::new(
             "\
-decimal_suffix: '42abc'\nsigned_spaced: '  -7ms'\ninvalid_int: abc42\ndouble_suffix: '  2.5ms'\nexponent_suffix: '1e2hz'\ninvalid_double: hz1.5\n",
+decimal_suffix: '42abc'\nsigned_spaced: '  -7ms'\nmalformed_hex_suffix: '0x10tail'\nmalformed_hex_empty: '0x'\nspaced_hex: ' 0x10'\ninvalid_int: abc42\ndouble_suffix: '  2.5ms'\nexponent_suffix: '1e2hz'\ninvalid_double: hz1.5\n",
         )
         .expect("yaml should be valid");
         assert_eq!(
@@ -7297,6 +7302,23 @@ decimal_suffix: '42abc'\nsigned_spaced: '  -7ms'\ninvalid_int: abc42\ndouble_suf
             TRUE
         );
         assert_eq!(int_output, -7);
+        assert_eq!(
+            unsafe {
+                RimeConfigGetInt(&mut config, malformed_hex_suffix.as_ptr(), &mut int_output)
+            },
+            TRUE
+        );
+        assert_eq!(int_output, 0);
+        assert_eq!(
+            unsafe { RimeConfigGetInt(&mut config, malformed_hex_empty.as_ptr(), &mut int_output) },
+            TRUE
+        );
+        assert_eq!(int_output, 0);
+        assert_eq!(
+            unsafe { RimeConfigGetInt(&mut config, spaced_hex.as_ptr(), &mut int_output) },
+            TRUE
+        );
+        assert_eq!(int_output, 0);
         assert_eq!(
             unsafe { RimeConfigGetInt(&mut config, invalid_int.as_ptr(), &mut int_output) },
             FALSE
