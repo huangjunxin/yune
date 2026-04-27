@@ -1841,7 +1841,8 @@ fn parse_yaml_scalar_value(value: &str) -> String {
     {
         let mut result = String::with_capacity(value.len());
         let mut escaped = false;
-        for character in value.chars() {
+        let mut characters = value.chars();
+        while let Some(character) = characters.next() {
             if escaped {
                 match character {
                     '"' => result.push('"'),
@@ -1852,6 +1853,27 @@ fn parse_yaml_scalar_value(value: &str) -> String {
                     'n' => result.push('\n'),
                     'r' => result.push('\r'),
                     't' => result.push('\t'),
+                    'x' => {
+                        if let Some(decoded) = read_yaml_hex_escape(&mut characters, 2) {
+                            result.push(decoded);
+                        } else {
+                            result.push(character);
+                        }
+                    }
+                    'u' => {
+                        if let Some(decoded) = read_yaml_hex_escape(&mut characters, 4) {
+                            result.push(decoded);
+                        } else {
+                            result.push(character);
+                        }
+                    }
+                    'U' => {
+                        if let Some(decoded) = read_yaml_hex_escape(&mut characters, 8) {
+                            result.push(decoded);
+                        } else {
+                            result.push(character);
+                        }
+                    }
                     other => result.push(other),
                 }
                 escaped = false;
@@ -1868,6 +1890,18 @@ fn parse_yaml_scalar_value(value: &str) -> String {
     }
 
     value.to_owned()
+}
+
+fn read_yaml_hex_escape(characters: &mut std::str::Chars<'_>, digits: usize) -> Option<char> {
+    let mut lookahead = characters.clone();
+    let mut value = 0;
+    for _ in 0..digits {
+        let digit = lookahead.next()?.to_digit(16)?;
+        value = (value << 4) | digit;
+    }
+    let decoded = char::from_u32(value)?;
+    *characters = lookahead;
+    Some(decoded)
 }
 
 fn parse_yaml_import_table_scalar(input: &str) -> Option<String> {
@@ -5435,7 +5469,7 @@ sort: original
 name: escaped_import_sample
 version: "0.1"
 sort: original
-import_tables: ['sec''ondary', "third\"table"]
+import_tables: ['sec''ondary', "third\"table", "hex\x5ftable", "unicode\u005ftable", "long\U0000005ftable"]
 ...
 
 primary	pri	1
@@ -5465,17 +5499,62 @@ double quote	dq	3
 "#
                         .to_owned(),
                     ),
+                    "hex_table" => Some(
+                        r#"
+---
+name: hex_table
+version: "0.1"
+...
+
+hex escape	he	4
+"#
+                        .to_owned(),
+                    ),
+                    "unicode_table" => Some(
+                        r#"
+---
+name: unicode_table
+version: "0.1"
+...
+
+unicode escape	ue	5
+"#
+                        .to_owned(),
+                    ),
+                    "long_table" => Some(
+                        r#"
+---
+name: long_table
+version: "0.1"
+...
+
+long unicode escape	le	6
+"#
+                        .to_owned(),
+                    ),
                     _ => None,
                 }
             },
         )
         .expect("quoted YAML import table names should be unescaped like yaml-cpp scalars");
 
-        assert_eq!(requested_imports, ["sec'ondary", "third\"table"]);
+        assert_eq!(
+            requested_imports,
+            [
+                "sec'ondary",
+                "third\"table",
+                "hex_table",
+                "unicode_table",
+                "long_table"
+            ]
+        );
         let entries = dictionary.entries();
         assert_eq!(entries[0].text, "primary");
         assert_eq!(entries[1].text, "single quote");
         assert_eq!(entries[2].text, "double quote");
+        assert_eq!(entries[3].text, "hex escape");
+        assert_eq!(entries[4].text, "unicode escape");
+        assert_eq!(entries[5].text, "long unicode escape");
     }
 
     #[test]
