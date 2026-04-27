@@ -67,6 +67,8 @@ pub enum KeyCode {
     MoveCaretRightByChar,
     MoveCaretLeftBySyllable,
     MoveCaretRightBySyllable,
+    Home,
+    End,
     PreviousCandidate,
     NextCandidate,
     FirstCandidate,
@@ -212,7 +214,8 @@ fn key_code_from_name(name: &str) -> Result<KeyCode, KeySequenceParseError> {
         "KP_Right" => KeyCode::MoveCaretRightByChar,
         "Up" | "KP_Up" => KeyCode::PreviousCandidate,
         "Down" | "KP_Down" => KeyCode::NextCandidate,
-        "Home" | "End" | "KP_Home" | "KP_End" => KeyCode::FirstCandidate,
+        "Home" | "KP_Home" => KeyCode::Home,
+        "End" | "KP_End" => KeyCode::End,
         "Page_Up" | "Prior" | "KP_Page_Up" | "KP_Prior" => KeyCode::PreviousPage,
         "Page_Down" | "Next" | "KP_Page_Down" | "KP_Next" => KeyCode::NextPage,
         "Return" => KeyCode::Return,
@@ -854,6 +857,20 @@ impl Engine {
                 self.move_caret_right_by_syllable();
                 None
             }
+            KeyCode::Home => {
+                if !self.first_candidate() {
+                    self.move_caret_home();
+                }
+                None
+            }
+            KeyCode::End => {
+                if self.context.composition.caret < self.context.composition.input.len()
+                    || !self.first_candidate()
+                {
+                    self.move_caret_end();
+                }
+                None
+            }
             KeyCode::PreviousCandidate => {
                 self.previous_candidate();
                 None
@@ -1063,6 +1080,22 @@ impl Engine {
     }
 
     pub fn move_caret_right_by_syllable(&mut self) -> bool {
+        if self.context.composition.caret >= self.context.composition.input.len() {
+            return false;
+        }
+        self.context.composition.caret = self.context.composition.input.len();
+        true
+    }
+
+    pub fn move_caret_home(&mut self) -> bool {
+        if self.context.composition.caret == 0 {
+            return false;
+        }
+        self.context.composition.caret = 0;
+        true
+    }
+
+    pub fn move_caret_end(&mut self) -> bool {
         if self.context.composition.caret >= self.context.composition.input.len() {
             return false;
         }
@@ -1289,8 +1322,8 @@ mod tests {
         assert_eq!(keys[17].code, KeyCode::MoveCaretRight);
         assert_eq!(keys[18].code, KeyCode::MoveCaretLeftByChar);
         assert_eq!(keys[19].code, KeyCode::MoveCaretRightByChar);
-        assert_eq!(keys[20].code, KeyCode::FirstCandidate);
-        assert_eq!(keys[21].code, KeyCode::FirstCandidate);
+        assert_eq!(keys[20].code, KeyCode::Home);
+        assert_eq!(keys[21].code, KeyCode::End);
         assert_eq!(keys[22].code, KeyCode::NextPage);
         assert_eq!(keys[23].code, KeyCode::PreviousPage);
         assert_eq!(keys[24].code, KeyCode::NextCandidate);
@@ -1675,6 +1708,18 @@ mod tests {
 
         assert_eq!(commits, vec!["八"]);
         assert_eq!(engine.context().last_commit.as_deref(), Some("八"));
+    }
+
+    #[test]
+    fn home_end_keys_fall_back_to_librime_navigator_caret_movement() {
+        let mut engine = Engine::new();
+
+        let commits = engine
+            .process_key_sequence("nix{Home}{Delete}{End}{BackSpace}{space}")
+            .expect("key sequence should parse");
+
+        assert_eq!(commits, vec!["i"]);
+        assert_eq!(engine.context().last_commit.as_deref(), Some("i"));
     }
 
     #[test]
