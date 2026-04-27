@@ -284,6 +284,14 @@ fn key_table_exposes_librime_style_modifier_and_key_name_lookup() {
     let rcedilla = CString::new("Rcedilla").expect("key name should be valid");
     let eng = CString::new("ENG").expect("key name should be valid");
     let umacron = CString::new("umacron").expect("key name should be valid");
+    let overline = CString::new("overline").expect("key name should be valid");
+    let kana_fullstop = CString::new("kana_fullstop").expect("key name should be valid");
+    let kana_middledot = CString::new("kana_middledot").expect("key name should be valid");
+    let kana_tu = CString::new("kana_tu").expect("key name should be valid");
+    let kana_chi = CString::new("kana_CHI").expect("key name should be valid");
+    let kana_ti = CString::new("kana_TI").expect("key name should be valid");
+    let kana_hu = CString::new("kana_HU").expect("key name should be valid");
+    let semivoicedsound = CString::new("semivoicedsound").expect("key name should be valid");
     let missing = CString::new("NoSuchKey").expect("key name should be valid");
 
     assert_eq!(unsafe { RimeGetKeycodeByName(space.as_ptr()) }, 0x20);
@@ -319,6 +327,23 @@ fn key_table_exposes_librime_style_modifier_and_key_name_lookup() {
     assert_eq!(unsafe { RimeGetKeycodeByName(rcedilla.as_ptr()) }, 0x3a3);
     assert_eq!(unsafe { RimeGetKeycodeByName(eng.as_ptr()) }, 0x3bd);
     assert_eq!(unsafe { RimeGetKeycodeByName(umacron.as_ptr()) }, 0x3fe);
+    assert_eq!(unsafe { RimeGetKeycodeByName(overline.as_ptr()) }, 0x47e);
+    assert_eq!(
+        unsafe { RimeGetKeycodeByName(kana_fullstop.as_ptr()) },
+        0x4a1
+    );
+    assert_eq!(
+        unsafe { RimeGetKeycodeByName(kana_middledot.as_ptr()) },
+        0x4a5
+    );
+    assert_eq!(unsafe { RimeGetKeycodeByName(kana_tu.as_ptr()) }, 0x4af);
+    assert_eq!(unsafe { RimeGetKeycodeByName(kana_chi.as_ptr()) }, 0x4c1);
+    assert_eq!(unsafe { RimeGetKeycodeByName(kana_ti.as_ptr()) }, 0x4c1);
+    assert_eq!(unsafe { RimeGetKeycodeByName(kana_hu.as_ptr()) }, 0x4cc);
+    assert_eq!(
+        unsafe { RimeGetKeycodeByName(semivoicedsound.as_ptr()) },
+        0x4df
+    );
     assert_eq!(
         unsafe { RimeGetKeycodeByName(missing.as_ptr()) },
         0x00ff_ffff
@@ -435,6 +460,34 @@ fn key_table_exposes_librime_style_modifier_and_key_name_lookup() {
     assert_eq!(
         static_c_string(RimeGetKeyName(0x3fe)).as_deref(),
         Some("umacron")
+    );
+    assert_eq!(
+        static_c_string(RimeGetKeyName(0x47e)).as_deref(),
+        Some("overline")
+    );
+    assert_eq!(
+        static_c_string(RimeGetKeyName(0x4a1)).as_deref(),
+        Some("kana_fullstop")
+    );
+    assert_eq!(
+        static_c_string(RimeGetKeyName(0x4a5)).as_deref(),
+        Some("kana_conjunctive")
+    );
+    assert_eq!(
+        static_c_string(RimeGetKeyName(0x4af)).as_deref(),
+        Some("kana_tsu")
+    );
+    assert_eq!(
+        static_c_string(RimeGetKeyName(0x4c1)).as_deref(),
+        Some("kana_CHI")
+    );
+    assert_eq!(
+        static_c_string(RimeGetKeyName(0x4cc)).as_deref(),
+        Some("kana_FU")
+    );
+    assert_eq!(
+        static_c_string(RimeGetKeyName(0x4df)).as_deref(),
+        Some("semivoicedsound")
     );
     assert_eq!(static_c_string(RimeGetKeyName(0x00ff_ffff)), None);
 }

@@ -478,6 +478,78 @@ const LATIN4_KEY_NAMES: &[(&[u8], c_int)] = &[
     (b"umacron\0", 0x3fe),
 ];
 
+const KANA_KEY_NAMES: &[(&[u8], c_int)] = &[
+    (b"overline\0", 0x47e),
+    (b"kana_fullstop\0", 0x4a1),
+    (b"kana_openingbracket\0", 0x4a2),
+    (b"kana_closingbracket\0", 0x4a3),
+    (b"kana_comma\0", 0x4a4),
+    (b"kana_conjunctive\0", 0x4a5),
+    (b"kana_middledot\0", 0x4a5),
+    (b"kana_WO\0", 0x4a6),
+    (b"kana_a\0", 0x4a7),
+    (b"kana_i\0", 0x4a8),
+    (b"kana_u\0", 0x4a9),
+    (b"kana_e\0", 0x4aa),
+    (b"kana_o\0", 0x4ab),
+    (b"kana_ya\0", 0x4ac),
+    (b"kana_yu\0", 0x4ad),
+    (b"kana_yo\0", 0x4ae),
+    (b"kana_tsu\0", 0x4af),
+    (b"kana_tu\0", 0x4af),
+    (b"prolongedsound\0", 0x4b0),
+    (b"kana_A\0", 0x4b1),
+    (b"kana_I\0", 0x4b2),
+    (b"kana_U\0", 0x4b3),
+    (b"kana_E\0", 0x4b4),
+    (b"kana_O\0", 0x4b5),
+    (b"kana_KA\0", 0x4b6),
+    (b"kana_KI\0", 0x4b7),
+    (b"kana_KU\0", 0x4b8),
+    (b"kana_KE\0", 0x4b9),
+    (b"kana_KO\0", 0x4ba),
+    (b"kana_SA\0", 0x4bb),
+    (b"kana_SHI\0", 0x4bc),
+    (b"kana_SU\0", 0x4bd),
+    (b"kana_SE\0", 0x4be),
+    (b"kana_SO\0", 0x4bf),
+    (b"kana_TA\0", 0x4c0),
+    (b"kana_CHI\0", 0x4c1),
+    (b"kana_TI\0", 0x4c1),
+    (b"kana_TSU\0", 0x4c2),
+    (b"kana_TU\0", 0x4c2),
+    (b"kana_TE\0", 0x4c3),
+    (b"kana_TO\0", 0x4c4),
+    (b"kana_NA\0", 0x4c5),
+    (b"kana_NI\0", 0x4c6),
+    (b"kana_NU\0", 0x4c7),
+    (b"kana_NE\0", 0x4c8),
+    (b"kana_NO\0", 0x4c9),
+    (b"kana_HA\0", 0x4ca),
+    (b"kana_HI\0", 0x4cb),
+    (b"kana_FU\0", 0x4cc),
+    (b"kana_HU\0", 0x4cc),
+    (b"kana_HE\0", 0x4cd),
+    (b"kana_HO\0", 0x4ce),
+    (b"kana_MA\0", 0x4cf),
+    (b"kana_MI\0", 0x4d0),
+    (b"kana_MU\0", 0x4d1),
+    (b"kana_ME\0", 0x4d2),
+    (b"kana_MO\0", 0x4d3),
+    (b"kana_YA\0", 0x4d4),
+    (b"kana_YU\0", 0x4d5),
+    (b"kana_YO\0", 0x4d6),
+    (b"kana_RA\0", 0x4d7),
+    (b"kana_RI\0", 0x4d8),
+    (b"kana_RU\0", 0x4d9),
+    (b"kana_RE\0", 0x4da),
+    (b"kana_RO\0", 0x4db),
+    (b"kana_WA\0", 0x4dc),
+    (b"kana_N\0", 0x4dd),
+    (b"voicedsound\0", 0x4de),
+    (b"semivoicedsound\0", 0x4df),
+];
+
 /// Returns the librime modifier bit mask for a modifier name.
 ///
 /// # Safety
@@ -534,6 +606,7 @@ fn lookup_keycode(name: &[u8]) -> Option<c_int> {
         .chain(LATIN2_KEY_NAMES)
         .chain(LATIN3_KEY_NAMES)
         .chain(LATIN4_KEY_NAMES)
+        .chain(KANA_KEY_NAMES)
         .find_map(|(key_name, keycode)| (name == *key_name).then_some(*keycode))
 }
 
@@ -545,6 +618,7 @@ fn lookup_key_name(keycode: c_int) -> Option<&'static [u8]> {
         .chain(LATIN2_KEY_NAMES)
         .chain(LATIN3_KEY_NAMES)
         .chain(LATIN4_KEY_NAMES)
+        .chain(KANA_KEY_NAMES)
         .find_map(|(name, candidate_keycode)| (*candidate_keycode == keycode).then_some(*name))
 }
 
