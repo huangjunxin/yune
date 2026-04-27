@@ -2363,6 +2363,114 @@ fn is_extended_cjk(ch: char) -> bool {
     )
 }
 
+pub struct SimplifierFilter {
+    option_name: String,
+}
+
+impl Default for SimplifierFilter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl SimplifierFilter {
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            option_name: "simplification".to_owned(),
+        }
+    }
+
+    #[must_use]
+    pub fn with_option_name(mut self, option_name: impl Into<String>) -> Self {
+        let option_name = option_name.into();
+        if !option_name.is_empty() {
+            self.option_name = option_name;
+        }
+        self
+    }
+}
+
+impl CandidateFilter for SimplifierFilter {
+    fn name(&self) -> &'static str {
+        "simplifier"
+    }
+
+    fn apply(&self, _candidates: &mut Vec<Candidate>) {}
+
+    fn apply_with_options(&self, candidates: &mut Vec<Candidate>, options: &HashMap<String, bool>) {
+        if !options.get(&self.option_name).copied().unwrap_or(false) {
+            return;
+        }
+
+        for candidate in candidates {
+            let simplified = simplify_traditional_text(&candidate.text);
+            if simplified != candidate.text {
+                candidate.text = simplified;
+            }
+        }
+    }
+}
+
+fn simplify_traditional_text(text: &str) -> String {
+    text.chars().map(simplify_traditional_char).collect()
+}
+
+fn simplify_traditional_char(ch: char) -> char {
+    match ch {
+        '臺' | '檯' | '颱' => '台',
+        '灣' => '湾',
+        '龍' => '龙',
+        '風' => '风',
+        '雲' => '云',
+        '馬' => '马',
+        '門' => '门',
+        '車' => '车',
+        '書' => '书',
+        '學' => '学',
+        '國' => '国',
+        '語' => '语',
+        '體' => '体',
+        '電' => '电',
+        '腦' => '脑',
+        '麵' => '面',
+        '裏' | '裡' => '里',
+        '後' => '后',
+        '萬' => '万',
+        '與' => '与',
+        '為' => '为',
+        '會' => '会',
+        '個' => '个',
+        '們' => '们',
+        '來' => '来',
+        '時' => '时',
+        '對' => '对',
+        '說' => '说',
+        '這' => '这',
+        '還' => '还',
+        '過' => '过',
+        '開' => '开',
+        '關' => '关',
+        '見' => '见',
+        '長' => '长',
+        '發' => '发',
+        '頭' => '头',
+        '東' => '东',
+        '廣' => '广',
+        '愛' => '爱',
+        '氣' => '气',
+        '無' => '无',
+        '點' => '点',
+        '話' => '话',
+        '機' => '机',
+        '樂' => '乐',
+        '貓' => '猫',
+        '鳥' => '鸟',
+        '魚' => '鱼',
+        _ => ch,
+    }
+}
+
 pub struct ReverseLookupFilter {
     reverse_comments: HashMap<String, Vec<String>>,
     overwrite_comment: bool,
@@ -3469,8 +3577,8 @@ mod tests {
     use super::{
         parse_key_sequence, Candidate, CandidateFilter, CandidateRanker, CandidateSource,
         CharsetFilter, Context, Engine, KeyCode, MockAiRanker, PunctuationTranslator, RerankResult,
-        ReverseLookupFilter, ReverseLookupTranslator, SingleCharFilter, StaticTableTranslator,
-        TableDictionary, Translator, UniquifierFilter,
+        ReverseLookupFilter, ReverseLookupTranslator, SimplifierFilter, SingleCharFilter,
+        StaticTableTranslator, TableDictionary, Translator, UniquifierFilter,
     };
 
     struct CommentTranslator;
@@ -6414,6 +6522,58 @@ sort: original
             .map(|candidate| candidate.text.as_str())
             .collect::<Vec<_>>();
         assert_eq!(texts, ["你", "㐀", "𠀀", "㍿", "ni"]);
+    }
+
+    #[test]
+    fn simplifier_filter_converts_text_when_option_enabled() {
+        let mut engine = Engine::new();
+        engine.add_translator(StaticTableTranslator::new([("tw", "臺灣"), ("tw", "龍馬")]));
+        engine.add_filter(SimplifierFilter::new());
+
+        engine
+            .process_key_sequence("tw")
+            .expect("keys should parse");
+
+        let texts = engine
+            .context()
+            .candidates
+            .iter()
+            .map(|candidate| candidate.text.as_str())
+            .collect::<Vec<_>>();
+        assert_eq!(texts, ["臺灣", "龍馬", "tw"]);
+
+        engine.set_option("simplification", true);
+        let texts = engine
+            .context()
+            .candidates
+            .iter()
+            .map(|candidate| candidate.text.as_str())
+            .collect::<Vec<_>>();
+        let comments = engine
+            .context()
+            .candidates
+            .iter()
+            .map(|candidate| candidate.comment.as_str())
+            .collect::<Vec<_>>();
+        assert_eq!(texts, ["台湾", "龙马", "tw"]);
+        assert_eq!(comments, ["tw", "tw", "echo"]);
+    }
+
+    #[test]
+    fn simplifier_filter_honors_custom_option_name() {
+        let mut engine = Engine::new();
+        engine.add_translator(StaticTableTranslator::new([("tw", "臺灣")]));
+        engine.add_filter(SimplifierFilter::new().with_option_name("zh_simp"));
+
+        engine
+            .process_key_sequence("tw")
+            .expect("keys should parse");
+
+        engine.set_option("simplification", true);
+        assert_eq!(engine.context().candidates[0].text, "臺灣");
+
+        engine.set_option("zh_simp", true);
+        assert_eq!(engine.context().candidates[0].text, "台湾");
     }
 
     #[test]

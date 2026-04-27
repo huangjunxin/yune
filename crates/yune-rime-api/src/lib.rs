@@ -15,8 +15,8 @@ use std::{
 use serde_yaml::{Mapping, Number, Value};
 use yune_core::{
     parse_key_sequence, CharsetFilter, Engine, KeyCode, KeyEvent, KeyModifiers,
-    PunctuationTranslator, ReverseLookupFilter, ReverseLookupTranslator, SingleCharFilter,
-    StaticTableTranslator, TableDictionary, UniquifierFilter,
+    PunctuationTranslator, ReverseLookupFilter, ReverseLookupTranslator, SimplifierFilter,
+    SingleCharFilter, StaticTableTranslator, TableDictionary, UniquifierFilter,
 };
 
 mod abi;
@@ -2150,6 +2150,7 @@ fn apply_schema_to_session(session: &mut SessionState, schema_id: &str) {
     install_schema_dictionary_translator(session, schema_id);
     install_schema_reverse_lookup_translator(session, schema_id);
     install_schema_reverse_lookup_filter(session, schema_id);
+    install_schema_simplifier_filter(session, schema_id);
     install_schema_uniquifier_filter(session, schema_id);
     install_schema_single_char_filter(session, schema_id);
     install_schema_charset_filter(session, schema_id);
@@ -3775,6 +3776,20 @@ fn install_schema_reverse_lookup_filter(session: &mut SessionState, schema_id: &
                 .with_append_comment(append_comment)
                 .with_comment_format(&comment_format),
         );
+    }
+}
+
+fn install_schema_simplifier_filter(session: &mut SessionState, schema_id: &str) {
+    let schema_config =
+        load_runtime_config_root(&format!("{schema_id}.schema"), ConfigOpenKind::Deployed);
+    for name_space in schema_engine_filter_namespaces(&schema_config, "simplifier", "simplifier") {
+        let option_name = find_config_value(&schema_config, &format!("{name_space}/option_name"))
+            .and_then(config_scalar_string)
+            .filter(|option_name| !option_name.is_empty())
+            .unwrap_or_else(|| "simplification".to_owned());
+        session
+            .engine
+            .add_filter(SimplifierFilter::new().with_option_name(option_name));
     }
 }
 
