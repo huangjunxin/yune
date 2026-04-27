@@ -50,6 +50,8 @@ const K_CONTROL_MASK: c_int = 1 << 2;
 const K_ALT_MASK: c_int = 1 << 3;
 #[cfg(test)]
 const K_SUPER_MASK: c_int = 1 << 26;
+#[cfg(test)]
+const K_RELEASE_MASK: c_int = 1 << 30;
 const DEFAULT_PAGE_SIZE: usize = 5;
 const RIME_VERSION_BYTES: &[u8] =
     concat!("yune-rime-api ", env!("CARGO_PKG_VERSION"), "\0").as_bytes();
