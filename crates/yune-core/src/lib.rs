@@ -1688,7 +1688,8 @@ impl RimeTableMetadata {
 
     fn read_header_list(&mut self, list: RimeTableHeaderList, value: &str) {
         let value = value.trim();
-        if value.is_empty() {
+        let uncommented = strip_yaml_comment(value).trim();
+        if uncommented.is_empty() {
             self.reset_header_list_to_null(list);
             self.reading_list = Some(list);
             self.pending_list_clear = Some(list);
@@ -4863,6 +4864,55 @@ ba	吧	9
         assert_eq!(entries[0].weight, 1.0);
         assert_eq!(entries[1].text, "吧");
         assert_eq!(entries[1].weight, 9.0);
+    }
+
+    #[test]
+    fn parses_rime_dict_yaml_block_lists_after_commented_keys() {
+        let dictionary = TableDictionary::parse_rime_dict_yaml_with_imports(
+            r#"
+---
+name: commented_list_key_primary
+version: "0.1"
+sort: original
+columns: # dictionary field order
+  - code
+  - text
+  - weight
+import_tables: # extra tables
+  - secondary
+...
+
+ba	八	1
+"#,
+            |name| {
+                (name == "secondary").then(|| {
+                    r#"
+---
+name: secondary
+version: "0.1"
+sort: original
+columns: # imported field order
+  - code
+  - text
+  - weight
+...
+
+ba	吧	2
+"#
+                    .to_owned()
+                })
+            },
+        )
+        .expect("yaml-cpp accepts comments after block-list mapping keys");
+
+        let entries = dictionary.entries();
+        assert_eq!(entries.len(), 2);
+        assert_eq!(entries[0].text, "八");
+        assert_eq!(entries[0].code, "ba");
+        assert_eq!(entries[0].weight, 1.0);
+        assert_eq!(entries[1].text, "吧");
+        assert_eq!(entries[1].code, "ba");
+        assert_eq!(entries[1].weight, 2.0);
     }
 
     #[test]
