@@ -801,6 +801,14 @@ impl Engine {
                     self.delete_candidate(self.context.highlighted);
                     return None;
                 }
+                KeyCode::MoveCaretLeft => {
+                    self.move_caret_left_by_syllable();
+                    return None;
+                }
+                KeyCode::MoveCaretRight => {
+                    self.move_caret_right_by_syllable();
+                    return None;
+                }
                 KeyCode::Character(ch) if ch == ' ' || is_printable_ascii(ch) => {
                     return self.process_char(ch);
                 }
@@ -1643,6 +1651,35 @@ mod tests {
         engine.set_input("nix");
         let commits = engine
             .process_key_sequence("{Control+Left}{Delete}{space}")
+            .expect("key sequence should parse");
+
+        assert_eq!(commits, vec!["ix"]);
+        assert_eq!(engine.context().last_commit.as_deref(), Some("ix"));
+    }
+
+    #[test]
+    fn shift_left_right_fall_back_to_control_syllable_jump_like_librime_navigator() {
+        let mut engine = Engine::new();
+
+        engine.set_input("nix");
+        engine.set_caret_pos(2);
+        let commits = engine
+            .process_key_sequence("{Shift+Left}")
+            .expect("key sequence should parse");
+
+        assert!(commits.is_empty());
+        assert_eq!(engine.context().composition.caret, 0);
+
+        let commits = engine
+            .process_key_sequence("{Shift+Right}{BackSpace}{space}")
+            .expect("key sequence should parse");
+
+        assert_eq!(commits, vec!["ni"]);
+        assert_eq!(engine.context().last_commit.as_deref(), Some("ni"));
+
+        engine.set_input("nix");
+        let commits = engine
+            .process_key_sequence("{Shift+Left}{Delete}{space}")
             .expect("key sequence should parse");
 
         assert_eq!(commits, vec!["ix"]);
