@@ -7387,7 +7387,7 @@ conditions:
 
     // SAFETY: schema_list points to valid writable storage.
     assert_eq!(unsafe { RimeGetSchemaList(&mut schema_list) }, TRUE);
-    assert_eq!(schema_list.size, 3);
+    assert_eq!(schema_list.size, 4);
     assert!(!schema_list.list.is_null());
 
     let mut actual = Vec::new();
@@ -7412,6 +7412,7 @@ conditions:
         vec![
             ("luna_pinyin".to_owned(), "Luna Pinyin".to_owned()),
             ("cangjie5".to_owned(), "Cangjie 5".to_owned()),
+            ("hidden".to_owned(), "hidden".to_owned()),
             ("missing_name".to_owned(), "missing_name".to_owned()),
         ]
     );

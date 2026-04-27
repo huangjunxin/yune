@@ -3508,7 +3508,7 @@ fn deployed_schema_list_entries() -> Vec<(String, String)> {
 
     schema_list
         .iter()
-        .filter_map(|entry| deployed_schema_list_entry(&default_config, entry))
+        .filter_map(deployed_schema_list_entry)
         .map(|schema_id| {
             let schema_config =
                 load_runtime_config_root(&format!("{schema_id}.schema"), ConfigOpenKind::Deployed);
@@ -4689,35 +4689,14 @@ fn count_text_user_dict_entries(path: &Path) -> Result<c_int, std::io::Error> {
         .unwrap_or(c_int::MAX))
 }
 
-fn deployed_schema_list_entry(default_config: &Value, entry: &Value) -> Option<String> {
+fn deployed_schema_list_entry(entry: &Value) -> Option<String> {
     let Value::Mapping(entry) = entry else {
         return None;
     };
-    if !schema_list_entry_conditions_match(default_config, entry) {
-        return None;
-    }
     entry
         .get(Value::String("schema".to_owned()))
         .and_then(Value::as_str)
         .map(ToOwned::to_owned)
-}
-
-fn schema_list_entry_conditions_match(default_config: &Value, entry: &Mapping) -> bool {
-    let Some(conditions) = entry.get(Value::String("case".to_owned())) else {
-        return true;
-    };
-    let Value::Sequence(conditions) = conditions else {
-        return true;
-    };
-
-    conditions.iter().all(|condition| {
-        let Some(path) = condition.as_str() else {
-            return false;
-        };
-        find_config_value(default_config, path)
-            .and_then(Value::as_bool)
-            .unwrap_or(false)
-    })
 }
 
 fn state_label_for_session(
