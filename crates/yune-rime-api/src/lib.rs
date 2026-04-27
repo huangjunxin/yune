@@ -100,6 +100,7 @@ struct SessionState {
     engine: Engine,
     unread_commit: Option<String>,
     input_buffer: Option<CString>,
+    punctuation_processor: Option<PunctuationProcessor>,
     last_active_time: u64,
 }
 
@@ -109,6 +110,7 @@ impl SessionState {
             engine: Engine::default(),
             unread_commit: None,
             input_buffer: None,
+            punctuation_processor: None,
             last_active_time: session_activity_now(),
         }
     }
@@ -116,6 +118,13 @@ impl SessionState {
     fn activate(&mut self) {
         self.last_active_time = session_activity_now();
     }
+}
+
+struct PunctuationProcessor {
+    use_space: bool,
+    half_shape_unique_commits: HashMap<String, String>,
+    full_shape_unique_commits: HashMap<String, String>,
+    symbol_unique_commits: HashMap<String, String>,
 }
 
 impl Default for SessionState {
@@ -2014,7 +2023,9 @@ pub unsafe extern "C" fn RimeSelectSchema(
             .engine
             .set_schema(schema_id.clone(), schema_name.clone());
         session.engine.reset_translators();
+        session.punctuation_processor = None;
         apply_schema_switch_resets(session, &schema_id);
+        install_schema_punctuation_processor(session, &schema_id);
         install_schema_punctuation_translator(session, &schema_id);
         install_schema_dictionary_translator(session, &schema_id);
         session.engine.clear_composition();
@@ -3616,6 +3627,38 @@ fn install_schema_punctuation_translator(session: &mut SessionState, schema_id: 
         ));
 }
 
+fn install_schema_punctuation_processor(session: &mut SessionState, schema_id: &str) {
+    let schema_config =
+        load_runtime_config_root(&format!("{schema_id}.schema"), ConfigOpenKind::Deployed);
+    if !schema_engine_processors_include(&schema_config, "punctuator")
+        || !schema_engine_translators_include(&schema_config, "punct_translator")
+    {
+        return;
+    }
+
+    let processor = PunctuationProcessor {
+        use_space: find_config_value(&schema_config, "punctuator/use_space")
+            .and_then(config_scalar_bool)
+            .unwrap_or(false),
+        half_shape_unique_commits: punctuation_unique_commits_from_config(
+            &schema_config,
+            "half_shape",
+        ),
+        full_shape_unique_commits: punctuation_unique_commits_from_config(
+            &schema_config,
+            "full_shape",
+        ),
+        symbol_unique_commits: punctuation_unique_commits_from_config(&schema_config, "symbols"),
+    };
+    if processor.half_shape_unique_commits.is_empty()
+        && processor.full_shape_unique_commits.is_empty()
+        && processor.symbol_unique_commits.is_empty()
+    {
+        return;
+    }
+    session.punctuation_processor = Some(processor);
+}
+
 fn schema_engine_translators_include(schema_config: &Value, translator_name: &str) -> bool {
     let Some(Value::Sequence(translators)) = find_config_value(schema_config, "engine/translators")
     else {
@@ -3625,6 +3668,17 @@ fn schema_engine_translators_include(schema_config: &Value, translator_name: &st
         .iter()
         .filter_map(Value::as_str)
         .any(|translator| translator == translator_name)
+}
+
+fn schema_engine_processors_include(schema_config: &Value, processor_name: &str) -> bool {
+    let Some(Value::Sequence(processors)) = find_config_value(schema_config, "engine/processors")
+    else {
+        return false;
+    };
+    processors
+        .iter()
+        .filter_map(Value::as_str)
+        .any(|processor| processor == processor_name)
 }
 
 fn apply_schema_switch_resets(session: &mut SessionState, schema_id: &str) {
@@ -3693,6 +3747,38 @@ fn punctuation_entries_from_config(schema_config: &Value, shape: &str) -> Vec<(S
     entries
 }
 
+fn punctuation_unique_commits_from_config(
+    schema_config: &Value,
+    shape: &str,
+) -> HashMap<String, String> {
+    let Some(Value::Mapping(mapping)) =
+        find_config_value(schema_config, &format!("punctuator/{shape}"))
+    else {
+        return HashMap::new();
+    };
+
+    mapping
+        .iter()
+        .filter_map(|(key, definition)| {
+            let key = config_scalar_string(key)?;
+            let text = punctuation_unique_commit(definition)?;
+            Some((key, text))
+        })
+        .collect()
+}
+
+fn punctuation_unique_commit(definition: &Value) -> Option<String> {
+    if let Some(text) = config_scalar_string(definition) {
+        return Some(text);
+    }
+    let Value::Mapping(mapping) = definition else {
+        return None;
+    };
+    mapping
+        .get(Value::String("commit".to_owned()))
+        .and_then(config_scalar_string)
+}
+
 fn append_punctuation_definition(
     entries: &mut Vec<(String, String)>,
     key: &str,
@@ -3736,10 +3822,50 @@ fn append_punctuation_definition(
 }
 
 fn process_session_key_event(session: &mut SessionState, key_event: KeyEvent) -> Option<String> {
+    if let Some(commit) = process_punctuation_processor(session, key_event) {
+        return Some(commit);
+    }
     if let Some(commit) = process_alternative_select_key(session, key_event) {
         return commit;
     }
     session.engine.process_key_event(key_event)
+}
+
+fn process_punctuation_processor(
+    session: &mut SessionState,
+    key_event: KeyEvent,
+) -> Option<String> {
+    if key_event.modifiers.control
+        || key_event.modifiers.alt
+        || key_event.modifiers.super_key
+        || key_event.modifiers.release
+        || session.engine.get_option("ascii_punct")
+    {
+        return None;
+    }
+
+    let KeyCode::Character(ch) = key_event.code else {
+        return None;
+    };
+    if !ch.is_ascii() || ch.is_ascii_control() {
+        return None;
+    }
+
+    let processor = session.punctuation_processor.as_ref()?;
+    if ch == ' ' && !processor.use_space && !session.engine.context().composition.input.is_empty() {
+        return None;
+    }
+
+    let key = ch.to_string();
+    let shape_entries = if session.engine.status().is_full_shape {
+        &processor.full_shape_unique_commits
+    } else {
+        &processor.half_shape_unique_commits
+    };
+    shape_entries
+        .get(&key)
+        .or_else(|| processor.symbol_unique_commits.get(&key))
+        .cloned()
 }
 
 fn process_alternative_select_key(
