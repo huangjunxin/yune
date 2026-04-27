@@ -1,14 +1,16 @@
 use std::{
     ffi::{CStr, CString},
-    mem,
+    fs, mem,
     os::raw::c_char,
+    path::PathBuf,
     ptr,
     sync::{Mutex, MutexGuard, OnceLock},
+    time::{SystemTime, UNIX_EPOCH},
 };
 
 use yune_rime_api::{
     rime_get_api, RimeCandidate, RimeCandidateListIterator, RimeCommit, RimeComposition,
-    RimeContext, RimeMenu, RimeStatus, FALSE, TRUE,
+    RimeContext, RimeMenu, RimeStatus, RimeTraits, FALSE, TRUE,
 };
 
 fn empty_context() -> RimeContext {
@@ -50,6 +52,23 @@ fn empty_status() -> RimeStatus {
     }
 }
 
+fn empty_traits() -> RimeTraits {
+    RimeTraits {
+        data_size: mem::size_of::<RimeTraits>() as i32,
+        shared_data_dir: ptr::null(),
+        user_data_dir: ptr::null(),
+        distribution_name: ptr::null(),
+        distribution_code_name: ptr::null(),
+        distribution_version: ptr::null(),
+        app_name: ptr::null(),
+        modules: ptr::null(),
+        min_log_level: 0,
+        log_dir: ptr::null(),
+        prebuilt_data_dir: ptr::null(),
+        staging_dir: ptr::null(),
+    }
+}
+
 fn empty_commit() -> RimeCommit {
     RimeCommit {
         data_size: (mem::size_of::<RimeCommit>() - mem::size_of::<i32>()) as i32,
@@ -75,6 +94,17 @@ fn test_guard() -> MutexGuard<'static, ()> {
         .get_or_init(|| Mutex::new(()))
         .lock()
         .expect("test lock should not be poisoned")
+}
+
+fn unique_temp_dir(label: &str) -> PathBuf {
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("system clock should be after Unix epoch")
+        .as_nanos();
+    std::env::temp_dir().join(format!(
+        "yune-rime-api-frontend-{label}-{}-{nanos}",
+        std::process::id()
+    ))
 }
 
 #[test]
@@ -446,6 +476,105 @@ fn frontend_style_api_table_can_manage_runtime_state() {
 
     assert_eq!(destroy_session(session_id), TRUE);
     cleanup_all_sessions();
+}
+
+#[test]
+fn frontend_style_api_table_can_read_schema_state_labels() {
+    let _guard = test_guard();
+    let api = rime_get_api();
+    assert!(!api.is_null());
+    let api = unsafe { &*api };
+
+    let setup = api.setup.expect("frontend requires setup");
+    let cleanup_all_sessions = api
+        .cleanup_all_sessions
+        .expect("frontend requires cleanup_all_sessions");
+    cleanup_all_sessions();
+
+    let root = unique_temp_dir("state-label");
+    let shared = root.join("shared");
+    let user = root.join("user");
+    let staging = user.join("build");
+    fs::create_dir_all(&shared).expect("shared dir should be created");
+    fs::create_dir_all(&staging).expect("staging dir should be created");
+    fs::write(
+        staging.join("luna.schema.yaml"),
+        "\
+switches:
+  - name: ascii_mode
+    states: [Native, Ascii]
+    abbrev: [N, A]
+  - options: [simplification, traditional]
+    states: [简体, 繁體]
+",
+    )
+    .expect("schema config should be written");
+
+    let shared_c = CString::new(shared.to_string_lossy().as_ref()).expect("path is valid");
+    let user_c = CString::new(user.to_string_lossy().as_ref()).expect("path is valid");
+    let mut traits = empty_traits();
+    traits.shared_data_dir = shared_c.as_ptr();
+    traits.user_data_dir = user_c.as_ptr();
+    unsafe { setup(&traits) };
+
+    let create_session = api
+        .create_session
+        .expect("frontend requires create_session");
+    let destroy_session = api
+        .destroy_session
+        .expect("frontend requires destroy_session");
+    let select_schema = api.select_schema.expect("frontend requires select_schema");
+    let get_state_label = api
+        .get_state_label
+        .expect("frontend requires get_state_label");
+    let get_state_label_abbreviated = api
+        .get_state_label_abbreviated
+        .expect("frontend requires get_state_label_abbreviated");
+
+    let session_id = create_session();
+    assert_ne!(session_id, 0);
+    let schema_id = CString::new("luna").expect("literal should not contain NUL");
+    assert_eq!(
+        unsafe { select_schema(session_id, schema_id.as_ptr()) },
+        TRUE
+    );
+
+    let ascii_mode = CString::new("ascii_mode").expect("literal should not contain NUL");
+    let full_label = unsafe { get_state_label(session_id, ascii_mode.as_ptr(), TRUE) };
+    assert!(!full_label.is_null());
+    let full_label = unsafe { CStr::from_ptr(full_label) };
+    assert_eq!(full_label.to_str(), Ok("Ascii"));
+
+    let abbreviated =
+        unsafe { get_state_label_abbreviated(session_id, ascii_mode.as_ptr(), TRUE, TRUE) };
+    assert_eq!(abbreviated.length, 1);
+    assert!(!abbreviated.str.is_null());
+    let abbreviated_label = unsafe { CStr::from_ptr(abbreviated.str) };
+    assert_eq!(abbreviated_label.to_str(), Ok("A"));
+
+    let simplification = CString::new("simplification").expect("literal should not contain NUL");
+    let radio =
+        unsafe { get_state_label_abbreviated(session_id, simplification.as_ptr(), TRUE, TRUE) };
+    assert_eq!(radio.length, "简".len());
+    assert!(!radio.str.is_null());
+    let radio_slice = unsafe { std::slice::from_raw_parts(radio.str.cast::<u8>(), radio.length) };
+    assert_eq!(std::str::from_utf8(radio_slice), Ok("简"));
+
+    let hidden_radio =
+        unsafe { get_state_label_abbreviated(session_id, simplification.as_ptr(), FALSE, TRUE) };
+    assert!(hidden_radio.str.is_null());
+    assert_eq!(hidden_radio.length, 0);
+
+    let missing = CString::new("missing").expect("literal should not contain NUL");
+    assert!(unsafe { get_state_label(session_id, missing.as_ptr(), TRUE) }.is_null());
+    assert!(unsafe { get_state_label(0, ascii_mode.as_ptr(), TRUE) }.is_null());
+    assert!(unsafe { get_state_label(session_id, ptr::null(), TRUE) }.is_null());
+
+    assert_eq!(destroy_session(session_id), TRUE);
+    cleanup_all_sessions();
+    let reset_traits = empty_traits();
+    unsafe { setup(&reset_traits) };
+    fs::remove_dir_all(root).expect("temp dirs should be removed");
 }
 
 #[test]
