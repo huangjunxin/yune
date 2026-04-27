@@ -14202,6 +14202,25 @@ translator:
     )
     .expect("abc-tags schema config should be written");
     fs::write(
+        staging.join("abc-extra-tags.schema.yaml"),
+        "\
+schema:
+  schema_id: abc-extra-tags
+  name: ABC Extra Tags
+engine:
+  segmentors:
+    - abc_segmentor
+  translators:
+    - table_translator
+abc_segmentor:
+  extra_tags: [custom]
+translator:
+  dictionary: luna
+  tag: custom
+",
+    )
+    .expect("abc-extra-tags schema config should be written");
+    fs::write(
         shared.join("luna.dict.yaml"),
         "\
 ---
@@ -14263,6 +14282,7 @@ ban\t班\t8
 
     assert_eq!(candidate_texts_for("custom-tag"), ["b"]);
     assert_eq!(candidate_texts_for("abc-tags"), ["爸", "班", "b"]);
+    assert_eq!(candidate_texts_for("abc-extra-tags"), ["爸", "班", "b"]);
 
     let reset_traits = empty_traits();
     // SAFETY: reset traits points to valid storage.

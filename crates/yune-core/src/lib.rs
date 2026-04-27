@@ -1308,13 +1308,27 @@ pub struct Composition {
     pub preedit: String,
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Context {
     pub composition: Composition,
+    pub segment_tags: Vec<String>,
     pub candidates: Vec<Candidate>,
     pub highlighted: usize,
     pub last_commit: Option<String>,
     pub commit_history: Vec<CommitRecord>,
+}
+
+impl Default for Context {
+    fn default() -> Self {
+        Self {
+            composition: Composition::default(),
+            segment_tags: vec!["abc".to_owned()],
+            candidates: Vec::new(),
+            highlighted: 0,
+            last_commit: None,
+            commit_history: Vec::new(),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -2234,8 +2248,14 @@ impl StaticTableTranslator {
         input.trim_end_matches(|ch| self.delimiters.contains(ch))
     }
 
-    fn accepts_current_segment(&self) -> bool {
+    fn accepts_default_segment(&self) -> bool {
         self.tags.iter().any(|tag| tag == "abc")
+    }
+
+    fn accepts_segment_tags(&self, segment_tags: &[String]) -> bool {
+        self.tags
+            .iter()
+            .any(|tag| segment_tags.iter().any(|segment_tag| segment_tag == tag))
     }
 
     fn matches_lookup_code(&self, entry_code: &str, lookup_code: &str) -> bool {
@@ -2266,7 +2286,19 @@ impl StaticTableTranslator {
     }
 
     fn translated_candidates(&self, input: &str, filter_by_charset: bool) -> Vec<Candidate> {
-        if !self.accepts_current_segment() {
+        self.translated_candidates_for_segment(input, filter_by_charset, None)
+    }
+
+    fn translated_candidates_for_segment(
+        &self,
+        input: &str,
+        filter_by_charset: bool,
+        segment_tags: Option<&[String]>,
+    ) -> Vec<Candidate> {
+        let accepts_segment = segment_tags
+            .map(|tags| self.accepts_segment_tags(tags))
+            .unwrap_or_else(|| self.accepts_default_segment());
+        if !accepts_segment {
             return Vec::new();
         }
 
@@ -2423,6 +2455,22 @@ impl Translator for StaticTableTranslator {
             && !options.get("extended_charset").copied().unwrap_or(false);
         self.translated_candidates(input, filter_by_charset)
     }
+
+    fn translate_with_context(
+        &self,
+        input: &str,
+        _status: &Status,
+        options: &HashMap<String, bool>,
+        context: &Context,
+    ) -> Vec<Candidate> {
+        let filter_by_charset = self.enable_charset_filter
+            && !options.get("extended_charset").copied().unwrap_or(false);
+        self.translated_candidates_for_segment(
+            input,
+            filter_by_charset,
+            Some(&context.segment_tags),
+        )
+    }
 }
 
 pub struct ReverseLookupTranslator {
@@ -2565,8 +2613,10 @@ impl HistoryTranslator {
         self
     }
 
-    fn accepts_current_segment(&self) -> bool {
-        self.tag == "abc"
+    fn accepts_segment_tags(&self, segment_tags: &[String]) -> bool {
+        segment_tags
+            .iter()
+            .any(|segment_tag| segment_tag == &self.tag)
     }
 }
 
@@ -2586,7 +2636,10 @@ impl Translator for HistoryTranslator {
         _options: &HashMap<String, bool>,
         context: &Context,
     ) -> Vec<Candidate> {
-        if !self.accepts_current_segment() || self.input.is_empty() || self.input != input {
+        if !self.accepts_segment_tags(&context.segment_tags)
+            || self.input.is_empty()
+            || self.input != input
+        {
             return Vec::new();
         }
 
@@ -3492,6 +3545,14 @@ impl Engine {
 
     pub fn set_property(&mut self, property: impl Into<String>, value: impl Into<String>) {
         self.properties.insert(property.into(), value.into());
+    }
+
+    pub fn set_segment_tags(&mut self, tags: impl IntoIterator<Item = impl Into<String>>) {
+        self.context.segment_tags = tags.into_iter().map(Into::into).collect();
+        if self.context.segment_tags.is_empty() {
+            self.context.segment_tags.push("abc".to_owned());
+        }
+        self.refresh_candidates();
     }
 
     #[must_use]
@@ -6970,6 +7031,16 @@ sort: original
             .candidates
             .iter()
             .all(|candidate| candidate.source != CandidateSource::History));
+
+        tagged_engine.set_segment_tags(["abc", "custom"]);
+        let history_candidates = tagged_engine
+            .context()
+            .candidates
+            .iter()
+            .filter(|candidate| candidate.source == CandidateSource::History)
+            .map(|candidate| candidate.text.as_str())
+            .collect::<Vec<_>>();
+        assert_eq!(history_candidates, ["你"]);
     }
 
     #[test]
@@ -7218,6 +7289,15 @@ sort: original
             .map(|candidate| candidate.text.as_str())
             .collect::<Vec<_>>();
         assert_eq!(texts, ["b"]);
+
+        custom_tag_engine.set_segment_tags(["abc", "custom"]);
+        let texts = custom_tag_engine
+            .context()
+            .candidates
+            .iter()
+            .map(|candidate| candidate.text.as_str())
+            .collect::<Vec<_>>();
+        assert_eq!(texts, ["爸", "班", "b"]);
 
         let mut abc_tag_engine = Engine::new();
         abc_tag_engine.add_translator(

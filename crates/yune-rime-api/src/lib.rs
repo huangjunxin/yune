@@ -2144,6 +2144,7 @@ fn apply_schema_to_session(session: &mut SessionState, schema_id: &str) {
     session.punctuation_processor = None;
     session.paging = false;
     apply_schema_switch_resets(session, schema_id);
+    install_schema_segment_tags(session, schema_id);
     install_schema_key_binder_processor(session, schema_id);
     install_schema_punctuation_processor(session, schema_id);
     install_schema_translator_chain(session, schema_id);
@@ -4026,6 +4027,29 @@ fn schema_string_list(schema_config: &Value, key: &str) -> Vec<String> {
 
 fn config_scalar_f32(value: &Value) -> Option<f32> {
     config_scalar_double(value).map(|number| number as f32)
+}
+
+fn install_schema_segment_tags(session: &mut SessionState, schema_id: &str) {
+    let schema_config =
+        load_runtime_config_root(&format!("{schema_id}.schema"), ConfigOpenKind::Deployed);
+    let mut tags = vec!["abc".to_owned()];
+    let Some(Value::Sequence(segmentors)) = find_config_value(&schema_config, "engine/segmentors")
+    else {
+        session.engine.set_segment_tags(tags);
+        return;
+    };
+    if segmentors
+        .iter()
+        .filter_map(Value::as_str)
+        .map(schema_component_prescription)
+        .any(|(component_name, _)| component_name == "abc_segmentor")
+    {
+        tags.extend(schema_string_list(
+            &schema_config,
+            "abc_segmentor/extra_tags",
+        ));
+    }
+    session.engine.set_segment_tags(tags);
 }
 
 fn install_schema_punctuation_translator_from_config(
