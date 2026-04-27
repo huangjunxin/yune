@@ -1413,6 +1413,15 @@ pub trait CandidateFilter: Send + Sync {
     ) {
         self.apply(candidates);
     }
+
+    fn apply_with_context(
+        &self,
+        candidates: &mut Vec<Candidate>,
+        options: &HashMap<String, bool>,
+        _context: &Context,
+    ) {
+        self.apply_with_options(candidates, options);
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -2744,6 +2753,57 @@ impl CandidateFilter for CharsetFilter {
     fn apply_with_options(&self, candidates: &mut Vec<Candidate>, options: &HashMap<String, bool>) {
         if !options.get("extended_charset").copied().unwrap_or(false) {
             self.apply(candidates);
+        }
+    }
+}
+
+pub struct TaggedFilter {
+    filter: Box<dyn CandidateFilter>,
+    tags: Vec<String>,
+}
+
+impl TaggedFilter {
+    #[must_use]
+    pub fn new(
+        filter: impl CandidateFilter + 'static,
+        tags: impl IntoIterator<Item = impl Into<String>>,
+    ) -> Self {
+        Self {
+            filter: Box::new(filter),
+            tags: tags.into_iter().map(Into::into).collect(),
+        }
+    }
+
+    fn accepts_segment_tags(&self, segment_tags: &[String]) -> bool {
+        self.tags.is_empty()
+            || self
+                .tags
+                .iter()
+                .any(|tag| segment_tags.iter().any(|segment_tag| segment_tag == tag))
+    }
+}
+
+impl CandidateFilter for TaggedFilter {
+    fn name(&self) -> &'static str {
+        self.filter.name()
+    }
+
+    fn apply(&self, candidates: &mut Vec<Candidate>) {
+        self.filter.apply(candidates);
+    }
+
+    fn apply_with_options(&self, candidates: &mut Vec<Candidate>, options: &HashMap<String, bool>) {
+        self.filter.apply_with_options(candidates, options);
+    }
+
+    fn apply_with_context(
+        &self,
+        candidates: &mut Vec<Candidate>,
+        options: &HashMap<String, bool>,
+        context: &Context,
+    ) {
+        if self.accepts_segment_tags(&context.segment_tags) {
+            self.filter.apply_with_context(candidates, options, context);
         }
     }
 }
@@ -4174,7 +4234,7 @@ impl Engine {
                 .unwrap_or(Ordering::Equal)
         });
         for filter in &self.filters {
-            filter.apply_with_options(&mut candidates, &self.options);
+            filter.apply_with_context(&mut candidates, &self.options, &self.context);
         }
         for ranker in &self.rankers {
             if let RerankResult::Ready(ranked) = ranker.try_rerank(&self.context, &candidates) {
@@ -4237,8 +4297,8 @@ mod tests {
         parse_key_sequence, Candidate, CandidateFilter, CandidateRanker, CandidateSource,
         CharsetFilter, Context, Engine, HistoryTranslator, KeyCode, MockAiRanker,
         PunctuationTranslator, RerankResult, ReverseLookupFilter, ReverseLookupTranslator,
-        SimplifierFilter, SingleCharFilter, StaticTableTranslator, TableDictionary, Translator,
-        UniquifierFilter,
+        SimplifierFilter, SingleCharFilter, StaticTableTranslator, TableDictionary, TaggedFilter,
+        Translator, UniquifierFilter,
     };
 
     struct CommentTranslator;
@@ -7598,6 +7658,23 @@ sort: original
         assert_eq!(engine.context().candidates[0].text, "臺灣");
 
         engine.set_option("zh_simp", true);
+        assert_eq!(engine.context().candidates[0].text, "台湾");
+    }
+
+    #[test]
+    fn tagged_filter_matches_librime_filter_tags() {
+        let mut engine = Engine::new();
+        engine.add_translator(StaticTableTranslator::new([("tw", "臺灣")]));
+        engine.add_filter(TaggedFilter::new(SimplifierFilter::new(), ["custom"]));
+
+        engine
+            .process_key_sequence("tw")
+            .expect("keys should parse");
+        engine.set_option("simplification", true);
+
+        assert_eq!(engine.context().candidates[0].text, "臺灣");
+
+        engine.set_segment_tags(["abc", "custom"]);
         assert_eq!(engine.context().candidates[0].text, "台湾");
     }
 

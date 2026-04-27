@@ -16,7 +16,7 @@ use serde_yaml::{Mapping, Number, Value};
 use yune_core::{
     parse_key_sequence, CharsetFilter, Engine, HistoryTranslator, KeyCode, KeyEvent, KeyModifiers,
     PunctuationTranslator, ReverseLookupFilter, ReverseLookupTranslator, SimplifierFilter,
-    SingleCharFilter, StaticTableTranslator, TableDictionary, UniquifierFilter,
+    SingleCharFilter, StaticTableTranslator, TableDictionary, TaggedFilter, UniquifierFilter,
 };
 
 mod abi;
@@ -3898,12 +3898,19 @@ fn install_schema_filter_chain(session: &mut SessionState, schema_id: &str) {
             "single_char_filter" => session.engine.add_filter(SingleCharFilter),
             "charset_filter" | "cjk_minifier" => {
                 if name_space.is_none() {
-                    session.engine.add_filter(CharsetFilter);
+                    let tags = schema_filter_tags(&schema_config, filter_name);
+                    session
+                        .engine
+                        .add_filter(TaggedFilter::new(CharsetFilter, tags));
                 }
             }
             _ => {}
         }
     }
+}
+
+fn schema_filter_tags(schema_config: &Value, name_space: &str) -> Vec<String> {
+    schema_string_list(schema_config, &format!("{name_space}/tags"))
 }
 
 fn install_schema_reverse_lookup_filter_from_config(
@@ -3924,12 +3931,14 @@ fn install_schema_reverse_lookup_filter_from_config(
         .unwrap_or(false);
     let comment_format = schema_comment_format(schema_config, name_space);
 
-    session.engine.add_filter(
+    let tags = schema_filter_tags(schema_config, name_space);
+    session.engine.add_filter(TaggedFilter::new(
         ReverseLookupFilter::new(reverse_dictionary)
             .with_overwrite_comment(overwrite_comment)
             .with_append_comment(append_comment)
             .with_comment_format(&comment_format),
-    );
+        tags,
+    ));
 }
 
 fn install_schema_simplifier_filter_from_config(
@@ -3959,7 +3968,8 @@ fn install_schema_simplifier_filter_from_config(
     let comment_format = schema_comment_format(schema_config, name_space);
     let excluded_types = schema_string_list(schema_config, &format!("{name_space}/excluded_types"));
 
-    session.engine.add_filter(
+    let tags = schema_filter_tags(schema_config, name_space);
+    session.engine.add_filter(TaggedFilter::new(
         SimplifierFilter::new()
             .with_option_name(option_name)
             .with_opencc_config(opencc_config)
@@ -3968,7 +3978,8 @@ fn install_schema_simplifier_filter_from_config(
             .with_inherit_comment(inherit_comment)
             .with_comment_format(&comment_format)
             .with_excluded_types(excluded_types),
-    );
+        tags,
+    ));
 }
 
 fn load_schema_table_dictionary(
