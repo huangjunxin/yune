@@ -1083,7 +1083,7 @@ fn key_table_exposes_librime_style_modifier_and_key_name_lookup() {
     );
     assert_eq!(
         static_c_string(RimeGetKeyName(0x7a5)).as_deref(),
-        Some("Greek_IOTAdieresis")
+        Some("Greek_IOTAdiaeresis")
     );
     assert_eq!(
         static_c_string(RimeGetKeyName(0x7cb)).as_deref(),
