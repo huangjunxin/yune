@@ -10,8 +10,8 @@ use serde_yaml::Value;
 use yune_core::{Candidate, CandidateSource, StaticTableTranslator, Translator};
 
 use super::{
-    bool_from, current_log_date_marker, find_config_value, rime_get_api, RimeApi,
-    RimeCandidateListBegin, RimeCandidateListEnd, RimeCandidateListFromIndex,
+    bool_from, current_log_date_marker, find_config_value, rime_get_api, rime_levers_get_api,
+    RimeApi, RimeCandidateListBegin, RimeCandidateListEnd, RimeCandidateListFromIndex,
     RimeCandidateListIterator, RimeCandidateListNext, RimeChangePage, RimeCleanupAllSessions,
     RimeCleanupStaleSessions, RimeClearComposition, RimeCommit, RimeCommitComposition, RimeConfig,
     RimeConfigBeginList, RimeConfigBeginMap, RimeConfigClear, RimeConfigClose,
@@ -595,6 +595,193 @@ fn rime_frontend_struct_layout_matches_librime_header() {
             user_dict_iterator_index + usize_size,
             std::mem::align_of::<RimeUserDictIterator>(),
         )
+    );
+}
+
+#[test]
+fn rime_api_function_table_layout_matches_librime_header() {
+    let int_size = std::mem::size_of::<c_int>();
+    let fn_size = std::mem::size_of::<Option<extern "C" fn()>>();
+    let fn_align = std::mem::align_of::<Option<extern "C" fn()>>();
+    let table_start = align_up(int_size, fn_align);
+    let api = unsafe { &*rime_get_api() };
+
+    macro_rules! assert_api_slot {
+        ($field:ident, $index:expr) => {
+            assert_eq!(
+                field_offset(api, std::ptr::addr_of!((*api).$field)),
+                table_start + fn_size * $index,
+                "RimeApi.{} must match librime rime_api.h slot {}",
+                stringify!($field),
+                $index
+            );
+        };
+    }
+
+    assert_eq!(field_offset(api, std::ptr::addr_of!((*api).data_size)), 0);
+    assert_api_slot!(setup, 0);
+    assert_api_slot!(set_notification_handler, 1);
+    assert_api_slot!(initialize, 2);
+    assert_api_slot!(finalize, 3);
+    assert_api_slot!(start_maintenance, 4);
+    assert_api_slot!(is_maintenance_mode, 5);
+    assert_api_slot!(join_maintenance_thread, 6);
+    assert_api_slot!(deployer_initialize, 7);
+    assert_api_slot!(prebuild, 8);
+    assert_api_slot!(deploy, 9);
+    assert_api_slot!(deploy_schema, 10);
+    assert_api_slot!(deploy_config_file, 11);
+    assert_api_slot!(sync_user_data, 12);
+    assert_api_slot!(create_session, 13);
+    assert_api_slot!(find_session, 14);
+    assert_api_slot!(destroy_session, 15);
+    assert_api_slot!(cleanup_stale_sessions, 16);
+    assert_api_slot!(cleanup_all_sessions, 17);
+    assert_api_slot!(process_key, 18);
+    assert_api_slot!(commit_composition, 19);
+    assert_api_slot!(clear_composition, 20);
+    assert_api_slot!(get_commit, 21);
+    assert_api_slot!(free_commit, 22);
+    assert_api_slot!(get_context, 23);
+    assert_api_slot!(free_context, 24);
+    assert_api_slot!(get_status, 25);
+    assert_api_slot!(free_status, 26);
+    assert_api_slot!(set_option, 27);
+    assert_api_slot!(get_option, 28);
+    assert_api_slot!(set_property, 29);
+    assert_api_slot!(get_property, 30);
+    assert_api_slot!(get_schema_list, 31);
+    assert_api_slot!(free_schema_list, 32);
+    assert_api_slot!(get_current_schema, 33);
+    assert_api_slot!(select_schema, 34);
+    assert_api_slot!(schema_open, 35);
+    assert_api_slot!(config_open, 36);
+    assert_api_slot!(config_close, 37);
+    assert_api_slot!(config_get_bool, 38);
+    assert_api_slot!(config_get_int, 39);
+    assert_api_slot!(config_get_double, 40);
+    assert_api_slot!(config_get_string, 41);
+    assert_api_slot!(config_get_cstring, 42);
+    assert_api_slot!(config_update_signature, 43);
+    assert_api_slot!(config_begin_map, 44);
+    assert_api_slot!(config_next, 45);
+    assert_api_slot!(config_end, 46);
+    assert_api_slot!(simulate_key_sequence, 47);
+    assert_api_slot!(register_module, 48);
+    assert_api_slot!(find_module, 49);
+    assert_api_slot!(run_task, 50);
+    assert_api_slot!(get_shared_data_dir, 51);
+    assert_api_slot!(get_user_data_dir, 52);
+    assert_api_slot!(get_sync_dir, 53);
+    assert_api_slot!(get_user_id, 54);
+    assert_api_slot!(get_user_data_sync_dir, 55);
+    assert_api_slot!(config_init, 56);
+    assert_api_slot!(config_load_string, 57);
+    assert_api_slot!(config_set_bool, 58);
+    assert_api_slot!(config_set_int, 59);
+    assert_api_slot!(config_set_double, 60);
+    assert_api_slot!(config_set_string, 61);
+    assert_api_slot!(config_get_item, 62);
+    assert_api_slot!(config_set_item, 63);
+    assert_api_slot!(config_clear, 64);
+    assert_api_slot!(config_create_list, 65);
+    assert_api_slot!(config_create_map, 66);
+    assert_api_slot!(config_list_size, 67);
+    assert_api_slot!(config_begin_list, 68);
+    assert_api_slot!(get_input, 69);
+    assert_api_slot!(get_caret_pos, 70);
+    assert_api_slot!(select_candidate, 71);
+    assert_api_slot!(get_version, 72);
+    assert_api_slot!(set_caret_pos, 73);
+    assert_api_slot!(select_candidate_on_current_page, 74);
+    assert_api_slot!(candidate_list_begin, 75);
+    assert_api_slot!(candidate_list_next, 76);
+    assert_api_slot!(candidate_list_end, 77);
+    assert_api_slot!(user_config_open, 78);
+    assert_api_slot!(candidate_list_from_index, 79);
+    assert_api_slot!(get_prebuilt_data_dir, 80);
+    assert_api_slot!(get_staging_dir, 81);
+    assert_api_slot!(commit_proto, 82);
+    assert_api_slot!(context_proto, 83);
+    assert_api_slot!(status_proto, 84);
+    assert_api_slot!(get_state_label, 85);
+    assert_api_slot!(delete_candidate, 86);
+    assert_api_slot!(delete_candidate_on_current_page, 87);
+    assert_api_slot!(get_state_label_abbreviated, 88);
+    assert_api_slot!(set_input, 89);
+    assert_api_slot!(get_shared_data_dir_s, 90);
+    assert_api_slot!(get_user_data_dir_s, 91);
+    assert_api_slot!(get_prebuilt_data_dir_s, 92);
+    assert_api_slot!(get_staging_dir_s, 93);
+    assert_api_slot!(get_sync_dir_s, 94);
+    assert_api_slot!(highlight_candidate, 95);
+    assert_api_slot!(highlight_candidate_on_current_page, 96);
+    assert_api_slot!(change_page, 97);
+    assert_eq!(
+        std::mem::size_of::<RimeApi>(),
+        align_up(table_start + fn_size * 98, fn_align)
+    );
+    assert_eq!(
+        api.data_size,
+        (std::mem::size_of::<RimeApi>() - std::mem::size_of::<c_int>()) as c_int
+    );
+
+    let levers_api = unsafe { &*rime_levers_get_api().cast::<RimeLeversApi>() };
+    macro_rules! assert_levers_slot {
+        ($field:ident, $index:expr) => {
+            assert_eq!(
+                field_offset(levers_api, std::ptr::addr_of!((*levers_api).$field)),
+                table_start + fn_size * $index,
+                "RimeLeversApi.{} must match librime rime_levers_api.h slot {}",
+                stringify!($field),
+                $index
+            );
+        };
+    }
+
+    assert_eq!(
+        field_offset(levers_api, std::ptr::addr_of!((*levers_api).data_size)),
+        0
+    );
+    assert_levers_slot!(custom_settings_init, 0);
+    assert_levers_slot!(custom_settings_destroy, 1);
+    assert_levers_slot!(load_settings, 2);
+    assert_levers_slot!(save_settings, 3);
+    assert_levers_slot!(customize_bool, 4);
+    assert_levers_slot!(customize_int, 5);
+    assert_levers_slot!(customize_double, 6);
+    assert_levers_slot!(customize_string, 7);
+    assert_levers_slot!(is_first_run, 8);
+    assert_levers_slot!(settings_is_modified, 9);
+    assert_levers_slot!(settings_get_config, 10);
+    assert_levers_slot!(switcher_settings_init, 11);
+    assert_levers_slot!(get_available_schema_list, 12);
+    assert_levers_slot!(get_selected_schema_list, 13);
+    assert_levers_slot!(schema_list_destroy, 14);
+    assert_levers_slot!(get_schema_id, 15);
+    assert_levers_slot!(get_schema_name, 16);
+    assert_levers_slot!(get_schema_version, 17);
+    assert_levers_slot!(get_schema_author, 18);
+    assert_levers_slot!(get_schema_description, 19);
+    assert_levers_slot!(get_schema_file_path, 20);
+    assert_levers_slot!(select_schemas, 21);
+    assert_levers_slot!(get_hotkeys, 22);
+    assert_levers_slot!(set_hotkeys, 23);
+    assert_levers_slot!(user_dict_iterator_init, 24);
+    assert_levers_slot!(user_dict_iterator_destroy, 25);
+    assert_levers_slot!(next_user_dict, 26);
+    assert_levers_slot!(backup_user_dict, 27);
+    assert_levers_slot!(restore_user_dict, 28);
+    assert_levers_slot!(export_user_dict, 29);
+    assert_levers_slot!(import_user_dict, 30);
+    assert_levers_slot!(customize_item, 31);
+    assert_eq!(
+        std::mem::size_of::<RimeLeversApi>(),
+        align_up(table_start + fn_size * 32, fn_align)
+    );
+    assert_eq!(
+        levers_api.data_size,
+        (std::mem::size_of::<RimeLeversApi>() - std::mem::size_of::<c_int>()) as c_int
     );
 }
 
