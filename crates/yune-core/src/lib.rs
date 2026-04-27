@@ -794,6 +794,10 @@ impl Engine {
                 KeyCode::Return => {
                     return self.commit_script_text();
                 }
+                KeyCode::Delete => {
+                    self.delete_candidate(self.context.highlighted);
+                    return None;
+                }
                 KeyCode::Character(ch) if ch == ' ' || is_printable_ascii(ch) => {
                     return self.process_char(ch);
                 }
@@ -1868,6 +1872,26 @@ mod tests {
 
         let commits = engine
             .process_key_sequence("ba{Down}{Control+Delete}")
+            .expect("key sequence should parse");
+
+        assert!(commits.is_empty());
+        assert_eq!(engine.context().candidates.len(), 3);
+        assert_eq!(engine.context().candidates[1].text, "爸");
+        assert_eq!(engine.context().highlighted, 1);
+        assert_eq!(engine.context().last_commit, None);
+    }
+
+    #[test]
+    fn shift_delete_removes_highlighted_candidate_like_librime_editor_shift_as_control_fallback() {
+        let mut engine = Engine::new();
+        engine.add_translator(StaticTableTranslator::new([
+            ("ba", "八"),
+            ("ba", "吧"),
+            ("ba", "爸"),
+        ]));
+
+        let commits = engine
+            .process_key_sequence("ba{Down}{Shift+Delete}")
             .expect("key sequence should parse");
 
         assert!(commits.is_empty());
