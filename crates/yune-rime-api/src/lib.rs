@@ -1609,7 +1609,8 @@ pub extern "C" fn RimeProcessKey(session_id: RimeSessionId, keycode: c_int, mask
                 && (matches!(
                     keycode,
                     XK_BACKSPACE | XK_DELETE | XK_LEFT | XK_RIGHT | XK_UP | XK_DOWN | XK_RETURN
-                ) || (('0' as c_int)..=('9' as c_int)).contains(&keycode)))
+                ) || (('0' as c_int)..=('9' as c_int)).contains(&keycode)
+                    || (XK_KP_0..=XK_KP_9).contains(&keycode)))
                 || (mask == K_SHIFT_MASK && keycode == XK_RETURN)
                 || (mask == K_SHIFT_MASK && keycode == XK_BACKSPACE)
                 || (mask == K_SHIFT_MASK && keycode == XK_DELETE)
@@ -1640,7 +1641,10 @@ pub extern "C" fn RimeProcessKey(session_id: RimeSessionId, keycode: c_int, mask
     let was_composing = !session.engine.context().composition.input.is_empty();
     if !was_composing
         && mask == K_CONTROL_MASK
-        && matches!(key_event.code, KeyCode::Character('0'..='9'))
+        && matches!(
+            key_event.code,
+            KeyCode::Character('0'..='9') | KeyCode::KeypadDigit('0'..='9')
+        )
     {
         return FALSE;
     }
