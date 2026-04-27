@@ -3727,7 +3727,10 @@ fn install_schema_translator_chain(session: &mut SessionState, schema_id: &str) 
             "history_translator" => install_schema_history_translator_from_config(
                 session,
                 &schema_config,
-                name_space.unwrap_or("history"),
+                match name_space {
+                    Some("translator") | None => "history",
+                    Some(name_space) => name_space,
+                },
             ),
             _ => {}
         }
