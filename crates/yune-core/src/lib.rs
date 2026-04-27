@@ -234,7 +234,8 @@ fn key_code_from_name(name: &str) -> Result<KeyCode, KeySequenceParseError> {
             || is_librime_input_method_key_name(name)
             || is_librime_keypad_noop_key_name(name)
             || is_librime_latin1_key_name(name)
-            || is_librime_latin2_key_name(name) =>
+            || is_librime_latin2_key_name(name)
+            || is_librime_latin3_key_name(name) =>
         {
             KeyCode::Ignored
         }
@@ -648,6 +649,34 @@ fn is_librime_latin2_key_name(name: &str) -> bool {
             | "uring"
             | "tcedilla"
             | "abovedot"
+    )
+}
+
+fn is_librime_latin3_key_name(name: &str) -> bool {
+    matches!(
+        name,
+        "Hstroke"
+            | "Hcircumflex"
+            | "Iabovedot"
+            | "Gbreve"
+            | "Jcircumflex"
+            | "hstroke"
+            | "hcircumflex"
+            | "idotless"
+            | "gbreve"
+            | "jcircumflex"
+            | "Cabovedot"
+            | "Ccircumflex"
+            | "Gabovedot"
+            | "Gcircumflex"
+            | "Ubreve"
+            | "Scircumflex"
+            | "cabovedot"
+            | "ccircumflex"
+            | "gabovedot"
+            | "gcircumflex"
+            | "ubreve"
+            | "scircumflex"
     )
 }
 
@@ -2256,6 +2285,46 @@ mod tests {
             "uring",
             "tcedilla",
             "Release+abovedot",
+        ];
+        let sequence = names
+            .iter()
+            .map(|name| format!("{{{name}}}"))
+            .collect::<String>();
+        let keys = parse_key_sequence(&sequence).expect("key sequence should parse");
+
+        assert_eq!(keys.len(), names.len());
+        assert!(keys.iter().all(|key| key.code == KeyCode::Ignored));
+        assert!(keys[..names.len() - 1]
+            .iter()
+            .all(|key| key.modifiers.is_empty()));
+        assert!(keys[names.len() - 1].modifiers.release);
+    }
+
+    #[test]
+    fn parses_librime_latin3_noop_key_names() {
+        let names = [
+            "Hstroke",
+            "Hcircumflex",
+            "Iabovedot",
+            "Gbreve",
+            "Jcircumflex",
+            "hstroke",
+            "hcircumflex",
+            "idotless",
+            "gbreve",
+            "jcircumflex",
+            "Cabovedot",
+            "Ccircumflex",
+            "Gabovedot",
+            "Gcircumflex",
+            "Ubreve",
+            "Scircumflex",
+            "cabovedot",
+            "ccircumflex",
+            "gabovedot",
+            "gcircumflex",
+            "ubreve",
+            "Release+scircumflex",
         ];
         let sequence = names
             .iter()
