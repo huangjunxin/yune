@@ -1,6 +1,8 @@
 use std::{
     ffi::{CStr, CString},
-    mem, ptr,
+    mem,
+    os::raw::c_char,
+    ptr,
     sync::{Mutex, MutexGuard, OnceLock},
 };
 
@@ -247,6 +249,116 @@ fn frontend_style_api_table_can_edit_input_and_caret() {
 
     assert_eq!(unsafe { set_input(session_id, ptr::null()) }, FALSE);
     assert_eq!(unsafe { set_input(session_id + 1, input.as_ptr()) }, FALSE);
+
+    assert_eq!(destroy_session(session_id), TRUE);
+    cleanup_all_sessions();
+}
+
+#[test]
+fn frontend_style_api_table_can_manage_runtime_state() {
+    let _guard = test_guard();
+    let api = rime_get_api();
+    assert!(!api.is_null());
+    let api = unsafe { &*api };
+
+    let cleanup_all_sessions = api
+        .cleanup_all_sessions
+        .expect("frontend requires cleanup_all_sessions");
+    cleanup_all_sessions();
+
+    let create_session = api
+        .create_session
+        .expect("frontend requires create_session");
+    let destroy_session = api
+        .destroy_session
+        .expect("frontend requires destroy_session");
+    let process_key = api.process_key.expect("frontend requires process_key");
+    let set_option = api.set_option.expect("frontend requires set_option");
+    let get_option = api.get_option.expect("frontend requires get_option");
+    let set_property = api.set_property.expect("frontend requires set_property");
+    let get_property = api.get_property.expect("frontend requires get_property");
+    let get_current_schema = api
+        .get_current_schema
+        .expect("frontend requires get_current_schema");
+    let select_schema = api.select_schema.expect("frontend requires select_schema");
+    let get_context = api.get_context.expect("frontend requires get_context");
+    let free_context = api.free_context.expect("frontend requires free_context");
+    let get_status = api.get_status.expect("frontend requires get_status");
+    let free_status = api.free_status.expect("frontend requires free_status");
+
+    let session_id = create_session();
+    assert_ne!(session_id, 0);
+
+    let ascii_mode = CString::new("ascii_mode").expect("literal should not contain NUL");
+    assert_eq!(
+        unsafe { get_option(session_id, ascii_mode.as_ptr()) },
+        FALSE
+    );
+    unsafe { set_option(session_id, ascii_mode.as_ptr(), TRUE) };
+    assert_eq!(unsafe { get_option(session_id, ascii_mode.as_ptr()) }, TRUE);
+
+    let mut status = empty_status();
+    assert_eq!(unsafe { get_status(session_id, &mut status) }, TRUE);
+    assert_eq!(status.is_ascii_mode, TRUE);
+    assert_eq!(unsafe { free_status(&mut status) }, TRUE);
+
+    let property = CString::new("client_app").expect("literal should not contain NUL");
+    let property_value = CString::new("frontend_client").expect("literal should not contain NUL");
+    let mut property_buffer = vec![0 as c_char; 32];
+    assert_eq!(
+        unsafe {
+            get_property(
+                session_id,
+                property.as_ptr(),
+                property_buffer.as_mut_ptr(),
+                property_buffer.len(),
+            )
+        },
+        FALSE
+    );
+    unsafe { set_property(session_id, property.as_ptr(), property_value.as_ptr()) };
+    assert_eq!(
+        unsafe {
+            get_property(
+                session_id,
+                property.as_ptr(),
+                property_buffer.as_mut_ptr(),
+                property_buffer.len(),
+            )
+        },
+        TRUE
+    );
+    let copied_property = unsafe { CStr::from_ptr(property_buffer.as_ptr()) };
+    assert_eq!(copied_property.to_str(), Ok("frontend_client"));
+
+    let mut schema_buffer = vec![0 as c_char; 32];
+    assert_eq!(
+        unsafe { get_current_schema(session_id, schema_buffer.as_mut_ptr(), schema_buffer.len()) },
+        TRUE
+    );
+    let current_schema = unsafe { CStr::from_ptr(schema_buffer.as_ptr()) };
+    assert_eq!(current_schema.to_str(), Ok("default"));
+
+    assert_eq!(process_key(session_id, 'n' as i32, 0), TRUE);
+    assert_eq!(process_key(session_id, 'i' as i32, 0), TRUE);
+
+    let schema_id = CString::new("sample_schema").expect("literal should not contain NUL");
+    assert_eq!(
+        unsafe { select_schema(session_id, schema_id.as_ptr()) },
+        TRUE
+    );
+    assert_eq!(
+        unsafe { get_current_schema(session_id, schema_buffer.as_mut_ptr(), schema_buffer.len()) },
+        TRUE
+    );
+    let selected_schema = unsafe { CStr::from_ptr(schema_buffer.as_ptr()) };
+    assert_eq!(selected_schema.to_str(), Ok("sample_schema"));
+
+    let mut context = empty_context();
+    assert_eq!(unsafe { get_context(session_id, &mut context) }, TRUE);
+    assert_eq!(context.composition.length, 0);
+    assert_eq!(context.menu.num_candidates, 0);
+    assert_eq!(unsafe { free_context(&mut context) }, TRUE);
 
     assert_eq!(destroy_session(session_id), TRUE);
     cleanup_all_sessions();
