@@ -11598,6 +11598,10 @@ punctuator:
     \"/\": [\"、\", \"/\"]
     \"!\": { commit: \"！\" }
     \"(\": { pair: [\"（\", \"）\"] }
+  full_shape:
+    \"/\": \"／\"
+    \"!\": { commit: \"！\" }
+    \"(\": { pair: [\"〔\", \"〕\"] }
 ",
     )
     .expect("schema config should be written");
@@ -11650,6 +11654,14 @@ punctuator:
     assert_eq!(candidate_texts('/'), ["、", "/", "/"]);
     assert_eq!(candidate_texts('!'), ["！", "!"]);
     assert_eq!(candidate_texts('('), ["（", "）", "("]);
+
+    let full_shape = CString::new("full_shape").expect("option name should be valid");
+    // SAFETY: option name is a valid NUL-terminated string.
+    unsafe { RimeSetOption(session_id, full_shape.as_ptr(), TRUE) };
+
+    assert_eq!(candidate_texts('/'), ["／", "/"]);
+    assert_eq!(candidate_texts('!'), ["！", "!"]);
+    assert_eq!(candidate_texts('('), ["〔", "〕", "("]);
 
     assert_eq!(RimeDestroySession(session_id), TRUE);
     let reset_traits = empty_traits();

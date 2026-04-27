@@ -1339,6 +1339,10 @@ pub trait Translator: Send + Sync {
     fn name(&self) -> &'static str;
 
     fn translate(&self, input: &str) -> Vec<Candidate>;
+
+    fn translate_with_status(&self, input: &str, _status: &Status) -> Vec<Candidate> {
+        self.translate(input)
+    }
 }
 
 pub trait CandidateRanker: Send + Sync {
@@ -2066,29 +2070,25 @@ impl Translator for StaticTableTranslator {
 }
 
 pub struct PunctuationTranslator {
-    entries: Vec<(String, Candidate)>,
+    half_shape_entries: Vec<(String, Candidate)>,
+    full_shape_entries: Vec<(String, Candidate)>,
 }
 
 impl PunctuationTranslator {
     #[must_use]
     pub fn new(entries: impl IntoIterator<Item = (impl Into<String>, impl Into<String>)>) -> Self {
-        let entries = entries
-            .into_iter()
-            .map(|(key, text)| {
-                let key = key.into();
-                let text = text.into();
-                (
-                    key.clone(),
-                    Candidate {
-                        text,
-                        comment: "punct".to_owned(),
-                        source: CandidateSource::Punctuation,
-                        quality: 1.0,
-                    },
-                )
-            })
-            .collect();
-        Self { entries }
+        Self::with_shape_entries(entries, std::iter::empty::<(String, String)>())
+    }
+
+    #[must_use]
+    pub fn with_shape_entries(
+        half_shape_entries: impl IntoIterator<Item = (impl Into<String>, impl Into<String>)>,
+        full_shape_entries: impl IntoIterator<Item = (impl Into<String>, impl Into<String>)>,
+    ) -> Self {
+        Self {
+            half_shape_entries: punctuation_candidates(half_shape_entries),
+            full_shape_entries: punctuation_candidates(full_shape_entries),
+        }
     }
 
     #[must_use]
@@ -2110,12 +2110,46 @@ impl Translator for PunctuationTranslator {
     }
 
     fn translate(&self, input: &str) -> Vec<Candidate> {
-        self.entries
+        self.half_shape_entries
             .iter()
             .filter(|(key, _)| key == input)
             .map(|(_, candidate)| candidate.clone())
             .collect()
     }
+
+    fn translate_with_status(&self, input: &str, status: &Status) -> Vec<Candidate> {
+        let entries = if status.is_full_shape {
+            &self.full_shape_entries
+        } else {
+            &self.half_shape_entries
+        };
+        entries
+            .iter()
+            .filter(|(key, _)| key == input)
+            .map(|(_, candidate)| candidate.clone())
+            .collect()
+    }
+}
+
+fn punctuation_candidates(
+    entries: impl IntoIterator<Item = (impl Into<String>, impl Into<String>)>,
+) -> Vec<(String, Candidate)> {
+    entries
+        .into_iter()
+        .map(|(key, text)| {
+            let key = key.into();
+            let text = text.into();
+            (
+                key.clone(),
+                Candidate {
+                    text,
+                    comment: "punct".to_owned(),
+                    source: CandidateSource::Punctuation,
+                    quality: 1.0,
+                },
+            )
+        })
+        .collect()
 }
 
 pub struct Engine {
@@ -2185,6 +2219,7 @@ impl Engine {
             _ => {}
         }
         self.options.insert(option, value);
+        self.refresh_candidates();
     }
 
     #[must_use]
@@ -2751,7 +2786,7 @@ impl Engine {
         let mut candidates = self
             .translators
             .iter()
-            .flat_map(|translator| translator.translate(input))
+            .flat_map(|translator| translator.translate_with_status(input, &self.status))
             .collect::<Vec<_>>();
         for ranker in &self.rankers {
             if let RerankResult::Ready(ranked) = ranker.try_rerank(&self.context, &candidates) {
@@ -6025,6 +6060,24 @@ sort: by_weight
         assert_eq!(commits, ["。"]);
         assert_eq!(engine.context().last_commit.as_deref(), Some("。"));
         assert!(!engine.status().is_composing);
+    }
+
+    #[test]
+    fn punctuation_translator_tracks_full_shape_option() {
+        let mut engine = Engine::new();
+        engine.add_translator(PunctuationTranslator::with_shape_entries(
+            [("/", "、")],
+            [("/", "／")],
+        ));
+
+        engine.process_char('/');
+        assert_eq!(engine.context().candidates[0].text, "、");
+
+        engine.set_option("full_shape", true);
+        assert_eq!(engine.context().candidates[0].text, "／");
+
+        engine.set_option("full_shape", false);
+        assert_eq!(engine.context().candidates[0].text, "、");
     }
 
     #[test]

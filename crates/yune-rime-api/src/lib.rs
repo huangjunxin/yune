@@ -3600,13 +3600,17 @@ fn install_schema_punctuation_translator(session: &mut SessionState, schema_id: 
         return;
     }
 
-    let entries = punctuation_entries_from_config(&schema_config, "half_shape");
-    if entries.is_empty() {
+    let half_shape_entries = punctuation_entries_from_config(&schema_config, "half_shape");
+    let full_shape_entries = punctuation_entries_from_config(&schema_config, "full_shape");
+    if half_shape_entries.is_empty() && full_shape_entries.is_empty() {
         return;
     }
     session
         .engine
-        .add_translator(PunctuationTranslator::new(entries));
+        .add_translator(PunctuationTranslator::with_shape_entries(
+            half_shape_entries,
+            full_shape_entries,
+        ));
 }
 
 fn schema_engine_translators_include(schema_config: &Value, translator_name: &str) -> bool {
