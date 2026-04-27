@@ -2147,11 +2147,7 @@ fn apply_schema_to_session(session: &mut SessionState, schema_id: &str) {
     install_schema_key_binder_processor(session, schema_id);
     install_schema_punctuation_processor(session, schema_id);
     install_schema_translator_chain(session, schema_id);
-    install_schema_reverse_lookup_filter(session, schema_id);
-    install_schema_simplifier_filter(session, schema_id);
-    install_schema_uniquifier_filter(session, schema_id);
-    install_schema_single_char_filter(session, schema_id);
-    install_schema_charset_filter(session, schema_id);
+    install_schema_filter_chain(session, schema_id);
     session.engine.clear_composition();
     session.input_buffer = None;
     session.unread_commit = None;
@@ -3844,101 +3840,100 @@ fn install_schema_history_translator_from_config(
     );
 }
 
-fn install_schema_reverse_lookup_filter(session: &mut SessionState, schema_id: &str) {
+fn install_schema_filter_chain(session: &mut SessionState, schema_id: &str) {
     let schema_config =
         load_runtime_config_root(&format!("{schema_id}.schema"), ConfigOpenKind::Deployed);
-    for name_space in
-        schema_engine_filter_namespaces(&schema_config, "reverse_lookup_filter", "reverse_lookup")
-    {
-        let Some(reverse_dictionary) = load_schema_table_dictionary(&schema_config, &name_space)
-        else {
-            continue;
-        };
-
-        let overwrite_comment =
-            find_config_value(&schema_config, &format!("{name_space}/overwrite_comment"))
-                .and_then(config_scalar_bool)
-                .unwrap_or(false);
-        let append_comment =
-            find_config_value(&schema_config, &format!("{name_space}/append_comment"))
-                .and_then(config_scalar_bool)
-                .unwrap_or(false);
-        let comment_format = schema_comment_format(&schema_config, &name_space);
-
-        session.engine.add_filter(
-            ReverseLookupFilter::new(reverse_dictionary)
-                .with_overwrite_comment(overwrite_comment)
-                .with_append_comment(append_comment)
-                .with_comment_format(&comment_format),
-        );
+    let Some(Value::Sequence(filters)) = find_config_value(&schema_config, "engine/filters") else {
+        return;
+    };
+    for filter in filters.iter().filter_map(Value::as_str) {
+        let (filter_name, name_space) = schema_component_prescription(filter);
+        match filter_name {
+            "reverse_lookup_filter" => install_schema_reverse_lookup_filter_from_config(
+                session,
+                &schema_config,
+                name_space.unwrap_or("reverse_lookup"),
+            ),
+            "simplifier" => install_schema_simplifier_filter_from_config(
+                session,
+                &schema_config,
+                name_space.unwrap_or("simplifier"),
+            ),
+            "uniquifier" => session.engine.add_filter(UniquifierFilter),
+            "single_char_filter" => session.engine.add_filter(SingleCharFilter),
+            "charset_filter" | "cjk_minifier" => {
+                if name_space.is_none() {
+                    session.engine.add_filter(CharsetFilter);
+                }
+            }
+            _ => {}
+        }
     }
 }
 
-fn install_schema_simplifier_filter(session: &mut SessionState, schema_id: &str) {
-    let schema_config =
-        load_runtime_config_root(&format!("{schema_id}.schema"), ConfigOpenKind::Deployed);
-    for name_space in schema_engine_filter_namespaces(&schema_config, "simplifier", "simplifier") {
-        let option_name = find_config_value(&schema_config, &format!("{name_space}/option_name"))
-            .and_then(config_scalar_string)
-            .filter(|option_name| !option_name.is_empty())
-            .unwrap_or_else(|| "simplification".to_owned());
-        let tips = find_config_value(&schema_config, &format!("{name_space}/tips"))
-            .or_else(|| find_config_value(&schema_config, &format!("{name_space}/tip")))
-            .and_then(config_scalar_string)
-            .unwrap_or_default();
-        let opencc_config =
-            find_config_value(&schema_config, &format!("{name_space}/opencc_config"))
-                .and_then(config_scalar_string)
-                .unwrap_or_default();
-        let show_in_comment =
-            find_config_value(&schema_config, &format!("{name_space}/show_in_comment"))
-                .and_then(config_scalar_bool)
-                .unwrap_or(false);
-        let inherit_comment =
-            find_config_value(&schema_config, &format!("{name_space}/inherit_comment"))
-                .and_then(config_scalar_bool)
-                .unwrap_or(true);
-        let comment_format = schema_comment_format(&schema_config, &name_space);
-        let excluded_types =
-            schema_string_list(&schema_config, &format!("{name_space}/excluded_types"));
+fn install_schema_reverse_lookup_filter_from_config(
+    session: &mut SessionState,
+    schema_config: &Value,
+    name_space: &str,
+) {
+    let Some(reverse_dictionary) = load_schema_table_dictionary(schema_config, name_space) else {
+        return;
+    };
 
-        session.engine.add_filter(
-            SimplifierFilter::new()
-                .with_option_name(option_name)
-                .with_opencc_config(opencc_config)
-                .with_tips(tips)
-                .with_show_in_comment(show_in_comment)
-                .with_inherit_comment(inherit_comment)
-                .with_comment_format(&comment_format)
-                .with_excluded_types(excluded_types),
-        );
-    }
+    let overwrite_comment =
+        find_config_value(schema_config, &format!("{name_space}/overwrite_comment"))
+            .and_then(config_scalar_bool)
+            .unwrap_or(false);
+    let append_comment = find_config_value(schema_config, &format!("{name_space}/append_comment"))
+        .and_then(config_scalar_bool)
+        .unwrap_or(false);
+    let comment_format = schema_comment_format(schema_config, name_space);
+
+    session.engine.add_filter(
+        ReverseLookupFilter::new(reverse_dictionary)
+            .with_overwrite_comment(overwrite_comment)
+            .with_append_comment(append_comment)
+            .with_comment_format(&comment_format),
+    );
 }
 
-fn install_schema_uniquifier_filter(session: &mut SessionState, schema_id: &str) {
-    let schema_config =
-        load_runtime_config_root(&format!("{schema_id}.schema"), ConfigOpenKind::Deployed);
-    if schema_engine_filters_include(&schema_config, "uniquifier") {
-        session.engine.add_filter(UniquifierFilter);
-    }
-}
+fn install_schema_simplifier_filter_from_config(
+    session: &mut SessionState,
+    schema_config: &Value,
+    name_space: &str,
+) {
+    let option_name = find_config_value(schema_config, &format!("{name_space}/option_name"))
+        .and_then(config_scalar_string)
+        .filter(|option_name| !option_name.is_empty())
+        .unwrap_or_else(|| "simplification".to_owned());
+    let tips = find_config_value(schema_config, &format!("{name_space}/tips"))
+        .or_else(|| find_config_value(schema_config, &format!("{name_space}/tip")))
+        .and_then(config_scalar_string)
+        .unwrap_or_default();
+    let opencc_config = find_config_value(schema_config, &format!("{name_space}/opencc_config"))
+        .and_then(config_scalar_string)
+        .unwrap_or_default();
+    let show_in_comment =
+        find_config_value(schema_config, &format!("{name_space}/show_in_comment"))
+            .and_then(config_scalar_bool)
+            .unwrap_or(false);
+    let inherit_comment =
+        find_config_value(schema_config, &format!("{name_space}/inherit_comment"))
+            .and_then(config_scalar_bool)
+            .unwrap_or(true);
+    let comment_format = schema_comment_format(schema_config, name_space);
+    let excluded_types = schema_string_list(schema_config, &format!("{name_space}/excluded_types"));
 
-fn install_schema_single_char_filter(session: &mut SessionState, schema_id: &str) {
-    let schema_config =
-        load_runtime_config_root(&format!("{schema_id}.schema"), ConfigOpenKind::Deployed);
-    if schema_engine_filters_include(&schema_config, "single_char_filter") {
-        session.engine.add_filter(SingleCharFilter);
-    }
-}
-
-fn install_schema_charset_filter(session: &mut SessionState, schema_id: &str) {
-    let schema_config =
-        load_runtime_config_root(&format!("{schema_id}.schema"), ConfigOpenKind::Deployed);
-    if schema_engine_filters_include(&schema_config, "charset_filter")
-        || schema_engine_filters_include(&schema_config, "cjk_minifier")
-    {
-        session.engine.add_filter(CharsetFilter);
-    }
+    session.engine.add_filter(
+        SimplifierFilter::new()
+            .with_option_name(option_name)
+            .with_opencc_config(opencc_config)
+            .with_tips(tips)
+            .with_show_in_comment(show_in_comment)
+            .with_inherit_comment(inherit_comment)
+            .with_comment_format(&comment_format)
+            .with_excluded_types(excluded_types),
+    );
 }
 
 fn load_schema_table_dictionary(
@@ -4250,27 +4245,6 @@ fn schema_engine_processors_include(schema_config: &Value, processor_name: &str)
         .iter()
         .filter_map(Value::as_str)
         .any(|processor| processor == processor_name)
-}
-
-fn schema_engine_filter_namespaces(
-    schema_config: &Value,
-    filter_name: &str,
-    default_name_space: &str,
-) -> Vec<String> {
-    let Some(Value::Sequence(filters)) = find_config_value(schema_config, "engine/filters") else {
-        return Vec::new();
-    };
-    schema_engine_component_namespaces(filters, filter_name, default_name_space)
-}
-
-fn schema_engine_filters_include(schema_config: &Value, filter_name: &str) -> bool {
-    let Some(Value::Sequence(filters)) = find_config_value(schema_config, "engine/filters") else {
-        return false;
-    };
-    filters
-        .iter()
-        .filter_map(Value::as_str)
-        .any(|filter| filter == filter_name)
 }
 
 fn apply_schema_switch_resets(session: &mut SessionState, schema_id: &str) {
