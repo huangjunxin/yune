@@ -3722,7 +3722,10 @@ fn install_schema_translator_chain(session: &mut SessionState, schema_id: &str) 
             "reverse_lookup_translator" => install_schema_reverse_lookup_translator_from_config(
                 session,
                 &schema_config,
-                name_space.unwrap_or("reverse_lookup"),
+                match name_space {
+                    Some("translator") | None => "reverse_lookup",
+                    Some(name_space) => name_space,
+                },
             ),
             "history_translator" => install_schema_history_translator_from_config(
                 session,
