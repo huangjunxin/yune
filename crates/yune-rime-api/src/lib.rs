@@ -2869,6 +2869,9 @@ pub unsafe extern "C" fn RimeConfigBeginList(
     config: *mut RimeConfig,
     key: *const c_char,
 ) -> Bool {
+    if iterator.is_null() || config.is_null() || key.is_null() {
+        return FALSE;
+    }
     let Some(key) = (unsafe { c_string_key(key) }) else {
         return FALSE;
     };
@@ -2906,6 +2909,9 @@ pub unsafe extern "C" fn RimeConfigBeginMap(
     config: *mut RimeConfig,
     key: *const c_char,
 ) -> Bool {
+    if iterator.is_null() || config.is_null() || key.is_null() {
+        return FALSE;
+    }
     let Some(key) = (unsafe { c_string_key(key) }) else {
         return FALSE;
     };
@@ -6812,6 +6818,38 @@ switches:\n  - name: ascii_mode\n  - name: full_shape\nmenu:\n  page_size: 9\n  
         assert_eq!(iterator.index, -1);
         assert!(iterator.key.is_null());
         assert!(iterator.path.is_null());
+
+        // librime performs the basic null-argument checks before clearing the
+        // caller-visible iterator state.
+        iterator.list = std::ptr::NonNull::<c_void>::dangling().as_ptr();
+        iterator.map = std::ptr::null_mut();
+        iterator.index = 3;
+        iterator.key = switches.as_ptr();
+        iterator.path = switches.as_ptr();
+        assert_eq!(
+            unsafe { RimeConfigBeginList(&mut iterator, std::ptr::null_mut(), switches.as_ptr()) },
+            FALSE
+        );
+        assert!(!iterator.list.is_null());
+        assert!(iterator.map.is_null());
+        assert_eq!(iterator.index, 3);
+        assert_eq!(iterator.key, switches.as_ptr());
+        assert_eq!(iterator.path, switches.as_ptr());
+
+        iterator.list = std::ptr::null_mut();
+        iterator.map = std::ptr::NonNull::<c_void>::dangling().as_ptr();
+        iterator.index = 5;
+        iterator.key = menu.as_ptr();
+        iterator.path = menu.as_ptr();
+        assert_eq!(
+            unsafe { RimeConfigBeginMap(&mut iterator, std::ptr::null_mut(), menu.as_ptr()) },
+            FALSE
+        );
+        assert!(iterator.list.is_null());
+        assert!(!iterator.map.is_null());
+        assert_eq!(iterator.index, 5);
+        assert_eq!(iterator.key, menu.as_ptr());
+        assert_eq!(iterator.path, menu.as_ptr());
 
         assert_eq!(unsafe { RimeConfigClose(&mut config) }, TRUE);
     }
