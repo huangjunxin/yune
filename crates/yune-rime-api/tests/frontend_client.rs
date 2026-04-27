@@ -479,6 +479,139 @@ fn frontend_style_api_table_can_manage_runtime_state() {
 }
 
 #[test]
+fn frontend_style_api_table_can_read_runtime_paths() {
+    let _guard = test_guard();
+    let api = rime_get_api();
+    assert!(!api.is_null());
+    let api = unsafe { &*api };
+
+    let setup = api.setup.expect("frontend requires setup");
+    let cleanup_all_sessions = api
+        .cleanup_all_sessions
+        .expect("frontend requires cleanup_all_sessions");
+    cleanup_all_sessions();
+
+    let root = unique_temp_dir("runtime-paths");
+    let shared = root.join("shared");
+    let user = root.join("user");
+    let prebuilt = root.join("prebuilt");
+    let staging = root.join("stage");
+    let sync = root.join("sync");
+    fs::create_dir_all(&shared).expect("shared dir should be created");
+    fs::create_dir_all(&user).expect("user dir should be created");
+    fs::write(
+        user.join("installation.yaml"),
+        format!(
+            "installation_id: frontend-user\nsync_dir: '{}'\n",
+            sync.to_string_lossy()
+        ),
+    )
+    .expect("installation metadata should be written");
+
+    let shared_c = CString::new(shared.to_string_lossy().as_ref()).expect("path is valid");
+    let user_c = CString::new(user.to_string_lossy().as_ref()).expect("path is valid");
+    let prebuilt_c = CString::new(prebuilt.to_string_lossy().as_ref()).expect("path is valid");
+    let staging_c = CString::new(staging.to_string_lossy().as_ref()).expect("path is valid");
+    let mut traits = empty_traits();
+    traits.shared_data_dir = shared_c.as_ptr();
+    traits.user_data_dir = user_c.as_ptr();
+    traits.prebuilt_data_dir = prebuilt_c.as_ptr();
+    traits.staging_dir = staging_c.as_ptr();
+    unsafe { setup(&traits) };
+
+    let get_shared_data_dir = api
+        .get_shared_data_dir
+        .expect("frontend requires get_shared_data_dir");
+    let get_user_data_dir = api
+        .get_user_data_dir
+        .expect("frontend requires get_user_data_dir");
+    let get_prebuilt_data_dir = api
+        .get_prebuilt_data_dir
+        .expect("frontend requires get_prebuilt_data_dir");
+    let get_staging_dir = api
+        .get_staging_dir
+        .expect("frontend requires get_staging_dir");
+    let get_sync_dir = api.get_sync_dir.expect("frontend requires get_sync_dir");
+    let get_user_id = api.get_user_id.expect("frontend requires get_user_id");
+    let get_shared_data_dir_s = api
+        .get_shared_data_dir_s
+        .expect("frontend requires get_shared_data_dir_s");
+    let get_user_data_dir_s = api
+        .get_user_data_dir_s
+        .expect("frontend requires get_user_data_dir_s");
+    let get_prebuilt_data_dir_s = api
+        .get_prebuilt_data_dir_s
+        .expect("frontend requires get_prebuilt_data_dir_s");
+    let get_staging_dir_s = api
+        .get_staging_dir_s
+        .expect("frontend requires get_staging_dir_s");
+    let get_sync_dir_s = api
+        .get_sync_dir_s
+        .expect("frontend requires get_sync_dir_s");
+    let get_user_data_sync_dir = api
+        .get_user_data_sync_dir
+        .expect("frontend requires get_user_data_sync_dir");
+
+    let shared_path = shared.to_string_lossy();
+    let user_path = user.to_string_lossy();
+    let prebuilt_path = prebuilt.to_string_lossy();
+    let staging_path = staging.to_string_lossy();
+    let sync_path = sync.to_string_lossy();
+    let user_sync_path = sync.join("frontend-user");
+    let user_sync_path = user_sync_path.to_string_lossy();
+
+    let raw_shared = unsafe { CStr::from_ptr(get_shared_data_dir()) };
+    assert_eq!(raw_shared.to_str(), Ok(shared_path.as_ref()));
+    let raw_user = unsafe { CStr::from_ptr(get_user_data_dir()) };
+    assert_eq!(raw_user.to_str(), Ok(user_path.as_ref()));
+    let raw_prebuilt = unsafe { CStr::from_ptr(get_prebuilt_data_dir()) };
+    assert_eq!(raw_prebuilt.to_str(), Ok(prebuilt_path.as_ref()));
+    let raw_staging = unsafe { CStr::from_ptr(get_staging_dir()) };
+    assert_eq!(raw_staging.to_str(), Ok(staging_path.as_ref()));
+    let raw_sync = unsafe { CStr::from_ptr(get_sync_dir()) };
+    assert_eq!(raw_sync.to_str(), Ok(sync_path.as_ref()));
+    let raw_user_id = unsafe { CStr::from_ptr(get_user_id()) };
+    assert_eq!(raw_user_id.to_str(), Ok("frontend-user"));
+
+    let mut buffer = vec![0 as c_char; 256];
+    unsafe { get_shared_data_dir_s(buffer.as_mut_ptr(), buffer.len()) };
+    let copied_shared = unsafe { CStr::from_ptr(buffer.as_ptr()) };
+    assert_eq!(copied_shared.to_str(), Ok(shared_path.as_ref()));
+
+    unsafe { get_user_data_dir_s(buffer.as_mut_ptr(), buffer.len()) };
+    let copied_user = unsafe { CStr::from_ptr(buffer.as_ptr()) };
+    assert_eq!(copied_user.to_str(), Ok(user_path.as_ref()));
+
+    unsafe { get_prebuilt_data_dir_s(buffer.as_mut_ptr(), buffer.len()) };
+    let copied_prebuilt = unsafe { CStr::from_ptr(buffer.as_ptr()) };
+    assert_eq!(copied_prebuilt.to_str(), Ok(prebuilt_path.as_ref()));
+
+    unsafe { get_staging_dir_s(buffer.as_mut_ptr(), buffer.len()) };
+    let copied_staging = unsafe { CStr::from_ptr(buffer.as_ptr()) };
+    assert_eq!(copied_staging.to_str(), Ok(staging_path.as_ref()));
+
+    unsafe { get_sync_dir_s(buffer.as_mut_ptr(), buffer.len()) };
+    let copied_sync = unsafe { CStr::from_ptr(buffer.as_ptr()) };
+    assert_eq!(copied_sync.to_str(), Ok(sync_path.as_ref()));
+
+    unsafe { get_user_data_sync_dir(buffer.as_mut_ptr(), buffer.len()) };
+    let copied_user_sync = unsafe { CStr::from_ptr(buffer.as_ptr()) };
+    assert_eq!(copied_user_sync.to_str(), Ok(user_sync_path.as_ref()));
+
+    let mut short_buffer = vec![0 as c_char; 8];
+    unsafe { get_sync_dir_s(short_buffer.as_mut_ptr(), short_buffer.len()) };
+    let truncated_sync = unsafe {
+        std::slice::from_raw_parts(short_buffer.as_ptr().cast::<u8>(), short_buffer.len())
+    };
+    assert_eq!(truncated_sync, &sync_path.as_bytes()[..short_buffer.len()]);
+
+    cleanup_all_sessions();
+    let reset_traits = empty_traits();
+    unsafe { setup(&reset_traits) };
+    fs::remove_dir_all(root).expect("temp dirs should be removed");
+}
+
+#[test]
 fn frontend_style_api_table_can_read_schema_state_labels() {
     let _guard = test_guard();
     let api = rime_get_api();
