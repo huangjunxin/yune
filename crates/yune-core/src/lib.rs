@@ -183,6 +183,7 @@ fn key_code_from_name(name: &str) -> Result<KeyCode, KeySequenceParseError> {
         "space" => KeyCode::Character(' '),
         "BackSpace" => KeyCode::Backspace,
         "Return" => KeyCode::Return,
+        "KP_Enter" => KeyCode::Return,
         "braceleft" => KeyCode::Character('{'),
         "braceright" => KeyCode::Character('}'),
         "plus" => KeyCode::Character('+'),
@@ -925,10 +926,10 @@ mod tests {
 
     #[test]
     fn parses_librime_style_key_sequence_names() {
-        let keys = parse_key_sequence("zyx 123{Shift+space}ABC{Control+Alt+Return}")
+        let keys = parse_key_sequence("zyx 123{Shift+space}ABC{Control+Alt+Return}{KP_Enter}")
             .expect("key sequence should parse");
 
-        assert_eq!(keys.len(), 12);
+        assert_eq!(keys.len(), 13);
         assert_eq!(keys[3].code, KeyCode::Character(' '));
         assert!(!keys[3].modifiers.shift);
         assert_eq!(keys[7].code, KeyCode::Character(' '));
@@ -936,6 +937,7 @@ mod tests {
         assert_eq!(keys[11].code, KeyCode::Return);
         assert!(keys[11].modifiers.control);
         assert!(keys[11].modifiers.alt);
+        assert_eq!(keys[12].code, KeyCode::Return);
     }
 
     #[test]

@@ -23,6 +23,7 @@ pub use key_table::*;
 
 const XK_BACKSPACE: c_int = 0xff08;
 const XK_RETURN: c_int = 0xff0d;
+const XK_KP_ENTER: c_int = 0xff8d;
 const DEFAULT_PAGE_SIZE: usize = 5;
 const RIME_VERSION_BYTES: &[u8] =
     concat!("yune-rime-api ", env!("CARGO_PKG_VERSION"), "\0").as_bytes();
@@ -3357,7 +3358,7 @@ pub unsafe extern "C" fn RimeFreeCommit(commit: *mut RimeCommit) -> Bool {
 fn key_event_from_rime_keycode(keycode: c_int) -> Option<KeyEvent> {
     let code = match keycode {
         XK_BACKSPACE => KeyCode::Backspace,
-        XK_RETURN => KeyCode::Return,
+        XK_RETURN | XK_KP_ENTER => KeyCode::Return,
         0x20..=0x7e => KeyCode::Character(char::from_u32(keycode as u32)?),
         _ => return None,
     };
