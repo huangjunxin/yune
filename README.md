@@ -18,15 +18,23 @@ typing.
 
 - `crates/yune-core`: session state, composition, candidates, and engine traits.
 - `crates/yune-schema`: RIME schema compatibility layer.
-- `crates/yune-rime-api`: future C ABI shim for RIME frontends.
+- `crates/yune-rime-api`: RIME-style C ABI shim and compatibility surface for
+  frontend integration tests.
 - `crates/yune-cli`: local test runner for input sequences and diagnostics.
 
-## First Milestone
+## Current Compatibility Surface
 
-The first milestone is a compatibility harness:
+Yune now has a deterministic compatibility harness plus a focused RIME frontend
+shim:
 
-1. Load a small RIME-style schema subset.
+1. Load a small RIME-style schema subset and table dictionary fixtures.
 2. Feed deterministic key sequences through a Yune session.
-3. Compare composition, candidate, and commit output against recorded fixtures.
-4. Add an AI ranking hook that can reorder candidates without blocking classic
+3. Compare composition, candidate, commit, and status output against checked-in
+   fixtures.
+4. Exercise a RIME-style C ABI surface for sessions, context/status/commit,
+   config, levers, schema lists, deployment helpers, and key processing.
+5. Cover librime-compatible key handling for navigation, editing, selection,
+   keypad keys, modifier fallbacks, `menu/alternative_select_keys`, and
+   simulated key sequences.
+6. Provide an AI ranking hook that can reorder candidates without blocking classic
    input behavior.
