@@ -2823,7 +2823,7 @@ pub unsafe extern "C" fn RimeConfigClear(config: *mut RimeConfig, key: *const c_
         return FALSE;
     };
     state.cstring_cache = None;
-    bool_from(remove_config_value(&mut state.root, &key))
+    bool_from(set_config_value(&mut state.root, &key, Value::Null))
 }
 
 /// Creates an empty list at a config path.
@@ -5919,49 +5919,6 @@ fn set_config_value(root: &mut Value, key: &str, value: Value) -> bool {
     }
 }
 
-fn remove_config_value(root: &mut Value, key: &str) -> bool {
-    if key.is_empty() {
-        *root = Value::Null;
-        return true;
-    }
-
-    let segments = key
-        .split('/')
-        .filter(|segment| !segment.is_empty())
-        .collect::<Vec<_>>();
-    let Some((last, parents)) = segments.split_last() else {
-        return false;
-    };
-
-    let mut current = root;
-    for segment in parents {
-        let Value::Mapping(mapping) = current else {
-            return false;
-        };
-        let Some(next) = mapping.get_mut(Value::String((*segment).to_owned())) else {
-            return false;
-        };
-        current = next;
-    }
-
-    if let Some(index) = list_index_for_read(last, current) {
-        let Value::Sequence(sequence) = current else {
-            return false;
-        };
-        if index < sequence.len() {
-            sequence.remove(index);
-            true
-        } else {
-            false
-        }
-    } else {
-        let Value::Mapping(mapping) = current else {
-            return false;
-        };
-        mapping.remove(Value::String((*last).to_owned())).is_some()
-    }
-}
-
 fn ensure_mapping(value: &mut Value) -> &mut Value {
     if !matches!(value, Value::Mapping(_)) {
         *value = Value::Mapping(Mapping::new());
@@ -6975,6 +6932,56 @@ switches:\n  - name: ascii_mode\n  - name: full_shape\nmenu:\n  page_size: 9\n  
             TRUE
         );
         assert_eq!(output, 6);
+
+        assert_eq!(unsafe { RimeConfigClose(&mut config) }, TRUE);
+    }
+
+    #[test]
+    fn config_clear_uses_librime_null_write_semantics() {
+        let _guard = test_guard();
+        let mut config = empty_config();
+        let list = CString::new("list").expect("key should be valid");
+        let next_id = CString::new("list/@next/id").expect("key should be valid");
+        let first_item = CString::new("list/@0").expect("key should be valid");
+        let first_id = CString::new("list/@0/id").expect("key should be valid");
+        let second_id = CString::new("list/@1/id").expect("key should be valid");
+        let mut output = 0;
+
+        // SAFETY: config points to writable storage.
+        assert_eq!(unsafe { RimeConfigInit(&mut config) }, TRUE);
+        assert_eq!(
+            unsafe { RimeConfigSetInt(&mut config, next_id.as_ptr(), 1) },
+            TRUE
+        );
+        assert_eq!(
+            unsafe { RimeConfigSetInt(&mut config, next_id.as_ptr(), 2) },
+            TRUE
+        );
+
+        assert_eq!(
+            unsafe { RimeConfigClear(&mut config, first_item.as_ptr()) },
+            TRUE
+        );
+        assert_eq!(unsafe { RimeConfigListSize(&mut config, list.as_ptr()) }, 2);
+        assert_eq!(
+            unsafe { RimeConfigGetInt(&mut config, first_id.as_ptr(), &mut output) },
+            FALSE
+        );
+        assert_eq!(
+            unsafe { RimeConfigGetInt(&mut config, second_id.as_ptr(), &mut output) },
+            TRUE
+        );
+        assert_eq!(output, 2);
+
+        assert_eq!(
+            unsafe { RimeConfigClear(&mut config, second_id.as_ptr()) },
+            TRUE
+        );
+        assert_eq!(unsafe { RimeConfigListSize(&mut config, list.as_ptr()) }, 2);
+        assert_eq!(
+            unsafe { RimeConfigGetInt(&mut config, second_id.as_ptr(), &mut output) },
+            FALSE
+        );
 
         assert_eq!(unsafe { RimeConfigClose(&mut config) }, TRUE);
     }
