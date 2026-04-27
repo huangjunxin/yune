@@ -818,6 +818,14 @@ impl Engine {
                     self.move_caret_right_by_syllable();
                     return None;
                 }
+                KeyCode::Home => {
+                    self.move_caret_home();
+                    return None;
+                }
+                KeyCode::End => {
+                    self.move_caret_end();
+                    return None;
+                }
                 KeyCode::Character(ch) if ch == ' ' || is_printable_ascii(ch) => {
                     return self.process_char(ch);
                 }
@@ -1861,6 +1869,27 @@ mod tests {
 
         assert_eq!(commits, vec!["i"]);
         assert_eq!(engine.context().last_commit.as_deref(), Some("i"));
+    }
+
+    #[test]
+    fn shift_home_end_keys_ignore_shift_like_librime_navigator() {
+        let mut engine = Engine::new();
+
+        engine.set_input("nix");
+        let commits = engine
+            .process_key_sequence("{Shift+Home}{Delete}{Shift+KP_End}{BackSpace}{space}")
+            .expect("key sequence should parse");
+
+        assert_eq!(commits, vec!["i"]);
+        assert_eq!(engine.context().last_commit.as_deref(), Some("i"));
+
+        engine.add_translator(StaticTableTranslator::new([("ba", "八"), ("ba", "吧")]));
+        engine
+            .process_key_sequence("ba{Down}{Shift+Home}")
+            .expect("key sequence should parse");
+
+        assert_eq!(engine.context().highlighted, 1);
+        assert_eq!(engine.context().composition.caret, 0);
     }
 
     #[test]

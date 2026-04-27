@@ -8373,6 +8373,70 @@ fn home_end_keys_fall_back_to_librime_navigator_caret_movement() {
 }
 
 #[test]
+fn shift_home_end_keys_ignore_shift_like_librime_navigator() {
+    let _guard = test_guard();
+    RimeCleanupAllSessions();
+    let home = CString::new("Home").expect("key name should be valid");
+    // SAFETY: key name is a valid NUL-terminated string.
+    let home_keycode = unsafe { RimeGetKeycodeByName(home.as_ptr()) };
+    assert_eq!(home_keycode, 0xff50);
+    let end = CString::new("End").expect("key name should be valid");
+    // SAFETY: key name is a valid NUL-terminated string.
+    let end_keycode = unsafe { RimeGetKeycodeByName(end.as_ptr()) };
+    assert_eq!(end_keycode, 0xff57);
+    let kp_end = CString::new("KP_End").expect("key name should be valid");
+    // SAFETY: key name is a valid NUL-terminated string.
+    let kp_end_keycode = unsafe { RimeGetKeycodeByName(kp_end.as_ptr()) };
+    assert_eq!(kp_end_keycode, 0xff9c);
+
+    let session_id = RimeCreateSession();
+    assert_eq!(
+        RimeProcessKey(session_id, home_keycode, K_SHIFT_MASK),
+        FALSE
+    );
+    let input = CString::new("nix").expect("input should be valid");
+    // SAFETY: input is a valid NUL-terminated C string.
+    assert_eq!(unsafe { RimeSetInput(session_id, input.as_ptr()) }, TRUE);
+
+    assert_eq!(RimeGetCaretPos(session_id), 3);
+    assert_eq!(RimeProcessKey(session_id, home_keycode, K_SHIFT_MASK), TRUE);
+    assert_eq!(RimeGetCaretPos(session_id), 0);
+    assert_eq!(RimeProcessKey(session_id, end_keycode, K_SHIFT_MASK), TRUE);
+    assert_eq!(RimeGetCaretPos(session_id), 3);
+    assert_eq!(RimeProcessKey(session_id, home_keycode, K_SHIFT_MASK), TRUE);
+    assert_eq!(RimeGetCaretPos(session_id), 0);
+    assert_eq!(
+        RimeProcessKey(session_id, kp_end_keycode, K_SHIFT_MASK),
+        TRUE
+    );
+    assert_eq!(RimeGetCaretPos(session_id), 3);
+    assert_eq!(RimeDestroySession(session_id), TRUE);
+
+    let sequence_session_id = RimeCreateSession();
+    let sequence = CString::new("nix{Shift+Home}{Delete}{Shift+KP_End}{BackSpace}{space}")
+        .expect("sequence should be valid");
+    // SAFETY: sequence is a valid NUL-terminated librime-style key sequence.
+    assert_eq!(
+        unsafe { RimeSimulateKeySequence(sequence_session_id, sequence.as_ptr()) },
+        TRUE
+    );
+    let mut commit = RimeCommit {
+        data_size: std::mem::size_of::<RimeCommit>() as i32,
+        text: std::ptr::null_mut(),
+    };
+    // SAFETY: commit points to valid writable storage.
+    assert_eq!(
+        unsafe { RimeGetCommit(sequence_session_id, &mut commit) },
+        TRUE
+    );
+    // SAFETY: successful commit text is a valid NUL-terminated string.
+    assert_eq!(unsafe { CStr::from_ptr(commit.text) }.to_str(), Ok("i"));
+    // SAFETY: commit text was allocated by RimeGetCommit.
+    assert_eq!(unsafe { RimeFreeCommit(&mut commit) }, TRUE);
+    assert_eq!(RimeDestroySession(sequence_session_id), TRUE);
+}
+
+#[test]
 fn returns_context_with_preedit_and_candidate_page() {
     let _guard = test_guard();
     RimeCleanupAllSessions();
