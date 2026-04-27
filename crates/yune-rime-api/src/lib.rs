@@ -2592,7 +2592,7 @@ pub unsafe extern "C" fn RimeConfigGetString(
     let Some(found) = (unsafe { config_string_value(config, key) }) else {
         return FALSE;
     };
-    copy_c_string_to_buffer(&found, value, buffer_size);
+    copy_c_string_with_strncpy_semantics(&found, value, buffer_size);
     TRUE
 }
 
@@ -5628,6 +5628,24 @@ fn copy_c_string_to_buffer(value: &str, output: *mut c_char, buffer_size: usize)
     }
 }
 
+fn copy_c_string_with_strncpy_semantics(value: &str, output: *mut c_char, buffer_size: usize) {
+    if buffer_size == 0 {
+        return;
+    }
+
+    let bytes = value.as_bytes();
+    let copy_len = bytes.len().min(buffer_size);
+    // SAFETY: callers pass writable storage of `buffer_size` bytes; `copy_len`
+    // is bounded by `buffer_size`, and the zero-fill mirrors `strncpy` for
+    // source strings shorter than the destination buffer.
+    unsafe {
+        ptr::copy_nonoverlapping(bytes.as_ptr().cast::<c_char>(), output, copy_len);
+        if copy_len < buffer_size {
+            ptr::write_bytes(output.add(copy_len), 0, buffer_size - copy_len);
+        }
+    }
+}
+
 unsafe fn config_state_mut(config: *mut RimeConfig) -> Option<&'static mut ConfigState> {
     if config.is_null() {
         return None;
@@ -6998,6 +7016,58 @@ switches:\n  - name: ascii_mode\n  - name: full_shape\nmenu:\n  page_size: 9\n  
             unsafe { RimeConfigGetString(&mut config, key.as_ptr(), std::ptr::null_mut(), 0) },
             FALSE
         );
+        assert_eq!(unsafe { RimeConfigClose(&mut config) }, TRUE);
+    }
+
+    #[test]
+    fn config_get_string_uses_librime_strncpy_copy_semantics() {
+        let _guard = test_guard();
+        let mut config = empty_config();
+        let long_key = CString::new("schema/name").expect("key should be valid");
+        let long_value = CString::new("Default").expect("value should be valid");
+        let short_key = CString::new("schema/id").expect("key should be valid");
+        let short_value = CString::new("yo").expect("value should be valid");
+        let mut truncated = [b'!' as c_char; 4];
+        let mut padded = [b'!' as c_char; 4];
+
+        assert_eq!(unsafe { RimeConfigInit(&mut config) }, TRUE);
+        assert_eq!(
+            unsafe { RimeConfigSetString(&mut config, long_key.as_ptr(), long_value.as_ptr()) },
+            TRUE
+        );
+        assert_eq!(
+            unsafe { RimeConfigSetString(&mut config, short_key.as_ptr(), short_value.as_ptr()) },
+            TRUE
+        );
+        assert_eq!(
+            unsafe {
+                RimeConfigGetString(
+                    &mut config,
+                    long_key.as_ptr(),
+                    truncated.as_mut_ptr(),
+                    truncated.len(),
+                )
+            },
+            TRUE
+        );
+        assert_eq!(
+            unsafe {
+                RimeConfigGetString(
+                    &mut config,
+                    short_key.as_ptr(),
+                    padded.as_mut_ptr(),
+                    padded.len(),
+                )
+            },
+            TRUE
+        );
+
+        let truncated_bytes =
+            unsafe { std::slice::from_raw_parts(truncated.as_ptr().cast::<u8>(), truncated.len()) };
+        let padded_bytes =
+            unsafe { std::slice::from_raw_parts(padded.as_ptr().cast::<u8>(), padded.len()) };
+        assert_eq!(truncated_bytes, b"Defa");
+        assert_eq!(padded_bytes, b"yo\0\0");
         assert_eq!(unsafe { RimeConfigClose(&mut config) }, TRUE);
     }
 
