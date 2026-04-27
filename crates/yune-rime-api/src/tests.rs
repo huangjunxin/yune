@@ -360,6 +360,17 @@ fn key_table_exposes_librime_style_modifier_and_key_name_lookup() {
     let thai_baht = CString::new("Thai_baht").expect("key name should be valid");
     let thai_leksun = CString::new("Thai_leksun").expect("key name should be valid");
     let thai_lekkao = CString::new("Thai_lekkao").expect("key name should be valid");
+    let hangul_kiyeog = CString::new("Hangul_Kiyeog").expect("key name should be valid");
+    let hangul_hieuh = CString::new("Hangul_Hieuh").expect("key name should be valid");
+    let hangul_a = CString::new("Hangul_A").expect("key name should be valid");
+    let hangul_i = CString::new("Hangul_I").expect("key name should be valid");
+    let hangul_j_kiyeog = CString::new("Hangul_J_Kiyeog").expect("key name should be valid");
+    let hangul_j_hieuh = CString::new("Hangul_J_Hieuh").expect("key name should be valid");
+    let hangul_sunkyeongeumpieub =
+        CString::new("Hangul_SunkyeongeumPieub").expect("key name should be valid");
+    let hangul_j_yeorinhieuh =
+        CString::new("Hangul_J_YeorinHieuh").expect("key name should be valid");
+    let korean_won = CString::new("Korean_Won").expect("key name should be valid");
     let missing = CString::new("NoSuchKey").expect("key name should be valid");
 
     assert_eq!(unsafe { RimeGetKeycodeByName(space.as_ptr()) }, 0x20);
@@ -550,6 +561,33 @@ fn key_table_exposes_librime_style_modifier_and_key_name_lookup() {
     assert_eq!(unsafe { RimeGetKeycodeByName(thai_baht.as_ptr()) }, 0xddf);
     assert_eq!(unsafe { RimeGetKeycodeByName(thai_leksun.as_ptr()) }, 0xdf0);
     assert_eq!(unsafe { RimeGetKeycodeByName(thai_lekkao.as_ptr()) }, 0xdf9);
+    assert_eq!(
+        unsafe { RimeGetKeycodeByName(hangul_kiyeog.as_ptr()) },
+        0xea1
+    );
+    assert_eq!(
+        unsafe { RimeGetKeycodeByName(hangul_hieuh.as_ptr()) },
+        0xebe
+    );
+    assert_eq!(unsafe { RimeGetKeycodeByName(hangul_a.as_ptr()) }, 0xebf);
+    assert_eq!(unsafe { RimeGetKeycodeByName(hangul_i.as_ptr()) }, 0xed3);
+    assert_eq!(
+        unsafe { RimeGetKeycodeByName(hangul_j_kiyeog.as_ptr()) },
+        0xed4
+    );
+    assert_eq!(
+        unsafe { RimeGetKeycodeByName(hangul_j_hieuh.as_ptr()) },
+        0xeee
+    );
+    assert_eq!(
+        unsafe { RimeGetKeycodeByName(hangul_sunkyeongeumpieub.as_ptr()) },
+        0xef1
+    );
+    assert_eq!(
+        unsafe { RimeGetKeycodeByName(hangul_j_yeorinhieuh.as_ptr()) },
+        0xefa
+    );
+    assert_eq!(unsafe { RimeGetKeycodeByName(korean_won.as_ptr()) }, 0xeff);
     assert_eq!(
         unsafe { RimeGetKeycodeByName(missing.as_ptr()) },
         0x00ff_ffff
@@ -902,6 +940,42 @@ fn key_table_exposes_librime_style_modifier_and_key_name_lookup() {
     assert_eq!(
         static_c_string(RimeGetKeyName(0xdf9)).as_deref(),
         Some("Thai_lekkao")
+    );
+    assert_eq!(
+        static_c_string(RimeGetKeyName(0xea1)).as_deref(),
+        Some("Hangul_Kiyeog")
+    );
+    assert_eq!(
+        static_c_string(RimeGetKeyName(0xebe)).as_deref(),
+        Some("Hangul_Hieuh")
+    );
+    assert_eq!(
+        static_c_string(RimeGetKeyName(0xebf)).as_deref(),
+        Some("Hangul_A")
+    );
+    assert_eq!(
+        static_c_string(RimeGetKeyName(0xed3)).as_deref(),
+        Some("Hangul_I")
+    );
+    assert_eq!(
+        static_c_string(RimeGetKeyName(0xed4)).as_deref(),
+        Some("Hangul_J_Kiyeog")
+    );
+    assert_eq!(
+        static_c_string(RimeGetKeyName(0xeee)).as_deref(),
+        Some("Hangul_J_Hieuh")
+    );
+    assert_eq!(
+        static_c_string(RimeGetKeyName(0xef1)).as_deref(),
+        Some("Hangul_SunkyeongeumPieub")
+    );
+    assert_eq!(
+        static_c_string(RimeGetKeyName(0xefa)).as_deref(),
+        Some("Hangul_J_YeorinHieuh")
+    );
+    assert_eq!(
+        static_c_string(RimeGetKeyName(0xeff)).as_deref(),
+        Some("Korean_Won")
     );
     assert_eq!(static_c_string(RimeGetKeyName(0x00ff_ffff)), None);
 }

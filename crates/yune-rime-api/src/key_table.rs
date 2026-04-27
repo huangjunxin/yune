@@ -1099,6 +1099,100 @@ const THAI_KEY_NAMES: &[(&[u8], c_int)] = &[
     (b"Thai_lekkao\0", 0x0df9),
 ];
 
+const HANGUL_KEY_NAMES: &[(&[u8], c_int)] = &[
+    (b"Hangul_Kiyeog\0", 0x0ea1),
+    (b"Hangul_SsangKiyeog\0", 0x0ea2),
+    (b"Hangul_KiyeogSios\0", 0x0ea3),
+    (b"Hangul_Nieun\0", 0x0ea4),
+    (b"Hangul_NieunJieuj\0", 0x0ea5),
+    (b"Hangul_NieunHieuh\0", 0x0ea6),
+    (b"Hangul_Dikeud\0", 0x0ea7),
+    (b"Hangul_SsangDikeud\0", 0x0ea8),
+    (b"Hangul_Rieul\0", 0x0ea9),
+    (b"Hangul_RieulKiyeog\0", 0x0eaa),
+    (b"Hangul_RieulMieum\0", 0x0eab),
+    (b"Hangul_RieulPieub\0", 0x0eac),
+    (b"Hangul_RieulSios\0", 0x0ead),
+    (b"Hangul_RieulTieut\0", 0x0eae),
+    (b"Hangul_RieulPhieuf\0", 0x0eaf),
+    (b"Hangul_RieulHieuh\0", 0x0eb0),
+    (b"Hangul_Mieum\0", 0x0eb1),
+    (b"Hangul_Pieub\0", 0x0eb2),
+    (b"Hangul_SsangPieub\0", 0x0eb3),
+    (b"Hangul_PieubSios\0", 0x0eb4),
+    (b"Hangul_Sios\0", 0x0eb5),
+    (b"Hangul_SsangSios\0", 0x0eb6),
+    (b"Hangul_Ieung\0", 0x0eb7),
+    (b"Hangul_Jieuj\0", 0x0eb8),
+    (b"Hangul_SsangJieuj\0", 0x0eb9),
+    (b"Hangul_Cieuc\0", 0x0eba),
+    (b"Hangul_Khieuq\0", 0x0ebb),
+    (b"Hangul_Tieut\0", 0x0ebc),
+    (b"Hangul_Phieuf\0", 0x0ebd),
+    (b"Hangul_Hieuh\0", 0x0ebe),
+    (b"Hangul_A\0", 0x0ebf),
+    (b"Hangul_AE\0", 0x0ec0),
+    (b"Hangul_YA\0", 0x0ec1),
+    (b"Hangul_YAE\0", 0x0ec2),
+    (b"Hangul_EO\0", 0x0ec3),
+    (b"Hangul_E\0", 0x0ec4),
+    (b"Hangul_YEO\0", 0x0ec5),
+    (b"Hangul_YE\0", 0x0ec6),
+    (b"Hangul_O\0", 0x0ec7),
+    (b"Hangul_WA\0", 0x0ec8),
+    (b"Hangul_WAE\0", 0x0ec9),
+    (b"Hangul_OE\0", 0x0eca),
+    (b"Hangul_YO\0", 0x0ecb),
+    (b"Hangul_U\0", 0x0ecc),
+    (b"Hangul_WEO\0", 0x0ecd),
+    (b"Hangul_WE\0", 0x0ece),
+    (b"Hangul_WI\0", 0x0ecf),
+    (b"Hangul_YU\0", 0x0ed0),
+    (b"Hangul_EU\0", 0x0ed1),
+    (b"Hangul_YI\0", 0x0ed2),
+    (b"Hangul_I\0", 0x0ed3),
+    (b"Hangul_J_Kiyeog\0", 0x0ed4),
+    (b"Hangul_J_SsangKiyeog\0", 0x0ed5),
+    (b"Hangul_J_KiyeogSios\0", 0x0ed6),
+    (b"Hangul_J_Nieun\0", 0x0ed7),
+    (b"Hangul_J_NieunJieuj\0", 0x0ed8),
+    (b"Hangul_J_NieunHieuh\0", 0x0ed9),
+    (b"Hangul_J_Dikeud\0", 0x0eda),
+    (b"Hangul_J_Rieul\0", 0x0edb),
+    (b"Hangul_J_RieulKiyeog\0", 0x0edc),
+    (b"Hangul_J_RieulMieum\0", 0x0edd),
+    (b"Hangul_J_RieulPieub\0", 0x0ede),
+    (b"Hangul_J_RieulSios\0", 0x0edf),
+    (b"Hangul_J_RieulTieut\0", 0x0ee0),
+    (b"Hangul_J_RieulPhieuf\0", 0x0ee1),
+    (b"Hangul_J_RieulHieuh\0", 0x0ee2),
+    (b"Hangul_J_Mieum\0", 0x0ee3),
+    (b"Hangul_J_Pieub\0", 0x0ee4),
+    (b"Hangul_J_PieubSios\0", 0x0ee5),
+    (b"Hangul_J_Sios\0", 0x0ee6),
+    (b"Hangul_J_SsangSios\0", 0x0ee7),
+    (b"Hangul_J_Ieung\0", 0x0ee8),
+    (b"Hangul_J_Jieuj\0", 0x0ee9),
+    (b"Hangul_J_Cieuc\0", 0x0eea),
+    (b"Hangul_J_Khieuq\0", 0x0eeb),
+    (b"Hangul_J_Tieut\0", 0x0eec),
+    (b"Hangul_J_Phieuf\0", 0x0eed),
+    (b"Hangul_J_Hieuh\0", 0x0eee),
+    (b"Hangul_RieulYeorinHieuh\0", 0x0eef),
+    (b"Hangul_SunkyeongeumMieum\0", 0x0ef0),
+    (b"Hangul_SunkyeongeumPieub\0", 0x0ef1),
+    (b"Hangul_PanSios\0", 0x0ef2),
+    (b"Hangul_KkogjiDalrinIeung\0", 0x0ef3),
+    (b"Hangul_SunkyeongeumPhieuf\0", 0x0ef4),
+    (b"Hangul_YeorinHieuh\0", 0x0ef5),
+    (b"Hangul_AraeA\0", 0x0ef6),
+    (b"Hangul_AraeAE\0", 0x0ef7),
+    (b"Hangul_J_PanSios\0", 0x0ef8),
+    (b"Hangul_J_KkogjiDalrinIeung\0", 0x0ef9),
+    (b"Hangul_J_YeorinHieuh\0", 0x0efa),
+    (b"Korean_Won\0", 0x0eff),
+];
+
 /// Returns the librime modifier bit mask for a modifier name.
 ///
 /// # Safety
@@ -1163,6 +1257,7 @@ fn lookup_keycode(name: &[u8]) -> Option<c_int> {
         .chain(PUBLISHING_KEY_NAMES)
         .chain(HEBREW_KEY_NAMES)
         .chain(THAI_KEY_NAMES)
+        .chain(HANGUL_KEY_NAMES)
         .find_map(|(key_name, keycode)| (name == *key_name).then_some(*keycode))
 }
 
@@ -1182,6 +1277,7 @@ fn lookup_key_name(keycode: c_int) -> Option<&'static [u8]> {
         .chain(PUBLISHING_KEY_NAMES)
         .chain(HEBREW_KEY_NAMES)
         .chain(THAI_KEY_NAMES)
+        .chain(HANGUL_KEY_NAMES)
         .find_map(|(name, candidate_keycode)| (*candidate_keycode == keycode).then_some(*name))
 }
 
