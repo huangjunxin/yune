@@ -11758,6 +11758,10 @@ fn simulates_librime_style_key_sequences() {
         "{Serbian_dje}{Ukrainian_ie}{Ukranian_je}{Cyrillic_je}{Serbian_je}{Byelorussian_shortu}{Cyrillic_dzhe}{Serbian_dze}{numerosign}{Cyrillic_yu}{Cyrillic_hardsign}{Cyrillic_YU}{Release+Cyrillic_HARDSIGN}",
     )
     .expect("key sequence should be valid");
+    let noop_greek_key_sequence = CString::new(
+        "{Greek_ALPHAaccent}{Greek_IOTAdieresis}{Greek_IOTAdiaeresis}{Greek_LAMBDA}{Greek_LAMDA}{Greek_OMEGA}{Greek_lambda}{Greek_lamda}{Greek_finalsmallsigma}{Release+Greek_omega}",
+    )
+    .expect("key sequence should be valid");
     let named_ascii_sequence =
         CString::new("{exclam}{space}").expect("key sequence should be valid");
     let invalid_sequence =
@@ -12007,6 +12011,20 @@ fn simulates_librime_style_key_sequences() {
         TRUE
     );
     // SAFETY: ignored Cyrillic key names should leave the context empty.
+    assert_eq!(unsafe { RimeGetContext(session_id, &mut context) }, TRUE);
+    assert_eq!(context.composition.length, 0);
+    assert_eq!(context.menu.num_candidates, 0);
+    // SAFETY: nested pointers were allocated by `RimeGetContext` above.
+    assert_eq!(unsafe { RimeFreeContext(&mut context) }, TRUE);
+
+    // SAFETY: noop_greek_key_sequence is a valid C string; librime parses
+    // Greek key-table names even though the default editor/speller ignore
+    // non-ASCII keycodes.
+    assert_eq!(
+        unsafe { RimeSimulateKeySequence(session_id, noop_greek_key_sequence.as_ptr()) },
+        TRUE
+    );
+    // SAFETY: ignored Greek key names should leave the context empty.
     assert_eq!(unsafe { RimeGetContext(session_id, &mut context) }, TRUE);
     assert_eq!(context.composition.length, 0);
     assert_eq!(context.menu.num_candidates, 0);

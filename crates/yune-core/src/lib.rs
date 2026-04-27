@@ -239,7 +239,8 @@ fn key_code_from_name(name: &str) -> Result<KeyCode, KeySequenceParseError> {
             || is_librime_latin4_key_name(name)
             || is_librime_kana_key_name(name)
             || is_librime_arabic_key_name(name)
-            || is_librime_cyrillic_key_name(name) =>
+            || is_librime_cyrillic_key_name(name)
+            || is_librime_greek_key_name(name) =>
         {
             KeyCode::Ignored
         }
@@ -966,6 +967,86 @@ fn is_librime_cyrillic_key_name(name: &str) -> bool {
             | "Cyrillic_SHCHA"
             | "Cyrillic_CHE"
             | "Cyrillic_HARDSIGN"
+    )
+}
+
+fn is_librime_greek_key_name(name: &str) -> bool {
+    matches!(
+        name,
+        "Greek_ALPHAaccent"
+            | "Greek_EPSILONaccent"
+            | "Greek_ETAaccent"
+            | "Greek_IOTAaccent"
+            | "Greek_IOTAdieresis"
+            | "Greek_IOTAdiaeresis"
+            | "Greek_OMICRONaccent"
+            | "Greek_UPSILONaccent"
+            | "Greek_UPSILONdieresis"
+            | "Greek_OMEGAaccent"
+            | "Greek_accentdieresis"
+            | "Greek_horizbar"
+            | "Greek_alphaaccent"
+            | "Greek_epsilonaccent"
+            | "Greek_etaaccent"
+            | "Greek_iotaaccent"
+            | "Greek_iotadieresis"
+            | "Greek_iotaaccentdieresis"
+            | "Greek_omicronaccent"
+            | "Greek_upsilonaccent"
+            | "Greek_upsilondieresis"
+            | "Greek_upsilonaccentdieresis"
+            | "Greek_omegaaccent"
+            | "Greek_ALPHA"
+            | "Greek_BETA"
+            | "Greek_GAMMA"
+            | "Greek_DELTA"
+            | "Greek_EPSILON"
+            | "Greek_ZETA"
+            | "Greek_ETA"
+            | "Greek_THETA"
+            | "Greek_IOTA"
+            | "Greek_KAPPA"
+            | "Greek_LAMBDA"
+            | "Greek_LAMDA"
+            | "Greek_MU"
+            | "Greek_NU"
+            | "Greek_XI"
+            | "Greek_OMICRON"
+            | "Greek_PI"
+            | "Greek_RHO"
+            | "Greek_SIGMA"
+            | "Greek_TAU"
+            | "Greek_UPSILON"
+            | "Greek_PHI"
+            | "Greek_CHI"
+            | "Greek_PSI"
+            | "Greek_OMEGA"
+            | "Greek_alpha"
+            | "Greek_beta"
+            | "Greek_gamma"
+            | "Greek_delta"
+            | "Greek_epsilon"
+            | "Greek_zeta"
+            | "Greek_eta"
+            | "Greek_theta"
+            | "Greek_iota"
+            | "Greek_kappa"
+            | "Greek_lambda"
+            | "Greek_lamda"
+            | "Greek_mu"
+            | "Greek_nu"
+            | "Greek_xi"
+            | "Greek_omicron"
+            | "Greek_pi"
+            | "Greek_rho"
+            | "Greek_sigma"
+            | "Greek_finalsmallsigma"
+            | "Greek_tau"
+            | "Greek_upsilon"
+            | "Greek_phi"
+            | "Greek_chi"
+            | "Greek_psi"
+            | "Greek_omega"
     )
 }
 
@@ -2947,6 +3028,98 @@ mod tests {
             "Cyrillic_SHCHA",
             "Cyrillic_CHE",
             "Release+Cyrillic_HARDSIGN",
+        ];
+        let sequence = names
+            .iter()
+            .map(|name| format!("{{{name}}}"))
+            .collect::<String>();
+        let keys = parse_key_sequence(&sequence).expect("key sequence should parse");
+
+        assert_eq!(keys.len(), names.len());
+        assert!(keys.iter().all(|key| key.code == KeyCode::Ignored));
+        assert!(keys[..names.len() - 1]
+            .iter()
+            .all(|key| key.modifiers.is_empty()));
+        assert!(keys[names.len() - 1].modifiers.release);
+    }
+
+    #[test]
+    fn parses_librime_greek_noop_key_names() {
+        let names = [
+            "Greek_ALPHAaccent",
+            "Greek_EPSILONaccent",
+            "Greek_ETAaccent",
+            "Greek_IOTAaccent",
+            "Greek_IOTAdieresis",
+            "Greek_IOTAdiaeresis",
+            "Greek_OMICRONaccent",
+            "Greek_UPSILONaccent",
+            "Greek_UPSILONdieresis",
+            "Greek_OMEGAaccent",
+            "Greek_accentdieresis",
+            "Greek_horizbar",
+            "Greek_alphaaccent",
+            "Greek_epsilonaccent",
+            "Greek_etaaccent",
+            "Greek_iotaaccent",
+            "Greek_iotadieresis",
+            "Greek_iotaaccentdieresis",
+            "Greek_omicronaccent",
+            "Greek_upsilonaccent",
+            "Greek_upsilondieresis",
+            "Greek_upsilonaccentdieresis",
+            "Greek_omegaaccent",
+            "Greek_ALPHA",
+            "Greek_BETA",
+            "Greek_GAMMA",
+            "Greek_DELTA",
+            "Greek_EPSILON",
+            "Greek_ZETA",
+            "Greek_ETA",
+            "Greek_THETA",
+            "Greek_IOTA",
+            "Greek_KAPPA",
+            "Greek_LAMBDA",
+            "Greek_LAMDA",
+            "Greek_MU",
+            "Greek_NU",
+            "Greek_XI",
+            "Greek_OMICRON",
+            "Greek_PI",
+            "Greek_RHO",
+            "Greek_SIGMA",
+            "Greek_TAU",
+            "Greek_UPSILON",
+            "Greek_PHI",
+            "Greek_CHI",
+            "Greek_PSI",
+            "Greek_OMEGA",
+            "Greek_alpha",
+            "Greek_beta",
+            "Greek_gamma",
+            "Greek_delta",
+            "Greek_epsilon",
+            "Greek_zeta",
+            "Greek_eta",
+            "Greek_theta",
+            "Greek_iota",
+            "Greek_kappa",
+            "Greek_lambda",
+            "Greek_lamda",
+            "Greek_mu",
+            "Greek_nu",
+            "Greek_xi",
+            "Greek_omicron",
+            "Greek_pi",
+            "Greek_rho",
+            "Greek_sigma",
+            "Greek_finalsmallsigma",
+            "Greek_tau",
+            "Greek_upsilon",
+            "Greek_phi",
+            "Greek_chi",
+            "Greek_psi",
+            "Release+Greek_omega",
         ];
         let sequence = names
             .iter()
