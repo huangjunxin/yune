@@ -2886,7 +2886,7 @@ pub extern "C" fn RimeDeleteCandidateOnCurrentPage(
 #[no_mangle]
 pub extern "C" fn RimeHighlightCandidate(session_id: RimeSessionId, index: usize) -> Bool {
     with_session(session_id, |session| {
-        session.engine.highlight_candidate(index)
+        highlight_candidate_clamped_like_librime(session, index)
     })
 }
 
@@ -2899,7 +2899,7 @@ pub extern "C" fn RimeHighlightCandidateOnCurrentPage(
         let Some(global_index) = candidate_index_on_current_page(session, index) else {
             return false;
         };
-        session.engine.highlight_candidate(global_index)
+        highlight_candidate_clamped_like_librime(session, global_index)
     })
 }
 
@@ -2917,7 +2917,7 @@ pub extern "C" fn RimeChangePage(session_id: RimeSessionId, backward: Bool) -> B
         } else {
             current_index + page_size
         };
-        session.engine.highlight_candidate(next_index)
+        highlight_candidate_clamped_like_librime(session, next_index)
     })
 }
 
@@ -3477,6 +3477,20 @@ fn candidate_index_on_current_page(session: &SessionState, index: usize) -> Opti
 
     let page_start = (session.engine.context().highlighted / page_size) * page_size;
     Some(page_start + index)
+}
+
+fn highlight_candidate_clamped_like_librime(session: &mut SessionState, index: usize) -> bool {
+    let candidate_count = session.engine.context().candidates.len();
+    if candidate_count == 0 {
+        return false;
+    }
+
+    let new_index = index.min(candidate_count - 1);
+    if new_index == session.engine.context().highlighted {
+        return false;
+    }
+
+    session.engine.highlight_candidate(new_index)
 }
 
 fn with_session(session_id: RimeSessionId, action: impl FnOnce(&mut SessionState) -> bool) -> Bool {

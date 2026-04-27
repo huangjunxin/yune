@@ -6354,6 +6354,9 @@ fn highlight_candidate_apis_move_selection_without_commit() {
     assert_eq!(RimeProcessKey(session_id, 'b' as i32, 0), TRUE);
     assert_eq!(RimeProcessKey(session_id, 'a' as i32, 0), TRUE);
     assert_eq!(RimeHighlightCandidate(session_id, 1), TRUE);
+    assert_eq!(RimeHighlightCandidate(session_id, 99), TRUE);
+    assert_eq!(RimeHighlightCandidate(session_id, 99), FALSE);
+    assert_eq!(RimeHighlightCandidate(session_id, 1), TRUE);
     // SAFETY: `commit` points to valid writable storage for this test.
     assert_eq!(unsafe { RimeGetCommit(session_id, &mut commit) }, FALSE);
     // SAFETY: `context` points to writable storage initialized with a
@@ -6374,12 +6377,14 @@ fn highlight_candidate_apis_move_selection_without_commit() {
     assert_eq!(unsafe { RimeFreeContext(&mut context) }, TRUE);
 
     assert_eq!(RimeHighlightCandidateOnCurrentPage(session_id, 0), TRUE);
+    assert_eq!(RimeHighlightCandidateOnCurrentPage(session_id, 4), TRUE);
+    assert_eq!(RimeHighlightCandidateOnCurrentPage(session_id, 4), FALSE);
     assert_eq!(RimeHighlightCandidateOnCurrentPage(session_id, 5), FALSE);
     // SAFETY: `context` points to writable storage initialized with a
     // positive `data_size`.
     assert_eq!(unsafe { RimeGetContext(session_id, &mut context) }, TRUE);
     assert_eq!(context.menu.page_no, 1);
-    assert_eq!(context.menu.highlighted_candidate_index, 0);
+    assert_eq!(context.menu.highlighted_candidate_index, 1);
     // SAFETY: nested pointers were allocated by `RimeGetContext` above.
     assert_eq!(unsafe { RimeFreeContext(&mut context) }, TRUE);
 
