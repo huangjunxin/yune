@@ -1887,20 +1887,20 @@ switches:\n  - name: ascii_mode\n  - name: full_shape\nmenu:\n  page_size: 9\n  
     assert_eq!(unsafe { RimeConfigNext(&mut iterator) }, TRUE);
     assert_eq!(
         unsafe { CStr::from_ptr(iterator.key) }.to_str(),
-        Ok("page_size")
-    );
-    assert_eq!(
-        unsafe { CStr::from_ptr(iterator.path) }.to_str(),
-        Ok("menu/page_size")
-    );
-    assert_eq!(unsafe { RimeConfigNext(&mut iterator) }, TRUE);
-    assert_eq!(
-        unsafe { CStr::from_ptr(iterator.key) }.to_str(),
         Ok("alternative_select_keys")
     );
     assert_eq!(
         unsafe { CStr::from_ptr(iterator.path) }.to_str(),
         Ok("menu/alternative_select_keys")
+    );
+    assert_eq!(unsafe { RimeConfigNext(&mut iterator) }, TRUE);
+    assert_eq!(
+        unsafe { CStr::from_ptr(iterator.key) }.to_str(),
+        Ok("page_size")
+    );
+    assert_eq!(
+        unsafe { CStr::from_ptr(iterator.path) }.to_str(),
+        Ok("menu/page_size")
     );
     assert_eq!(unsafe { RimeConfigNext(&mut iterator) }, FALSE);
     assert_eq!(iterator.index, 2);

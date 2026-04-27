@@ -2559,7 +2559,7 @@ pub unsafe extern "C" fn RimeConfigBeginMap(
         return FALSE;
     };
 
-    let entries = mapping
+    let mut entries = mapping
         .iter()
         .filter_map(|(entry_key, _)| match entry_key {
             Value::String(entry_key) => {
@@ -2569,6 +2569,9 @@ pub unsafe extern "C" fn RimeConfigBeginMap(
             _ => None,
         })
         .collect::<Vec<_>>();
+    // librime stores config maps in std::map, so public map iteration is
+    // lexical by key rather than YAML insertion order.
+    entries.sort_by(|(left, _), (right, _)| left.cmp(right));
     unsafe { config_iterator_begin(iterator, entries, false) }
 }
 
