@@ -248,7 +248,8 @@ pub(crate) fn apply_legacy_preset_config_plugins(
     }
 
     apply_legacy_key_binder_import_preset(root, shared_data_dir, patch_dependencies)?;
-    apply_legacy_import_preset(root, "punctuator", shared_data_dir, patch_dependencies)
+    apply_legacy_import_preset(root, "punctuator", shared_data_dir, patch_dependencies)?;
+    apply_legacy_import_preset(root, "recognizer", shared_data_dir, patch_dependencies)
 }
 
 fn apply_legacy_key_binder_import_preset(
