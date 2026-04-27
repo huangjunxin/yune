@@ -866,6 +866,31 @@ fn frontend_style_api_table_can_manage_levers_user_dicts() {
         -1
     );
 
+    fs::remove_file(user.join("essay.userdb")).expect("restored user dict should be removable");
+    fs::remove_file(user.join("frontend_imported.userdb"))
+        .expect("imported user dict should be removable");
+    fs::remove_dir_all(user.join("luna_pinyin.userdb"))
+        .expect("leveldb-style user dict dir should be removable");
+    let mut empty_iterator = empty_user_dict_iterator();
+    empty_iterator.i = 7;
+    assert_eq!(unsafe { iterator_init(&mut empty_iterator) }, FALSE);
+    assert!(empty_iterator.ptr.is_null());
+    assert_eq!(empty_iterator.i, 7);
+
+    fs::write(user.join("cached.userdb"), "").expect("cached user dict should be written");
+    let mut cached_iterator = empty_user_dict_iterator();
+    assert_eq!(unsafe { iterator_init(&mut cached_iterator) }, TRUE);
+    assert!(!cached_iterator.ptr.is_null());
+    assert_eq!(cached_iterator.i, 0);
+    fs::remove_file(user.join("cached.userdb")).expect("cached user dict should be removed");
+    assert_eq!(unsafe { iterator_init(&mut cached_iterator) }, FALSE);
+    assert!(!cached_iterator.ptr.is_null());
+    assert_eq!(cached_iterator.i, 0);
+    let cached = unsafe { next_user_dict(&mut cached_iterator) };
+    assert!(!cached.is_null());
+    assert_eq!(unsafe { CStr::from_ptr(cached) }.to_str(), Ok("cached"));
+    unsafe { iterator_destroy(&mut cached_iterator) };
+
     let reset_traits = empty_traits();
     unsafe { setup(&reset_traits) };
     fs::remove_dir_all(root).expect("temp dirs should be removed");
