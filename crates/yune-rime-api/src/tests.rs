@@ -257,11 +257,15 @@ fn key_table_exposes_librime_style_modifier_and_key_name_lookup() {
     let space = CString::new("space").expect("key name should be valid");
     let backspace = CString::new("BackSpace").expect("key name should be valid");
     let left = CString::new("Left").expect("key name should be valid");
+    let f1 = CString::new("F1").expect("key name should be valid");
+    let f12 = CString::new("F12").expect("key name should be valid");
     let missing = CString::new("NoSuchKey").expect("key name should be valid");
 
     assert_eq!(unsafe { RimeGetKeycodeByName(space.as_ptr()) }, 0x20);
     assert_eq!(unsafe { RimeGetKeycodeByName(backspace.as_ptr()) }, 0xff08);
     assert_eq!(unsafe { RimeGetKeycodeByName(left.as_ptr()) }, 0xff51);
+    assert_eq!(unsafe { RimeGetKeycodeByName(f1.as_ptr()) }, 0xffbe);
+    assert_eq!(unsafe { RimeGetKeycodeByName(f12.as_ptr()) }, 0xffc9);
     assert_eq!(
         unsafe { RimeGetKeycodeByName(missing.as_ptr()) },
         0x00ff_ffff
@@ -282,6 +286,14 @@ fn key_table_exposes_librime_style_modifier_and_key_name_lookup() {
     assert_eq!(
         static_c_string(RimeGetKeyName(0xff51)).as_deref(),
         Some("Left")
+    );
+    assert_eq!(
+        static_c_string(RimeGetKeyName(0xffbe)).as_deref(),
+        Some("F1")
+    );
+    assert_eq!(
+        static_c_string(RimeGetKeyName(0xffc9)).as_deref(),
+        Some("F12")
     );
     assert_eq!(static_c_string(RimeGetKeyName(0x00ff_ffff)), None);
 }

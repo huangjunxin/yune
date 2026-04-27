@@ -19,6 +19,18 @@ const XK_END: c_int = 0xff57;
 const XK_PAGE_UP: c_int = 0xff55;
 const XK_PAGE_DOWN: c_int = 0xff56;
 const XK_INSERT: c_int = 0xff63;
+const XK_F1: c_int = 0xffbe;
+const XK_F2: c_int = 0xffbf;
+const XK_F3: c_int = 0xffc0;
+const XK_F4: c_int = 0xffc1;
+const XK_F5: c_int = 0xffc2;
+const XK_F6: c_int = 0xffc3;
+const XK_F7: c_int = 0xffc4;
+const XK_F8: c_int = 0xffc5;
+const XK_F9: c_int = 0xffc6;
+const XK_F10: c_int = 0xffc7;
+const XK_F11: c_int = 0xffc8;
+const XK_F12: c_int = 0xffc9;
 
 const MODIFIERS: &[(usize, &[u8])] = &[
     (0, b"Shift\0"),
@@ -55,6 +67,18 @@ const NAMED_KEYS: &[(&[u8], c_int)] = &[
     (b"Page_Up\0", XK_PAGE_UP),
     (b"Page_Down\0", XK_PAGE_DOWN),
     (b"Insert\0", XK_INSERT),
+    (b"F1\0", XK_F1),
+    (b"F2\0", XK_F2),
+    (b"F3\0", XK_F3),
+    (b"F4\0", XK_F4),
+    (b"F5\0", XK_F5),
+    (b"F6\0", XK_F6),
+    (b"F7\0", XK_F7),
+    (b"F8\0", XK_F8),
+    (b"F9\0", XK_F9),
+    (b"F10\0", XK_F10),
+    (b"F11\0", XK_F11),
+    (b"F12\0", XK_F12),
 ];
 
 const ASCII_KEY_NAMES: &[(&[u8], c_int)] = &[
