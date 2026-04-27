@@ -122,9 +122,17 @@ impl SessionState {
 
 struct PunctuationProcessor {
     use_space: bool,
+    half_shape_alternating_counts: HashMap<String, usize>,
+    full_shape_alternating_counts: HashMap<String, usize>,
+    symbol_alternating_counts: HashMap<String, usize>,
     half_shape_unique_commits: HashMap<String, String>,
     full_shape_unique_commits: HashMap<String, String>,
     symbol_unique_commits: HashMap<String, String>,
+}
+
+enum PunctuationProcessResult {
+    Accepted,
+    Commit(String),
 }
 
 impl Default for SessionState {
@@ -3640,6 +3648,18 @@ fn install_schema_punctuation_processor(session: &mut SessionState, schema_id: &
         use_space: find_config_value(&schema_config, "punctuator/use_space")
             .and_then(config_scalar_bool)
             .unwrap_or(false),
+        half_shape_alternating_counts: punctuation_alternating_counts_from_config(
+            &schema_config,
+            "half_shape",
+        ),
+        full_shape_alternating_counts: punctuation_alternating_counts_from_config(
+            &schema_config,
+            "full_shape",
+        ),
+        symbol_alternating_counts: punctuation_alternating_counts_from_config(
+            &schema_config,
+            "symbols",
+        ),
         half_shape_unique_commits: punctuation_unique_commits_from_config(
             &schema_config,
             "half_shape",
@@ -3653,6 +3673,9 @@ fn install_schema_punctuation_processor(session: &mut SessionState, schema_id: &
     if processor.half_shape_unique_commits.is_empty()
         && processor.full_shape_unique_commits.is_empty()
         && processor.symbol_unique_commits.is_empty()
+        && processor.half_shape_alternating_counts.is_empty()
+        && processor.full_shape_alternating_counts.is_empty()
+        && processor.symbol_alternating_counts.is_empty()
     {
         return;
     }
@@ -3767,6 +3790,29 @@ fn punctuation_unique_commits_from_config(
         .collect()
 }
 
+fn punctuation_alternating_counts_from_config(
+    schema_config: &Value,
+    shape: &str,
+) -> HashMap<String, usize> {
+    let Some(Value::Mapping(mapping)) =
+        find_config_value(schema_config, &format!("punctuator/{shape}"))
+    else {
+        return HashMap::new();
+    };
+
+    mapping
+        .iter()
+        .filter_map(|(key, definition)| {
+            let key = config_scalar_string(key)?;
+            let Value::Sequence(values) = definition else {
+                return None;
+            };
+            let count = values.iter().filter_map(config_scalar_string).count();
+            (count > 0).then_some((key, count))
+        })
+        .collect()
+}
+
 fn punctuation_unique_commit(definition: &Value) -> Option<String> {
     if let Some(text) = config_scalar_string(definition) {
         return Some(text);
@@ -3822,8 +3868,11 @@ fn append_punctuation_definition(
 }
 
 fn process_session_key_event(session: &mut SessionState, key_event: KeyEvent) -> Option<String> {
-    if let Some(commit) = process_punctuation_processor(session, key_event) {
-        return Some(commit);
+    if let Some(result) = process_punctuation_processor(session, key_event) {
+        return match result {
+            PunctuationProcessResult::Accepted => None,
+            PunctuationProcessResult::Commit(commit) => Some(commit),
+        };
     }
     if let Some(commit) = process_alternative_select_key(session, key_event) {
         return commit;
@@ -3834,7 +3883,7 @@ fn process_session_key_event(session: &mut SessionState, key_event: KeyEvent) ->
 fn process_punctuation_processor(
     session: &mut SessionState,
     key_event: KeyEvent,
-) -> Option<String> {
+) -> Option<PunctuationProcessResult> {
     if key_event.modifiers.control
         || key_event.modifiers.alt
         || key_event.modifiers.super_key
@@ -3851,21 +3900,51 @@ fn process_punctuation_processor(
         return None;
     }
 
-    let processor = session.punctuation_processor.as_ref()?;
-    if ch == ' ' && !processor.use_space && !session.engine.context().composition.input.is_empty() {
+    let use_space = session.punctuation_processor.as_ref()?.use_space;
+    if ch == ' ' && !use_space && !session.engine.context().composition.input.is_empty() {
         return None;
     }
 
     let key = ch.to_string();
+    if let Some(count) = active_alternating_punct_count(session, &key) {
+        let highlighted = session.engine.context().highlighted;
+        let next_index = (highlighted + 1) % count;
+        session.engine.highlight_candidate(next_index);
+        return Some(PunctuationProcessResult::Accepted);
+    }
+
+    let processor = session.punctuation_processor.as_ref()?;
     let shape_entries = if session.engine.status().is_full_shape {
         &processor.full_shape_unique_commits
     } else {
         &processor.half_shape_unique_commits
     };
+
     shape_entries
         .get(&key)
         .or_else(|| processor.symbol_unique_commits.get(&key))
         .cloned()
+        .map(PunctuationProcessResult::Commit)
+}
+
+fn active_alternating_punct_count(session: &SessionState, key: &str) -> Option<usize> {
+    let context = session.engine.context();
+    if context.composition.input != key || context.candidates.is_empty() {
+        return None;
+    }
+
+    let processor = session.punctuation_processor.as_ref()?;
+    let shape_counts = if session.engine.status().is_full_shape {
+        &processor.full_shape_alternating_counts
+    } else {
+        &processor.half_shape_alternating_counts
+    };
+    shape_counts
+        .get(key)
+        .or_else(|| processor.symbol_alternating_counts.get(key))
+        .copied()
+        .filter(|count| *count > 0)
+        .map(|count| count.min(context.candidates.len()))
 }
 
 fn process_alternative_select_key(
