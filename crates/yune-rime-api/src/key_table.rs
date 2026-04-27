@@ -66,6 +66,29 @@ const XK_F9: c_int = 0xffc6;
 const XK_F10: c_int = 0xffc7;
 const XK_F11: c_int = 0xffc8;
 const XK_F12: c_int = 0xffc9;
+const XK_F13: c_int = 0xffca;
+const XK_F14: c_int = 0xffcb;
+const XK_F15: c_int = 0xffcc;
+const XK_F16: c_int = 0xffcd;
+const XK_F17: c_int = 0xffce;
+const XK_F18: c_int = 0xffcf;
+const XK_F19: c_int = 0xffd0;
+const XK_F20: c_int = 0xffd1;
+const XK_F21: c_int = 0xffd2;
+const XK_F22: c_int = 0xffd3;
+const XK_F23: c_int = 0xffd4;
+const XK_F24: c_int = 0xffd5;
+const XK_F25: c_int = 0xffd6;
+const XK_F26: c_int = 0xffd7;
+const XK_F27: c_int = 0xffd8;
+const XK_F28: c_int = 0xffd9;
+const XK_F29: c_int = 0xffda;
+const XK_F30: c_int = 0xffdb;
+const XK_F31: c_int = 0xffdc;
+const XK_F32: c_int = 0xffdd;
+const XK_F33: c_int = 0xffde;
+const XK_F34: c_int = 0xffdf;
+const XK_F35: c_int = 0xffe0;
 
 const MODIFIERS: &[(usize, &[u8])] = &[
     (0, b"Shift\0"),
@@ -151,6 +174,29 @@ const NAMED_KEYS: &[(&[u8], c_int)] = &[
     (b"F10\0", XK_F10),
     (b"F11\0", XK_F11),
     (b"F12\0", XK_F12),
+    (b"F13\0", XK_F13),
+    (b"F14\0", XK_F14),
+    (b"F15\0", XK_F15),
+    (b"F16\0", XK_F16),
+    (b"F17\0", XK_F17),
+    (b"F18\0", XK_F18),
+    (b"F19\0", XK_F19),
+    (b"F20\0", XK_F20),
+    (b"F21\0", XK_F21),
+    (b"F22\0", XK_F22),
+    (b"F23\0", XK_F23),
+    (b"F24\0", XK_F24),
+    (b"F25\0", XK_F25),
+    (b"F26\0", XK_F26),
+    (b"F27\0", XK_F27),
+    (b"F28\0", XK_F28),
+    (b"F29\0", XK_F29),
+    (b"F30\0", XK_F30),
+    (b"F31\0", XK_F31),
+    (b"F32\0", XK_F32),
+    (b"F33\0", XK_F33),
+    (b"F34\0", XK_F34),
+    (b"F35\0", XK_F35),
 ];
 
 const ASCII_KEY_NAMES: &[(&[u8], c_int)] = &[

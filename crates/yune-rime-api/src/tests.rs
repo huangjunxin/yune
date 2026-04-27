@@ -266,6 +266,9 @@ fn key_table_exposes_librime_style_modifier_and_key_name_lookup() {
     let kp_equal = CString::new("KP_Equal").expect("key name should be valid");
     let f1 = CString::new("F1").expect("key name should be valid");
     let f12 = CString::new("F12").expect("key name should be valid");
+    let f13 = CString::new("F13").expect("key name should be valid");
+    let f24 = CString::new("F24").expect("key name should be valid");
+    let f35 = CString::new("F35").expect("key name should be valid");
     let nobreakspace = CString::new("nobreakspace").expect("key name should be valid");
     let yen = CString::new("yen").expect("key name should be valid");
     let eth = CString::new("Eth").expect("key name should be valid");
@@ -422,6 +425,9 @@ fn key_table_exposes_librime_style_modifier_and_key_name_lookup() {
     assert_eq!(unsafe { RimeGetKeycodeByName(kp_equal.as_ptr()) }, 0xffbd);
     assert_eq!(unsafe { RimeGetKeycodeByName(f1.as_ptr()) }, 0xffbe);
     assert_eq!(unsafe { RimeGetKeycodeByName(f12.as_ptr()) }, 0xffc9);
+    assert_eq!(unsafe { RimeGetKeycodeByName(f13.as_ptr()) }, 0xffca);
+    assert_eq!(unsafe { RimeGetKeycodeByName(f24.as_ptr()) }, 0xffd5);
+    assert_eq!(unsafe { RimeGetKeycodeByName(f35.as_ptr()) }, 0xffe0);
     assert_eq!(unsafe { RimeGetKeycodeByName(nobreakspace.as_ptr()) }, 0xa0);
     assert_eq!(unsafe { RimeGetKeycodeByName(yen.as_ptr()) }, 0xa5);
     assert_eq!(unsafe { RimeGetKeycodeByName(eth.as_ptr()) }, 0xd0);
@@ -759,6 +765,18 @@ fn key_table_exposes_librime_style_modifier_and_key_name_lookup() {
     assert_eq!(
         static_c_string(RimeGetKeyName(0xffc9)).as_deref(),
         Some("F12")
+    );
+    assert_eq!(
+        static_c_string(RimeGetKeyName(0xffca)).as_deref(),
+        Some("F13")
+    );
+    assert_eq!(
+        static_c_string(RimeGetKeyName(0xffd5)).as_deref(),
+        Some("F24")
+    );
+    assert_eq!(
+        static_c_string(RimeGetKeyName(0xffe0)).as_deref(),
+        Some("F35")
     );
     assert_eq!(
         static_c_string(RimeGetKeyName(0xa0)).as_deref(),
