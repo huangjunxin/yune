@@ -1,0 +1,184 @@
+use std::{
+    ffi::{CStr, CString},
+    mem, ptr,
+    sync::{Mutex, MutexGuard, OnceLock},
+};
+
+use yune_rime_api::{
+    rime_get_api, RimeCommit, RimeComposition, RimeContext, RimeMenu, RimeStatus, FALSE, TRUE,
+};
+
+fn empty_context() -> RimeContext {
+    RimeContext {
+        data_size: (mem::size_of::<RimeContext>() - mem::size_of::<i32>()) as i32,
+        composition: RimeComposition {
+            length: 0,
+            cursor_pos: 0,
+            sel_start: 0,
+            sel_end: 0,
+            preedit: ptr::null_mut(),
+        },
+        menu: RimeMenu {
+            page_size: 0,
+            page_no: 0,
+            is_last_page: FALSE,
+            highlighted_candidate_index: 0,
+            num_candidates: 0,
+            candidates: ptr::null_mut(),
+            select_keys: ptr::null_mut(),
+        },
+        commit_text_preview: ptr::null_mut(),
+        select_labels: ptr::null_mut(),
+    }
+}
+
+fn empty_status() -> RimeStatus {
+    RimeStatus {
+        data_size: (mem::size_of::<RimeStatus>() - mem::size_of::<i32>()) as i32,
+        schema_id: ptr::null_mut(),
+        schema_name: ptr::null_mut(),
+        is_disabled: FALSE,
+        is_composing: FALSE,
+        is_ascii_mode: FALSE,
+        is_full_shape: FALSE,
+        is_simplified: FALSE,
+        is_traditional: FALSE,
+        is_ascii_punct: FALSE,
+    }
+}
+
+fn empty_commit() -> RimeCommit {
+    RimeCommit {
+        data_size: (mem::size_of::<RimeCommit>() - mem::size_of::<i32>()) as i32,
+        text: ptr::null_mut(),
+    }
+}
+
+fn test_guard() -> MutexGuard<'static, ()> {
+    static TEST_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    TEST_LOCK
+        .get_or_init(|| Mutex::new(()))
+        .lock()
+        .expect("test lock should not be poisoned")
+}
+
+#[test]
+fn frontend_style_api_table_can_drive_basic_composition_flow() {
+    let _guard = test_guard();
+    let api = rime_get_api();
+    assert!(!api.is_null());
+    let api = unsafe { &*api };
+
+    assert_eq!(
+        api.data_size,
+        (mem::size_of_val(api) - mem::size_of::<i32>()) as i32
+    );
+
+    let cleanup_all_sessions = api
+        .cleanup_all_sessions
+        .expect("frontend requires cleanup_all_sessions");
+    cleanup_all_sessions();
+
+    let create_session = api
+        .create_session
+        .expect("frontend requires create_session");
+    let find_session = api.find_session.expect("frontend requires find_session");
+    let destroy_session = api
+        .destroy_session
+        .expect("frontend requires destroy_session");
+    let process_key = api.process_key.expect("frontend requires process_key");
+    let get_input = api.get_input.expect("frontend requires get_input");
+    let get_status = api.get_status.expect("frontend requires get_status");
+    let free_status = api.free_status.expect("frontend requires free_status");
+    let get_context = api.get_context.expect("frontend requires get_context");
+    let free_context = api.free_context.expect("frontend requires free_context");
+    let select_candidate_on_current_page = api
+        .select_candidate_on_current_page
+        .expect("frontend requires select_candidate_on_current_page");
+    let get_commit = api.get_commit.expect("frontend requires get_commit");
+    let free_commit = api.free_commit.expect("frontend requires free_commit");
+
+    let session_id = create_session();
+    assert_ne!(session_id, 0);
+    assert_eq!(find_session(session_id), TRUE);
+    assert_eq!(process_key(session_id, 'n' as i32, 0), TRUE);
+    assert_eq!(process_key(session_id, 'i' as i32, 0), TRUE);
+
+    let input = get_input(session_id);
+    assert!(!input.is_null());
+    let input = unsafe { CStr::from_ptr(input) };
+    assert_eq!(input.to_str(), Ok("ni"));
+
+    let mut status = empty_status();
+    assert_eq!(unsafe { get_status(session_id, &mut status) }, TRUE);
+    assert_eq!(status.is_composing, TRUE);
+    let schema_id = unsafe { CStr::from_ptr(status.schema_id) };
+    assert_eq!(schema_id.to_str(), Ok("default"));
+    assert_eq!(unsafe { free_status(&mut status) }, TRUE);
+
+    let mut context = empty_context();
+    assert_eq!(unsafe { get_context(session_id, &mut context) }, TRUE);
+    assert_eq!(context.composition.length, 2);
+    assert_eq!(context.menu.page_size, 5);
+    assert_eq!(context.menu.num_candidates, 1);
+    assert_eq!(context.menu.highlighted_candidate_index, 0);
+    let first_candidate = unsafe { *context.menu.candidates };
+    let first_candidate_text = unsafe { CStr::from_ptr(first_candidate.text) };
+    assert_eq!(first_candidate_text.to_str(), Ok("ni"));
+    assert_eq!(unsafe { free_context(&mut context) }, TRUE);
+
+    assert_eq!(select_candidate_on_current_page(session_id, 0), TRUE);
+
+    let mut commit = empty_commit();
+    assert_eq!(unsafe { get_commit(session_id, &mut commit) }, TRUE);
+    let commit_text = unsafe { CStr::from_ptr(commit.text) };
+    assert_eq!(commit_text.to_str(), Ok("ni"));
+    assert_eq!(unsafe { free_commit(&mut commit) }, TRUE);
+    assert_eq!(unsafe { get_commit(session_id, &mut commit) }, FALSE);
+
+    assert_eq!(destroy_session(session_id), TRUE);
+    cleanup_all_sessions();
+}
+
+#[test]
+fn frontend_style_api_table_can_simulate_key_sequences() {
+    let _guard = test_guard();
+    let api = rime_get_api();
+    assert!(!api.is_null());
+    let api = unsafe { &*api };
+
+    let cleanup_all_sessions = api
+        .cleanup_all_sessions
+        .expect("frontend requires cleanup_all_sessions");
+    cleanup_all_sessions();
+
+    let create_session = api
+        .create_session
+        .expect("frontend requires create_session");
+    let destroy_session = api
+        .destroy_session
+        .expect("frontend requires destroy_session");
+    let simulate_key_sequence = api
+        .simulate_key_sequence
+        .expect("frontend requires simulate_key_sequence");
+    let get_commit = api.get_commit.expect("frontend requires get_commit");
+    let free_commit = api.free_commit.expect("frontend requires free_commit");
+
+    let session_id = create_session();
+    assert_ne!(session_id, 0);
+
+    let sequence = CString::new("ni{space}").expect("literal should not contain NUL");
+    assert_eq!(
+        unsafe { simulate_key_sequence(session_id, sequence.as_ptr()) },
+        TRUE
+    );
+
+    let mut commit = empty_commit();
+    assert_eq!(unsafe { get_commit(session_id, &mut commit) }, TRUE);
+    let commit_text = unsafe { CStr::from_ptr(commit.text) };
+    assert_eq!(commit_text.to_str(), Ok("ni"));
+    assert_eq!(unsafe { free_commit(&mut commit) }, TRUE);
+
+    assert_eq!(destroy_session(session_id), TRUE);
+    cleanup_all_sessions();
+}
