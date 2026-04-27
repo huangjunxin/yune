@@ -410,7 +410,7 @@ struct CandidateListState {
 
 struct ConfigState {
     root: Value,
-    cstring_cache: Option<CString>,
+    cstring_borrows: Vec<CString>,
 }
 
 struct ConfigIteratorState {
@@ -455,7 +455,7 @@ impl Default for ConfigState {
     fn default() -> Self {
         Self {
             root: Value::Mapping(Mapping::new()),
-            cstring_cache: None,
+            cstring_borrows: Vec::new(),
         }
     }
 }
@@ -976,7 +976,7 @@ pub unsafe extern "C" fn RimeLeversCustomSettingsInit(
         config: ConfigState::default(),
         custom_config: ConfigState {
             root: Value::Null,
-            cstring_cache: None,
+            cstring_borrows: Vec::new(),
         },
         modified: false,
     }))
@@ -1011,7 +1011,7 @@ pub unsafe extern "C" fn RimeLeversLoadSettings(settings: *mut RimeCustomSetting
     };
 
     settings.config.root = load_runtime_config_root(&settings.config_id, ConfigOpenKind::Deployed);
-    settings.config.cstring_cache = None;
+    settings.config.cstring_borrows.clear();
     settings.modified = false;
 
     let path = custom_config_path(&settings.config_id);
@@ -1021,12 +1021,12 @@ pub unsafe extern "C" fn RimeLeversLoadSettings(settings: *mut RimeCustomSetting
     match loaded {
         Some(root) => {
             settings.custom_config.root = root;
-            settings.custom_config.cstring_cache = None;
+            settings.custom_config.cstring_borrows.clear();
             TRUE
         }
         None => {
             settings.custom_config.root = Value::Null;
-            settings.custom_config.cstring_cache = None;
+            settings.custom_config.cstring_borrows.clear();
             FALSE
         }
     }
@@ -2464,7 +2464,7 @@ pub unsafe extern "C" fn RimeConfigLoadString(
         return FALSE;
     };
     state.root = root;
-    state.cstring_cache = None;
+    state.cstring_borrows.clear();
     TRUE
 }
 
@@ -2617,10 +2617,10 @@ pub unsafe extern "C" fn RimeConfigGetCString(
     let Some(state) = (unsafe { config_state_mut(config) }) else {
         return ptr::null();
     };
-    state.cstring_cache = Some(value);
+    state.cstring_borrows.push(value);
     state
-        .cstring_cache
-        .as_ref()
+        .cstring_borrows
+        .last()
         .map_or(ptr::null(), |value| value.as_ptr())
 }
 
@@ -2674,7 +2674,7 @@ pub unsafe extern "C" fn RimeConfigUpdateSignature(
             return FALSE;
         }
     }
-    state.cstring_cache = None;
+    state.cstring_borrows.clear();
     TRUE
 }
 
@@ -2775,7 +2775,7 @@ pub unsafe extern "C" fn RimeConfigGetItem(
     };
 
     destination.root = item;
-    destination.cstring_cache = None;
+    destination.cstring_borrows.clear();
     TRUE
 }
 
@@ -2817,7 +2817,7 @@ pub unsafe extern "C" fn RimeConfigClear(config: *mut RimeConfig, key: *const c_
     let Some(state) = (unsafe { config_state_mut(config) }) else {
         return FALSE;
     };
-    state.cstring_cache = None;
+    state.cstring_borrows.clear();
     bool_from(set_config_value(&mut state.root, &key, Value::Null))
 }
 
@@ -3667,7 +3667,7 @@ unsafe fn install_config_root(config: *mut RimeConfig, root: Value) -> Bool {
     }
     let state = Box::new(ConfigState {
         root,
-        cstring_cache: None,
+        cstring_borrows: Vec::new(),
     });
 
     // SAFETY: `config` is non-null and points to caller-owned writable storage.
@@ -5680,7 +5680,7 @@ unsafe fn config_set(config: *mut RimeConfig, key: *const c_char, value: Value) 
     let Some(state) = (unsafe { config_state_mut(config) }) else {
         return FALSE;
     };
-    state.cstring_cache = None;
+    state.cstring_borrows.clear();
     bool_from(set_config_value(&mut state.root, &key, value))
 }
 
@@ -5792,7 +5792,7 @@ unsafe fn levers_customize_value(
         return FALSE;
     };
     patch.insert(Value::String(key), value);
-    settings.custom_config.cstring_cache = None;
+    settings.custom_config.cstring_borrows.clear();
     settings.modified = true;
     TRUE
 }
@@ -7233,6 +7233,38 @@ hex: '0x10'\nflag: 'FALSE'\ndecimal: '42'\nfloating: '1.5'\nnative_bool: true\nn
             TRUE
         );
         assert_eq!(int_output, 8);
+
+        assert_eq!(unsafe { RimeConfigClose(&mut config) }, TRUE);
+    }
+
+    #[test]
+    fn config_get_cstring_keeps_previous_read_only_borrows_alive() {
+        let _guard = test_guard();
+        let mut config = empty_config();
+        let name_key = CString::new("schema/name").expect("key should be valid");
+        let name_value = CString::new("Luna Pinyin").expect("value should be valid");
+        let id_key = CString::new("schema/schema_id").expect("key should be valid");
+        let id_value = CString::new("luna_pinyin").expect("value should be valid");
+
+        assert_eq!(unsafe { RimeConfigInit(&mut config) }, TRUE);
+        assert_eq!(
+            unsafe { RimeConfigSetString(&mut config, name_key.as_ptr(), name_value.as_ptr()) },
+            TRUE
+        );
+        assert_eq!(
+            unsafe { RimeConfigSetString(&mut config, id_key.as_ptr(), id_value.as_ptr()) },
+            TRUE
+        );
+
+        let name = unsafe { RimeConfigGetCString(&mut config, name_key.as_ptr()) };
+        let schema_id = unsafe { RimeConfigGetCString(&mut config, id_key.as_ptr()) };
+        assert!(!name.is_null());
+        assert!(!schema_id.is_null());
+        assert_eq!(unsafe { CStr::from_ptr(name) }.to_str(), Ok("Luna Pinyin"));
+        assert_eq!(
+            unsafe { CStr::from_ptr(schema_id) }.to_str(),
+            Ok("luna_pinyin")
+        );
 
         assert_eq!(unsafe { RimeConfigClose(&mut config) }, TRUE);
     }
