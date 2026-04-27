@@ -3813,20 +3813,24 @@ fn install_schema_key_binder_processor(session: &mut SessionState, schema_id: &s
         } else {
             continue;
         };
-        processor
-            .bindings
-            .entry(key_event)
-            .or_default()
-            .push(KeyBinding { condition, action });
-    }
-
-    for bindings in processor.bindings.values_mut() {
-        bindings.sort_by_key(|binding| key_binding_condition_rank(binding.condition));
+        insert_key_binding(
+            processor.bindings.entry(key_event).or_default(),
+            KeyBinding { condition, action },
+        );
     }
 
     if !processor.bindings.is_empty() {
         session.key_binder = Some(processor);
     }
+}
+
+fn insert_key_binding(bindings: &mut Vec<KeyBinding>, binding: KeyBinding) {
+    let rank = key_binding_condition_rank(binding.condition);
+    let insertion_index = bindings
+        .iter()
+        .position(|existing| key_binding_condition_rank(existing.condition) >= rank)
+        .unwrap_or(bindings.len());
+    bindings.insert(insertion_index, binding);
 }
 
 fn key_binding_condition(condition: &str) -> Option<KeyBindingCondition> {
