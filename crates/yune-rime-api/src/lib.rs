@@ -3824,12 +3824,12 @@ fn install_schema_history_translator_from_config(
         .and_then(config_scalar_string)
         .unwrap_or_default();
     let size = find_config_value(schema_config, &format!("{name_space}/size"))
-        .and_then(Value::as_i64)
+        .and_then(config_scalar_int)
         .and_then(|size| usize::try_from(size).ok())
         .unwrap_or(1);
     let initial_quality =
         find_config_value(schema_config, &format!("{name_space}/initial_quality"))
-            .and_then(Value::as_f64)
+            .and_then(config_scalar_double)
             .map(|quality| quality as f32)
             .unwrap_or(1000.0);
 
@@ -3978,11 +3978,7 @@ fn schema_string_list(schema_config: &Value, key: &str) -> Vec<String> {
 }
 
 fn config_scalar_f32(value: &Value) -> Option<f32> {
-    match value {
-        Value::Number(number) => number.as_f64().map(|number| number as f32),
-        Value::String(value) => value.parse::<f32>().ok(),
-        _ => None,
-    }
+    config_scalar_double(value).map(|number| number as f32)
 }
 
 fn install_schema_punctuation_translator_from_config(
