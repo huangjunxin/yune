@@ -228,7 +228,7 @@ fn key_code_from_name(name: &str) -> Result<KeyCode, KeySequenceParseError> {
         | "F33" | "F34" | "F35" | "Shift_L" | "Shift_R" | "Control_L" | "Control_R"
         | "Caps_Lock" | "Shift_Lock" | "Meta_L" | "Meta_R" | "Alt_L" | "Alt_R" | "Super_L"
         | "Super_R" | "Hyper_L" | "Hyper_R" => KeyCode::Ignored,
-        _ if is_librime_iso_key_name(name) => KeyCode::Ignored,
+        _ if is_librime_iso_key_name(name) || is_librime_xkb_key_name(name) => KeyCode::Ignored,
         "BackSpace" => KeyCode::Backspace,
         "Delete" => KeyCode::Delete,
         "Escape" => KeyCode::Escape,
@@ -309,6 +309,77 @@ fn is_librime_iso_key_name(name: &str) -> bool {
             | "ISO_Emphasize"
             | "ISO_Center_Object"
             | "ISO_Enter"
+    )
+}
+
+fn is_librime_xkb_key_name(name: &str) -> bool {
+    matches!(
+        name,
+        "dead_grave"
+            | "dead_acute"
+            | "dead_circumflex"
+            | "dead_tilde"
+            | "dead_macron"
+            | "dead_breve"
+            | "dead_abovedot"
+            | "dead_diaeresis"
+            | "dead_abovering"
+            | "dead_doubleacute"
+            | "dead_caron"
+            | "dead_cedilla"
+            | "dead_ogonek"
+            | "dead_iota"
+            | "dead_voiced_sound"
+            | "dead_semivoiced_sound"
+            | "dead_belowdot"
+            | "dead_hook"
+            | "dead_horn"
+            | "AccessX_Enable"
+            | "AccessX_Feedback_Enable"
+            | "RepeatKeys_Enable"
+            | "SlowKeys_Enable"
+            | "BounceKeys_Enable"
+            | "StickyKeys_Enable"
+            | "MouseKeys_Enable"
+            | "MouseKeys_Accel_Enable"
+            | "Overlay1_Enable"
+            | "Overlay2_Enable"
+            | "AudibleBell_Enable"
+            | "First_Virtual_Screen"
+            | "Prev_Virtual_Screen"
+            | "Next_Virtual_Screen"
+            | "Last_Virtual_Screen"
+            | "Terminate_Server"
+            | "Pointer_Left"
+            | "Pointer_Right"
+            | "Pointer_Up"
+            | "Pointer_Down"
+            | "Pointer_UpLeft"
+            | "Pointer_UpRight"
+            | "Pointer_DownLeft"
+            | "Pointer_DownRight"
+            | "Pointer_Button_Dflt"
+            | "Pointer_Button1"
+            | "Pointer_Button2"
+            | "Pointer_Button3"
+            | "Pointer_Button4"
+            | "Pointer_Button5"
+            | "Pointer_DblClick_Dflt"
+            | "Pointer_DblClick1"
+            | "Pointer_DblClick2"
+            | "Pointer_DblClick3"
+            | "Pointer_DblClick4"
+            | "Pointer_DblClick5"
+            | "Pointer_Drag_Dflt"
+            | "Pointer_Drag1"
+            | "Pointer_Drag2"
+            | "Pointer_Drag3"
+            | "Pointer_Drag4"
+            | "Pointer_EnableKeys"
+            | "Pointer_Accelerate"
+            | "Pointer_DfltBtnNext"
+            | "Pointer_DfltBtnPrev"
+            | "Pointer_Drag5"
     )
 }
 
@@ -1519,6 +1590,90 @@ mod tests {
         assert!(keys[27].modifiers.alt);
         assert!(keys[44].modifiers.release);
         assert!(keys[80].modifiers.release);
+    }
+
+    #[test]
+    fn parses_librime_xkb_noop_key_names() {
+        let names = [
+            "dead_grave",
+            "dead_acute",
+            "dead_circumflex",
+            "dead_tilde",
+            "dead_macron",
+            "dead_breve",
+            "dead_abovedot",
+            "dead_diaeresis",
+            "dead_abovering",
+            "dead_doubleacute",
+            "dead_caron",
+            "dead_cedilla",
+            "dead_ogonek",
+            "dead_iota",
+            "dead_voiced_sound",
+            "dead_semivoiced_sound",
+            "dead_belowdot",
+            "dead_hook",
+            "dead_horn",
+            "AccessX_Enable",
+            "AccessX_Feedback_Enable",
+            "RepeatKeys_Enable",
+            "SlowKeys_Enable",
+            "BounceKeys_Enable",
+            "StickyKeys_Enable",
+            "MouseKeys_Enable",
+            "MouseKeys_Accel_Enable",
+            "Overlay1_Enable",
+            "Overlay2_Enable",
+            "AudibleBell_Enable",
+            "First_Virtual_Screen",
+            "Prev_Virtual_Screen",
+            "Next_Virtual_Screen",
+            "Last_Virtual_Screen",
+            "Terminate_Server",
+            "Pointer_Left",
+            "Pointer_Right",
+            "Pointer_Up",
+            "Pointer_Down",
+            "Pointer_UpLeft",
+            "Pointer_UpRight",
+            "Pointer_DownLeft",
+            "Pointer_DownRight",
+            "Pointer_Button_Dflt",
+            "Pointer_Button1",
+            "Pointer_Button2",
+            "Pointer_Button3",
+            "Pointer_Button4",
+            "Pointer_Button5",
+            "Pointer_DblClick_Dflt",
+            "Pointer_DblClick1",
+            "Pointer_DblClick2",
+            "Pointer_DblClick3",
+            "Pointer_DblClick4",
+            "Pointer_DblClick5",
+            "Pointer_Drag_Dflt",
+            "Pointer_Drag1",
+            "Pointer_Drag2",
+            "Pointer_Drag3",
+            "Pointer_Drag4",
+            "Pointer_EnableKeys",
+            "Pointer_Accelerate",
+            "Pointer_DfltBtnNext",
+            "Pointer_DfltBtnPrev",
+            "Pointer_Drag5",
+            "Release+Pointer_Drag5",
+        ];
+        let sequence = names
+            .iter()
+            .map(|name| format!("{{{name}}}"))
+            .collect::<String>();
+        let keys = parse_key_sequence(&sequence).expect("key sequence should parse");
+
+        assert_eq!(keys.len(), names.len());
+        assert!(keys.iter().all(|key| key.code == KeyCode::Ignored));
+        assert!(keys[..names.len() - 1]
+            .iter()
+            .all(|key| key.modifiers.is_empty()));
+        assert!(keys[names.len() - 1].modifiers.release);
     }
 
     #[test]

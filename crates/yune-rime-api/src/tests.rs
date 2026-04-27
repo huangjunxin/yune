@@ -11693,6 +11693,28 @@ fn simulates_librime_style_key_sequences() {
         "{ISO_Lock}{ISO_Level2_Latch}{ISO_Level3_Shift}{ISO_Level3_Latch}{ISO_Level3_Lock}{ISO_Group_Latch}{ISO_Group_Lock}{ISO_Next_Group}{ISO_Next_Group_Lock}{ISO_Prev_Group}{ISO_Prev_Group_Lock}{ISO_First_Group}{ISO_First_Group_Lock}{ISO_Last_Group}{ISO_Last_Group_Lock}{ISO_Left_Tab}{ISO_Move_Line_Up}{ISO_Move_Line_Down}{ISO_Partial_Line_Up}{ISO_Partial_Line_Down}{ISO_Partial_Space_Left}{ISO_Partial_Space_Right}{ISO_Set_Margin_Left}{ISO_Set_Margin_Right}{ISO_Release_Margin_Left}{ISO_Release_Margin_Right}{ISO_Release_Both_Margins}{ISO_Fast_Cursor_Left}{ISO_Fast_Cursor_Right}{ISO_Fast_Cursor_Up}{ISO_Fast_Cursor_Down}{ISO_Continuous_Underline}{ISO_Discontinuous_Underline}{ISO_Emphasize}{ISO_Center_Object}{Release+ISO_Enter}",
     )
     .expect("key sequence should be valid");
+    let noop_xkb_key_sequence = CString::new(concat!(
+        "{dead_grave}{dead_acute}{dead_circumflex}{dead_tilde}{dead_macron}",
+        "{dead_breve}{dead_abovedot}{dead_diaeresis}{dead_abovering}",
+        "{dead_doubleacute}{dead_caron}{dead_cedilla}{dead_ogonek}",
+        "{dead_iota}{dead_voiced_sound}{dead_semivoiced_sound}{dead_belowdot}",
+        "{dead_hook}{dead_horn}{AccessX_Enable}{AccessX_Feedback_Enable}",
+        "{RepeatKeys_Enable}{SlowKeys_Enable}{BounceKeys_Enable}",
+        "{StickyKeys_Enable}{MouseKeys_Enable}{MouseKeys_Accel_Enable}",
+        "{Overlay1_Enable}{Overlay2_Enable}{AudibleBell_Enable}",
+        "{First_Virtual_Screen}{Prev_Virtual_Screen}{Next_Virtual_Screen}",
+        "{Last_Virtual_Screen}{Terminate_Server}{Pointer_Left}{Pointer_Right}",
+        "{Pointer_Up}{Pointer_Down}{Pointer_UpLeft}{Pointer_UpRight}",
+        "{Pointer_DownLeft}{Pointer_DownRight}{Pointer_Button_Dflt}",
+        "{Pointer_Button1}{Pointer_Button2}{Pointer_Button3}{Pointer_Button4}",
+        "{Pointer_Button5}{Pointer_DblClick_Dflt}{Pointer_DblClick1}",
+        "{Pointer_DblClick2}{Pointer_DblClick3}{Pointer_DblClick4}",
+        "{Pointer_DblClick5}{Pointer_Drag_Dflt}{Pointer_Drag1}",
+        "{Pointer_Drag2}{Pointer_Drag3}{Pointer_Drag4}{Pointer_EnableKeys}",
+        "{Pointer_Accelerate}{Pointer_DfltBtnNext}{Pointer_DfltBtnPrev}",
+        "{Release+Pointer_Drag5}",
+    ))
+    .expect("key sequence should be valid");
     let invalid_sequence =
         CString::new("x{Unknown}").expect("key sequence should be valid C string");
     let mut commit = RimeCommit {
@@ -11802,6 +11824,20 @@ fn simulates_librime_style_key_sequences() {
         TRUE
     );
     // SAFETY: ignored ISO key names should leave the context empty.
+    assert_eq!(unsafe { RimeGetContext(session_id, &mut context) }, TRUE);
+    assert_eq!(context.composition.length, 0);
+    assert_eq!(context.menu.num_candidates, 0);
+    // SAFETY: nested pointers were allocated by `RimeGetContext` above.
+    assert_eq!(unsafe { RimeFreeContext(&mut context) }, TRUE);
+
+    // SAFETY: noop_xkb_key_sequence is a valid C string; librime parses the
+    // XKB/dead-key block through its key table even when no processor handles
+    // the resulting key events.
+    assert_eq!(
+        unsafe { RimeSimulateKeySequence(session_id, noop_xkb_key_sequence.as_ptr()) },
+        TRUE
+    );
+    // SAFETY: ignored XKB key names should leave the context empty.
     assert_eq!(unsafe { RimeGetContext(session_id, &mut context) }, TRUE);
     assert_eq!(context.composition.length, 0);
     assert_eq!(context.menu.num_candidates, 0);
