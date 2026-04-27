@@ -3887,7 +3887,10 @@ fn install_schema_filter_chain(session: &mut SessionState, schema_id: &str) {
             "reverse_lookup_filter" => install_schema_reverse_lookup_filter_from_config(
                 session,
                 &schema_config,
-                name_space.unwrap_or("reverse_lookup"),
+                match name_space {
+                    Some("filter") | None => "reverse_lookup",
+                    Some(name_space) => name_space,
+                },
             ),
             "simplifier" => install_schema_simplifier_filter_from_config(
                 session,
