@@ -2098,6 +2098,7 @@ pub struct StaticTableTranslator {
     enable_charset_filter: bool,
     enable_sentence: bool,
     sentence_over_completion: bool,
+    tags: Vec<String>,
     delimiters: String,
     initial_quality: f32,
     comment_format: CommentFormat,
@@ -2129,6 +2130,7 @@ impl StaticTableTranslator {
             enable_charset_filter: false,
             enable_sentence: false,
             sentence_over_completion: false,
+            tags: vec!["abc".to_owned()],
             delimiters: " ".to_owned(),
             initial_quality: 0.0,
             comment_format: CommentFormat::default(),
@@ -2157,6 +2159,7 @@ impl StaticTableTranslator {
             enable_charset_filter: false,
             enable_sentence: false,
             sentence_over_completion: false,
+            tags: vec!["abc".to_owned()],
             delimiters: " ".to_owned(),
             initial_quality: 0.0,
             comment_format: CommentFormat::default(),
@@ -2198,6 +2201,15 @@ impl StaticTableTranslator {
     }
 
     #[must_use]
+    pub fn with_tags(mut self, tags: impl IntoIterator<Item = impl Into<String>>) -> Self {
+        self.tags = tags.into_iter().map(Into::into).collect();
+        if self.tags.is_empty() {
+            self.tags.push("abc".to_owned());
+        }
+        self
+    }
+
+    #[must_use]
     pub fn with_initial_quality(mut self, initial_quality: f32) -> Self {
         self.initial_quality = initial_quality;
         self
@@ -2220,6 +2232,10 @@ impl StaticTableTranslator {
 
     fn lookup_code<'a>(&self, input: &'a str) -> &'a str {
         input.trim_end_matches(|ch| self.delimiters.contains(ch))
+    }
+
+    fn accepts_current_segment(&self) -> bool {
+        self.tags.iter().any(|tag| tag == "abc")
     }
 
     fn matches_lookup_code(&self, entry_code: &str, lookup_code: &str) -> bool {
@@ -2250,6 +2266,10 @@ impl StaticTableTranslator {
     }
 
     fn translated_candidates(&self, input: &str, filter_by_charset: bool) -> Vec<Candidate> {
+        if !self.accepts_current_segment() {
+            return Vec::new();
+        }
+
         let lookup_code = self.lookup_code(input);
         let mut candidates = self
             .entries
@@ -7152,6 +7172,41 @@ sort: original
             .collect::<Vec<_>>();
         assert_eq!(texts, ["爸", "班", "b"]);
         assert_eq!(sources, ["completion", "completion", "echo"]);
+    }
+
+    #[test]
+    fn static_table_translator_honors_librime_segment_tags() {
+        let mut custom_tag_engine = Engine::new();
+        custom_tag_engine.add_translator(
+            StaticTableTranslator::new([("ba", "爸"), ("ban", "班")])
+                .with_completion(true)
+                .with_tags(["custom"]),
+        );
+        custom_tag_engine.process_char('b');
+
+        let texts = custom_tag_engine
+            .context()
+            .candidates
+            .iter()
+            .map(|candidate| candidate.text.as_str())
+            .collect::<Vec<_>>();
+        assert_eq!(texts, ["b"]);
+
+        let mut abc_tag_engine = Engine::new();
+        abc_tag_engine.add_translator(
+            StaticTableTranslator::new([("ba", "爸"), ("ban", "班")])
+                .with_completion(true)
+                .with_tags(["custom", "abc"]),
+        );
+        abc_tag_engine.process_char('b');
+
+        let texts = abc_tag_engine
+            .context()
+            .candidates
+            .iter()
+            .map(|candidate| candidate.text.as_str())
+            .collect::<Vec<_>>();
+        assert_eq!(texts, ["爸", "班", "b"]);
     }
 
     #[test]

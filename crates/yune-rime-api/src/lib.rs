@@ -3787,6 +3787,7 @@ fn install_schema_dictionary_translator_from_config(
         .or_else(|| find_config_value(schema_config, "speller/delimiter"))
         .and_then(config_scalar_string)
         .unwrap_or_else(|| " ".to_owned());
+    let tags = schema_translator_tags(schema_config, name_space);
     let initial_quality =
         find_config_value(schema_config, &format!("{name_space}/initial_quality"))
             .and_then(config_scalar_f32)
@@ -3801,6 +3802,7 @@ fn install_schema_dictionary_translator_from_config(
             .with_sentence(enable_sentence)
             .with_sentence_over_completion(sentence_over_completion)
             .with_delimiters(delimiters)
+            .with_tags(tags)
             .with_initial_quality(initial_quality)
             .with_comment_format(&comment_format)
             .with_dictionary_exclude(dictionary_exclude),
@@ -3992,6 +3994,23 @@ fn schema_dictionary_packs(schema_config: &Value, name_space: &str) -> Vec<Strin
 
 fn schema_comment_format(schema_config: &Value, name_space: &str) -> Vec<String> {
     schema_string_list(schema_config, &format!("{name_space}/comment_format"))
+}
+
+fn schema_translator_tags(schema_config: &Value, name_space: &str) -> Vec<String> {
+    let mut tags = Vec::new();
+    if let Some(tag) = find_config_value(schema_config, &format!("{name_space}/tag"))
+        .and_then(config_scalar_string)
+    {
+        tags.push(tag);
+    }
+    tags.extend(schema_string_list(
+        schema_config,
+        &format!("{name_space}/tags"),
+    ));
+    if tags.is_empty() {
+        tags.push("abc".to_owned());
+    }
+    tags
 }
 
 fn schema_string_list(schema_config: &Value, key: &str) -> Vec<String> {
