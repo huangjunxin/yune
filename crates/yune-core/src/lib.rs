@@ -1353,6 +1353,12 @@ pub trait CandidateRanker: Send + Sync {
     fn try_rerank(&self, context: &Context, candidates: &[Candidate]) -> RerankResult;
 }
 
+pub trait CandidateFilter: Send + Sync {
+    fn name(&self) -> &'static str;
+
+    fn apply(&self, candidates: &mut [Candidate]);
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum RerankResult {
     Pending,
@@ -2215,6 +2221,74 @@ impl Translator for ReverseLookupTranslator {
     }
 }
 
+pub struct ReverseLookupFilter {
+    reverse_comments: HashMap<String, Vec<String>>,
+    overwrite_comment: bool,
+    append_comment: bool,
+}
+
+impl ReverseLookupFilter {
+    #[must_use]
+    pub fn new(reverse_dictionary: TableDictionary) -> Self {
+        let mut reverse_comments: HashMap<String, Vec<String>> = HashMap::new();
+        for entry in reverse_dictionary.entries {
+            reverse_comments
+                .entry(entry.text)
+                .or_default()
+                .push(entry.code);
+        }
+
+        Self {
+            reverse_comments,
+            overwrite_comment: false,
+            append_comment: false,
+        }
+    }
+
+    #[must_use]
+    pub fn with_overwrite_comment(mut self, overwrite_comment: bool) -> Self {
+        self.overwrite_comment = overwrite_comment;
+        self
+    }
+
+    #[must_use]
+    pub fn with_append_comment(mut self, append_comment: bool) -> Self {
+        self.append_comment = append_comment;
+        self
+    }
+}
+
+impl CandidateFilter for ReverseLookupFilter {
+    fn name(&self) -> &'static str {
+        "reverse_lookup_filter"
+    }
+
+    fn apply(&self, candidates: &mut [Candidate]) {
+        for candidate in candidates {
+            if candidate.source != CandidateSource::Table {
+                continue;
+            }
+            if !candidate.comment.is_empty() && !(self.overwrite_comment || self.append_comment) {
+                continue;
+            }
+
+            let Some(comments) = self.reverse_comments.get(&candidate.text) else {
+                continue;
+            };
+            if comments.is_empty() {
+                continue;
+            }
+
+            let reverse_comment = comments.join(" ");
+            if self.overwrite_comment || candidate.comment.is_empty() {
+                candidate.comment = reverse_comment;
+            } else {
+                candidate.comment = format!("{} {reverse_comment}", candidate.comment);
+            }
+        }
+    }
+}
+
 pub struct PunctuationTranslator {
     half_shape_entries: Vec<(String, Candidate)>,
     full_shape_entries: Vec<(String, Candidate)>,
@@ -2394,6 +2468,7 @@ pub struct Engine {
     options: HashMap<String, bool>,
     properties: HashMap<String, String>,
     translators: Vec<Box<dyn Translator>>,
+    filters: Vec<Box<dyn CandidateFilter>>,
     rankers: Vec<Box<dyn CandidateRanker>>,
 }
 
@@ -2407,6 +2482,7 @@ impl Default for Engine {
             options: HashMap::new(),
             properties: HashMap::new(),
             translators: vec![Box::new(EchoTranslator)],
+            filters: Vec::new(),
             rankers: Vec::new(),
         }
     }
@@ -2430,6 +2506,16 @@ impl Engine {
 
     pub fn reset_translators(&mut self) {
         self.translators = vec![Box::new(EchoTranslator)];
+        self.refresh_candidates();
+    }
+
+    pub fn add_filter(&mut self, filter: impl CandidateFilter + 'static) {
+        self.filters.push(Box::new(filter));
+        self.refresh_candidates();
+    }
+
+    pub fn reset_filters(&mut self) {
+        self.filters.clear();
         self.refresh_candidates();
     }
 
@@ -3050,6 +3136,9 @@ impl Engine {
             .iter()
             .flat_map(|translator| translator.translate_with_status(input, &self.status))
             .collect::<Vec<_>>();
+        for filter in &self.filters {
+            filter.apply(&mut candidates);
+        }
         for ranker in &self.rankers {
             if let RerankResult::Ready(ranked) = ranker.try_rerank(&self.context, &candidates) {
                 candidates = ranked;
@@ -3108,9 +3197,9 @@ const fn select_index_from_digit(ch: char) -> usize {
 #[cfg(test)]
 mod tests {
     use super::{
-        parse_key_sequence, Candidate, CandidateRanker, CandidateSource, Context, Engine, KeyCode,
-        MockAiRanker, PunctuationTranslator, RerankResult, ReverseLookupTranslator,
-        StaticTableTranslator, TableDictionary, Translator,
+        parse_key_sequence, Candidate, CandidateFilter, CandidateRanker, CandidateSource, Context,
+        Engine, KeyCode, MockAiRanker, PunctuationTranslator, RerankResult, ReverseLookupFilter,
+        ReverseLookupTranslator, StaticTableTranslator, TableDictionary, Translator,
     };
 
     struct CommentTranslator;
@@ -5879,6 +5968,61 @@ sort: original
         assert_eq!(candidates.len(), 1);
         assert_eq!(candidates[0].text, "火");
         assert_eq!(candidates[0].comment, "huo");
+    }
+
+    #[test]
+    fn reverse_lookup_filter_updates_comments_like_librime() {
+        let reverse_dictionary = TableDictionary::parse_rime_dict_yaml(
+            r#"
+---
+name: stroke
+version: "0.1"
+sort: original
+...
+
+你	wq
+好	vb
+"#,
+        )
+        .expect("reverse lookup dictionary should parse");
+
+        let default_filter = ReverseLookupFilter::new(reverse_dictionary.clone());
+        let mut candidates = vec![
+            Candidate {
+                text: "你".to_owned(),
+                comment: "ni".to_owned(),
+                source: CandidateSource::Table,
+                quality: 1.0,
+            },
+            Candidate {
+                text: "好".to_owned(),
+                comment: String::new(),
+                source: CandidateSource::Table,
+                quality: 1.0,
+            },
+        ];
+        default_filter.apply(&mut candidates);
+        assert_eq!(candidates[0].comment, "ni");
+        assert_eq!(candidates[1].comment, "vb");
+
+        let mut overwrite_engine = Engine::new();
+        overwrite_engine.add_translator(StaticTableTranslator::new([("ni", "你")]));
+        overwrite_engine.add_filter(
+            ReverseLookupFilter::new(reverse_dictionary.clone()).with_overwrite_comment(true),
+        );
+        overwrite_engine
+            .process_key_sequence("ni")
+            .expect("keys should parse");
+        assert_eq!(overwrite_engine.context().candidates[0].comment, "wq");
+
+        let mut append_engine = Engine::new();
+        append_engine.add_translator(StaticTableTranslator::new([("ni", "你")]));
+        append_engine
+            .add_filter(ReverseLookupFilter::new(reverse_dictionary).with_append_comment(true));
+        append_engine
+            .process_key_sequence("ni")
+            .expect("keys should parse");
+        assert_eq!(append_engine.context().candidates[0].comment, "ni wq");
     }
 
     #[test]

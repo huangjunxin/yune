@@ -15,7 +15,7 @@ use std::{
 use serde_yaml::{Mapping, Number, Value};
 use yune_core::{
     parse_key_sequence, Engine, KeyCode, KeyEvent, KeyModifiers, PunctuationTranslator,
-    ReverseLookupTranslator, StaticTableTranslator, TableDictionary,
+    ReverseLookupFilter, ReverseLookupTranslator, StaticTableTranslator, TableDictionary,
 };
 
 mod abi;
@@ -2138,6 +2138,7 @@ fn apply_schema_to_session(session: &mut SessionState, schema_id: &str) {
     let schema_name = deployed_schema_name(schema_id);
     session.engine.set_schema(schema_id.to_owned(), schema_name);
     session.engine.reset_translators();
+    session.engine.reset_filters();
     session.key_binder = None;
     session.punctuation_processor = None;
     session.paging = false;
@@ -2147,6 +2148,7 @@ fn apply_schema_to_session(session: &mut SessionState, schema_id: &str) {
     install_schema_punctuation_translator(session, schema_id);
     install_schema_dictionary_translator(session, schema_id);
     install_schema_reverse_lookup_translator(session, schema_id);
+    install_schema_reverse_lookup_filter(session, schema_id);
     session.engine.clear_composition();
     session.input_buffer = None;
     session.unread_commit = None;
@@ -3731,6 +3733,31 @@ fn install_schema_reverse_lookup_translator(session: &mut SessionState, schema_i
     );
 }
 
+fn install_schema_reverse_lookup_filter(session: &mut SessionState, schema_id: &str) {
+    let schema_config =
+        load_runtime_config_root(&format!("{schema_id}.schema"), ConfigOpenKind::Deployed);
+    if !schema_engine_filters_include(&schema_config, "reverse_lookup_filter") {
+        return;
+    }
+    let Some(reverse_dictionary) = load_schema_table_dictionary(&schema_config, "reverse_lookup")
+    else {
+        return;
+    };
+
+    let overwrite_comment = find_config_value(&schema_config, "reverse_lookup/overwrite_comment")
+        .and_then(config_scalar_bool)
+        .unwrap_or(false);
+    let append_comment = find_config_value(&schema_config, "reverse_lookup/append_comment")
+        .and_then(config_scalar_bool)
+        .unwrap_or(false);
+
+    session.engine.add_filter(
+        ReverseLookupFilter::new(reverse_dictionary)
+            .with_overwrite_comment(overwrite_comment)
+            .with_append_comment(append_comment),
+    );
+}
+
 fn load_schema_table_dictionary(
     schema_config: &Value,
     name_space: &str,
@@ -3997,6 +4024,16 @@ fn schema_engine_processors_include(schema_config: &Value, processor_name: &str)
         .iter()
         .filter_map(Value::as_str)
         .any(|processor| processor == processor_name)
+}
+
+fn schema_engine_filters_include(schema_config: &Value, filter_name: &str) -> bool {
+    let Some(Value::Sequence(filters)) = find_config_value(schema_config, "engine/filters") else {
+        return false;
+    };
+    filters
+        .iter()
+        .filter_map(Value::as_str)
+        .any(|filter| filter == filter_name)
 }
 
 fn apply_schema_switch_resets(session: &mut SessionState, schema_id: &str) {
