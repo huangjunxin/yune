@@ -6907,6 +6907,50 @@ fn sync_user_data_emits_librime_deploy_notifications() {
 }
 
 #[test]
+fn finalize_clears_sessions_but_preserves_notification_handler() {
+    let _guard = test_guard();
+    RimeCleanupAllSessions();
+    RimeSetNotificationHandler(None, std::ptr::null_mut());
+    notification_events()
+        .lock()
+        .expect("notification events should not be poisoned")
+        .clear();
+    let context_object = 0x7c_usize as *mut c_void;
+    let ascii_mode = CString::new("ascii_mode").expect("option name should be valid");
+
+    RimeSetNotificationHandler(Some(record_notification), context_object);
+    let old_session_id = RimeCreateSession();
+    assert_ne!(old_session_id, 0);
+    RimeFinalize();
+    assert_eq!(RimeFindSession(old_session_id), FALSE);
+
+    let traits = empty_traits();
+    // SAFETY: traits points to valid storage.
+    unsafe { RimeInitialize(&traits) };
+    let new_session_id = RimeCreateSession();
+    assert_ne!(new_session_id, 0);
+    // SAFETY: option is a valid NUL-terminated C string.
+    unsafe { RimeSetOption(new_session_id, ascii_mode.as_ptr(), TRUE) };
+
+    let events = notification_events()
+        .lock()
+        .expect("notification events should not be poisoned");
+    assert_eq!(
+        *events,
+        vec![NotificationEvent {
+            context_object: 0x7c,
+            session_id: new_session_id,
+            message_type: "option".to_owned(),
+            message_value: "ascii_mode".to_owned(),
+        }]
+    );
+    drop(events);
+
+    RimeSetNotificationHandler(None, std::ptr::null_mut());
+    assert_eq!(RimeDestroySession(new_session_id), TRUE);
+}
+
+#[test]
 fn creates_finds_and_destroys_sessions() {
     let _guard = test_guard();
     RimeCleanupAllSessions();

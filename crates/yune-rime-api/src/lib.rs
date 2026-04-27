@@ -1433,7 +1433,6 @@ pub unsafe extern "C" fn RimeInitialize(traits: *const RimeTraits) {
 #[no_mangle]
 pub extern "C" fn RimeFinalize() {
     RimeCleanupAllSessions();
-    RimeSetNotificationHandler(None, ptr::null_mut());
 }
 
 #[no_mangle]
