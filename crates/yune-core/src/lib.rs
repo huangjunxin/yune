@@ -1678,7 +1678,7 @@ impl RimeTableMetadata {
         let weight = self
             .column_index("weight")
             .and_then(|column| fields.get(column))
-            .and_then(|value| value.trim().parse::<f32>().ok())
+            .map(|value| parse_rime_entry_weight(value))
             .unwrap_or(0.0);
         Some(TableEntry::new(code, text, weight))
     }
@@ -1840,6 +1840,21 @@ fn parse_yaml_import_table_scalar(input: &str) -> Option<String> {
         return None;
     }
     parse_yaml_scalar_node(input)
+}
+
+fn parse_rime_entry_weight(input: &str) -> f32 {
+    let value = input.trim();
+    if value.ends_with('%') {
+        return 0.0;
+    }
+
+    value
+        .char_indices()
+        .map(|(index, _)| index)
+        .chain(std::iter::once(value.len()))
+        .rev()
+        .find_map(|end| value[..end].parse::<f32>().ok())
+        .unwrap_or(0.0)
 }
 
 fn strip_yaml_comment(input: &str) -> &str {
@@ -5014,6 +5029,37 @@ ba	 八 	10
         assert_eq!(entries[0].text, " 八 ");
         assert_eq!(entries[0].code, "ba");
         assert_eq!(entries[0].weight, 10.0);
+    }
+
+    #[test]
+    fn parses_rime_dict_yaml_weight_numeric_prefixes() {
+        let dictionary = TableDictionary::parse_rime_dict_yaml(
+            r#"
+---
+name: weight_prefix_sample
+version: "0.1"
+sort: original
+columns: [code, text, weight]
+...
+
+ba	八	10oops
+ba	吧	-2.5x
+ba	巴	abc
+ba	把	50%
+"#,
+        )
+        .expect("dictionary with librime-style row weights should parse");
+
+        let entries = dictionary.entries();
+        assert_eq!(entries.len(), 4);
+        assert_eq!(entries[0].text, "八");
+        assert_eq!(entries[0].weight, 10.0);
+        assert_eq!(entries[1].text, "吧");
+        assert_eq!(entries[1].weight, -2.5);
+        assert_eq!(entries[2].text, "巴");
+        assert_eq!(entries[2].weight, 0.0);
+        assert_eq!(entries[3].text, "把");
+        assert_eq!(entries[3].weight, 0.0);
     }
 
     #[test]
