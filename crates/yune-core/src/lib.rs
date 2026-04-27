@@ -1738,10 +1738,9 @@ impl RimeTableMetadata {
         match list {
             RimeTableHeaderList::Columns => self.columns.push(parse_yaml_scalar(value)),
             RimeTableHeaderList::ImportTables => {
-                if parse_yaml_scalar_node(value).is_none() {
+                let Some(value) = parse_yaml_import_table_scalar(value) else {
                     return;
-                }
-                let value = parse_yaml_scalar(value);
+                };
                 if !value.is_empty() {
                     self.import_tables.push(value);
                 }
@@ -1782,12 +1781,17 @@ fn split_inline_yaml_list_items(items: &str) -> Vec<String> {
     let mut in_single_quote = false;
     let mut in_double_quote = false;
     let mut escaped = false;
+    let mut flow_depth = 0usize;
 
     for (index, character) in items.char_indices() {
         match character {
             '\'' if !in_double_quote => in_single_quote = !in_single_quote,
             '"' if !in_single_quote && !escaped => in_double_quote = !in_double_quote,
-            ',' if !in_single_quote && !in_double_quote => {
+            '[' | '{' if !in_single_quote && !in_double_quote => flow_depth += 1,
+            ']' | '}' if !in_single_quote && !in_double_quote && flow_depth > 0 => {
+                flow_depth -= 1;
+            }
+            ',' if !in_single_quote && !in_double_quote && flow_depth == 0 => {
                 result.push(items[start..index].trim().to_owned());
                 start = index + character.len_utf8();
             }
@@ -1818,6 +1822,18 @@ fn parse_yaml_scalar_node(input: &str) -> Option<String> {
     }
 
     Some(value.trim_matches(['"', '\'']).to_owned())
+}
+
+fn parse_yaml_import_table_scalar(input: &str) -> Option<String> {
+    let value = strip_yaml_comment(input).trim();
+    let is_quoted = value.starts_with('"') || value.starts_with('\'');
+    if !is_quoted
+        && ((value.starts_with('[') && value.ends_with(']'))
+            || (value.starts_with('{') && value.ends_with('}')))
+    {
+        return None;
+    }
+    parse_yaml_scalar_node(input)
 }
 
 fn strip_yaml_comment(input: &str) -> &str {
@@ -5247,6 +5263,56 @@ sort: original
             },
         )
         .expect("YAML-null import tables should be skipped like librime config nodes");
+
+        let entries = dictionary.entries();
+        assert_eq!(entries.len(), 3);
+        assert_eq!(entries[0].text, "八");
+        assert_eq!(entries[1].text, "吧");
+        assert_eq!(entries[2].text, "爸");
+    }
+
+    #[test]
+    fn parses_rime_dict_yaml_skips_collection_import_tables() {
+        let dictionary = TableDictionary::parse_rime_dict_yaml_with_imports(
+            r#"
+---
+name: primary
+version: "0.1"
+sort: original
+import_tables: [[ignored, missing], {name: skipped}, secondary, '[literal]']
+...
+
+八	ba	1
+"#,
+            |name| match name {
+                "secondary" => Some(
+                    r#"
+---
+name: secondary
+version: "0.1"
+sort: original
+...
+
+吧	ba	2
+"#
+                    .to_owned(),
+                ),
+                "[literal]" => Some(
+                    r#"
+---
+name: '[literal]'
+version: "0.1"
+sort: original
+...
+
+爸	ba	3
+"#
+                    .to_owned(),
+                ),
+                other => panic!("non-scalar import table should be skipped, got {other}"),
+            },
+        )
+        .expect("non-scalar import table items should be skipped like librime config nodes");
 
         let entries = dictionary.entries();
         assert_eq!(entries.len(), 3);
