@@ -4565,9 +4565,6 @@ fn deployed_config_yaml_with_build_info(
     let apply_auto_custom_patch =
         apply_config_directives(&mut root, shared_data_dir, &mut patch_dependencies)?;
     set_build_info(&mut root, &resource_id, timestamp)?;
-    for (resource_id, timestamp) in patch_dependencies {
-        set_build_info(&mut root, &resource_id, timestamp)?;
-    }
 
     if apply_auto_custom_patch {
         let custom_resource_id = custom_patch_resource_id(&resource_id);
@@ -4576,7 +4573,12 @@ fn deployed_config_yaml_with_build_info(
             .ok()
             .and_then(|yaml| serde_yaml::from_str::<Value>(&yaml).ok())
         {
-            apply_custom_patch(&mut root, &custom_root)?;
+            apply_custom_patch(
+                &mut root,
+                &custom_root,
+                shared_data_dir,
+                &mut patch_dependencies,
+            )?;
             set_build_info(
                 &mut root,
                 &custom_resource_id,
@@ -4585,6 +4587,9 @@ fn deployed_config_yaml_with_build_info(
         } else {
             set_build_info(&mut root, &custom_resource_id, 0)?;
         }
+    }
+    for (resource_id, timestamp) in patch_dependencies {
+        set_build_info(&mut root, &resource_id, timestamp)?;
     }
     serde_yaml::to_string(&root).ok()
 }
@@ -4742,7 +4747,7 @@ fn apply_patch_directive(
     patch_dependencies: &mut Vec<(String, c_int)>,
 ) -> Option<()> {
     match patch {
-        Value::Mapping(patch) => apply_patch_map(root, patch),
+        Value::Mapping(patch) => apply_patch_map(root, patch, shared_data_dir, patch_dependencies),
         Value::String(reference) => {
             apply_patch_reference(root, reference, shared_data_dir, patch_dependencies)
         }
@@ -4782,12 +4787,16 @@ fn apply_patch_reference(
             return Some(());
         };
         return match referenced {
-            Value::Mapping(patch) => apply_patch_map(root, &patch),
+            Value::Mapping(patch) => {
+                apply_patch_map(root, &patch, shared_data_dir, patch_dependencies)
+            }
             _ => None,
         };
     }
     match find_config_value(root, path).cloned() {
-        Some(Value::Mapping(patch)) => apply_patch_map(root, &patch),
+        Some(Value::Mapping(patch)) => {
+            apply_patch_map(root, &patch, shared_data_dir, patch_dependencies)
+        }
         Some(_) => None,
         None => optional.then_some(()),
     }
@@ -4821,17 +4830,29 @@ fn load_external_config_reference(
     }
 }
 
-fn apply_custom_patch(root: &mut Value, custom_root: &Value) -> Option<()> {
+fn apply_custom_patch(
+    root: &mut Value,
+    custom_root: &Value,
+    shared_data_dir: &Path,
+    patch_dependencies: &mut Vec<(String, c_int)>,
+) -> Option<()> {
     let Some(Value::Mapping(patch)) = find_config_value(custom_root, "patch") else {
         return Some(());
     };
-    apply_patch_map(root, patch)
+    apply_patch_map(root, patch, shared_data_dir, patch_dependencies)
 }
 
-fn apply_patch_map(root: &mut Value, patch: &Mapping) -> Option<()> {
+fn apply_patch_map(
+    root: &mut Value,
+    patch: &Mapping,
+    shared_data_dir: &Path,
+    patch_dependencies: &mut Vec<(String, c_int)>,
+) -> Option<()> {
     for (key, value) in patch {
         let key = key.as_str()?;
-        if !apply_patch_entry(root, key, value.clone(), false) {
+        let mut value = value.clone();
+        apply_config_directives_inner(&mut value, shared_data_dir, patch_dependencies, false)?;
+        if !apply_patch_entry(root, key, value, false) {
             return None;
         }
     }
@@ -8068,6 +8089,93 @@ base_units:
         assert!(find_config_value(&staged, "combined_units/__include").is_none());
         assert!(find_config_value(&staged, "combined_units/__append").is_none());
         assert!(find_config_value(&staged, "all_units/__patch").is_none());
+
+        let reset_traits = empty_traits();
+        // SAFETY: reset traits points to valid storage.
+        unsafe { RimeSetup(&reset_traits) };
+        fs::remove_dir_all(root).expect("temp dirs should be removed");
+    }
+
+    #[test]
+    fn deploy_config_file_expands_include_directives_inside_patch_values() {
+        let _guard = test_guard();
+        RimeCleanupAllSessions();
+        let root = unique_temp_dir("deploy-config-patch-value-include");
+        let shared = root.join("shared");
+        let user = root.join("user");
+        let staging = user.join("build");
+        fs::create_dir_all(&shared).expect("shared dir should be created");
+        fs::create_dir_all(&user).expect("user dir should be created");
+        fs::write(
+            shared.join("default.yaml"),
+            "\
+config_version: '2.0'
+combined_units:
+  - probe
+  - zealot
+__patch:
+  combined_units/+:
+    __include: units.yaml:/terran_units
+literal_units:
+  __patch:
+    __append:
+      __include: units.yaml:/zerg_units
+",
+        )
+        .expect("shared config should be written");
+        fs::write(
+            shared.join("units.yaml"),
+            "\
+terran_units:
+  - scv
+  - marine
+zerg_units:
+  - drone
+  - zergling
+",
+        )
+        .expect("included config should be written");
+        let shared_c =
+            CString::new(shared.to_string_lossy().as_ref()).expect("path should be valid");
+        let user_c = CString::new(user.to_string_lossy().as_ref()).expect("path should be valid");
+        let config_file = CString::new("default.yaml").expect("file should be valid");
+        let version_key = CString::new("config_version").expect("key should be valid");
+        let mut traits = empty_traits();
+        traits.shared_data_dir = shared_c.as_ptr();
+        traits.user_data_dir = user_c.as_ptr();
+
+        // SAFETY: traits points to a valid RimeTraits object with valid strings.
+        unsafe { RimeDeployerInitialize(&traits) };
+        assert_eq!(
+            RimeDeployConfigFile(config_file.as_ptr(), version_key.as_ptr()),
+            TRUE
+        );
+        let staged: Value = serde_yaml::from_str(
+            &fs::read_to_string(staging.join("default.yaml"))
+                .expect("staged config should be readable"),
+        )
+        .expect("staged config should parse");
+        assert_eq!(
+            find_config_value(&staged, "combined_units/@0").and_then(Value::as_str),
+            Some("probe")
+        );
+        assert_eq!(
+            find_config_value(&staged, "combined_units/@3").and_then(Value::as_str),
+            Some("marine")
+        );
+        assert_eq!(
+            find_config_value(&staged, "literal_units/@0").and_then(Value::as_str),
+            Some("drone")
+        );
+        assert_eq!(
+            find_config_value(&staged, "literal_units/@1").and_then(Value::as_str),
+            Some("zergling")
+        );
+        assert!(find_config_value(&staged, "__patch").is_none());
+        assert!(find_config_value(&staged, "literal_units/__patch").is_none());
+        assert!(find_config_value(&staged, "__build_info/timestamps/units")
+            .and_then(Value::as_i64)
+            .is_some_and(|timestamp| timestamp > 0));
 
         let reset_traits = empty_traits();
         // SAFETY: reset traits points to valid storage.
