@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Candidate {
@@ -1441,6 +1441,7 @@ impl TableDictionary {
 
     pub fn parse_rime_dict_yaml(input: &str) -> Result<Self, TableDictionaryParseError> {
         let (metadata, mut entries) = parse_rime_dict_yaml_parts(input)?;
+        dedupe_rime_table_entries(&mut entries);
         sort_rime_table_entries(&metadata, &mut entries);
         Ok(Self { entries })
     }
@@ -1462,6 +1463,7 @@ impl TableDictionary {
             let (_, mut imported_entries) = parse_rime_dict_yaml_parts(&import_yaml)?;
             entries.append(&mut imported_entries);
         }
+        dedupe_rime_table_entries(&mut entries);
         sort_rime_table_entries(&metadata, &mut entries);
         Ok(Self { entries })
     }
@@ -1537,6 +1539,11 @@ fn sort_rime_table_entries(metadata: &RimeTableMetadata, entries: &mut [TableEnt
             })
         });
     }
+}
+
+fn dedupe_rime_table_entries(entries: &mut Vec<TableEntry>) {
+    let mut seen = HashSet::new();
+    entries.retain(|entry| seen.insert((entry.text.clone(), entry.code.clone())));
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -4800,6 +4807,47 @@ ba	吧	3
         assert_eq!(entries[0].text, "爸");
         assert_eq!(entries[1].text, "吧");
         assert_eq!(entries[2].text, "八");
+    }
+
+    #[test]
+    fn parses_rime_dict_yaml_drops_duplicate_word_code_definitions() {
+        let dictionary = TableDictionary::parse_rime_dict_yaml_with_imports(
+            r#"
+---
+name: primary
+version: "0.1"
+sort: original
+import_tables: [secondary]
+...
+
+八	ba	1
+八	ba	99
+"#,
+            |name| {
+                (name == "secondary").then(|| {
+                    r#"
+---
+name: secondary
+version: "0.1"
+sort: original
+...
+
+八	ba	88
+吧	ba	3
+"#
+                    .to_owned()
+                })
+            },
+        )
+        .expect("dictionary imports should parse");
+
+        let entries = dictionary.entries();
+        assert_eq!(entries.len(), 2);
+        assert_eq!(entries[0].text, "八");
+        assert_eq!(entries[0].code, "ba");
+        assert_eq!(entries[0].weight, 1.0);
+        assert_eq!(entries[1].text, "吧");
+        assert_eq!(entries[1].code, "ba");
     }
 
     #[test]
