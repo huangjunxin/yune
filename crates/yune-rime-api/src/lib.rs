@@ -164,6 +164,11 @@ struct KeyBindingSwitchOption {
     reset_index: usize,
 }
 
+enum KeyBindingSwitchTarget {
+    Toggle(String),
+    Radio(KeyBindingSwitchOption),
+}
+
 struct PunctuationProcessor {
     use_space: bool,
     digit_separators: String,
@@ -4322,21 +4327,42 @@ fn update_key_binding_paging_state(
 }
 
 fn toggle_key_binding_option(session: &mut SessionState, option: &str) {
+    if let Some(the_option) = key_binding_switch_by_index(session, option) {
+        match the_option {
+            KeyBindingSwitchTarget::Toggle(option) => {
+                session
+                    .engine
+                    .set_option(option.clone(), !session.engine.get_option(&option));
+            }
+            KeyBindingSwitchTarget::Radio(the_option) => {
+                toggle_key_binding_radio_option(session, &the_option);
+            }
+        }
+        return;
+    }
+
     if let Some(the_option) = key_binding_switch_option(session, option) {
-        let selected_index = the_option
-            .options
-            .iter()
-            .position(|option| session.engine.get_option(option));
-        let next_index = selected_index
-            .map(|index| (index + 1) % the_option.options.len())
-            .unwrap_or(the_option.option_index);
-        select_key_binding_radio_option(session, &the_option.options, next_index);
+        toggle_key_binding_radio_option(session, &the_option);
         return;
     }
 
     session
         .engine
         .set_option(option, !session.engine.get_option(option));
+}
+
+fn toggle_key_binding_radio_option(
+    session: &mut SessionState,
+    the_option: &KeyBindingSwitchOption,
+) {
+    let selected_index = the_option
+        .options
+        .iter()
+        .position(|option| session.engine.get_option(option));
+    let next_index = selected_index
+        .map(|index| (index + 1) % the_option.options.len())
+        .unwrap_or(the_option.option_index);
+    select_key_binding_radio_option(session, &the_option.options, next_index);
 }
 
 fn set_key_binding_option(session: &mut SessionState, option: &str, value: bool) {
@@ -4428,6 +4454,45 @@ fn key_binding_switch_option(
         });
     }
     None
+}
+
+fn key_binding_switch_by_index(
+    session: &SessionState,
+    option_name: &str,
+) -> Option<KeyBindingSwitchTarget> {
+    let switch_index = option_name.strip_prefix('@')?.parse::<usize>().ok()?;
+    let schema_id = &session.engine.status().schema_id;
+    let schema_config =
+        load_runtime_config_root(&format!("{schema_id}.schema"), ConfigOpenKind::Deployed);
+    let Value::Sequence(switches) = find_config_value(&schema_config, "switches")? else {
+        return None;
+    };
+    let Value::Mapping(switch_map) = switches.get(switch_index)? else {
+        return None;
+    };
+
+    if let Some(option_name) = switch_scalar_field(switch_map, "name") {
+        return Some(KeyBindingSwitchTarget::Toggle(option_name));
+    }
+
+    let Some(Value::Sequence(options)) = switch_map.get(Value::String("options".to_owned())) else {
+        return None;
+    };
+    let options = options
+        .iter()
+        .filter_map(config_scalar_string)
+        .collect::<Vec<_>>();
+    if options.is_empty() {
+        return None;
+    }
+    let reset_index = switch_reset_value(switch_map)
+        .and_then(|reset| usize::try_from(reset).ok())
+        .unwrap_or(0);
+    Some(KeyBindingSwitchTarget::Radio(KeyBindingSwitchOption {
+        options,
+        option_index: 0,
+        reset_index,
+    }))
 }
 
 fn process_punctuation_processor(
