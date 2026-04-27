@@ -44,6 +44,7 @@ const XK_KP_PAGE_DOWN: c_int = 0xff9b;
 const XK_KP_END: c_int = 0xff9c;
 const XK_KP_0: c_int = 0xffb0;
 const XK_KP_9: c_int = 0xffb9;
+const K_CONTROL_MASK: c_int = 1 << 2;
 const DEFAULT_PAGE_SIZE: usize = 5;
 const RIME_VERSION_BYTES: &[u8] =
     concat!("yune-rime-api ", env!("CARGO_PKG_VERSION"), "\0").as_bytes();
@@ -1601,10 +1602,10 @@ pub extern "C" fn RimeCleanupStaleSessions() {}
 
 #[no_mangle]
 pub extern "C" fn RimeProcessKey(session_id: RimeSessionId, keycode: c_int, mask: c_int) -> Bool {
-    if session_id == 0 || mask != 0 {
+    if session_id == 0 || (mask != 0 && !(mask == K_CONTROL_MASK && keycode == XK_DELETE)) {
         return FALSE;
     }
-    let Some(key_event) = key_event_from_rime_keycode(keycode) else {
+    let Some(key_event) = key_event_from_rime_keycode(keycode, mask) else {
         return FALSE;
     };
 
@@ -3387,7 +3388,7 @@ pub unsafe extern "C" fn RimeFreeCommit(commit: *mut RimeCommit) -> Bool {
     TRUE
 }
 
-fn key_event_from_rime_keycode(keycode: c_int) -> Option<KeyEvent> {
+fn key_event_from_rime_keycode(keycode: c_int, mask: c_int) -> Option<KeyEvent> {
     let code = match keycode {
         XK_BACKSPACE => KeyCode::Backspace,
         XK_DELETE => KeyCode::Delete,
@@ -3408,11 +3409,16 @@ fn key_event_from_rime_keycode(keycode: c_int) -> Option<KeyEvent> {
         0x20..=0x7e => KeyCode::Character(char::from_u32(keycode as u32)?),
         _ => return None,
     };
+    let modifiers = match mask {
+        0 => KeyModifiers::default(),
+        K_CONTROL_MASK => KeyModifiers {
+            control: true,
+            ..KeyModifiers::default()
+        },
+        _ => return None,
+    };
 
-    Some(KeyEvent {
-        code,
-        modifiers: KeyModifiers::default(),
-    })
+    Some(KeyEvent { code, modifiers })
 }
 
 fn commit_selected_candidate(

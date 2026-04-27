@@ -763,6 +763,20 @@ impl Engine {
     }
 
     pub fn process_key_event(&mut self, key_event: KeyEvent) -> Option<String> {
+        if key_event.modifiers.control
+            && !key_event.modifiers.shift
+            && !key_event.modifiers.lock
+            && !key_event.modifiers.alt
+            && !key_event.modifiers.super_key
+            && !key_event.modifiers.hyper
+            && !key_event.modifiers.meta
+            && !key_event.modifiers.release
+            && key_event.code == KeyCode::Delete
+        {
+            self.delete_candidate(self.context.highlighted);
+            return None;
+        }
+
         if !key_event.modifiers.is_empty() {
             return None;
         }
@@ -1457,6 +1471,26 @@ mod tests {
             Some("拔")
         );
         assert!(!engine.delete_candidate_on_current_page(5));
+    }
+
+    #[test]
+    fn control_delete_removes_highlighted_candidate_like_librime_editor_delete_candidate() {
+        let mut engine = Engine::new();
+        engine.add_translator(StaticTableTranslator::new([
+            ("ba", "八"),
+            ("ba", "吧"),
+            ("ba", "爸"),
+        ]));
+
+        let commits = engine
+            .process_key_sequence("ba{Down}{Control+Delete}")
+            .expect("key sequence should parse");
+
+        assert!(commits.is_empty());
+        assert_eq!(engine.context().candidates.len(), 3);
+        assert_eq!(engine.context().candidates[1].text, "爸");
+        assert_eq!(engine.context().highlighted, 1);
+        assert_eq!(engine.context().last_commit, None);
     }
 
     #[test]
