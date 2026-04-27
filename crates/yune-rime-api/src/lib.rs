@@ -1768,8 +1768,8 @@ pub unsafe extern "C" fn RimeSetProperty(
 /// # Safety
 ///
 /// `property` must point to a valid nul-terminated C string, and `value` must
-/// point to writable storage of `buffer_size` bytes. Null or empty values are
-/// rejected.
+/// point to writable storage of `buffer_size` bytes. Null pointers and empty
+/// property values are rejected.
 #[no_mangle]
 pub unsafe extern "C" fn RimeGetProperty(
     session_id: RimeSessionId,
@@ -1777,7 +1777,7 @@ pub unsafe extern "C" fn RimeGetProperty(
     value: *mut c_char,
     buffer_size: usize,
 ) -> Bool {
-    if property.is_null() || value.is_null() || buffer_size == 0 {
+    if property.is_null() || value.is_null() {
         return FALSE;
     }
     // SAFETY: callers promise that `property` is a valid nul-terminated string.
@@ -1799,15 +1799,15 @@ pub unsafe extern "C" fn RimeGetProperty(
 ///
 /// # Safety
 ///
-/// `schema_id` must point to writable storage of `buffer_size` bytes. Null or
-/// empty buffers are rejected.
+/// `schema_id` must point to writable storage of `buffer_size` bytes. Null
+/// buffers are rejected.
 #[no_mangle]
 pub unsafe extern "C" fn RimeGetCurrentSchema(
     session_id: RimeSessionId,
     schema_id: *mut c_char,
     buffer_size: usize,
 ) -> Bool {
-    if schema_id.is_null() || buffer_size == 0 {
+    if schema_id.is_null() {
         return FALSE;
     }
 

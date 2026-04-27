@@ -6866,6 +6866,15 @@ fn sets_and_gets_runtime_properties() {
     let copied_value = unsafe { CStr::from_ptr(buffer.as_ptr()) };
     assert_eq!(copied_value.to_str(), Ok("sample_console"));
 
+    let mut zero_len_marker = b'!' as c_char;
+    // SAFETY: librime's strncpy-based getter accepts a valid output pointer
+    // with a zero-length buffer and reports the non-empty property as present.
+    assert_eq!(
+        unsafe { RimeGetProperty(session_id, property.as_ptr(), &mut zero_len_marker, 0,) },
+        TRUE
+    );
+    assert_eq!(zero_len_marker, b'!' as c_char);
+
     let mut short_buffer = vec![0 as c_char; 7];
     // SAFETY: property name is valid and buffer points to writable storage.
     assert_eq!(
@@ -6965,6 +6974,15 @@ fn gets_and_selects_current_schema() {
     // SAFETY: `RimeGetCurrentSchema` wrote a trailing NUL into buffer.
     let truncated_schema = unsafe { CStr::from_ptr(short_buffer.as_ptr()) };
     assert_eq!(truncated_schema.to_str(), Ok("sample_"));
+
+    let mut zero_len_marker = b'?' as c_char;
+    // SAFETY: librime's strncpy-based getter accepts a valid output pointer
+    // with a zero-length buffer and leaves the pointed storage untouched.
+    assert_eq!(
+        unsafe { RimeGetCurrentSchema(session_id, &mut zero_len_marker, 0) },
+        TRUE
+    );
+    assert_eq!(zero_len_marker, b'?' as c_char);
 
     // SAFETY: status points to writable storage initialized with positive
     // `data_size`.
