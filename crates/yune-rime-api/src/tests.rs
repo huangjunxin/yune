@@ -11685,6 +11685,10 @@ fn simulates_librime_style_key_sequences() {
     .expect("key sequence should be valid");
     let noop_function_sequence =
         CString::new("{F1}{Alt+F4}{F12}{F13}{F35}").expect("key sequence should be valid");
+    let noop_modifier_key_sequence = CString::new(
+        "{Shift_L}{Shift_R}{Control_L}{Control_R}{Caps_Lock}{Shift_Lock}{Meta_L}{Meta_R}{Alt_L}{Alt_R}{Super_L}{Super_R}{Hyper_L}{Release+Hyper_R}",
+    )
+    .expect("key sequence should be valid");
     let invalid_sequence =
         CString::new("x{Unknown}").expect("key sequence should be valid C string");
     let mut commit = RimeCommit {
@@ -11767,6 +11771,19 @@ fn simulates_librime_style_key_sequences() {
         TRUE
     );
     // SAFETY: ignored function keys should leave the context empty.
+    assert_eq!(unsafe { RimeGetContext(session_id, &mut context) }, TRUE);
+    assert_eq!(context.composition.length, 0);
+    assert_eq!(context.menu.num_candidates, 0);
+    // SAFETY: nested pointers were allocated by `RimeGetContext` above.
+    assert_eq!(unsafe { RimeFreeContext(&mut context) }, TRUE);
+
+    // SAFETY: noop_modifier_key_sequence is a valid C string; librime parses
+    // physical modifier key names as key-table names even when ignored.
+    assert_eq!(
+        unsafe { RimeSimulateKeySequence(session_id, noop_modifier_key_sequence.as_ptr()) },
+        TRUE
+    );
+    // SAFETY: ignored modifier-key names should leave the context empty.
     assert_eq!(unsafe { RimeGetContext(session_id, &mut context) }, TRUE);
     assert_eq!(context.composition.length, 0);
     assert_eq!(context.menu.num_candidates, 0);
