@@ -37,8 +37,8 @@ use super::{
     RimeSetInput, RimeSetNotificationHandler, RimeSetOption, RimeSetProperty, RimeSetup,
     RimeSetupLogging, RimeSimulateKeySequence, RimeStartMaintenance,
     RimeStartMaintenanceOnWorkspaceChange, RimeStatus, RimeSyncUserData, RimeTraits,
-    RimeUserConfigOpen, FALSE, K_ALT_MASK, K_CONTROL_MASK, K_RELEASE_MASK, K_SHIFT_MASK,
-    K_SUPER_MASK, TRUE,
+    RimeUserConfigOpen, RimeUserDictIterator, FALSE, K_ALT_MASK, K_CONTROL_MASK, K_RELEASE_MASK,
+    K_SHIFT_MASK, K_SUPER_MASK, TRUE,
 };
 
 #[derive(Debug, PartialEq, Eq)]
@@ -395,6 +395,205 @@ fn rime_frontend_struct_layout_matches_librime_header() {
         align_up(
             iterator_candidate + std::mem::size_of::<super::RimeCandidate>(),
             std::mem::align_of::<RimeCandidateListIterator>(),
+        )
+    );
+
+    let config = empty_config();
+    assert_eq!(field_offset(&config, std::ptr::addr_of!(config.ptr)), 0);
+    assert_eq!(std::mem::size_of::<RimeConfig>(), ptr_size);
+
+    let config_iterator = empty_config_iterator();
+    let config_iterator_index = ptr_size * 2;
+    let config_iterator_key = align_up(config_iterator_index + int_size, ptr_align);
+    assert_eq!(
+        field_offset(&config_iterator, std::ptr::addr_of!(config_iterator.list)),
+        0
+    );
+    assert_eq!(
+        field_offset(&config_iterator, std::ptr::addr_of!(config_iterator.map)),
+        ptr_size
+    );
+    assert_eq!(
+        field_offset(&config_iterator, std::ptr::addr_of!(config_iterator.index)),
+        config_iterator_index
+    );
+    assert_eq!(
+        field_offset(&config_iterator, std::ptr::addr_of!(config_iterator.key)),
+        config_iterator_key
+    );
+    assert_eq!(
+        field_offset(&config_iterator, std::ptr::addr_of!(config_iterator.path)),
+        config_iterator_key + ptr_size
+    );
+    assert_eq!(
+        std::mem::size_of::<RimeConfigIterator>(),
+        align_up(config_iterator_key + ptr_size * 2, ptr_align)
+    );
+
+    let schema_list_item = super::RimeSchemaListItem {
+        schema_id: std::ptr::null_mut(),
+        name: std::ptr::null_mut(),
+        reserved: std::ptr::null_mut(),
+    };
+    assert_eq!(
+        field_offset(
+            &schema_list_item,
+            std::ptr::addr_of!(schema_list_item.schema_id)
+        ),
+        0
+    );
+    assert_eq!(
+        field_offset(&schema_list_item, std::ptr::addr_of!(schema_list_item.name)),
+        ptr_size
+    );
+    assert_eq!(
+        field_offset(
+            &schema_list_item,
+            std::ptr::addr_of!(schema_list_item.reserved)
+        ),
+        ptr_size * 2
+    );
+    assert_eq!(
+        std::mem::size_of::<super::RimeSchemaListItem>(),
+        ptr_size * 3
+    );
+
+    let schema_list = empty_schema_list();
+    let usize_size = std::mem::size_of::<usize>();
+    let usize_align = std::mem::align_of::<usize>();
+    let schema_list_items = align_up(usize_size, ptr_align);
+    assert_eq!(
+        field_offset(&schema_list, std::ptr::addr_of!(schema_list.size)),
+        0
+    );
+    assert_eq!(
+        field_offset(&schema_list, std::ptr::addr_of!(schema_list.list)),
+        schema_list_items
+    );
+    assert_eq!(
+        std::mem::size_of::<super::RimeSchemaList>(),
+        align_up(
+            schema_list_items + ptr_size,
+            std::mem::align_of::<super::RimeSchemaList>(),
+        )
+    );
+
+    let string_slice = super::RimeStringSlice {
+        str: std::ptr::null(),
+        length: 0,
+    };
+    let string_slice_length = align_up(ptr_size, usize_align);
+    assert_eq!(
+        field_offset(&string_slice, std::ptr::addr_of!(string_slice.str)),
+        0
+    );
+    assert_eq!(
+        field_offset(&string_slice, std::ptr::addr_of!(string_slice.length)),
+        string_slice_length
+    );
+    assert_eq!(
+        std::mem::size_of::<super::RimeStringSlice>(),
+        align_up(
+            string_slice_length + usize_size,
+            std::mem::align_of::<super::RimeStringSlice>(),
+        )
+    );
+
+    let custom_api = RimeCustomApi { data_size: 0 };
+    assert_eq!(
+        field_offset(&custom_api, std::ptr::addr_of!(custom_api.data_size)),
+        0
+    );
+    assert_eq!(std::mem::size_of::<RimeCustomApi>(), int_size);
+
+    let module = RimeModule {
+        data_size: 0,
+        module_name: std::ptr::null(),
+        initialize: None,
+        finalize: None,
+        get_api: None,
+    };
+    let function_size = std::mem::size_of::<Option<extern "C" fn()>>();
+    let function_align = std::mem::align_of::<Option<extern "C" fn()>>();
+    let module_name = align_up(int_size, ptr_align);
+    let module_initialize = align_up(module_name + ptr_size, function_align);
+    assert_eq!(
+        field_offset(&module, std::ptr::addr_of!(module.data_size)),
+        0
+    );
+    assert_eq!(
+        field_offset(&module, std::ptr::addr_of!(module.module_name)),
+        module_name
+    );
+    assert_eq!(
+        field_offset(&module, std::ptr::addr_of!(module.initialize)),
+        module_initialize
+    );
+    assert_eq!(
+        field_offset(&module, std::ptr::addr_of!(module.finalize)),
+        module_initialize + function_size
+    );
+    assert_eq!(
+        field_offset(&module, std::ptr::addr_of!(module.get_api)),
+        module_initialize + function_size * 2
+    );
+    assert_eq!(
+        std::mem::size_of::<RimeModule>(),
+        align_up(
+            module_initialize + function_size * 3,
+            std::mem::align_of::<RimeModule>(),
+        )
+    );
+
+    let custom_settings = super::RimeCustomSettings { placeholder: 0 };
+    let switcher_settings = super::RimeSwitcherSettings { placeholder: 0 };
+    let schema_info = super::RimeSchemaInfo { placeholder: 0 };
+    assert_eq!(
+        field_offset(
+            &custom_settings,
+            std::ptr::addr_of!(custom_settings.placeholder)
+        ),
+        0
+    );
+    assert_eq!(
+        field_offset(
+            &switcher_settings,
+            std::ptr::addr_of!(switcher_settings.placeholder)
+        ),
+        0
+    );
+    assert_eq!(
+        field_offset(&schema_info, std::ptr::addr_of!(schema_info.placeholder)),
+        0
+    );
+    assert_eq!(std::mem::size_of::<super::RimeCustomSettings>(), 1);
+    assert_eq!(std::mem::size_of::<super::RimeSwitcherSettings>(), 1);
+    assert_eq!(std::mem::size_of::<super::RimeSchemaInfo>(), 1);
+
+    let user_dict_iterator = RimeUserDictIterator {
+        ptr: std::ptr::null_mut(),
+        i: 0,
+    };
+    let user_dict_iterator_index = align_up(ptr_size, usize_align);
+    assert_eq!(
+        field_offset(
+            &user_dict_iterator,
+            std::ptr::addr_of!(user_dict_iterator.ptr)
+        ),
+        0
+    );
+    assert_eq!(
+        field_offset(
+            &user_dict_iterator,
+            std::ptr::addr_of!(user_dict_iterator.i)
+        ),
+        user_dict_iterator_index
+    );
+    assert_eq!(
+        std::mem::size_of::<RimeUserDictIterator>(),
+        align_up(
+            user_dict_iterator_index + usize_size,
+            std::mem::align_of::<RimeUserDictIterator>(),
         )
     );
 }
