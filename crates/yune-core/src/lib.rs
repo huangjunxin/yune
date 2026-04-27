@@ -1482,6 +1482,20 @@ mod tests {
     }
 
     #[test]
+    fn shift_ascii_numeric_selection_matches_librime_selector() {
+        let mut engine = Engine::new();
+        engine.add_translator(StaticTableTranslator::new([("ba", "八"), ("ba", "吧")]));
+
+        let commits = engine
+            .process_key_sequence("ba{Shift+2}")
+            .expect("key sequence should parse");
+
+        assert_eq!(commits, ["吧"]);
+        assert_eq!(engine.context().last_commit.as_deref(), Some("吧"));
+        assert!(!engine.status().is_composing);
+    }
+
+    #[test]
     fn escape_clears_composition_like_librime_editor_cancel() {
         let mut engine = Engine::new();
         engine.add_translator(StaticTableTranslator::new([("ni", "你")]));
