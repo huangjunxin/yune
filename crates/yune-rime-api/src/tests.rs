@@ -11754,6 +11754,10 @@ fn simulates_librime_style_key_sequences() {
         "{Arabic_comma}{Arabic_semicolon}{Arabic_question_mark}{Arabic_hamza}{Arabic_hamzaonyeh}{Arabic_tatweel}{Arabic_ha}{Arabic_heh}{Release+Arabic_sukun}",
     )
     .expect("key sequence should be valid");
+    let noop_cyrillic_key_sequence = CString::new(
+        "{Serbian_dje}{Ukrainian_ie}{Ukranian_je}{Cyrillic_je}{Serbian_je}{Byelorussian_shortu}{Cyrillic_dzhe}{Serbian_dze}{numerosign}{Cyrillic_yu}{Cyrillic_hardsign}{Cyrillic_YU}{Release+Cyrillic_HARDSIGN}",
+    )
+    .expect("key sequence should be valid");
     let named_ascii_sequence =
         CString::new("{exclam}{space}").expect("key sequence should be valid");
     let invalid_sequence =
@@ -11989,6 +11993,20 @@ fn simulates_librime_style_key_sequences() {
         TRUE
     );
     // SAFETY: ignored Arabic key names should leave the context empty.
+    assert_eq!(unsafe { RimeGetContext(session_id, &mut context) }, TRUE);
+    assert_eq!(context.composition.length, 0);
+    assert_eq!(context.menu.num_candidates, 0);
+    // SAFETY: nested pointers were allocated by `RimeGetContext` above.
+    assert_eq!(unsafe { RimeFreeContext(&mut context) }, TRUE);
+
+    // SAFETY: noop_cyrillic_key_sequence is a valid C string; librime parses
+    // Cyrillic key-table names even though the default editor/speller ignore
+    // non-ASCII keycodes.
+    assert_eq!(
+        unsafe { RimeSimulateKeySequence(session_id, noop_cyrillic_key_sequence.as_ptr()) },
+        TRUE
+    );
+    // SAFETY: ignored Cyrillic key names should leave the context empty.
     assert_eq!(unsafe { RimeGetContext(session_id, &mut context) }, TRUE);
     assert_eq!(context.composition.length, 0);
     assert_eq!(context.menu.num_candidates, 0);

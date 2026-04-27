@@ -238,7 +238,8 @@ fn key_code_from_name(name: &str) -> Result<KeyCode, KeySequenceParseError> {
             || is_librime_latin3_key_name(name)
             || is_librime_latin4_key_name(name)
             || is_librime_kana_key_name(name)
-            || is_librime_arabic_key_name(name) =>
+            || is_librime_arabic_key_name(name)
+            || is_librime_cyrillic_key_name(name) =>
         {
             KeyCode::Ignored
         }
@@ -852,6 +853,119 @@ fn is_librime_arabic_key_name(name: &str) -> bool {
             | "Arabic_kasra"
             | "Arabic_shadda"
             | "Arabic_sukun"
+    )
+}
+
+fn is_librime_cyrillic_key_name(name: &str) -> bool {
+    matches!(
+        name,
+        "Serbian_dje"
+            | "Macedonia_gje"
+            | "Cyrillic_io"
+            | "Ukrainian_ie"
+            | "Ukranian_je"
+            | "Macedonia_dse"
+            | "Ukrainian_i"
+            | "Ukranian_i"
+            | "Ukrainian_yi"
+            | "Ukranian_yi"
+            | "Cyrillic_je"
+            | "Serbian_je"
+            | "Cyrillic_lje"
+            | "Serbian_lje"
+            | "Cyrillic_nje"
+            | "Serbian_nje"
+            | "Serbian_tshe"
+            | "Macedonia_kje"
+            | "Byelorussian_shortu"
+            | "Cyrillic_dzhe"
+            | "Serbian_dze"
+            | "numerosign"
+            | "Serbian_DJE"
+            | "Macedonia_GJE"
+            | "Cyrillic_IO"
+            | "Ukrainian_IE"
+            | "Ukranian_JE"
+            | "Macedonia_DSE"
+            | "Ukrainian_I"
+            | "Ukranian_I"
+            | "Ukrainian_YI"
+            | "Ukranian_YI"
+            | "Cyrillic_JE"
+            | "Serbian_JE"
+            | "Cyrillic_LJE"
+            | "Serbian_LJE"
+            | "Cyrillic_NJE"
+            | "Serbian_NJE"
+            | "Serbian_TSHE"
+            | "Macedonia_KJE"
+            | "Byelorussian_SHORTU"
+            | "Cyrillic_DZHE"
+            | "Serbian_DZE"
+            | "Cyrillic_yu"
+            | "Cyrillic_a"
+            | "Cyrillic_be"
+            | "Cyrillic_tse"
+            | "Cyrillic_de"
+            | "Cyrillic_ie"
+            | "Cyrillic_ef"
+            | "Cyrillic_ghe"
+            | "Cyrillic_ha"
+            | "Cyrillic_i"
+            | "Cyrillic_shorti"
+            | "Cyrillic_ka"
+            | "Cyrillic_el"
+            | "Cyrillic_em"
+            | "Cyrillic_en"
+            | "Cyrillic_o"
+            | "Cyrillic_pe"
+            | "Cyrillic_ya"
+            | "Cyrillic_er"
+            | "Cyrillic_es"
+            | "Cyrillic_te"
+            | "Cyrillic_u"
+            | "Cyrillic_zhe"
+            | "Cyrillic_ve"
+            | "Cyrillic_softsign"
+            | "Cyrillic_yeru"
+            | "Cyrillic_ze"
+            | "Cyrillic_sha"
+            | "Cyrillic_e"
+            | "Cyrillic_shcha"
+            | "Cyrillic_che"
+            | "Cyrillic_hardsign"
+            | "Cyrillic_YU"
+            | "Cyrillic_A"
+            | "Cyrillic_BE"
+            | "Cyrillic_TSE"
+            | "Cyrillic_DE"
+            | "Cyrillic_IE"
+            | "Cyrillic_EF"
+            | "Cyrillic_GHE"
+            | "Cyrillic_HA"
+            | "Cyrillic_I"
+            | "Cyrillic_SHORTI"
+            | "Cyrillic_KA"
+            | "Cyrillic_EL"
+            | "Cyrillic_EM"
+            | "Cyrillic_EN"
+            | "Cyrillic_O"
+            | "Cyrillic_PE"
+            | "Cyrillic_YA"
+            | "Cyrillic_ER"
+            | "Cyrillic_ES"
+            | "Cyrillic_TE"
+            | "Cyrillic_U"
+            | "Cyrillic_ZHE"
+            | "Cyrillic_VE"
+            | "Cyrillic_SOFTSIGN"
+            | "Cyrillic_YERU"
+            | "Cyrillic_ZE"
+            | "Cyrillic_SHA"
+            | "Cyrillic_E"
+            | "Cyrillic_SHCHA"
+            | "Cyrillic_CHE"
+            | "Cyrillic_HARDSIGN"
     )
 }
 
@@ -2708,6 +2822,131 @@ mod tests {
             "Arabic_kasra",
             "Arabic_shadda",
             "Release+Arabic_sukun",
+        ];
+        let sequence = names
+            .iter()
+            .map(|name| format!("{{{name}}}"))
+            .collect::<String>();
+        let keys = parse_key_sequence(&sequence).expect("key sequence should parse");
+
+        assert_eq!(keys.len(), names.len());
+        assert!(keys.iter().all(|key| key.code == KeyCode::Ignored));
+        assert!(keys[..names.len() - 1]
+            .iter()
+            .all(|key| key.modifiers.is_empty()));
+        assert!(keys[names.len() - 1].modifiers.release);
+    }
+
+    #[test]
+    fn parses_librime_cyrillic_noop_key_names() {
+        let names = [
+            "Serbian_dje",
+            "Macedonia_gje",
+            "Cyrillic_io",
+            "Ukrainian_ie",
+            "Ukranian_je",
+            "Macedonia_dse",
+            "Ukrainian_i",
+            "Ukranian_i",
+            "Ukrainian_yi",
+            "Ukranian_yi",
+            "Cyrillic_je",
+            "Serbian_je",
+            "Cyrillic_lje",
+            "Serbian_lje",
+            "Cyrillic_nje",
+            "Serbian_nje",
+            "Serbian_tshe",
+            "Macedonia_kje",
+            "Byelorussian_shortu",
+            "Cyrillic_dzhe",
+            "Serbian_dze",
+            "numerosign",
+            "Serbian_DJE",
+            "Macedonia_GJE",
+            "Cyrillic_IO",
+            "Ukrainian_IE",
+            "Ukranian_JE",
+            "Macedonia_DSE",
+            "Ukrainian_I",
+            "Ukranian_I",
+            "Ukrainian_YI",
+            "Ukranian_YI",
+            "Cyrillic_JE",
+            "Serbian_JE",
+            "Cyrillic_LJE",
+            "Serbian_LJE",
+            "Cyrillic_NJE",
+            "Serbian_NJE",
+            "Serbian_TSHE",
+            "Macedonia_KJE",
+            "Byelorussian_SHORTU",
+            "Cyrillic_DZHE",
+            "Serbian_DZE",
+            "Cyrillic_yu",
+            "Cyrillic_a",
+            "Cyrillic_be",
+            "Cyrillic_tse",
+            "Cyrillic_de",
+            "Cyrillic_ie",
+            "Cyrillic_ef",
+            "Cyrillic_ghe",
+            "Cyrillic_ha",
+            "Cyrillic_i",
+            "Cyrillic_shorti",
+            "Cyrillic_ka",
+            "Cyrillic_el",
+            "Cyrillic_em",
+            "Cyrillic_en",
+            "Cyrillic_o",
+            "Cyrillic_pe",
+            "Cyrillic_ya",
+            "Cyrillic_er",
+            "Cyrillic_es",
+            "Cyrillic_te",
+            "Cyrillic_u",
+            "Cyrillic_zhe",
+            "Cyrillic_ve",
+            "Cyrillic_softsign",
+            "Cyrillic_yeru",
+            "Cyrillic_ze",
+            "Cyrillic_sha",
+            "Cyrillic_e",
+            "Cyrillic_shcha",
+            "Cyrillic_che",
+            "Cyrillic_hardsign",
+            "Cyrillic_YU",
+            "Cyrillic_A",
+            "Cyrillic_BE",
+            "Cyrillic_TSE",
+            "Cyrillic_DE",
+            "Cyrillic_IE",
+            "Cyrillic_EF",
+            "Cyrillic_GHE",
+            "Cyrillic_HA",
+            "Cyrillic_I",
+            "Cyrillic_SHORTI",
+            "Cyrillic_KA",
+            "Cyrillic_EL",
+            "Cyrillic_EM",
+            "Cyrillic_EN",
+            "Cyrillic_O",
+            "Cyrillic_PE",
+            "Cyrillic_YA",
+            "Cyrillic_ER",
+            "Cyrillic_ES",
+            "Cyrillic_TE",
+            "Cyrillic_U",
+            "Cyrillic_ZHE",
+            "Cyrillic_VE",
+            "Cyrillic_SOFTSIGN",
+            "Cyrillic_YERU",
+            "Cyrillic_ZE",
+            "Cyrillic_SHA",
+            "Cyrillic_E",
+            "Cyrillic_SHCHA",
+            "Cyrillic_CHE",
+            "Release+Cyrillic_HARDSIGN",
         ];
         let sequence = names
             .iter()
