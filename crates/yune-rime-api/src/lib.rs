@@ -1602,7 +1602,9 @@ pub extern "C" fn RimeCleanupStaleSessions() {}
 
 #[no_mangle]
 pub extern "C" fn RimeProcessKey(session_id: RimeSessionId, keycode: c_int, mask: c_int) -> Bool {
-    if session_id == 0 || (mask != 0 && !(mask == K_CONTROL_MASK && keycode == XK_DELETE)) {
+    if session_id == 0
+        || (mask != 0 && !(mask == K_CONTROL_MASK && matches!(keycode, XK_BACKSPACE | XK_DELETE)))
+    {
         return FALSE;
     }
     let Some(key_event) = key_event_from_rime_keycode(keycode, mask) else {

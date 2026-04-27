@@ -763,18 +763,17 @@ impl Engine {
     }
 
     pub fn process_key_event(&mut self, key_event: KeyEvent) -> Option<String> {
-        if key_event.modifiers.control
-            && !key_event.modifiers.shift
-            && !key_event.modifiers.lock
-            && !key_event.modifiers.alt
-            && !key_event.modifiers.super_key
-            && !key_event.modifiers.hyper
-            && !key_event.modifiers.meta
-            && !key_event.modifiers.release
-            && key_event.code == KeyCode::Delete
-        {
-            self.delete_candidate(self.context.highlighted);
-            return None;
+        if is_exact_control_modifier(key_event.modifiers) {
+            match key_event.code {
+                KeyCode::Backspace => {
+                    return self.backspace();
+                }
+                KeyCode::Delete => {
+                    self.delete_candidate(self.context.highlighted);
+                    return None;
+                }
+                _ => {}
+            }
         }
 
         if !key_event.modifiers.is_empty() {
@@ -1095,6 +1094,17 @@ impl Engine {
     }
 }
 
+const fn is_exact_control_modifier(modifiers: KeyModifiers) -> bool {
+    modifiers.control
+        && !modifiers.shift
+        && !modifiers.lock
+        && !modifiers.alt
+        && !modifiers.super_key
+        && !modifiers.hyper
+        && !modifiers.meta
+        && !modifiers.release
+}
+
 const fn select_index_from_digit(ch: char) -> usize {
     match ch {
         '1'..='9' => ch as usize - '1' as usize,
@@ -1260,6 +1270,22 @@ mod tests {
         assert!(commits.is_empty());
         assert_eq!(engine.context().composition.input, "ni");
         assert_eq!(engine.context().composition.caret, 0);
+    }
+
+    #[test]
+    fn control_backspace_falls_back_to_previous_input_like_librime_editor_back_syllable() {
+        let mut engine = Engine::new();
+        engine.add_translator(StaticTableTranslator::new([("ni", "你")]));
+
+        engine.set_input("nxi");
+        engine.set_caret_pos(2);
+        let commits = engine
+            .process_key_sequence("{Control+BackSpace}{space}")
+            .expect("key sequence should parse");
+
+        assert_eq!(commits, vec!["你"]);
+        assert_eq!(engine.context().last_commit.as_deref(), Some("你"));
+        assert!(!engine.status().is_composing);
     }
 
     #[test]
