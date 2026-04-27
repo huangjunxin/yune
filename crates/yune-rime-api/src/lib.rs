@@ -1387,7 +1387,7 @@ pub extern "C" fn RimeRunTask(task_name: *const c_char) -> Bool {
     if task_name == "prebuild_all_schemas" {
         return bool_from(prebuild_all_schemas());
     }
-    TRUE
+    FALSE
 }
 
 #[no_mangle]

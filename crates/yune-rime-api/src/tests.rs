@@ -2988,6 +2988,7 @@ fn maintenance_and_deployment_shims_are_deterministic() {
     let config_file = CString::new("default.yaml").expect("file should be valid");
     let version_key = CString::new("config_version").expect("key should be valid");
     let task_name = CString::new("workspace_update").expect("task should be valid");
+    let unknown_task = CString::new("no_such_task").expect("task should be valid");
     let mut traits = empty_traits();
     traits.shared_data_dir = shared.as_ptr();
     traits.user_data_dir = user_c.as_ptr();
@@ -3024,6 +3025,7 @@ fn maintenance_and_deployment_shims_are_deterministic() {
         FALSE
     );
     assert_eq!(RimeRunTask(task_name.as_ptr()), TRUE);
+    assert_eq!(RimeRunTask(unknown_task.as_ptr()), FALSE);
     assert_eq!(RimeRunTask(std::ptr::null()), FALSE);
 
     let session_id = RimeCreateSession();
