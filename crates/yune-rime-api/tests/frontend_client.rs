@@ -1,5 +1,5 @@
 use std::{
-    ffi::{CStr, CString},
+    ffi::{c_void, CStr, CString},
     fs, mem,
     os::raw::{c_char, c_int},
     path::PathBuf,
@@ -11,8 +11,16 @@ use std::{
 use yune_rime_api::{
     rime_get_api, RimeCandidate, RimeCandidateListIterator, RimeCommit, RimeComposition,
     RimeConfig, RimeConfigIterator, RimeContext, RimeCustomApi, RimeMenu, RimeModule,
-    RimeSchemaList, RimeStatus, RimeTraits, FALSE, TRUE,
+    RimeSchemaList, RimeSessionId, RimeStatus, RimeTraits, FALSE, TRUE,
 };
+
+#[derive(Debug, PartialEq, Eq)]
+struct NotificationEvent {
+    context_object: usize,
+    session_id: RimeSessionId,
+    message_type: String,
+    message_value: String,
+}
 
 fn empty_context() -> RimeContext {
     RimeContext {
@@ -118,6 +126,37 @@ fn test_guard() -> MutexGuard<'static, ()> {
         .get_or_init(|| Mutex::new(()))
         .lock()
         .expect("test lock should not be poisoned")
+}
+
+fn notification_events() -> &'static Mutex<Vec<NotificationEvent>> {
+    static NOTIFICATION_EVENTS: OnceLock<Mutex<Vec<NotificationEvent>>> = OnceLock::new();
+    NOTIFICATION_EVENTS.get_or_init(|| Mutex::new(Vec::new()))
+}
+
+extern "C" fn record_notification(
+    context_object: *mut c_void,
+    session_id: RimeSessionId,
+    message_type: *const c_char,
+    message_value: *const c_char,
+) {
+    // SAFETY: the shim invokes handlers with valid NUL-terminated message
+    // strings for the duration of the callback.
+    let message_type = unsafe { CStr::from_ptr(message_type) }
+        .to_string_lossy()
+        .into_owned();
+    // SAFETY: same as above.
+    let message_value = unsafe { CStr::from_ptr(message_value) }
+        .to_string_lossy()
+        .into_owned();
+    notification_events()
+        .lock()
+        .expect("notification events should not be poisoned")
+        .push(NotificationEvent {
+            context_object: context_object as usize,
+            session_id,
+            message_type,
+            message_value,
+        });
 }
 
 fn unique_temp_dir(label: &str) -> PathBuf {
@@ -271,6 +310,137 @@ conditions:
     assert_eq!(unsafe { register_module(ptr::null_mut()) }, FALSE);
     assert!(unsafe { find_module(ptr::null()) }.is_null());
 
+    let reset_traits = empty_traits();
+    unsafe { setup(&reset_traits) };
+    fs::remove_dir_all(root).expect("temp dirs should be removed");
+}
+
+#[test]
+fn frontend_style_api_table_can_receive_runtime_notifications() {
+    let _guard = test_guard();
+    let api = rime_get_api();
+    assert!(!api.is_null());
+    let api = unsafe { &*api };
+
+    let setup = api.setup.expect("frontend requires setup");
+    let set_notification_handler = api
+        .set_notification_handler
+        .expect("frontend requires set_notification_handler");
+    let create_session = api
+        .create_session
+        .expect("frontend requires create_session");
+    let destroy_session = api
+        .destroy_session
+        .expect("frontend requires destroy_session");
+    let cleanup_all_sessions = api
+        .cleanup_all_sessions
+        .expect("frontend requires cleanup_all_sessions");
+    let set_option = api.set_option.expect("frontend requires set_option");
+    let set_property = api.set_property.expect("frontend requires set_property");
+    let select_schema = api.select_schema.expect("frontend requires select_schema");
+    let deploy = api.deploy.expect("frontend requires deploy");
+
+    cleanup_all_sessions();
+    let root = unique_temp_dir("notifications");
+    let shared = root.join("shared");
+    let user = root.join("user");
+    fs::create_dir_all(&shared).expect("shared dir should be created");
+    fs::create_dir_all(&user).expect("user dir should be created");
+    fs::write(
+        shared.join("default.yaml"),
+        "config_version: test\nschema_list:\n  - schema: sample_schema\n",
+    )
+    .expect("shared config should be written");
+    fs::write(
+        shared.join("sample_schema.schema.yaml"),
+        "schema:\n  schema_id: sample_schema\n  name: Sample\n",
+    )
+    .expect("shared schema should be written");
+
+    let shared_c = CString::new(shared.to_string_lossy().as_ref()).expect("path should be valid");
+    let user_c = CString::new(user.to_string_lossy().as_ref()).expect("path should be valid");
+    let mut traits = empty_traits();
+    traits.shared_data_dir = shared_c.as_ptr();
+    traits.user_data_dir = user_c.as_ptr();
+    unsafe { setup(&traits) };
+
+    notification_events()
+        .lock()
+        .expect("notification events should not be poisoned")
+        .clear();
+    let session_id = create_session();
+    let ascii_mode = CString::new("ascii_mode").expect("option name should be valid");
+    let property = CString::new("client_app").expect("property name should be valid");
+    let property_value = CString::new("frontend_client").expect("property value should be valid");
+    let schema_id = CString::new("sample_schema").expect("schema id should be valid");
+    let context_object = 0x7b_usize as *mut c_void;
+
+    set_notification_handler(Some(record_notification), context_object);
+    unsafe {
+        set_option(session_id, ascii_mode.as_ptr(), TRUE);
+        set_option(session_id, ascii_mode.as_ptr(), FALSE);
+        set_property(session_id, property.as_ptr(), property_value.as_ptr());
+        assert_eq!(select_schema(session_id, schema_id.as_ptr()), TRUE);
+    }
+    assert_eq!(deploy(), TRUE);
+
+    let events = notification_events()
+        .lock()
+        .expect("notification events should not be poisoned");
+    assert_eq!(
+        *events,
+        vec![
+            NotificationEvent {
+                context_object: 0x7b,
+                session_id,
+                message_type: "option".to_owned(),
+                message_value: "ascii_mode".to_owned(),
+            },
+            NotificationEvent {
+                context_object: 0x7b,
+                session_id,
+                message_type: "option".to_owned(),
+                message_value: "!ascii_mode".to_owned(),
+            },
+            NotificationEvent {
+                context_object: 0x7b,
+                session_id,
+                message_type: "property".to_owned(),
+                message_value: "client_app=frontend_client".to_owned(),
+            },
+            NotificationEvent {
+                context_object: 0x7b,
+                session_id,
+                message_type: "schema".to_owned(),
+                message_value: "sample_schema/sample_schema".to_owned(),
+            },
+            NotificationEvent {
+                context_object: 0x7b,
+                session_id: 0,
+                message_type: "deploy".to_owned(),
+                message_value: "start".to_owned(),
+            },
+            NotificationEvent {
+                context_object: 0x7b,
+                session_id: 0,
+                message_type: "deploy".to_owned(),
+                message_value: "success".to_owned(),
+            },
+        ]
+    );
+    drop(events);
+
+    set_notification_handler(None, ptr::null_mut());
+    unsafe { set_option(session_id, ascii_mode.as_ptr(), TRUE) };
+    assert_eq!(
+        notification_events()
+            .lock()
+            .expect("notification events should not be poisoned")
+            .len(),
+        6
+    );
+
+    assert_eq!(destroy_session(session_id), TRUE);
     let reset_traits = empty_traits();
     unsafe { setup(&reset_traits) };
     fs::remove_dir_all(root).expect("temp dirs should be removed");
