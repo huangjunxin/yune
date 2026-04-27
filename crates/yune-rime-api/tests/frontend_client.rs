@@ -936,6 +936,9 @@ fn frontend_style_api_table_can_receive_runtime_notifications() {
     let set_option = api.set_option.expect("frontend requires set_option");
     let set_property = api.set_property.expect("frontend requires set_property");
     let select_schema = api.select_schema.expect("frontend requires select_schema");
+    let start_maintenance = api
+        .start_maintenance
+        .expect("frontend requires start_maintenance");
     let deploy = api.deploy.expect("frontend requires deploy");
 
     cleanup_all_sessions();
@@ -980,6 +983,7 @@ fn frontend_style_api_table_can_receive_runtime_notifications() {
         set_property(session_id, property.as_ptr(), property_value.as_ptr());
         assert_eq!(select_schema(session_id, schema_id.as_ptr()), TRUE);
     }
+    assert_eq!(start_maintenance(TRUE), TRUE);
     assert_eq!(deploy(), TRUE);
 
     let events = notification_events()

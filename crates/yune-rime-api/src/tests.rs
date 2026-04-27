@@ -6151,6 +6151,7 @@ fn notification_handler_receives_runtime_events_and_can_be_cleared() {
         RimeSetProperty(session_id, property.as_ptr(), property_value.as_ptr());
         assert_eq!(RimeSelectSchema(session_id, schema_id.as_ptr()), TRUE);
     }
+    assert_eq!(RimeStartMaintenance(TRUE), TRUE);
     assert_eq!(RimeDeployWorkspace(), TRUE);
 
     let events = notification_events()

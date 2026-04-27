@@ -1404,16 +1404,17 @@ pub extern "C" fn RimeFinalize() {
 
 #[no_mangle]
 pub extern "C" fn RimeStartMaintenance(full_check: Bool) -> Bool {
-    if !clean_old_log_files() {
-        return FALSE;
-    }
+    let _ = clean_old_log_files();
     if !run_installation_update() {
         return FALSE;
     }
     if full_check == FALSE && !detect_modifications() {
         return FALSE;
     }
-    bool_from(run_workspace_maintenance_tasks())
+    notify(0, "deploy", "start");
+    let success = run_workspace_maintenance_tasks();
+    notify(0, "deploy", if success { "success" } else { "failure" });
+    bool_from(success)
 }
 
 #[no_mangle]
@@ -1453,8 +1454,6 @@ pub extern "C" fn RimeDeployWorkspace() -> Bool {
     if !run_workspace_maintenance_tasks() {
         return FALSE;
     }
-    notify(0, "deploy", "start");
-    notify(0, "deploy", "success");
     TRUE
 }
 
