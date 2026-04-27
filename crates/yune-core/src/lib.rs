@@ -790,6 +790,19 @@ impl Engine {
         {
             return self.commit_comment();
         }
+        if is_exact_control_shift_modifier(key_event.modifiers) {
+            match key_event.code {
+                KeyCode::Character(ch)
+                    if ch.is_ascii_digit() && !self.context.candidates.is_empty() =>
+                {
+                    return self.commit_candidate_at_page_index(select_index_from_digit(ch));
+                }
+                KeyCode::KeypadDigit(ch) if !self.context.candidates.is_empty() => {
+                    return self.commit_candidate_at_page_index(select_index_from_digit(ch));
+                }
+                _ => {}
+            }
+        }
 
         if is_exact_shift_modifier(key_event.modifiers) {
             match key_event.code {
@@ -1524,6 +1537,31 @@ mod tests {
 
         let commits = engine
             .process_key_sequence("{Control+KP_2}ba{Control+KP_2}")
+            .expect("key sequence should parse");
+
+        assert_eq!(commits, ["吧"]);
+        assert_eq!(engine.context().last_commit.as_deref(), Some("吧"));
+        assert!(!engine.status().is_composing);
+    }
+
+    #[test]
+    fn control_shift_numeric_selection_matches_librime_selector_digit_fallback() {
+        let mut engine = Engine::new();
+        engine.add_translator(StaticTableTranslator::new([("ba", "八"), ("ba", "吧")]));
+
+        let commits = engine
+            .process_key_sequence("{Control+Shift+2}{Control+Shift+KP_2}ba{Control+Shift+2}")
+            .expect("key sequence should parse");
+
+        assert_eq!(commits, ["吧"]);
+        assert_eq!(engine.context().last_commit.as_deref(), Some("吧"));
+        assert!(!engine.status().is_composing);
+
+        let mut engine = Engine::new();
+        engine.add_translator(StaticTableTranslator::new([("ba", "八"), ("ba", "吧")]));
+
+        let commits = engine
+            .process_key_sequence("ba{Control+Shift+KP_2}")
             .expect("key sequence should parse");
 
         assert_eq!(commits, ["吧"]);
