@@ -24,7 +24,8 @@ use super::{
     RimeDeleteCandidateOnCurrentPage, RimeDeployConfigFile, RimeDeploySchema, RimeDeployWorkspace,
     RimeDeployerInitialize, RimeDestroySession, RimeFinalize, RimeFindModule, RimeFindSession,
     RimeFreeCommit, RimeFreeContext, RimeFreeStatus, RimeGetCaretPos, RimeGetCommit,
-    RimeGetContext, RimeGetCurrentSchema, RimeGetInput, RimeGetOption, RimeGetPrebuiltDataDir,
+    RimeGetContext, RimeGetCurrentSchema, RimeGetInput, RimeGetKeyName, RimeGetKeycodeByName,
+    RimeGetModifierByName, RimeGetModifierName, RimeGetOption, RimeGetPrebuiltDataDir,
     RimeGetPrebuiltDataDirSecure, RimeGetProperty, RimeGetSchemaList, RimeGetSharedDataDir,
     RimeGetSharedDataDirSecure, RimeGetStagingDir, RimeGetStagingDirSecure, RimeGetStateLabel,
     RimeGetStateLabelAbbreviated, RimeGetStatus, RimeGetSyncDir, RimeGetSyncDirSecure,
@@ -158,6 +159,17 @@ fn empty_config() -> RimeConfig {
     }
 }
 
+fn static_c_string(ptr: *const c_char) -> Option<String> {
+    if ptr.is_null() {
+        return None;
+    }
+    Some(
+        unsafe { CStr::from_ptr(ptr) }
+            .to_string_lossy()
+            .into_owned(),
+    )
+}
+
 fn empty_config_iterator() -> RimeConfigIterator {
     RimeConfigIterator {
         list: std::ptr::null_mut(),
@@ -217,6 +229,61 @@ fn unique_temp_dir(name: &str) -> std::path::PathBuf {
 fn maps_bool_to_rime_bool() {
     assert_eq!(bool_from(true), TRUE);
     assert_eq!(bool_from(false), FALSE);
+}
+
+#[test]
+fn key_table_exposes_librime_style_modifier_and_key_name_lookup() {
+    let shift = CString::new("Shift").expect("modifier name should be valid");
+    let control = CString::new("Control").expect("modifier name should be valid");
+    let alt = CString::new("Alt").expect("modifier name should be valid");
+    let unknown = CString::new("NoSuchModifier").expect("modifier name should be valid");
+
+    assert_eq!(unsafe { RimeGetModifierByName(shift.as_ptr()) }, 1);
+    assert_eq!(unsafe { RimeGetModifierByName(control.as_ptr()) }, 1 << 2);
+    assert_eq!(unsafe { RimeGetModifierByName(alt.as_ptr()) }, 1 << 3);
+    assert_eq!(unsafe { RimeGetModifierByName(unknown.as_ptr()) }, 0);
+    assert_eq!(unsafe { RimeGetModifierByName(std::ptr::null()) }, 0);
+
+    assert_eq!(
+        static_c_string(RimeGetModifierName(1 << 2)).as_deref(),
+        Some("Control")
+    );
+    assert_eq!(
+        static_c_string(RimeGetModifierName((1 << 2) | (1 << 3))).as_deref(),
+        Some("Control")
+    );
+    assert_eq!(static_c_string(RimeGetModifierName(1 << 13)), None);
+
+    let space = CString::new("space").expect("key name should be valid");
+    let backspace = CString::new("BackSpace").expect("key name should be valid");
+    let left = CString::new("Left").expect("key name should be valid");
+    let missing = CString::new("NoSuchKey").expect("key name should be valid");
+
+    assert_eq!(unsafe { RimeGetKeycodeByName(space.as_ptr()) }, 0x20);
+    assert_eq!(unsafe { RimeGetKeycodeByName(backspace.as_ptr()) }, 0xff08);
+    assert_eq!(unsafe { RimeGetKeycodeByName(left.as_ptr()) }, 0xff51);
+    assert_eq!(
+        unsafe { RimeGetKeycodeByName(missing.as_ptr()) },
+        0x00ff_ffff
+    );
+    assert_eq!(
+        unsafe { RimeGetKeycodeByName(std::ptr::null()) },
+        0x00ff_ffff
+    );
+
+    assert_eq!(
+        static_c_string(RimeGetKeyName(0x20)).as_deref(),
+        Some("space")
+    );
+    assert_eq!(
+        static_c_string(RimeGetKeyName(0xff08)).as_deref(),
+        Some("BackSpace")
+    );
+    assert_eq!(
+        static_c_string(RimeGetKeyName(0xff51)).as_deref(),
+        Some("Left")
+    );
+    assert_eq!(static_c_string(RimeGetKeyName(0x00ff_ffff)), None);
 }
 
 #[test]

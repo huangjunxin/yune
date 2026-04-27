@@ -15,9 +15,11 @@ use yune_core::{parse_key_sequence, Engine, KeyCode, KeyEvent, KeyModifiers};
 mod abi;
 mod config;
 mod config_compiler;
+mod key_table;
 pub use abi::*;
 use config::*;
 use config_compiler::*;
+pub use key_table::*;
 
 const XK_BACKSPACE: c_int = 0xff08;
 const XK_RETURN: c_int = 0xff0d;
