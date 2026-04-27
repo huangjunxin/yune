@@ -53,13 +53,20 @@ const XK_KP_END: c_int = 0xff9c;
 const XK_KP_0: c_int = 0xffb0;
 const XK_KP_9: c_int = 0xffb9;
 const XK_EISU_TOGGLE: c_int = 0xff30;
+const XK_SHIFT_L: c_int = 0xffe1;
+const XK_SHIFT_R: c_int = 0xffe2;
+const XK_CONTROL_L: c_int = 0xffe3;
+const XK_CONTROL_R: c_int = 0xffe4;
+const XK_ALT_L: c_int = 0xffe9;
+const XK_ALT_R: c_int = 0xffea;
+const XK_SUPER_L: c_int = 0xffeb;
+const XK_SUPER_R: c_int = 0xffec;
 const K_SHIFT_MASK: c_int = 1 << 0;
 const K_CONTROL_MASK: c_int = 1 << 2;
 #[cfg(test)]
 const K_ALT_MASK: c_int = 1 << 3;
 #[cfg(test)]
 const K_SUPER_MASK: c_int = 1 << 26;
-#[cfg(test)]
 const K_RELEASE_MASK: c_int = 1 << 30;
 const DEFAULT_PAGE_SIZE: usize = 5;
 const SESSION_LIFESPAN_SECS: u64 = 5 * 60;
@@ -113,6 +120,7 @@ struct SessionState {
     key_binder: Option<KeyBinderProcessor>,
     ascii_composer_enabled: bool,
     ascii_composer_switch_bindings: HashMap<c_int, AsciiModeSwitchStyle>,
+    ascii_composer_pressed_switch_key: Option<c_int>,
     ascii_segmentor_enabled: bool,
     punctuation_processor: Option<PunctuationProcessor>,
     recognizer_processor: Option<RecognizerProcessor>,
@@ -132,6 +140,7 @@ impl SessionState {
             key_binder: None,
             ascii_composer_enabled: false,
             ascii_composer_switch_bindings: HashMap::new(),
+            ascii_composer_pressed_switch_key: None,
             ascii_segmentor_enabled: false,
             punctuation_processor: None,
             recognizer_processor: None,
@@ -1839,7 +1848,8 @@ pub extern "C" fn RimeProcessKey(session_id: RimeSessionId, keycode: c_int, mask
                 || (mask == (K_CONTROL_MASK | K_SHIFT_MASK)
                     && (keycode == XK_RETURN
                         || (('0' as c_int)..=('9' as c_int)).contains(&keycode)
-                        || (XK_KP_0..=XK_KP_9).contains(&keycode)))))
+                        || (XK_KP_0..=XK_KP_9).contains(&keycode)))
+                || (mask == K_RELEASE_MASK && is_ascii_composer_modifier_key(keycode))))
     {
         return FALSE;
     }
@@ -1849,6 +1859,17 @@ pub extern "C" fn RimeProcessKey(session_id: RimeSessionId, keycode: c_int, mask
     let Some(session) = registry.get_session_mut(session_id) else {
         return FALSE;
     };
+
+    if is_ascii_composer_modifier_key(keycode) && (mask == 0 || mask == K_RELEASE_MASK) {
+        if let Some(commit) = process_ascii_composer_modifier_switch_key(session, keycode, mask) {
+            append_unread_commit(session, commit);
+        }
+        update_session_segment_tags(session);
+        return FALSE;
+    }
+    if session.ascii_composer_pressed_switch_key.is_some() {
+        session.ascii_composer_pressed_switch_key = None;
+    }
 
     if keycode == XK_EISU_TOGGLE && mask == 0 {
         if let Some(commit) = process_ascii_composer_switch_key(session, keycode) {
@@ -2224,6 +2245,7 @@ fn apply_schema_to_session(session: &mut SessionState, schema_id: &str) {
     session.key_binder = None;
     session.ascii_composer_enabled = false;
     session.ascii_composer_switch_bindings.clear();
+    session.ascii_composer_pressed_switch_key = None;
     session.ascii_segmentor_enabled = false;
     session.punctuation_processor = None;
     session.recognizer_processor = None;
@@ -4963,6 +4985,44 @@ fn process_ascii_composer_processor(
     input.push(ch);
     session.engine.set_input(input);
     AsciiComposerProcessResult::Accepted(None)
+}
+
+fn is_ascii_composer_modifier_key(keycode: c_int) -> bool {
+    matches!(
+        keycode,
+        XK_SHIFT_L
+            | XK_SHIFT_R
+            | XK_CONTROL_L
+            | XK_CONTROL_R
+            | XK_ALT_L
+            | XK_ALT_R
+            | XK_SUPER_L
+            | XK_SUPER_R
+    )
+}
+
+fn process_ascii_composer_modifier_switch_key(
+    session: &mut SessionState,
+    keycode: c_int,
+    mask: c_int,
+) -> Option<String> {
+    if !session.ascii_composer_enabled {
+        return None;
+    }
+    if mask == K_RELEASE_MASK {
+        let pressed = session.ascii_composer_pressed_switch_key.take();
+        if pressed == Some(keycode) {
+            return switch_ascii_mode_with_key(session, keycode);
+        }
+        return None;
+    }
+
+    match session.ascii_composer_pressed_switch_key {
+        None => session.ascii_composer_pressed_switch_key = Some(keycode),
+        Some(pressed) if pressed != keycode => session.ascii_composer_pressed_switch_key = None,
+        Some(_) => {}
+    }
+    None
 }
 
 fn process_ascii_composer_switch_key(
