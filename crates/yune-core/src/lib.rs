@@ -1638,7 +1638,7 @@ impl RimeTableMetadata {
         }
 
         if let Some(version) = trimmed.strip_prefix("version:") {
-            self.has_version = !version.trim().is_empty();
+            self.has_version = !parse_yaml_scalar(version).is_empty();
         }
     }
 
@@ -4881,6 +4881,23 @@ sort: by_weight
         .expect_err("dictionary without a version should be rejected");
         assert_eq!(
             missing_version.to_string(),
+            "RIME dictionary header is missing required name or version"
+        );
+
+        let commented_blank_version = TableDictionary::parse_rime_dict_yaml(
+            r#"
+---
+name: incomplete_sample
+version: # dictionary version is missing
+sort: by_weight
+...
+
+八	ba	1
+"#,
+        )
+        .expect_err("dictionary with a blank commented version should be rejected");
+        assert_eq!(
+            commented_blank_version.to_string(),
             "RIME dictionary header is missing required name or version"
         );
     }
