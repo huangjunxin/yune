@@ -1753,7 +1753,7 @@ pub extern "C" fn RimeProcessKey(session_id: RimeSessionId, keycode: c_int, mask
         }
         _ => {
             if let Some(commit) = process_session_key_event(session, key_event) {
-                session.unread_commit = Some(commit);
+                append_unread_commit(session, commit);
                 return TRUE;
             }
         }
@@ -1778,7 +1778,7 @@ pub extern "C" fn RimeCommitComposition(session_id: RimeSessionId) -> Bool {
         return FALSE;
     };
 
-    session.unread_commit = Some(commit);
+    append_unread_commit(session, commit);
     TRUE
 }
 
@@ -2963,7 +2963,7 @@ pub unsafe extern "C" fn RimeSimulateKeySequence(
 
     for key_event in key_events {
         if let Some(commit) = process_session_key_event(session, key_event) {
-            session.unread_commit = Some(commit);
+            append_unread_commit(session, commit);
         }
     }
     TRUE
@@ -3584,8 +3584,15 @@ fn commit_selected_candidate(
         return FALSE;
     };
 
-    session.unread_commit = Some(commit);
+    append_unread_commit(session, commit);
     TRUE
+}
+
+fn append_unread_commit(session: &mut SessionState, commit: String) {
+    match &mut session.unread_commit {
+        Some(buffer) => buffer.push_str(&commit),
+        None => session.unread_commit = Some(commit),
+    }
 }
 
 fn session_menu_page_size(session: &SessionState) -> usize {

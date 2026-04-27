@@ -6262,6 +6262,34 @@ fn processes_ascii_keys_and_returns_unread_commit_once() {
 }
 
 #[test]
+fn accumulates_unread_commit_text_like_librime_session() {
+    let _guard = test_guard();
+    RimeCleanupAllSessions();
+    let session_id = RimeCreateSession();
+    let mut commit = RimeCommit {
+        data_size: 0,
+        text: std::ptr::null_mut(),
+    };
+
+    for ch in "ni hao ".chars() {
+        assert_eq!(RimeProcessKey(session_id, ch as i32, 0), TRUE);
+    }
+
+    // SAFETY: `commit` points to valid writable storage for this test.
+    assert_eq!(unsafe { RimeGetCommit(session_id, &mut commit) }, TRUE);
+    // SAFETY: `RimeGetCommit` returned true and populated `text` with a
+    // valid NUL-terminated C string owned by the commit object.
+    let text = unsafe { CStr::from_ptr(commit.text) };
+    assert_eq!(text.to_str(), Ok("nihao"));
+    // SAFETY: `commit.text` was returned by `RimeGetCommit` above.
+    assert_eq!(unsafe { RimeFreeCommit(&mut commit) }, TRUE);
+    // SAFETY: `commit` points to valid writable storage for this test.
+    assert_eq!(unsafe { RimeGetCommit(session_id, &mut commit) }, FALSE);
+
+    assert_eq!(RimeDestroySession(session_id), TRUE);
+}
+
+#[test]
 fn rime_commit_clear_preserves_librime_struct_data_size() {
     let _guard = test_guard();
     RimeCleanupAllSessions();
