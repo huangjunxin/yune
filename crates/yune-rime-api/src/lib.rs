@@ -3791,6 +3791,10 @@ fn install_schema_simplifier_filter(session: &mut SessionState, schema_id: &str)
             .or_else(|| find_config_value(&schema_config, &format!("{name_space}/tip")))
             .and_then(config_scalar_string)
             .unwrap_or_default();
+        let opencc_config =
+            find_config_value(&schema_config, &format!("{name_space}/opencc_config"))
+                .and_then(config_scalar_string)
+                .unwrap_or_default();
         let show_in_comment =
             find_config_value(&schema_config, &format!("{name_space}/show_in_comment"))
                 .and_then(config_scalar_bool)
@@ -3806,6 +3810,7 @@ fn install_schema_simplifier_filter(session: &mut SessionState, schema_id: &str)
         session.engine.add_filter(
             SimplifierFilter::new()
                 .with_option_name(option_name)
+                .with_opencc_config(opencc_config)
                 .with_tips(tips)
                 .with_show_in_comment(show_in_comment)
                 .with_inherit_comment(inherit_comment)

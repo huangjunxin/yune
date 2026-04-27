@@ -2365,11 +2365,23 @@ fn is_extended_cjk(ch: char) -> bool {
 
 pub struct SimplifierFilter {
     option_name: String,
+    conversion: SimplifierConversion,
     tips_level: SimplifierTipsLevel,
     show_in_comment: bool,
     inherit_comment: bool,
     comment_format: CommentFormat,
     excluded_types: HashSet<String>,
+}
+
+#[derive(Clone, Copy, Eq, PartialEq)]
+enum SimplifierConversion {
+    None,
+    TraditionalToSimplified,
+    SimplifiedToTraditional,
+    TraditionalToTaiwan,
+    SimplifiedToTaiwan,
+    TaiwanToSimplified,
+    TaiwanToTraditional,
 }
 
 #[derive(Clone, Copy, Eq, PartialEq)]
@@ -2390,6 +2402,7 @@ impl SimplifierFilter {
     pub fn new() -> Self {
         Self {
             option_name: "simplification".to_owned(),
+            conversion: SimplifierConversion::TraditionalToSimplified,
             tips_level: SimplifierTipsLevel::None,
             show_in_comment: false,
             inherit_comment: true,
@@ -2404,6 +2417,12 @@ impl SimplifierFilter {
         if !option_name.is_empty() {
             self.option_name = option_name;
         }
+        self
+    }
+
+    #[must_use]
+    pub fn with_opencc_config(mut self, opencc_config: impl AsRef<str>) -> Self {
+        self.conversion = SimplifierConversion::from_opencc_config(opencc_config.as_ref());
         self
     }
 
@@ -2445,6 +2464,43 @@ impl SimplifierFilter {
     }
 }
 
+impl SimplifierConversion {
+    fn from_opencc_config(opencc_config: &str) -> Self {
+        let config_name = opencc_config
+            .rsplit(['/', '\\'])
+            .next()
+            .unwrap_or(opencc_config)
+            .to_ascii_lowercase();
+        let config_stem = config_name.strip_suffix(".json").unwrap_or(&config_name);
+        match config_stem {
+            "" | "t2s" | "hk2s" => Self::TraditionalToSimplified,
+            "s2t" => Self::SimplifiedToTraditional,
+            "t2tw" => Self::TraditionalToTaiwan,
+            "s2tw" => Self::SimplifiedToTaiwan,
+            "tw2s" => Self::TaiwanToSimplified,
+            "tw2t" => Self::TaiwanToTraditional,
+            _ if config_stem.ends_with(".ini") => Self::None,
+            _ => Self::None,
+        }
+    }
+
+    fn convert(self, text: &str) -> String {
+        match self {
+            Self::None => text.to_owned(),
+            Self::TraditionalToSimplified => simplify_traditional_text(text),
+            Self::SimplifiedToTraditional => traditionalize_simplified_text(text),
+            Self::TraditionalToTaiwan => traditional_to_taiwan_text(text),
+            Self::SimplifiedToTaiwan => {
+                traditional_to_taiwan_text(&traditionalize_simplified_text(text))
+            }
+            Self::TaiwanToSimplified => {
+                simplify_traditional_text(&taiwan_to_traditional_text(text))
+            }
+            Self::TaiwanToTraditional => taiwan_to_traditional_text(text),
+        }
+    }
+}
+
 impl CandidateFilter for SimplifierFilter {
     fn name(&self) -> &'static str {
         "simplifier"
@@ -2463,7 +2519,7 @@ impl CandidateFilter for SimplifierFilter {
             }
 
             let original = candidate.text.clone();
-            let simplified = simplify_traditional_text(&original);
+            let simplified = self.conversion.convert(&original);
             if simplified == original {
                 continue;
             }
@@ -2552,6 +2608,88 @@ fn simplify_traditional_char(ch: char) -> char {
         '貓' => '猫',
         '鳥' => '鸟',
         '魚' => '鱼',
+        _ => ch,
+    }
+}
+
+fn traditionalize_simplified_text(text: &str) -> String {
+    text.chars().map(traditionalize_simplified_char).collect()
+}
+
+fn traditionalize_simplified_char(ch: char) -> char {
+    match ch {
+        '台' => '臺',
+        '湾' => '灣',
+        '龙' => '龍',
+        '风' => '風',
+        '云' => '雲',
+        '马' => '馬',
+        '门' => '門',
+        '车' => '車',
+        '书' => '書',
+        '学' => '學',
+        '国' => '國',
+        '语' => '語',
+        '体' => '體',
+        '电' => '電',
+        '脑' => '腦',
+        '面' => '麵',
+        '里' => '裏',
+        '后' => '後',
+        '万' => '萬',
+        '与' => '與',
+        '为' => '為',
+        '会' => '會',
+        '个' => '個',
+        '们' => '們',
+        '来' => '來',
+        '时' => '時',
+        '对' => '對',
+        '说' => '說',
+        '这' => '這',
+        '还' => '還',
+        '过' => '過',
+        '开' => '開',
+        '关' => '關',
+        '见' => '見',
+        '长' => '長',
+        '发' => '發',
+        '头' => '頭',
+        '东' => '東',
+        '广' => '廣',
+        '爱' => '愛',
+        '气' => '氣',
+        '无' => '無',
+        '点' => '點',
+        '话' => '話',
+        '机' => '機',
+        '乐' => '樂',
+        '猫' => '貓',
+        '鸟' => '鳥',
+        '鱼' => '魚',
+        _ => ch,
+    }
+}
+
+fn traditional_to_taiwan_text(text: &str) -> String {
+    text.chars().map(traditional_to_taiwan_char).collect()
+}
+
+fn traditional_to_taiwan_char(ch: char) -> char {
+    match ch {
+        '台' | '臺' => '臺',
+        '裏' | '裡' => '裡',
+        _ => ch,
+    }
+}
+
+fn taiwan_to_traditional_text(text: &str) -> String {
+    text.chars().map(taiwan_to_traditional_char).collect()
+}
+
+fn taiwan_to_traditional_char(ch: char) -> char {
+    match ch {
+        '裡' => '裏',
         _ => ch,
     }
 }
@@ -6664,6 +6802,33 @@ sort: original
 
         engine.set_option("zh_simp", true);
         assert_eq!(engine.context().candidates[0].text, "台湾");
+    }
+
+    #[test]
+    fn simplifier_filter_honors_librime_opencc_config() {
+        let mut engine = Engine::new();
+        engine.add_translator(StaticTableTranslator::new([("tw", "台灣"), ("tw", "裏")]));
+        engine.add_filter(
+            SimplifierFilter::new()
+                .with_option_name("zh_tw")
+                .with_opencc_config("t2tw.json"),
+        );
+
+        engine
+            .process_key_sequence("tw")
+            .expect("keys should parse");
+
+        engine.set_option("simplification", true);
+        assert_eq!(engine.context().candidates[0].text, "台灣");
+
+        engine.set_option("zh_tw", true);
+        let texts = engine
+            .context()
+            .candidates
+            .iter()
+            .map(|candidate| candidate.text.as_str())
+            .collect::<Vec<_>>();
+        assert_eq!(texts, ["臺灣", "裡", "tw"]);
     }
 
     #[test]
