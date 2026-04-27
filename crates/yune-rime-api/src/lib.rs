@@ -3718,9 +3718,14 @@ fn install_schema_dictionary_translator(session: &mut SessionState, schema_id: &
         )
         .and_then(config_scalar_bool)
         .unwrap_or(false);
+        let delimiters = find_config_value(&schema_config, &format!("{name_space}/delimiter"))
+            .or_else(|| find_config_value(&schema_config, "speller/delimiter"))
+            .and_then(config_scalar_string)
+            .unwrap_or_else(|| " ".to_owned());
         session.engine.add_translator(
             StaticTableTranslator::from_dictionary(dictionary)
-                .with_charset_filter(enable_charset_filter),
+                .with_charset_filter(enable_charset_filter)
+                .with_delimiters(delimiters),
         );
     }
 }

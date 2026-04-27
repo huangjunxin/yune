@@ -2071,6 +2071,7 @@ fn normalize_table_code(code: &str) -> String {
 pub struct StaticTableTranslator {
     entries: Vec<(String, Candidate)>,
     enable_charset_filter: bool,
+    delimiters: String,
 }
 
 impl StaticTableTranslator {
@@ -2095,6 +2096,7 @@ impl StaticTableTranslator {
         Self {
             entries,
             enable_charset_filter: false,
+            delimiters: " ".to_owned(),
         }
     }
 
@@ -2116,6 +2118,7 @@ impl StaticTableTranslator {
         Self {
             entries,
             enable_charset_filter: false,
+            delimiters: " ".to_owned(),
         }
     }
 
@@ -2123,6 +2126,19 @@ impl StaticTableTranslator {
     pub fn with_charset_filter(mut self, enable_charset_filter: bool) -> Self {
         self.enable_charset_filter = enable_charset_filter;
         self
+    }
+
+    #[must_use]
+    pub fn with_delimiters(mut self, delimiters: impl Into<String>) -> Self {
+        self.delimiters = delimiters.into();
+        if self.delimiters.is_empty() {
+            self.delimiters = " ".to_owned();
+        }
+        self
+    }
+
+    fn lookup_code<'a>(&self, input: &'a str) -> &'a str {
+        input.trim_end_matches(|ch| self.delimiters.contains(ch))
     }
 
     pub fn parse_rime_dict_yaml(input: &str) -> Result<Self, TableDictionaryParseError> {
@@ -2153,9 +2169,10 @@ impl Translator for StaticTableTranslator {
     }
 
     fn translate(&self, input: &str) -> Vec<Candidate> {
+        let lookup_code = self.lookup_code(input);
         self.entries
             .iter()
-            .filter(|(code, _)| code == input)
+            .filter(|(entry_code, _)| entry_code == lookup_code)
             .map(|(_, candidate)| candidate.clone())
             .collect()
     }
@@ -2168,10 +2185,12 @@ impl Translator for StaticTableTranslator {
     ) -> Vec<Candidate> {
         let filter_by_charset = self.enable_charset_filter
             && !options.get("extended_charset").copied().unwrap_or(false);
+        let lookup_code = self.lookup_code(input);
         self.entries
             .iter()
-            .filter(|(code, candidate)| {
-                code == input && (!filter_by_charset || !contains_extended_cjk(&candidate.text))
+            .filter(|(entry_code, candidate)| {
+                entry_code == lookup_code
+                    && (!filter_by_charset || !contains_extended_cjk(&candidate.text))
             })
             .map(|(_, candidate)| candidate.clone())
             .collect()
@@ -6750,6 +6769,27 @@ sort: original
             .map(|candidate| candidate.text.as_str())
             .collect::<Vec<_>>();
         assert_eq!(texts, ["你", "㐀", "𠀀", "㍿", "ni"]);
+    }
+
+    #[test]
+    fn static_table_translator_trims_trailing_librime_delimiters() {
+        let mut engine = Engine::new();
+        engine.add_translator(
+            StaticTableTranslator::new([("ba", "爸"), ("ban", "班")]).with_delimiters("'"),
+        );
+
+        engine.process_char('b');
+        engine.process_char('a');
+        engine.process_char('\'');
+
+        let texts = engine
+            .context()
+            .candidates
+            .iter()
+            .map(|candidate| candidate.text.as_str())
+            .collect::<Vec<_>>();
+        assert_eq!(texts, ["爸", "ba'"]);
+        assert_eq!(engine.context().composition.preedit, "ba'");
     }
 
     #[test]
