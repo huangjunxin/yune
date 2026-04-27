@@ -6290,7 +6290,7 @@ fn rime_context_reads_librime_menu_settings_from_selected_schema() {
     fs::write(
         staging.join("luna.schema.yaml"),
         "\
-schema:\n  schema_id: luna\n  name: Luna\nmenu:\n  page_size: 2\n  alternative_select_keys: AB\n",
+schema:\n  schema_id: luna\n  name: Luna\nmenu:\n  page_size: 2\n  alternative_select_keys: AB\n  alternative_select_labels: [Alpha, Beta]\n",
     )
     .expect("schema config should be written");
 
@@ -6342,6 +6342,21 @@ schema:\n  schema_id: luna\n  name: Luna\nmenu:\n  page_size: 2\n  alternative_s
     // SAFETY: `RimeGetContext` returned true and populated a select-key string.
     let select_keys = unsafe { CStr::from_ptr(context.menu.select_keys) };
     assert_eq!(select_keys.to_str(), Ok("AB"));
+    assert!(!context.select_labels.is_null());
+    // SAFETY: `RimeGetContext` returned true and populated one label per page slot.
+    let select_labels = unsafe {
+        std::slice::from_raw_parts(context.select_labels, context.menu.page_size as usize)
+    };
+    // SAFETY: label pointers are valid NUL-terminated strings owned by the context object.
+    assert_eq!(
+        unsafe { CStr::from_ptr(select_labels[0]) }.to_str(),
+        Ok("Alpha")
+    );
+    // SAFETY: label pointers are valid NUL-terminated strings owned by the context object.
+    assert_eq!(
+        unsafe { CStr::from_ptr(select_labels[1]) }.to_str(),
+        Ok("Beta")
+    );
     // SAFETY: `context.menu.candidates` points to `num_candidates` entries.
     let candidates = unsafe {
         std::slice::from_raw_parts(
@@ -6363,6 +6378,7 @@ schema:\n  schema_id: luna\n  name: Luna\nmenu:\n  page_size: 2\n  alternative_s
     // SAFETY: nested pointers were allocated by `RimeGetContext` above.
     assert_eq!(unsafe { RimeFreeContext(&mut context) }, TRUE);
     assert!(context.menu.select_keys.is_null());
+    assert!(context.select_labels.is_null());
 
     assert_eq!(RimeDestroySession(session_id), TRUE);
     let reset_traits = empty_traits();

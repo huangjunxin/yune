@@ -82,6 +82,7 @@ struct StateLabel {
 struct ContextMenuSettings {
     page_size: usize,
     select_keys: Option<String>,
+    select_labels: Vec<String>,
 }
 
 #[derive(Clone, Copy)]
@@ -2953,6 +2954,27 @@ pub unsafe extern "C" fn RimeGetContext(
             });
         }
 
+        let select_labels = if unsafe { context_has_select_labels(context) }
+            && menu_settings.select_labels.len() >= page_size
+        {
+            let mut labels = Vec::with_capacity(page_size);
+            for label in menu_settings.select_labels.iter().take(page_size) {
+                let Ok(label) = CString::new(label.as_str()) else {
+                    free_rime_candidates(&mut rime_candidates);
+                    return FALSE;
+                };
+                labels.push(label);
+            }
+            let mut labels = labels
+                .into_iter()
+                .map(CString::into_raw)
+                .collect::<Vec<_>>();
+            let labels_ptr = labels.as_mut_ptr();
+            std::mem::forget(labels);
+            Some(labels_ptr)
+        } else {
+            None
+        };
         let num_candidates = rime_candidates.len();
         let candidates_ptr = rime_candidates.as_mut_ptr();
         std::mem::forget(rime_candidates);
@@ -2970,6 +2992,9 @@ pub unsafe extern "C" fn RimeGetContext(
             (*context).menu.candidates = candidates_ptr;
             if let Some(select_keys) = select_keys {
                 (*context).menu.select_keys = select_keys.into_raw();
+            }
+            if let Some(select_labels) = select_labels {
+                (*context).select_labels = select_labels;
             }
         }
     }
@@ -4615,10 +4640,19 @@ fn context_menu_settings(schema_id: &str) -> ContextMenuSettings {
         .and_then(Value::as_str)
         .filter(|select_keys| !select_keys.is_empty())
         .map(ToOwned::to_owned);
+    let select_labels = match find_config_value(&schema_config, "menu/alternative_select_labels") {
+        Some(Value::Sequence(labels)) => labels
+            .iter()
+            .filter_map(Value::as_str)
+            .map(ToOwned::to_owned)
+            .collect(),
+        _ => Vec::new(),
+    };
 
     ContextMenuSettings {
         page_size,
         select_keys,
+        select_labels,
     }
 }
 
