@@ -11732,6 +11732,9 @@ fn simulates_librime_style_key_sequences() {
         "{KP_Subtract}{KP_Decimal}{KP_Divide}{Release+KP_Equal}",
     ))
     .expect("key sequence should be valid");
+    let noop_latin1_key_sequence =
+        CString::new("{nobreakspace}{yen}{ETH}{Eth}{THORN}{Thorn}{division}{Release+ydiaeresis}")
+            .expect("key sequence should be valid");
     let named_ascii_sequence =
         CString::new("{exclam}{space}").expect("key sequence should be valid");
     let invalid_sequence =
@@ -11883,6 +11886,20 @@ fn simulates_librime_style_key_sequences() {
         TRUE
     );
     // SAFETY: ignored keypad key names should leave the context empty.
+    assert_eq!(unsafe { RimeGetContext(session_id, &mut context) }, TRUE);
+    assert_eq!(context.composition.length, 0);
+    assert_eq!(context.menu.num_candidates, 0);
+    // SAFETY: nested pointers were allocated by `RimeGetContext` above.
+    assert_eq!(unsafe { RimeFreeContext(&mut context) }, TRUE);
+
+    // SAFETY: noop_latin1_key_sequence is a valid C string; librime parses
+    // Latin-1 key-table names even though the default editor/speller ignore
+    // non-ASCII keycodes.
+    assert_eq!(
+        unsafe { RimeSimulateKeySequence(session_id, noop_latin1_key_sequence.as_ptr()) },
+        TRUE
+    );
+    // SAFETY: ignored Latin-1 key names should leave the context empty.
     assert_eq!(unsafe { RimeGetContext(session_id, &mut context) }, TRUE);
     assert_eq!(context.composition.length, 0);
     assert_eq!(context.menu.num_candidates, 0);

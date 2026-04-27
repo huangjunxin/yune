@@ -232,7 +232,8 @@ fn key_code_from_name(name: &str) -> Result<KeyCode, KeySequenceParseError> {
         _ if is_librime_iso_key_name(name)
             || is_librime_xkb_key_name(name)
             || is_librime_input_method_key_name(name)
-            || is_librime_keypad_noop_key_name(name) =>
+            || is_librime_keypad_noop_key_name(name)
+            || is_librime_latin1_key_name(name) =>
         {
             KeyCode::Ignored
         }
@@ -479,6 +480,110 @@ fn is_librime_keypad_noop_key_name(name: &str) -> bool {
             | "KP_Decimal"
             | "KP_Divide"
             | "KP_Equal"
+    )
+}
+
+fn is_librime_latin1_key_name(name: &str) -> bool {
+    matches!(
+        name,
+        "nobreakspace"
+            | "exclamdown"
+            | "cent"
+            | "sterling"
+            | "currency"
+            | "yen"
+            | "brokenbar"
+            | "section"
+            | "diaeresis"
+            | "copyright"
+            | "ordfeminine"
+            | "guillemotleft"
+            | "notsign"
+            | "hyphen"
+            | "registered"
+            | "macron"
+            | "degree"
+            | "plusminus"
+            | "twosuperior"
+            | "threesuperior"
+            | "acute"
+            | "mu"
+            | "paragraph"
+            | "periodcentered"
+            | "cedilla"
+            | "onesuperior"
+            | "masculine"
+            | "guillemotright"
+            | "onequarter"
+            | "onehalf"
+            | "threequarters"
+            | "questiondown"
+            | "Agrave"
+            | "Aacute"
+            | "Acircumflex"
+            | "Atilde"
+            | "Adiaeresis"
+            | "Aring"
+            | "AE"
+            | "Ccedilla"
+            | "Egrave"
+            | "Eacute"
+            | "Ecircumflex"
+            | "Ediaeresis"
+            | "Igrave"
+            | "Iacute"
+            | "Icircumflex"
+            | "Idiaeresis"
+            | "ETH"
+            | "Eth"
+            | "Ntilde"
+            | "Ograve"
+            | "Oacute"
+            | "Ocircumflex"
+            | "Otilde"
+            | "Odiaeresis"
+            | "multiply"
+            | "Ooblique"
+            | "Ugrave"
+            | "Uacute"
+            | "Ucircumflex"
+            | "Udiaeresis"
+            | "Yacute"
+            | "THORN"
+            | "Thorn"
+            | "ssharp"
+            | "agrave"
+            | "aacute"
+            | "acircumflex"
+            | "atilde"
+            | "adiaeresis"
+            | "aring"
+            | "ae"
+            | "ccedilla"
+            | "egrave"
+            | "eacute"
+            | "ecircumflex"
+            | "ediaeresis"
+            | "igrave"
+            | "iacute"
+            | "icircumflex"
+            | "idiaeresis"
+            | "eth"
+            | "ntilde"
+            | "ograve"
+            | "oacute"
+            | "ocircumflex"
+            | "otilde"
+            | "odiaeresis"
+            | "division"
+            | "oslash"
+            | "ugrave"
+            | "uacute"
+            | "ucircumflex"
+            | "udiaeresis"
+            | "yacute"
+            | "thorn"
+            | "ydiaeresis"
     )
 }
 
@@ -1896,6 +2001,122 @@ mod tests {
             "KP_Decimal",
             "KP_Divide",
             "Release+KP_Equal",
+        ];
+        let sequence = names
+            .iter()
+            .map(|name| format!("{{{name}}}"))
+            .collect::<String>();
+        let keys = parse_key_sequence(&sequence).expect("key sequence should parse");
+
+        assert_eq!(keys.len(), names.len());
+        assert!(keys.iter().all(|key| key.code == KeyCode::Ignored));
+        assert!(keys[..names.len() - 1]
+            .iter()
+            .all(|key| key.modifiers.is_empty()));
+        assert!(keys[names.len() - 1].modifiers.release);
+    }
+
+    #[test]
+    fn parses_librime_latin1_noop_key_names() {
+        let names = [
+            "nobreakspace",
+            "exclamdown",
+            "cent",
+            "sterling",
+            "currency",
+            "yen",
+            "brokenbar",
+            "section",
+            "diaeresis",
+            "copyright",
+            "ordfeminine",
+            "guillemotleft",
+            "notsign",
+            "hyphen",
+            "registered",
+            "macron",
+            "degree",
+            "plusminus",
+            "twosuperior",
+            "threesuperior",
+            "acute",
+            "mu",
+            "paragraph",
+            "periodcentered",
+            "cedilla",
+            "onesuperior",
+            "masculine",
+            "guillemotright",
+            "onequarter",
+            "onehalf",
+            "threequarters",
+            "questiondown",
+            "Agrave",
+            "Aacute",
+            "Acircumflex",
+            "Atilde",
+            "Adiaeresis",
+            "Aring",
+            "AE",
+            "Ccedilla",
+            "Egrave",
+            "Eacute",
+            "Ecircumflex",
+            "Ediaeresis",
+            "Igrave",
+            "Iacute",
+            "Icircumflex",
+            "Idiaeresis",
+            "ETH",
+            "Eth",
+            "Ntilde",
+            "Ograve",
+            "Oacute",
+            "Ocircumflex",
+            "Otilde",
+            "Odiaeresis",
+            "multiply",
+            "Ooblique",
+            "Ugrave",
+            "Uacute",
+            "Ucircumflex",
+            "Udiaeresis",
+            "Yacute",
+            "THORN",
+            "Thorn",
+            "ssharp",
+            "agrave",
+            "aacute",
+            "acircumflex",
+            "atilde",
+            "adiaeresis",
+            "aring",
+            "ae",
+            "ccedilla",
+            "egrave",
+            "eacute",
+            "ecircumflex",
+            "ediaeresis",
+            "igrave",
+            "iacute",
+            "icircumflex",
+            "idiaeresis",
+            "eth",
+            "ntilde",
+            "ograve",
+            "oacute",
+            "ocircumflex",
+            "otilde",
+            "odiaeresis",
+            "division",
+            "oslash",
+            "ugrave",
+            "uacute",
+            "ucircumflex",
+            "udiaeresis",
+            "yacute",
+            "thorn",
+            "Release+ydiaeresis",
         ];
         let sequence = names
             .iter()
