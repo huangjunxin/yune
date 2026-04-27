@@ -16,6 +16,7 @@ pub enum CandidateSource {
     Table,
     Completion,
     ReverseLookup,
+    History,
     Ai,
 }
 
@@ -28,9 +29,16 @@ impl CandidateSource {
             Self::Table => "table",
             Self::Completion => "completion",
             Self::ReverseLookup => "reverse_lookup",
+            Self::History => "history",
             Self::Ai => "ai",
         }
     }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CommitRecord {
+    pub candidate_type: String,
+    pub text: String,
 }
 
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
@@ -1303,6 +1311,7 @@ pub struct Context {
     pub candidates: Vec<Candidate>,
     pub highlighted: usize,
     pub last_commit: Option<String>,
+    pub commit_history: Vec<CommitRecord>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -1356,6 +1365,16 @@ pub trait Translator: Send + Sync {
         _options: &HashMap<String, bool>,
     ) -> Vec<Candidate> {
         self.translate_with_status(input, status)
+    }
+
+    fn translate_with_context(
+        &self,
+        input: &str,
+        status: &Status,
+        options: &HashMap<String, bool>,
+        _context: &Context,
+    ) -> Vec<Candidate> {
+        self.translate_with_state(input, status, options)
     }
 }
 
@@ -2359,6 +2378,71 @@ impl Translator for ReverseLookupTranslator {
                     source: CandidateSource::ReverseLookup,
                     quality: entry.weight,
                 }
+            })
+            .collect()
+    }
+}
+
+pub struct HistoryTranslator {
+    input: String,
+    size: usize,
+    initial_quality: f32,
+}
+
+impl HistoryTranslator {
+    #[must_use]
+    pub fn new(input: impl Into<String>) -> Self {
+        Self {
+            input: input.into(),
+            size: 1,
+            initial_quality: 1000.0,
+        }
+    }
+
+    #[must_use]
+    pub const fn with_size(mut self, size: usize) -> Self {
+        self.size = size;
+        self
+    }
+
+    #[must_use]
+    pub const fn with_initial_quality(mut self, initial_quality: f32) -> Self {
+        self.initial_quality = initial_quality;
+        self
+    }
+}
+
+impl Translator for HistoryTranslator {
+    fn name(&self) -> &'static str {
+        "history_translator"
+    }
+
+    fn translate(&self, _input: &str) -> Vec<Candidate> {
+        Vec::new()
+    }
+
+    fn translate_with_context(
+        &self,
+        input: &str,
+        _status: &Status,
+        _options: &HashMap<String, bool>,
+        context: &Context,
+    ) -> Vec<Candidate> {
+        if self.input.is_empty() || self.input != input {
+            return Vec::new();
+        }
+
+        context
+            .commit_history
+            .iter()
+            .rev()
+            .filter(|record| record.candidate_type != "thru")
+            .take(self.size)
+            .map(|record| Candidate {
+                text: record.text.clone(),
+                comment: String::new(),
+                source: CandidateSource::History,
+                quality: self.initial_quality,
             })
             .collect()
     }
@@ -3637,7 +3721,7 @@ impl Engine {
 
     pub fn record_commit(&mut self, text: impl Into<String>) -> String {
         let text = text.into();
-        self.context.last_commit = Some(text.clone());
+        self.record_commit_with_type("raw", text.clone());
         self.clear_composition();
         text
     }
@@ -3773,7 +3857,7 @@ impl Engine {
             return None;
         }
         let text = self.context.composition.input.clone();
-        self.context.last_commit = Some(text.clone());
+        self.record_commit_with_type("raw", text.clone());
         self.clear_composition();
         Some(text)
     }
@@ -3783,7 +3867,7 @@ impl Engine {
             return None;
         }
         let text = self.context.composition.preedit.clone();
-        self.context.last_commit = Some(text.clone());
+        self.record_commit_with_type("raw", text.clone());
         self.clear_composition();
         Some(text)
     }
@@ -3796,7 +3880,7 @@ impl Engine {
             .and_then(|candidate| {
                 (!candidate.comment.is_empty()).then(|| candidate.comment.clone())
             })?;
-        self.context.last_commit = Some(text.clone());
+        self.record_commit_with_type("raw", text.clone());
         self.clear_composition();
         Some(text)
     }
@@ -3810,14 +3894,22 @@ impl Engine {
     }
 
     fn commit_candidate(&mut self, candidate_index: usize) -> Option<String> {
-        let text = self
+        let (text, candidate_type) = self
             .context
             .candidates
             .get(candidate_index)
-            .map(|candidate| candidate.text.clone())?;
-        self.context.last_commit = Some(text.clone());
+            .map(|candidate| (candidate.text.clone(), candidate.source.as_str().to_owned()))?;
+        self.record_commit_with_type(candidate_type, text.clone());
         self.clear_composition();
         Some(text)
+    }
+
+    fn record_commit_with_type(&mut self, candidate_type: impl Into<String>, text: String) {
+        self.context.last_commit = Some(text.clone());
+        self.context.commit_history.push(CommitRecord {
+            candidate_type: candidate_type.into(),
+            text,
+        });
     }
 
     fn refresh_candidates(&mut self) {
@@ -3826,7 +3918,7 @@ impl Engine {
             .translators
             .iter()
             .flat_map(|translator| {
-                translator.translate_with_state(input, &self.status, &self.options)
+                translator.translate_with_context(input, &self.status, &self.options, &self.context)
             })
             .collect::<Vec<_>>();
         for filter in &self.filters {
@@ -3891,9 +3983,10 @@ const fn select_index_from_digit(ch: char) -> usize {
 mod tests {
     use super::{
         parse_key_sequence, Candidate, CandidateFilter, CandidateRanker, CandidateSource,
-        CharsetFilter, Context, Engine, KeyCode, MockAiRanker, PunctuationTranslator, RerankResult,
-        ReverseLookupFilter, ReverseLookupTranslator, SimplifierFilter, SingleCharFilter,
-        StaticTableTranslator, TableDictionary, Translator, UniquifierFilter,
+        CharsetFilter, Context, Engine, HistoryTranslator, KeyCode, MockAiRanker,
+        PunctuationTranslator, RerankResult, ReverseLookupFilter, ReverseLookupTranslator,
+        SimplifierFilter, SingleCharFilter, StaticTableTranslator, TableDictionary, Translator,
+        UniquifierFilter,
     };
 
     struct CommentTranslator;
@@ -6670,6 +6763,37 @@ sort: original
         assert_eq!(candidates.len(), 1);
         assert_eq!(candidates[0].text, "火");
         assert_eq!(candidates[0].comment, "huo");
+    }
+
+    #[test]
+    fn history_translator_returns_recent_commits_for_configured_input() {
+        let mut engine = Engine::new();
+        engine.add_translator(StaticTableTranslator::new([("ni", "你"), ("hao", "好")]));
+        engine.add_translator(HistoryTranslator::new("his").with_size(2));
+
+        engine.set_input("ni");
+        assert_eq!(engine.commit_highlighted(), Some("你".to_owned()));
+        engine.set_input("hao");
+        assert_eq!(engine.commit_highlighted(), Some("好".to_owned()));
+
+        engine.set_input("hi");
+        assert_eq!(engine.context().candidates[0].text, "hi");
+
+        engine.set_input("his");
+        let history_candidates = engine
+            .context()
+            .candidates
+            .iter()
+            .take(2)
+            .map(|candidate| (candidate.text.as_str(), &candidate.source))
+            .collect::<Vec<_>>();
+        assert_eq!(
+            history_candidates,
+            [
+                ("好", &CandidateSource::History),
+                ("你", &CandidateSource::History)
+            ]
+        );
     }
 
     #[test]

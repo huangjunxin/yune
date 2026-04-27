@@ -14,7 +14,7 @@ use std::{
 
 use serde_yaml::{Mapping, Number, Value};
 use yune_core::{
-    parse_key_sequence, CharsetFilter, Engine, KeyCode, KeyEvent, KeyModifiers,
+    parse_key_sequence, CharsetFilter, Engine, HistoryTranslator, KeyCode, KeyEvent, KeyModifiers,
     PunctuationTranslator, ReverseLookupFilter, ReverseLookupTranslator, SimplifierFilter,
     SingleCharFilter, StaticTableTranslator, TableDictionary, UniquifierFilter,
 };
@@ -2149,6 +2149,7 @@ fn apply_schema_to_session(session: &mut SessionState, schema_id: &str) {
     install_schema_punctuation_translator(session, schema_id);
     install_schema_dictionary_translator(session, schema_id);
     install_schema_reverse_lookup_translator(session, schema_id);
+    install_schema_history_translator(session, schema_id);
     install_schema_reverse_lookup_filter(session, schema_id);
     install_schema_simplifier_filter(session, schema_id);
     install_schema_uniquifier_filter(session, schema_id);
@@ -3777,6 +3778,33 @@ fn install_schema_reverse_lookup_translator(session: &mut SessionState, schema_i
             ReverseLookupTranslator::new(dictionary, reverse_dictionary, prefix, suffix)
                 .with_completion(enable_completion)
                 .with_comment_format(&comment_format),
+        );
+    }
+}
+
+fn install_schema_history_translator(session: &mut SessionState, schema_id: &str) {
+    let schema_config =
+        load_runtime_config_root(&format!("{schema_id}.schema"), ConfigOpenKind::Deployed);
+    for name_space in
+        schema_engine_translator_namespaces(&schema_config, "history_translator", "history")
+    {
+        let input = find_config_value(&schema_config, &format!("{name_space}/input"))
+            .and_then(config_scalar_string)
+            .unwrap_or_default();
+        let size = find_config_value(&schema_config, &format!("{name_space}/size"))
+            .and_then(Value::as_i64)
+            .and_then(|size| usize::try_from(size).ok())
+            .unwrap_or(1);
+        let initial_quality =
+            find_config_value(&schema_config, &format!("{name_space}/initial_quality"))
+                .and_then(Value::as_f64)
+                .map(|quality| quality as f32)
+                .unwrap_or(1000.0);
+
+        session.engine.add_translator(
+            HistoryTranslator::new(input)
+                .with_size(size)
+                .with_initial_quality(initial_quality),
         );
     }
 }
