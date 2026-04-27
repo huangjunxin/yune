@@ -119,6 +119,13 @@ fn empty_context() -> RimeContext {
     }
 }
 
+fn context_data_size_before_commit_text_preview() -> i32 {
+    let context = empty_context();
+    let base = &context as *const RimeContext as usize;
+    let member = std::ptr::addr_of!(context.commit_text_preview) as usize;
+    (member - base - std::mem::size_of::<i32>()) as i32
+}
+
 fn empty_status() -> RimeStatus {
     RimeStatus {
         data_size: (std::mem::size_of::<RimeStatus>() - std::mem::size_of::<i32>()) as i32,
@@ -6268,6 +6275,46 @@ fn returns_context_with_preedit_and_candidate_page() {
     assert_eq!(context.menu.num_candidates, 0);
 
     assert_eq!(RimeDestroySession(session_id), TRUE);
+}
+
+#[test]
+fn rime_context_clear_respects_librime_versioned_tail_members() {
+    let _guard = test_guard();
+    let mut context = empty_context();
+    let preview = CString::new("preserve-preview")
+        .expect("literal should be valid")
+        .into_raw();
+    let label = CString::new("preserve-label")
+        .expect("literal should be valid")
+        .into_raw();
+    let mut labels = vec![label];
+    let labels_ptr = labels.as_mut_ptr();
+    std::mem::forget(labels);
+
+    context.data_size = context_data_size_before_commit_text_preview();
+    context.menu.page_size = 1;
+    context.commit_text_preview = preview;
+    context.select_labels = labels_ptr;
+
+    // SAFETY: `context` points to valid writable storage. Its tail members are
+    // valid allocations but are outside the caller-declared version boundary.
+    assert_eq!(unsafe { RimeFreeContext(&mut context) }, TRUE);
+    assert_eq!(
+        context.data_size,
+        context_data_size_before_commit_text_preview()
+    );
+    assert_eq!(context.commit_text_preview, preview);
+    assert_eq!(context.select_labels, labels_ptr);
+
+    // SAFETY: the older-version context did not transfer ownership of tail
+    // members to `RimeFreeContext`, so the test reclaims its own allocations.
+    unsafe {
+        drop(CString::from_raw(preview));
+        let labels = Vec::from_raw_parts(labels_ptr, 1, 1);
+        for label in labels {
+            drop(CString::from_raw(label));
+        }
+    }
 }
 
 #[test]

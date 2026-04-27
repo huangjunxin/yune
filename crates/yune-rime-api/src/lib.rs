@@ -4710,7 +4710,8 @@ fn clear_commit(commit: *mut RimeCommit) {
 
 fn clear_context(context: *mut RimeContext) {
     // SAFETY: callers only pass non-null pointers to this helper; this mirrors
-    // librime's versioned struct clear by preserving `data_size`.
+    // librime's versioned struct clear by preserving `data_size` and only
+    // clearing members covered by the caller-provided version.
     unsafe {
         (*context).composition = RimeComposition {
             length: 0,
@@ -4728,9 +4729,46 @@ fn clear_context(context: *mut RimeContext) {
             candidates: ptr::null_mut(),
             select_keys: ptr::null_mut(),
         };
-        (*context).commit_text_preview = ptr::null_mut();
-        (*context).select_labels = ptr::null_mut();
+        if context_has_commit_text_preview(context) {
+            (*context).commit_text_preview = ptr::null_mut();
+        }
+        if context_has_select_labels(context) {
+            (*context).select_labels = ptr::null_mut();
+        }
     }
+}
+
+unsafe fn context_has_commit_text_preview(context: *const RimeContext) -> bool {
+    // SAFETY: callers pass a valid `RimeContext` pointer; `addr_of!` computes a
+    // field address without creating an intermediate reference.
+    unsafe {
+        rime_struct_has_member(
+            context,
+            (*context).data_size,
+            ptr::addr_of!((*context).commit_text_preview),
+        )
+    }
+}
+
+unsafe fn context_has_select_labels(context: *const RimeContext) -> bool {
+    // SAFETY: callers pass a valid `RimeContext` pointer; `addr_of!` computes a
+    // field address without creating an intermediate reference.
+    unsafe {
+        rime_struct_has_member(
+            context,
+            (*context).data_size,
+            ptr::addr_of!((*context).select_labels),
+        )
+    }
+}
+
+fn rime_struct_has_member<T, U>(object: *const T, data_size: c_int, member: *const U) -> bool {
+    let Ok(data_size) = usize::try_from(data_size) else {
+        return false;
+    };
+    let bytes_after_data_size = std::mem::size_of::<c_int>().saturating_add(data_size);
+    let member_offset = (member as usize).saturating_sub(object as usize);
+    bytes_after_data_size > member_offset
 }
 
 fn clear_status(status: *mut RimeStatus) {
@@ -4789,10 +4827,10 @@ fn free_context_fields(context: *mut RimeContext) {
         if !(*context).menu.select_keys.is_null() {
             drop(CString::from_raw((*context).menu.select_keys));
         }
-        if !(*context).commit_text_preview.is_null() {
+        if context_has_commit_text_preview(context) && !(*context).commit_text_preview.is_null() {
             drop(CString::from_raw((*context).commit_text_preview));
         }
-        if !(*context).select_labels.is_null() {
+        if context_has_select_labels(context) && !(*context).select_labels.is_null() {
             let page_size = (*context).menu.page_size.max(0) as usize;
             let labels = Vec::from_raw_parts((*context).select_labels, page_size, page_size);
             for label in labels {
