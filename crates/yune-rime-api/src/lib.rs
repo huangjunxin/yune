@@ -589,7 +589,7 @@ pub extern "C" fn RimeSwitcherSettingsInit() -> *mut RimeSwitcherSettings {
     switcher_selection_registry()
         .lock()
         .expect("switcher selection registry should not be poisoned")
-        .insert(settings as usize, None);
+        .insert(settings as usize, Some(deployed_selected_schema_ids()));
     switcher_hotkeys_registry()
         .lock()
         .expect("switcher hotkeys registry should not be poisoned")

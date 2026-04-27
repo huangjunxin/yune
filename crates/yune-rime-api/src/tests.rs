@@ -5232,6 +5232,53 @@ schema:
     let destroy = api
         .schema_list_destroy
         .expect("schema-list destroy should be available");
+    fs::write(
+        staging.join("default.yaml"),
+        "\
+schema_list:
+  - schema: terra_pinyin
+",
+    )
+    .expect("default config should be rewritten");
+    let mut stale_selected_list = empty_schema_list();
+    // SAFETY: existing settings keep their initialized selected-schema state.
+    assert_eq!(
+        unsafe { get_selected(settings, &mut stale_selected_list) },
+        TRUE
+    );
+    assert_eq!(stale_selected_list.size, 2);
+    // SAFETY: the levers API populated two selected schema-list items.
+    let stale_first = unsafe { *stale_selected_list.list };
+    // SAFETY: selected schema-list ids are valid NUL-terminated strings.
+    assert_eq!(
+        unsafe { CStr::from_ptr(stale_first.schema_id) }.to_str(),
+        Ok("luna_pinyin")
+    );
+    // SAFETY: stale_selected_list was populated by the levers API above.
+    unsafe { destroy(&mut stale_selected_list) };
+    let new_settings = (api
+        .switcher_settings_init
+        .expect("switcher settings init should be available"))();
+    assert!(!new_settings.is_null());
+    let mut refreshed_selected_list = empty_schema_list();
+    // SAFETY: a new settings object sees the updated deployed default config.
+    assert_eq!(
+        unsafe { get_selected(new_settings, &mut refreshed_selected_list) },
+        TRUE
+    );
+    assert_eq!(refreshed_selected_list.size, 1);
+    // SAFETY: the levers API populated one selected schema-list item.
+    let refreshed_first = unsafe { *refreshed_selected_list.list };
+    // SAFETY: selected schema-list ids are valid NUL-terminated strings.
+    assert_eq!(
+        unsafe { CStr::from_ptr(refreshed_first.schema_id) }.to_str(),
+        Ok("terra_pinyin")
+    );
+    // SAFETY: refreshed_selected_list was populated by the levers API above.
+    unsafe { destroy(&mut refreshed_selected_list) };
+    // SAFETY: new_settings was allocated by this shim's switcher init function.
+    unsafe { drop(Box::from_raw(new_settings)) };
+
     // SAFETY: selected_list was populated by the levers API above.
     unsafe { destroy(&mut selected_list) };
     assert_eq!(selected_list.size, 0);
