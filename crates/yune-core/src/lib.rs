@@ -218,7 +218,9 @@ fn key_code_from_name(name: &str) -> Result<KeyCode, KeySequenceParseError> {
     let code = match name {
         "space" => KeyCode::Character(' '),
         "Tab" => KeyCode::Tab,
-        "Linefeed" | "Clear" | "Pause" | "Scroll_Lock" | "Sys_Req" => KeyCode::Ignored,
+        "Linefeed" | "Clear" | "Pause" | "Scroll_Lock" | "Sys_Req" | "Begin" | "Select"
+        | "Print" | "Execute" | "Insert" | "Undo" | "Redo" | "Menu" | "Find" | "Cancel"
+        | "Help" | "Break" => KeyCode::Ignored,
         "BackSpace" => KeyCode::Backspace,
         "Delete" => KeyCode::Delete,
         "Escape" => KeyCode::Escape,
@@ -1453,10 +1455,12 @@ mod tests {
 
     #[test]
     fn parses_librime_known_noop_key_names() {
-        let keys = parse_key_sequence("{Linefeed}{Clear}{Pause}{Scroll_Lock}{Sys_Req}")
-            .expect("key sequence should parse");
+        let keys = parse_key_sequence(
+            "{Linefeed}{Clear}{Pause}{Scroll_Lock}{Sys_Req}{Begin}{Select}{Print}{Execute}{Insert}{Undo}{Redo}{Menu}{Find}{Cancel}{Help}{Break}",
+        )
+        .expect("key sequence should parse");
 
-        assert_eq!(keys.len(), 5);
+        assert_eq!(keys.len(), 17);
         assert!(keys.iter().all(|key| key.code == KeyCode::Ignored));
         assert!(keys.iter().all(|key| key.modifiers.is_empty()));
     }
