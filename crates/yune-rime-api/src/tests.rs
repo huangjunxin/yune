@@ -312,6 +312,18 @@ fn key_table_exposes_librime_style_modifier_and_key_name_lookup() {
     let cyrillic_yu_upper = CString::new("Cyrillic_YU").expect("key name should be valid");
     let cyrillic_hardsign_upper =
         CString::new("Cyrillic_HARDSIGN").expect("key name should be valid");
+    let greek_alphaaccent = CString::new("Greek_ALPHAaccent").expect("key name should be valid");
+    let greek_iotadieresis = CString::new("Greek_IOTAdieresis").expect("key name should be valid");
+    let greek_iotadiaeresis =
+        CString::new("Greek_IOTAdiaeresis").expect("key name should be valid");
+    let greek_lambda_upper = CString::new("Greek_LAMBDA").expect("key name should be valid");
+    let greek_lamda_upper = CString::new("Greek_LAMDA").expect("key name should be valid");
+    let greek_omega_upper = CString::new("Greek_OMEGA").expect("key name should be valid");
+    let greek_lambda = CString::new("Greek_lambda").expect("key name should be valid");
+    let greek_lamda = CString::new("Greek_lamda").expect("key name should be valid");
+    let greek_finalsmallsigma =
+        CString::new("Greek_finalsmallsigma").expect("key name should be valid");
+    let greek_omega = CString::new("Greek_omega").expect("key name should be valid");
     let missing = CString::new("NoSuchKey").expect("key name should be valid");
 
     assert_eq!(unsafe { RimeGetKeycodeByName(space.as_ptr()) }, 0x20);
@@ -409,6 +421,40 @@ fn key_table_exposes_librime_style_modifier_and_key_name_lookup() {
         unsafe { RimeGetKeycodeByName(cyrillic_hardsign_upper.as_ptr()) },
         0x6ff
     );
+    assert_eq!(
+        unsafe { RimeGetKeycodeByName(greek_alphaaccent.as_ptr()) },
+        0x7a1
+    );
+    assert_eq!(
+        unsafe { RimeGetKeycodeByName(greek_iotadieresis.as_ptr()) },
+        0x7a5
+    );
+    assert_eq!(
+        unsafe { RimeGetKeycodeByName(greek_iotadiaeresis.as_ptr()) },
+        0x7a5
+    );
+    assert_eq!(
+        unsafe { RimeGetKeycodeByName(greek_lambda_upper.as_ptr()) },
+        0x7cb
+    );
+    assert_eq!(
+        unsafe { RimeGetKeycodeByName(greek_lamda_upper.as_ptr()) },
+        0x7cb
+    );
+    assert_eq!(
+        unsafe { RimeGetKeycodeByName(greek_omega_upper.as_ptr()) },
+        0x7d9
+    );
+    assert_eq!(
+        unsafe { RimeGetKeycodeByName(greek_lambda.as_ptr()) },
+        0x7eb
+    );
+    assert_eq!(unsafe { RimeGetKeycodeByName(greek_lamda.as_ptr()) }, 0x7eb);
+    assert_eq!(
+        unsafe { RimeGetKeycodeByName(greek_finalsmallsigma.as_ptr()) },
+        0x7f3
+    );
+    assert_eq!(unsafe { RimeGetKeycodeByName(greek_omega.as_ptr()) }, 0x7f9);
     assert_eq!(
         unsafe { RimeGetKeycodeByName(missing.as_ptr()) },
         0x00ff_ffff
@@ -605,6 +651,34 @@ fn key_table_exposes_librime_style_modifier_and_key_name_lookup() {
     assert_eq!(
         static_c_string(RimeGetKeyName(0x6ff)).as_deref(),
         Some("Cyrillic_HARDSIGN")
+    );
+    assert_eq!(
+        static_c_string(RimeGetKeyName(0x7a1)).as_deref(),
+        Some("Greek_ALPHAaccent")
+    );
+    assert_eq!(
+        static_c_string(RimeGetKeyName(0x7a5)).as_deref(),
+        Some("Greek_IOTAdieresis")
+    );
+    assert_eq!(
+        static_c_string(RimeGetKeyName(0x7cb)).as_deref(),
+        Some("Greek_LAMBDA")
+    );
+    assert_eq!(
+        static_c_string(RimeGetKeyName(0x7d9)).as_deref(),
+        Some("Greek_OMEGA")
+    );
+    assert_eq!(
+        static_c_string(RimeGetKeyName(0x7eb)).as_deref(),
+        Some("Greek_lambda")
+    );
+    assert_eq!(
+        static_c_string(RimeGetKeyName(0x7f3)).as_deref(),
+        Some("Greek_finalsmallsigma")
+    );
+    assert_eq!(
+        static_c_string(RimeGetKeyName(0x7f9)).as_deref(),
+        Some("Greek_omega")
     );
     assert_eq!(static_c_string(RimeGetKeyName(0x00ff_ffff)), None);
 }

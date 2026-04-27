@@ -712,6 +712,83 @@ const CYRILLIC_KEY_NAMES: &[(&[u8], c_int)] = &[
     (b"Cyrillic_HARDSIGN\0", 0x6ff),
 ];
 
+const GREEK_KEY_NAMES: &[(&[u8], c_int)] = &[
+    (b"Greek_ALPHAaccent\0", 0x7a1),
+    (b"Greek_EPSILONaccent\0", 0x7a2),
+    (b"Greek_ETAaccent\0", 0x7a3),
+    (b"Greek_IOTAaccent\0", 0x7a4),
+    (b"Greek_IOTAdieresis\0", 0x7a5),
+    (b"Greek_IOTAdiaeresis\0", 0x7a5),
+    (b"Greek_OMICRONaccent\0", 0x7a7),
+    (b"Greek_UPSILONaccent\0", 0x7a8),
+    (b"Greek_UPSILONdieresis\0", 0x7a9),
+    (b"Greek_OMEGAaccent\0", 0x7ab),
+    (b"Greek_accentdieresis\0", 0x7ae),
+    (b"Greek_horizbar\0", 0x7af),
+    (b"Greek_alphaaccent\0", 0x7b1),
+    (b"Greek_epsilonaccent\0", 0x7b2),
+    (b"Greek_etaaccent\0", 0x7b3),
+    (b"Greek_iotaaccent\0", 0x7b4),
+    (b"Greek_iotadieresis\0", 0x7b5),
+    (b"Greek_iotaaccentdieresis\0", 0x7b6),
+    (b"Greek_omicronaccent\0", 0x7b7),
+    (b"Greek_upsilonaccent\0", 0x7b8),
+    (b"Greek_upsilondieresis\0", 0x7b9),
+    (b"Greek_upsilonaccentdieresis\0", 0x7ba),
+    (b"Greek_omegaaccent\0", 0x7bb),
+    (b"Greek_ALPHA\0", 0x7c1),
+    (b"Greek_BETA\0", 0x7c2),
+    (b"Greek_GAMMA\0", 0x7c3),
+    (b"Greek_DELTA\0", 0x7c4),
+    (b"Greek_EPSILON\0", 0x7c5),
+    (b"Greek_ZETA\0", 0x7c6),
+    (b"Greek_ETA\0", 0x7c7),
+    (b"Greek_THETA\0", 0x7c8),
+    (b"Greek_IOTA\0", 0x7c9),
+    (b"Greek_KAPPA\0", 0x7ca),
+    (b"Greek_LAMBDA\0", 0x7cb),
+    (b"Greek_LAMDA\0", 0x7cb),
+    (b"Greek_MU\0", 0x7cc),
+    (b"Greek_NU\0", 0x7cd),
+    (b"Greek_XI\0", 0x7ce),
+    (b"Greek_OMICRON\0", 0x7cf),
+    (b"Greek_PI\0", 0x7d0),
+    (b"Greek_RHO\0", 0x7d1),
+    (b"Greek_SIGMA\0", 0x7d2),
+    (b"Greek_TAU\0", 0x7d4),
+    (b"Greek_UPSILON\0", 0x7d5),
+    (b"Greek_PHI\0", 0x7d6),
+    (b"Greek_CHI\0", 0x7d7),
+    (b"Greek_PSI\0", 0x7d8),
+    (b"Greek_OMEGA\0", 0x7d9),
+    (b"Greek_alpha\0", 0x7e1),
+    (b"Greek_beta\0", 0x7e2),
+    (b"Greek_gamma\0", 0x7e3),
+    (b"Greek_delta\0", 0x7e4),
+    (b"Greek_epsilon\0", 0x7e5),
+    (b"Greek_zeta\0", 0x7e6),
+    (b"Greek_eta\0", 0x7e7),
+    (b"Greek_theta\0", 0x7e8),
+    (b"Greek_iota\0", 0x7e9),
+    (b"Greek_kappa\0", 0x7ea),
+    (b"Greek_lambda\0", 0x7eb),
+    (b"Greek_lamda\0", 0x7eb),
+    (b"Greek_mu\0", 0x7ec),
+    (b"Greek_nu\0", 0x7ed),
+    (b"Greek_xi\0", 0x7ee),
+    (b"Greek_omicron\0", 0x7ef),
+    (b"Greek_pi\0", 0x7f0),
+    (b"Greek_rho\0", 0x7f1),
+    (b"Greek_sigma\0", 0x7f2),
+    (b"Greek_finalsmallsigma\0", 0x7f3),
+    (b"Greek_tau\0", 0x7f4),
+    (b"Greek_upsilon\0", 0x7f5),
+    (b"Greek_phi\0", 0x7f6),
+    (b"Greek_chi\0", 0x7f7),
+    (b"Greek_psi\0", 0x7f8),
+    (b"Greek_omega\0", 0x7f9),
+];
+
 /// Returns the librime modifier bit mask for a modifier name.
 ///
 /// # Safety
@@ -771,6 +848,7 @@ fn lookup_keycode(name: &[u8]) -> Option<c_int> {
         .chain(KANA_KEY_NAMES)
         .chain(ARABIC_KEY_NAMES)
         .chain(CYRILLIC_KEY_NAMES)
+        .chain(GREEK_KEY_NAMES)
         .find_map(|(key_name, keycode)| (name == *key_name).then_some(*keycode))
 }
 
@@ -785,6 +863,7 @@ fn lookup_key_name(keycode: c_int) -> Option<&'static [u8]> {
         .chain(KANA_KEY_NAMES)
         .chain(ARABIC_KEY_NAMES)
         .chain(CYRILLIC_KEY_NAMES)
+        .chain(GREEK_KEY_NAMES)
         .find_map(|(name, candidate_keycode)| (*candidate_keycode == keycode).then_some(*name))
 }
 
