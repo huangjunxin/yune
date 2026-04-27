@@ -1664,7 +1664,7 @@ impl RimeTableMetadata {
     fn parse_entry(&self, line: &str) -> Option<TableEntry> {
         let fields = line.split('\t').collect::<Vec<_>>();
         let text_column = self.column_index("text")?;
-        let text = fields.get(text_column)?.trim();
+        let text = fields.get(text_column).copied()?;
         if text.is_empty() {
             return None;
         }
@@ -1672,7 +1672,8 @@ impl RimeTableMetadata {
         let code = self
             .column_index("code")
             .and_then(|column| fields.get(column))
-            .map_or("", |code| code.trim());
+            .copied()
+            .unwrap_or("");
         let weight = self
             .column_index("weight")
             .and_then(|column| fields.get(column))
@@ -4906,6 +4907,29 @@ columns: [text, weight]
         assert_eq!(entries[1].text, "你");
         assert_eq!(entries[1].code, "");
         assert_eq!(entries[1].weight, 1.0);
+    }
+
+    #[test]
+    fn parses_rime_dict_yaml_preserves_raw_text_column_whitespace() {
+        let dictionary = TableDictionary::parse_rime_dict_yaml(
+            r#"
+---
+name: spaced_text_sample
+version: "0.1"
+sort: original
+columns: [code, text, weight]
+...
+
+ba	 八 	10
+"#,
+        )
+        .expect("RIME dictionary text fields should parse");
+
+        let entries = dictionary.entries();
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].text, " 八 ");
+        assert_eq!(entries[0].code, "ba");
+        assert_eq!(entries[0].weight, 10.0);
     }
 
     #[test]
