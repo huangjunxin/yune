@@ -1756,8 +1756,31 @@ fn parse_inline_yaml_list(input: &str) -> Option<Vec<String>> {
             if items.trim().is_empty() {
                 return Vec::new();
             }
-            items.split(',').map(str::trim).map(str::to_owned).collect()
+            split_inline_yaml_list_items(items)
         })
+}
+
+fn split_inline_yaml_list_items(items: &str) -> Vec<String> {
+    let mut result = Vec::new();
+    let mut start = 0;
+    let mut in_single_quote = false;
+    let mut in_double_quote = false;
+    let mut escaped = false;
+
+    for (index, character) in items.char_indices() {
+        match character {
+            '\'' if !in_double_quote => in_single_quote = !in_single_quote,
+            '"' if !in_single_quote && !escaped => in_double_quote = !in_double_quote,
+            ',' if !in_single_quote && !in_double_quote => {
+                result.push(items[start..index].trim().to_owned());
+                start = index + character.len_utf8();
+            }
+            _ => {}
+        }
+        escaped = character == '\\' && !escaped;
+    }
+    result.push(items[start..].trim().to_owned());
+    result
 }
 
 fn parse_yaml_scalar(input: &str) -> String {
@@ -4951,6 +4974,29 @@ ignored	八	ba	ignored	10
 "#,
         )
         .expect("inline YAML-null column items should still occupy column positions");
+
+        let entries = dictionary.entries();
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].text, "八");
+        assert_eq!(entries[0].code, "ba");
+        assert_eq!(entries[0].weight, 10.0);
+    }
+
+    #[test]
+    fn parses_rime_dict_yaml_inline_quoted_commas_as_single_column_items() {
+        let dictionary = TableDictionary::parse_rime_dict_yaml(
+            r#"
+---
+name: inline_quoted_comma_column_sample
+version: "0.1"
+sort: original
+columns: ['ignored,placeholder', text, code, weight]
+...
+
+ignored	八	ba	10
+"#,
+        )
+        .expect("quoted commas in YAML flow lists should not split column items");
 
         let entries = dictionary.entries();
         assert_eq!(entries.len(), 1);
