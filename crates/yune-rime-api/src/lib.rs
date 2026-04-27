@@ -52,6 +52,7 @@ const XK_KP_PAGE_DOWN: c_int = 0xff9b;
 const XK_KP_END: c_int = 0xff9c;
 const XK_KP_0: c_int = 0xffb0;
 const XK_KP_9: c_int = 0xffb9;
+const XK_EISU_TOGGLE: c_int = 0xff30;
 const K_SHIFT_MASK: c_int = 1 << 0;
 const K_CONTROL_MASK: c_int = 1 << 2;
 #[cfg(test)]
@@ -111,6 +112,7 @@ struct SessionState {
     input_buffer: Option<CString>,
     key_binder: Option<KeyBinderProcessor>,
     ascii_composer_enabled: bool,
+    ascii_composer_switch_bindings: HashMap<c_int, AsciiModeSwitchStyle>,
     ascii_segmentor_enabled: bool,
     punctuation_processor: Option<PunctuationProcessor>,
     recognizer_processor: Option<RecognizerProcessor>,
@@ -129,6 +131,7 @@ impl SessionState {
             input_buffer: None,
             key_binder: None,
             ascii_composer_enabled: false,
+            ascii_composer_switch_bindings: HashMap::new(),
             ascii_segmentor_enabled: false,
             punctuation_processor: None,
             recognizer_processor: None,
@@ -199,11 +202,21 @@ struct RecognizerProcessor {
     patterns: Vec<MatcherPattern>,
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 enum AsciiComposerProcessResult {
     Noop,
-    Accepted,
+    Accepted(Option<String>),
     Rejected,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum AsciiModeSwitchStyle {
+    InlineAscii,
+    CommitText,
+    CommitCode,
+    Clear,
+    SetAsciiMode,
+    UnsetAsciiMode,
 }
 
 struct MatcherPattern {
@@ -1830,10 +1843,6 @@ pub extern "C" fn RimeProcessKey(session_id: RimeSessionId, keycode: c_int, mask
     {
         return FALSE;
     }
-    let Some(key_event) = key_event_from_rime_keycode(keycode, mask) else {
-        return FALSE;
-    };
-
     let mut registry = sessions()
         .lock()
         .expect("session registry should not be poisoned");
@@ -1841,9 +1850,27 @@ pub extern "C" fn RimeProcessKey(session_id: RimeSessionId, keycode: c_int, mask
         return FALSE;
     };
 
+    if keycode == XK_EISU_TOGGLE && mask == 0 {
+        if let Some(commit) = process_ascii_composer_switch_key(session, keycode) {
+            if let Some(commit) = commit {
+                append_unread_commit(session, commit);
+            }
+            update_session_segment_tags(session);
+            return TRUE;
+        }
+        return FALSE;
+    }
+
+    let Some(key_event) = key_event_from_rime_keycode(keycode, mask) else {
+        return FALSE;
+    };
+
     match process_ascii_composer_processor(session, key_event) {
         AsciiComposerProcessResult::Noop => {}
-        AsciiComposerProcessResult::Accepted => {
+        AsciiComposerProcessResult::Accepted(commit) => {
+            if let Some(commit) = commit {
+                append_unread_commit(session, commit);
+            }
             update_session_segment_tags(session);
             return TRUE;
         }
@@ -2196,6 +2223,7 @@ fn apply_schema_to_session(session: &mut SessionState, schema_id: &str) {
     session.engine.reset_filters();
     session.key_binder = None;
     session.ascii_composer_enabled = false;
+    session.ascii_composer_switch_bindings.clear();
     session.ascii_segmentor_enabled = false;
     session.punctuation_processor = None;
     session.recognizer_processor = None;
@@ -4160,6 +4188,51 @@ fn install_schema_ascii_composer_processor(session: &mut SessionState, schema_id
         .filter_map(Value::as_str)
         .map(schema_component_prescription)
         .any(|(component_name, _)| component_name == "ascii_composer");
+    if !session.ascii_composer_enabled {
+        return;
+    }
+
+    session.ascii_composer_switch_bindings = load_ascii_composer_switch_bindings(&schema_config);
+    if session.ascii_composer_switch_bindings.is_empty() {
+        let default_config = load_runtime_config_root("default", ConfigOpenKind::Deployed);
+        session.ascii_composer_switch_bindings =
+            load_ascii_composer_switch_bindings(&default_config);
+    }
+}
+
+fn load_ascii_composer_switch_bindings(
+    schema_config: &Value,
+) -> HashMap<c_int, AsciiModeSwitchStyle> {
+    let Some(Value::Mapping(bindings)) =
+        find_config_value(schema_config, "ascii_composer/switch_key")
+    else {
+        return HashMap::new();
+    };
+
+    bindings
+        .iter()
+        .filter_map(|(key, style)| {
+            let key = config_scalar_string(key)?;
+            let style =
+                config_scalar_string(style).and_then(|style| ascii_mode_switch_style(&style))?;
+            let key_c = CString::new(key).ok()?;
+            // SAFETY: `key_c` is a valid NUL-terminated key-name string.
+            let keycode = unsafe { RimeGetKeycodeByName(key_c.as_ptr()) };
+            (keycode != 0x00ff_ffff).then_some((keycode, style))
+        })
+        .collect()
+}
+
+fn ascii_mode_switch_style(style: &str) -> Option<AsciiModeSwitchStyle> {
+    match style {
+        "inline_ascii" => Some(AsciiModeSwitchStyle::InlineAscii),
+        "commit_text" => Some(AsciiModeSwitchStyle::CommitText),
+        "commit_code" => Some(AsciiModeSwitchStyle::CommitCode),
+        "clear" => Some(AsciiModeSwitchStyle::Clear),
+        "set_ascii_mode" => Some(AsciiModeSwitchStyle::SetAsciiMode),
+        "unset_ascii_mode" => Some(AsciiModeSwitchStyle::UnsetAsciiMode),
+        _ => None,
+    }
 }
 
 fn install_schema_recognizer_processor(session: &mut SessionState, schema_id: &str) {
@@ -4889,7 +4962,60 @@ fn process_ascii_composer_processor(
     let mut input = session.engine.context().composition.input.clone();
     input.push(ch);
     session.engine.set_input(input);
-    AsciiComposerProcessResult::Accepted
+    AsciiComposerProcessResult::Accepted(None)
+}
+
+fn process_ascii_composer_switch_key(
+    session: &mut SessionState,
+    keycode: c_int,
+) -> Option<Option<String>> {
+    if !session.ascii_composer_enabled {
+        return None;
+    }
+    Some(switch_ascii_mode_with_key(session, keycode))
+}
+
+fn switch_ascii_mode_with_key(session: &mut SessionState, keycode: c_int) -> Option<String> {
+    let style = *session.ascii_composer_switch_bindings.get(&keycode)?;
+    let old_mode = session.engine.status().is_ascii_mode;
+    let new_mode = match style {
+        AsciiModeSwitchStyle::SetAsciiMode => true,
+        AsciiModeSwitchStyle::UnsetAsciiMode => false,
+        AsciiModeSwitchStyle::InlineAscii
+        | AsciiModeSwitchStyle::CommitText
+        | AsciiModeSwitchStyle::CommitCode
+        | AsciiModeSwitchStyle::Clear => !old_mode,
+    };
+    if old_mode == new_mode {
+        return None;
+    }
+    switch_ascii_mode(session, new_mode, style)
+}
+
+fn switch_ascii_mode(
+    session: &mut SessionState,
+    ascii_mode: bool,
+    style: AsciiModeSwitchStyle,
+) -> Option<String> {
+    let mut commit = None;
+    if !session.engine.context().composition.input.is_empty() {
+        match style {
+            AsciiModeSwitchStyle::InlineAscii => {}
+            AsciiModeSwitchStyle::CommitText => {
+                commit = session.engine.commit_composition();
+            }
+            AsciiModeSwitchStyle::CommitCode => {
+                commit = session.engine.commit_raw_input();
+            }
+            AsciiModeSwitchStyle::Clear
+            | AsciiModeSwitchStyle::SetAsciiMode
+            | AsciiModeSwitchStyle::UnsetAsciiMode => {
+                session.engine.clear_composition();
+            }
+        }
+    }
+    session.engine.set_option("ascii_mode", ascii_mode);
+    commit
 }
 
 fn process_recognizer_processor(session: &mut SessionState, key_event: KeyEvent) -> bool {

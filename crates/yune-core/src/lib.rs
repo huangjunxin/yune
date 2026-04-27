@@ -3894,6 +3894,10 @@ impl Engine {
         self.commit_highlighted()
     }
 
+    pub fn commit_raw_input(&mut self) -> Option<String> {
+        self.commit_raw_input_text()
+    }
+
     pub fn select_candidate(&mut self, index: usize) -> Option<String> {
         self.commit_candidate(index)
     }
@@ -4161,7 +4165,7 @@ impl Engine {
         self.commit_candidate(self.context.highlighted)
     }
 
-    fn commit_raw_input(&mut self) -> Option<String> {
+    fn commit_raw_input_text(&mut self) -> Option<String> {
         if self.context.composition.input.is_empty() {
             return None;
         }
