@@ -134,6 +134,7 @@ impl SessionState {
 struct KeyBinderProcessor {
     bindings: HashMap<KeyEvent, Vec<KeyBinding>>,
     redirecting: bool,
+    last_key: Option<char>,
 }
 
 struct KeyBinding {
@@ -3747,6 +3748,7 @@ fn install_schema_key_binder_processor(session: &mut SessionState, schema_id: &s
     let mut processor = KeyBinderProcessor {
         bindings: HashMap::new(),
         redirecting: false,
+        last_key: None,
     };
     for binding in bindings {
         let Value::Mapping(binding) = binding else {
@@ -4178,10 +4180,19 @@ fn process_key_binder_processor(
     session: &mut SessionState,
     key_event: KeyEvent,
 ) -> Option<Vec<String>> {
+    {
+        let Some(processor) = session.key_binder.as_mut() else {
+            return None;
+        };
+        if processor.redirecting {
+            return None;
+        }
+        if reinterpret_key_binding_paging_key(processor, &mut session.engine, key_event) {
+            return None;
+        }
+    }
+
     let Some(processor) = session.key_binder.as_ref() else {
-        return None;
-    };
-    if processor.redirecting {
         return None;
     };
     let Some(bindings) = processor.bindings.get(&key_event) else {
@@ -4212,6 +4223,42 @@ fn process_key_binder_processor(
             Some(Vec::new())
         }
     }
+}
+
+fn reinterpret_key_binding_paging_key(
+    processor: &mut KeyBinderProcessor,
+    engine: &mut Engine,
+    key_event: KeyEvent,
+) -> bool {
+    if key_event.modifiers.release {
+        return false;
+    }
+
+    let ch = if key_event.modifiers.is_empty() {
+        match key_event.code {
+            KeyCode::Character(ch) => Some(ch),
+            _ => None,
+        }
+    } else {
+        None
+    };
+
+    if ch == Some('.') && matches!(processor.last_key, Some('.') | Some(',')) {
+        processor.last_key = None;
+        return false;
+    }
+
+    let mut reinterpreted = false;
+    if processor.last_key == Some('.') && matches!(ch, Some('a'..='z')) {
+        let input = &engine.context().composition.input;
+        if !input.is_empty() && !input.ends_with('.') {
+            engine.process_char('.');
+            reinterpreted = true;
+        }
+    }
+
+    processor.last_key = ch;
+    reinterpreted
 }
 
 fn redirect_key_binding_events(

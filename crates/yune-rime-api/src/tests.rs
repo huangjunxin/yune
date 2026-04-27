@@ -2956,6 +2956,85 @@ key_binder:
 }
 
 #[test]
+fn schema_key_binder_processor_reinterprets_period_paging_before_letters() {
+    let _guard = test_guard();
+    RimeCleanupAllSessions();
+    let root = unique_temp_dir("schema-key-binder-reinterpret-period");
+    let shared = root.join("shared");
+    let user = root.join("user");
+    let staging = user.join("build");
+    fs::create_dir_all(&shared).expect("shared dir should be created");
+    fs::create_dir_all(&staging).expect("staging dir should be created");
+    fs::write(
+        staging.join("luna.schema.yaml"),
+        "\
+schema:
+  schema_id: luna
+  name: Luna
+engine:
+  processors:
+    - key_binder
+  translators:
+    - echo_translator
+key_binder:
+  bindings:
+    - { when: has_menu, accept: period, send: Page_Down }
+",
+    )
+    .expect("schema config should be written");
+
+    let shared_c = CString::new(shared.to_string_lossy().as_ref()).expect("path is valid");
+    let user_c = CString::new(user.to_string_lossy().as_ref()).expect("path is valid");
+    let mut traits = empty_traits();
+    traits.shared_data_dir = shared_c.as_ptr();
+    traits.user_data_dir = user_c.as_ptr();
+    // SAFETY: traits points to valid storage and strings live for the call.
+    unsafe { RimeSetup(&traits) };
+
+    let session_id = RimeCreateSession();
+    let schema_id = CString::new("luna").expect("schema id should be valid");
+    // SAFETY: schema id is a valid NUL-terminated string.
+    assert_eq!(
+        unsafe { RimeSelectSchema(session_id, schema_id.as_ptr()) },
+        TRUE
+    );
+
+    let preedit = |session_id| {
+        let mut context = empty_context();
+        assert_eq!(unsafe { RimeGetContext(session_id, &mut context) }, TRUE);
+        // SAFETY: `preedit` is populated by `RimeGetContext` for active composition.
+        let text = unsafe { CStr::from_ptr(context.composition.preedit) }
+            .to_str()
+            .expect("preedit should be valid UTF-8")
+            .to_owned();
+        // SAFETY: nested pointers were allocated by `RimeGetContext` above.
+        unsafe { RimeFreeContext(&mut context) };
+        text
+    };
+
+    assert_eq!(RimeProcessKey(session_id, 'b' as c_int, 0), TRUE);
+    assert_eq!(RimeProcessKey(session_id, 'a' as c_int, 0), TRUE);
+    assert_eq!(RimeProcessKey(session_id, '.' as c_int, 0), TRUE);
+    assert_eq!(preedit(session_id), "ba");
+    assert_eq!(RimeProcessKey(session_id, 'c' as c_int, 0), TRUE);
+    assert_eq!(preedit(session_id), "ba.c");
+
+    assert_eq!(RimeProcessKey(session_id, 0xff1b, 0), TRUE);
+    assert_eq!(RimeProcessKey(session_id, 'b' as c_int, 0), TRUE);
+    assert_eq!(RimeProcessKey(session_id, 'a' as c_int, 0), TRUE);
+    assert_eq!(RimeProcessKey(session_id, '.' as c_int, 0), TRUE);
+    assert_eq!(RimeProcessKey(session_id, '.' as c_int, 0), TRUE);
+    assert_eq!(RimeProcessKey(session_id, 'c' as c_int, 0), TRUE);
+    assert_eq!(preedit(session_id), "bac");
+
+    assert_eq!(RimeDestroySession(session_id), TRUE);
+    let reset_traits = empty_traits();
+    // SAFETY: reset traits points to valid storage.
+    unsafe { RimeSetup(&reset_traits) };
+    fs::remove_dir_all(root).expect("temp dirs should be removed");
+}
+
+#[test]
 fn schema_key_binder_processor_selects_schemas_from_bindings() {
     let _guard = test_guard();
     RimeCleanupAllSessions();
