@@ -7290,6 +7290,51 @@ fn shift_return_key_commits_script_text_like_librime_fluid_editor() {
 }
 
 #[test]
+fn shift_printable_keys_enter_input_and_shift_space_confirms_like_librime_editor() {
+    let _guard = test_guard();
+    RimeCleanupAllSessions();
+
+    let session_id = RimeCreateSession();
+    assert_eq!(RimeProcessKey(session_id, 'A' as i32, K_SHIFT_MASK), TRUE);
+    assert_eq!(RimeProcessKey(session_id, 'b' as i32, 0), TRUE);
+    let input = RimeGetInput(session_id);
+    assert!(!input.is_null());
+    // SAFETY: `RimeGetInput` returned a non-null session-owned C string.
+    assert_eq!(unsafe { CStr::from_ptr(input) }.to_str(), Ok("Ab"));
+    assert_eq!(RimeProcessKey(session_id, ' ' as i32, K_SHIFT_MASK), TRUE);
+    let mut commit = RimeCommit {
+        data_size: std::mem::size_of::<RimeCommit>() as i32,
+        text: std::ptr::null_mut(),
+    };
+    // SAFETY: commit points to valid writable storage.
+    assert_eq!(unsafe { RimeGetCommit(session_id, &mut commit) }, TRUE);
+    // SAFETY: `RimeGetCommit` returned true and populated a valid C string.
+    assert_eq!(unsafe { CStr::from_ptr(commit.text) }.to_str(), Ok("Ab"));
+    // SAFETY: commit.text was allocated by the shim above.
+    assert_eq!(unsafe { RimeFreeCommit(&mut commit) }, TRUE);
+    assert_eq!(RimeProcessKey(session_id, ' ' as i32, K_SHIFT_MASK), FALSE);
+    assert_eq!(RimeDestroySession(session_id), TRUE);
+
+    let sequence_session_id = RimeCreateSession();
+    let sequence = CString::new("{Shift+A}b{Shift+space}").expect("sequence should be valid");
+    // SAFETY: sequence is a valid NUL-terminated librime-style key sequence.
+    assert_eq!(
+        unsafe { RimeSimulateKeySequence(sequence_session_id, sequence.as_ptr()) },
+        TRUE
+    );
+    // SAFETY: commit points to valid writable storage.
+    assert_eq!(
+        unsafe { RimeGetCommit(sequence_session_id, &mut commit) },
+        TRUE
+    );
+    // SAFETY: `RimeGetCommit` returned true and populated a valid C string.
+    assert_eq!(unsafe { CStr::from_ptr(commit.text) }.to_str(), Ok("Ab"));
+    // SAFETY: commit.text was allocated by the shim above.
+    assert_eq!(unsafe { RimeFreeCommit(&mut commit) }, TRUE);
+    assert_eq!(RimeDestroySession(sequence_session_id), TRUE);
+}
+
+#[test]
 fn control_shift_return_key_commits_selected_comment_like_librime_fluid_editor() {
     let _guard = test_guard();
     RimeCleanupAllSessions();
@@ -9065,7 +9110,11 @@ fn rejects_unknown_sessions_and_modified_keys() {
 
     assert_eq!(RimeProcessKey(0, 'a' as i32, 0), FALSE);
     assert_eq!(RimeProcessKey(session_id + 1, 'a' as i32, 0), FALSE);
-    assert_eq!(RimeProcessKey(session_id, 'a' as i32, 1), FALSE);
+    assert_eq!(
+        RimeProcessKey(session_id, 'a' as i32, K_CONTROL_MASK),
+        FALSE
+    );
+    assert_eq!(RimeProcessKey(session_id, 'a' as i32, 1 << 3), FALSE);
 
     assert_eq!(RimeDestroySession(session_id), TRUE);
 }

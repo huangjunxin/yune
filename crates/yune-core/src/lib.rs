@@ -203,6 +203,14 @@ fn apply_modifier(modifiers: &mut KeyModifiers, token: &str) -> Result<(), KeySe
 }
 
 fn key_code_from_name(name: &str) -> Result<KeyCode, KeySequenceParseError> {
+    if name.chars().count() == 1 {
+        return Ok(KeyCode::Character(
+            name.chars()
+                .next()
+                .expect("single-character key name should contain a char"),
+        ));
+    }
+
     let code = match name {
         "space" => KeyCode::Character(' '),
         "BackSpace" => KeyCode::Backspace,
@@ -781,8 +789,16 @@ impl Engine {
             return self.commit_comment();
         }
 
-        if is_exact_shift_modifier(key_event.modifiers) && key_event.code == KeyCode::Return {
-            return self.commit_script_text();
+        if is_exact_shift_modifier(key_event.modifiers) {
+            match key_event.code {
+                KeyCode::Return => {
+                    return self.commit_script_text();
+                }
+                KeyCode::Character(ch) if ch == ' ' || is_printable_ascii(ch) => {
+                    return self.process_char(ch);
+                }
+                _ => {}
+            }
         }
 
         if is_exact_control_modifier(key_event.modifiers) {
@@ -1259,6 +1275,10 @@ const fn is_exact_control_shift_modifier(modifiers: KeyModifiers) -> bool {
         && !modifiers.release
 }
 
+const fn is_printable_ascii(ch: char) -> bool {
+    matches!(ch, '!'..='~')
+}
+
 const fn select_index_from_digit(ch: char) -> usize {
     match ch {
         '1'..='9' => ch as usize - '1' as usize,
@@ -1511,6 +1531,25 @@ mod tests {
             .process_key_sequence("{Shift+Return}")
             .expect("key sequence should parse");
         assert!(commits.is_empty());
+    }
+
+    #[test]
+    fn shift_printable_keys_enter_input_and_shift_space_confirms_like_librime_editor() {
+        let mut engine = Engine::new();
+
+        let commits = engine
+            .process_key_sequence("{Shift+A}b{Shift+space}")
+            .expect("key sequence should parse");
+
+        assert_eq!(commits, vec!["Ab"]);
+        assert_eq!(engine.context().last_commit.as_deref(), Some("Ab"));
+        assert!(!engine.status().is_composing);
+
+        let commits = engine
+            .process_key_sequence("{Shift+space}")
+            .expect("key sequence should parse");
+        assert!(commits.is_empty());
+        assert_eq!(engine.context().last_commit.as_deref(), Some("Ab"));
     }
 
     #[test]
