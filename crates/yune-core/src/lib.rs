@@ -1620,8 +1620,8 @@ impl RimeTableMetadata {
 }
 
 fn parse_inline_yaml_list(input: &str) -> Vec<String> {
+    let input = strip_yaml_comment(input).trim();
     input
-        .trim()
         .strip_prefix('[')
         .and_then(|items| items.strip_suffix(']'))
         .map(|items| {
@@ -1635,7 +1635,36 @@ fn parse_inline_yaml_list(input: &str) -> Vec<String> {
 }
 
 fn parse_yaml_scalar(input: &str) -> String {
-    input.trim().trim_matches(['"', '\'']).to_owned()
+    strip_yaml_comment(input)
+        .trim()
+        .trim_matches(['"', '\''])
+        .to_owned()
+}
+
+fn strip_yaml_comment(input: &str) -> &str {
+    let mut in_single_quote = false;
+    let mut in_double_quote = false;
+    let mut escaped = false;
+
+    for (index, character) in input.char_indices() {
+        match character {
+            '\'' if !in_double_quote => in_single_quote = !in_single_quote,
+            '"' if !in_single_quote && !escaped => in_double_quote = !in_double_quote,
+            '#' if !in_single_quote && !in_double_quote => {
+                let starts_comment = input[..index]
+                    .chars()
+                    .next_back()
+                    .map_or(true, char::is_whitespace);
+                if starts_comment {
+                    return &input[..index];
+                }
+            }
+            _ => {}
+        }
+        escaped = character == '\\' && !escaped;
+    }
+
+    input
 }
 
 fn normalize_table_code(code: &str) -> String {
@@ -4603,6 +4632,59 @@ ba	吧	9
         assert_eq!(entries[0].weight, 1.0);
         assert_eq!(entries[1].text, "吧");
         assert_eq!(entries[1].weight, 9.0);
+    }
+
+    #[test]
+    fn parses_rime_dict_yaml_header_scalars_with_comments() {
+        let dictionary = TableDictionary::parse_rime_dict_yaml(
+            r#"
+---
+name: commented_header_sample
+version: "0.1" # dictionary version
+sort: original # preserve source order
+columns:
+  - code # input code
+  - text # candidate text
+  - weight # absolute weight
+...
+
+ba	八	1
+ba	吧	9
+"#,
+        )
+        .expect("dictionary should parse");
+
+        let entries = dictionary.entries();
+        assert_eq!(entries.len(), 2);
+        assert_eq!(entries[0].text, "八");
+        assert_eq!(entries[0].weight, 1.0);
+        assert_eq!(entries[1].text, "吧");
+        assert_eq!(entries[1].weight, 9.0);
+    }
+
+    #[test]
+    fn parses_rime_dict_yaml_inline_columns_with_trailing_comment() {
+        let dictionary = TableDictionary::parse_rime_dict_yaml(
+            r#"
+---
+name: commented_inline_columns_sample
+version: "0.1"
+sort: original
+columns: [code, text, weight] # inline RIME config comment
+...
+
+ba	八	10
+ba	吧	9
+"#,
+        )
+        .expect("dictionary should parse");
+
+        let entries = dictionary.entries();
+        assert_eq!(entries.len(), 2);
+        assert_eq!(entries[0].code, "ba");
+        assert_eq!(entries[0].text, "八");
+        assert_eq!(entries[0].weight, 10.0);
+        assert_eq!(entries[1].text, "吧");
     }
 
     #[test]
