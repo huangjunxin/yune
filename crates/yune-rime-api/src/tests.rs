@@ -6881,6 +6881,131 @@ fn escape_clears_composition_like_librime_editor_cancel_key() {
 }
 
 #[test]
+fn page_keys_move_candidate_page_like_librime_selector_keys() {
+    let _guard = test_guard();
+    RimeCleanupAllSessions();
+    let root = unique_temp_dir("page-key-selector");
+    let shared = root.join("shared");
+    let user = root.join("user");
+    let staging = user.join("build");
+    fs::create_dir_all(&shared).expect("shared dir should be created");
+    fs::create_dir_all(&staging).expect("staging dir should be created");
+    fs::write(
+        staging.join("luna.schema.yaml"),
+        "\
+schema:\n  schema_id: luna\n  name: Luna\nmenu:\n  page_size: 2\n",
+    )
+    .expect("schema config should be written");
+
+    let shared_c = CString::new(shared.to_string_lossy().as_ref()).expect("path is valid");
+    let user_c = CString::new(user.to_string_lossy().as_ref()).expect("path is valid");
+    let mut traits = empty_traits();
+    traits.shared_data_dir = shared_c.as_ptr();
+    traits.user_data_dir = user_c.as_ptr();
+    // SAFETY: traits points to valid storage and strings live for the call.
+    unsafe { RimeSetup(&traits) };
+
+    let page_down = CString::new("Page_Down").expect("key name should be valid");
+    let page_down_keycode = unsafe { RimeGetKeycodeByName(page_down.as_ptr()) };
+    assert_eq!(page_down_keycode, 0xff56);
+    let kp_page_up = CString::new("KP_Page_Up").expect("key name should be valid");
+    let kp_page_up_keycode = unsafe { RimeGetKeycodeByName(kp_page_up.as_ptr()) };
+    assert_eq!(kp_page_up_keycode, 0xff9a);
+
+    let session_id = RimeCreateSession();
+    let schema_id = CString::new("luna").expect("schema id should be valid");
+    // SAFETY: schema id is a valid NUL-terminated string.
+    assert_eq!(
+        unsafe { RimeSelectSchema(session_id, schema_id.as_ptr()) },
+        TRUE
+    );
+    {
+        let mut registry = super::sessions()
+            .lock()
+            .expect("session registry should not be poisoned");
+        let session = registry
+            .sessions
+            .get_mut(&session_id)
+            .expect("session should exist");
+        session.engine.add_translator(StaticTableTranslator::new([
+            ("ba", "八"),
+            ("ba", "吧"),
+            ("ba", "爸"),
+            ("ba", "巴"),
+        ]));
+    }
+
+    assert_eq!(RimeProcessKey(session_id, page_down_keycode, 0), FALSE);
+    assert_eq!(RimeProcessKey(session_id, 'b' as i32, 0), TRUE);
+    assert_eq!(RimeProcessKey(session_id, 'a' as i32, 0), TRUE);
+    assert_eq!(RimeProcessKey(session_id, page_down_keycode, 0), TRUE);
+    let mut context = empty_context();
+    // SAFETY: context points to writable storage initialized with a positive data_size.
+    assert_eq!(unsafe { RimeGetContext(session_id, &mut context) }, TRUE);
+    assert_eq!(context.menu.page_size, 2);
+    assert_eq!(context.menu.page_no, 1);
+    assert_eq!(context.menu.highlighted_candidate_index, 0);
+    // SAFETY: context.menu.candidates points to at least one candidate.
+    let first_candidate = unsafe { *context.menu.candidates };
+    // SAFETY: candidate text is owned by the returned context and is valid until free.
+    assert_eq!(
+        unsafe { CStr::from_ptr(first_candidate.text) }.to_str(),
+        Ok("爸")
+    );
+    // SAFETY: nested pointers were allocated by RimeGetContext above.
+    assert_eq!(unsafe { RimeFreeContext(&mut context) }, TRUE);
+
+    assert_eq!(RimeProcessKey(session_id, kp_page_up_keycode, 0), TRUE);
+    // SAFETY: context points to writable storage initialized with a positive data_size.
+    assert_eq!(unsafe { RimeGetContext(session_id, &mut context) }, TRUE);
+    assert_eq!(context.menu.page_no, 0);
+    assert_eq!(context.menu.highlighted_candidate_index, 0);
+    // SAFETY: nested pointers were allocated by RimeGetContext above.
+    assert_eq!(unsafe { RimeFreeContext(&mut context) }, TRUE);
+    assert_eq!(RimeDestroySession(session_id), TRUE);
+
+    let sequence_session_id = RimeCreateSession();
+    {
+        let mut registry = super::sessions()
+            .lock()
+            .expect("session registry should not be poisoned");
+        let session = registry
+            .sessions
+            .get_mut(&sequence_session_id)
+            .expect("session should exist");
+        session.engine.add_translator(StaticTableTranslator::new([
+            ("ba", "八"),
+            ("ba", "吧"),
+            ("ba", "爸"),
+            ("ba", "巴"),
+            ("ba", "把"),
+            ("ba", "拔"),
+        ]));
+    }
+    let sequence = CString::new("ba{Next}").expect("sequence should be valid");
+    // SAFETY: sequence is a valid NUL-terminated librime-style key sequence.
+    assert_eq!(
+        unsafe { RimeSimulateKeySequence(sequence_session_id, sequence.as_ptr()) },
+        TRUE
+    );
+    // SAFETY: context points to writable storage initialized with a positive data_size.
+    assert_eq!(
+        unsafe { RimeGetContext(sequence_session_id, &mut context) },
+        TRUE
+    );
+    assert_eq!(context.menu.page_no, 1);
+    assert_eq!(context.menu.highlighted_candidate_index, 0);
+    // SAFETY: nested pointers were allocated by RimeGetContext above.
+    assert_eq!(unsafe { RimeFreeContext(&mut context) }, TRUE);
+    assert_eq!(RimeDestroySession(sequence_session_id), TRUE);
+
+    let reset_traits = empty_traits();
+    // SAFETY: reset traits points to valid storage.
+    unsafe { RimeSetup(&reset_traits) };
+    fs::remove_dir_all(root).expect("temp dirs should be removed");
+}
+
+#[test]
 fn returns_context_with_preedit_and_candidate_page() {
     let _guard = test_guard();
     RimeCleanupAllSessions();

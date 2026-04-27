@@ -24,7 +24,11 @@ pub use key_table::*;
 const XK_BACKSPACE: c_int = 0xff08;
 const XK_ESCAPE: c_int = 0xff1b;
 const XK_RETURN: c_int = 0xff0d;
+const XK_PAGE_UP: c_int = 0xff55;
+const XK_PAGE_DOWN: c_int = 0xff56;
 const XK_KP_ENTER: c_int = 0xff8d;
+const XK_KP_PAGE_UP: c_int = 0xff9a;
+const XK_KP_PAGE_DOWN: c_int = 0xff9b;
 const XK_KP_0: c_int = 0xffb0;
 const XK_KP_9: c_int = 0xffb9;
 const DEFAULT_PAGE_SIZE: usize = 5;
@@ -1599,9 +1603,21 @@ pub extern "C" fn RimeProcessKey(session_id: RimeSessionId, keycode: c_int, mask
     };
 
     let was_composing = !session.engine.context().composition.input.is_empty();
-    if let Some(commit) = session.engine.process_key_event(key_event) {
-        session.unread_commit = Some(commit);
-        return TRUE;
+    match key_event.code {
+        KeyCode::PreviousPage => {
+            let page_size = session_menu_page_size(session);
+            session.engine.change_page_by(page_size, true);
+        }
+        KeyCode::NextPage => {
+            let page_size = session_menu_page_size(session);
+            session.engine.change_page_by(page_size, false);
+        }
+        _ => {
+            if let Some(commit) = session.engine.process_key_event(key_event) {
+                session.unread_commit = Some(commit);
+                return TRUE;
+            }
+        }
     }
 
     bool_from(matches!(key_event.code, KeyCode::Character(ch) if ch != ' ') || was_composing)
@@ -3362,6 +3378,8 @@ fn key_event_from_rime_keycode(keycode: c_int) -> Option<KeyEvent> {
     let code = match keycode {
         XK_BACKSPACE => KeyCode::Backspace,
         XK_ESCAPE => KeyCode::Escape,
+        XK_PAGE_UP | XK_KP_PAGE_UP => KeyCode::PreviousPage,
+        XK_PAGE_DOWN | XK_KP_PAGE_DOWN => KeyCode::NextPage,
         XK_RETURN | XK_KP_ENTER => KeyCode::Return,
         XK_KP_0..=XK_KP_9 => {
             KeyCode::KeypadDigit(char::from_u32(('0' as u32) + (keycode - XK_KP_0) as u32)?)

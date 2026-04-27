@@ -60,6 +60,8 @@ pub enum KeyCode {
     KeypadDigit(char),
     Backspace,
     Escape,
+    PreviousPage,
+    NextPage,
     Return,
 }
 
@@ -185,6 +187,8 @@ fn key_code_from_name(name: &str) -> Result<KeyCode, KeySequenceParseError> {
         "space" => KeyCode::Character(' '),
         "BackSpace" => KeyCode::Backspace,
         "Escape" => KeyCode::Escape,
+        "Page_Up" | "Prior" | "KP_Page_Up" | "KP_Prior" => KeyCode::PreviousPage,
+        "Page_Down" | "Next" | "KP_Page_Down" | "KP_Next" => KeyCode::NextPage,
         "Return" => KeyCode::Return,
         "KP_Enter" => KeyCode::Return,
         "KP_0" => KeyCode::KeypadDigit('0'),
@@ -758,6 +762,14 @@ impl Engine {
                 self.clear_composition();
                 None
             }
+            KeyCode::PreviousPage => {
+                self.change_page(true);
+                None
+            }
+            KeyCode::NextPage => {
+                self.change_page(false);
+                None
+            }
             KeyCode::Return => self.commit_highlighted(),
         }
     }
@@ -831,15 +843,20 @@ impl Engine {
     }
 
     pub fn change_page(&mut self, backward: bool) -> bool {
+        self.change_page_by(DEFAULT_PAGE_SIZE, backward)
+    }
+
+    pub fn change_page_by(&mut self, page_size: usize, backward: bool) -> bool {
         if self.context.candidates.is_empty() {
             return false;
         }
 
+        let page_size = page_size.max(1);
         let current_index = self.context.highlighted;
         let next_index = if backward {
-            current_index.saturating_sub(DEFAULT_PAGE_SIZE)
+            current_index.saturating_sub(page_size)
         } else {
-            current_index + DEFAULT_PAGE_SIZE
+            current_index + page_size
         };
         self.highlight_candidate(next_index)
     }
@@ -948,11 +965,11 @@ mod tests {
     #[test]
     fn parses_librime_style_key_sequence_names() {
         let keys = parse_key_sequence(
-            "zyx 123{Shift+space}ABC{Control+Alt+Return}{KP_Enter}{KP_2}{Escape}",
+            "zyx 123{Shift+space}ABC{Control+Alt+Return}{KP_Enter}{KP_2}{Escape}{Page_Down}{KP_Page_Up}",
         )
         .expect("key sequence should parse");
 
-        assert_eq!(keys.len(), 15);
+        assert_eq!(keys.len(), 17);
         assert_eq!(keys[3].code, KeyCode::Character(' '));
         assert!(!keys[3].modifiers.shift);
         assert_eq!(keys[7].code, KeyCode::Character(' '));
@@ -963,6 +980,8 @@ mod tests {
         assert_eq!(keys[12].code, KeyCode::Return);
         assert_eq!(keys[13].code, KeyCode::KeypadDigit('2'));
         assert_eq!(keys[14].code, KeyCode::Escape);
+        assert_eq!(keys[15].code, KeyCode::NextPage);
+        assert_eq!(keys[16].code, KeyCode::PreviousPage);
     }
 
     #[test]
@@ -1032,6 +1051,34 @@ mod tests {
         assert!(engine.context().candidates.is_empty());
         assert_eq!(engine.context().last_commit, None);
         assert!(!engine.status().is_composing);
+    }
+
+    #[test]
+    fn page_keys_move_candidate_page_like_librime_selector() {
+        let mut engine = Engine::new();
+        engine.add_translator(StaticTableTranslator::new([
+            ("ba", "八"),
+            ("ba", "吧"),
+            ("ba", "爸"),
+            ("ba", "巴"),
+            ("ba", "把"),
+            ("ba", "拔"),
+        ]));
+
+        let commits = engine
+            .process_key_sequence("{Page_Down}ba{Page_Down}")
+            .expect("key sequence should parse");
+
+        assert!(commits.is_empty());
+        assert_eq!(engine.context().highlighted, 5);
+        assert_eq!(engine.context().candidates[5].text, "拔");
+
+        engine
+            .process_key_sequence("{KP_Page_Up}")
+            .expect("key sequence should parse");
+
+        assert_eq!(engine.context().highlighted, 0);
+        assert_eq!(engine.context().last_commit, None);
     }
 
     #[test]
