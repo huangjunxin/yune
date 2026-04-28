@@ -100,9 +100,10 @@
   focused previous-match auto-commit reuse with `express_editor`, and ASCII mode
   switch-key handling.
 - Expanded schema-loaded segmentor coverage for `ascii_segmentor`, `matcher`,
-  and namespaced `affix_segmentor`, including recognizer-pattern tags,
-  namespace fallback behavior, sorted pattern precedence, raw ASCII tags, and
-  exclusive affix-tag behavior for prefixed reverse lookup.
+  namespaced `affix_segmentor`, and a focused `punct_segmentor` subset,
+  including recognizer-pattern tags, namespace fallback behavior, sorted pattern
+  precedence, raw ASCII tags, exclusive affix-tag behavior for prefixed reverse
+  lookup, and exclusive single-key shape punctuation tags.
 - Expanded schema-loaded translator coverage for `table_translator`,
   `script_translator`, `r10n_translator`, `reverse_lookup_translator`,
   `history_translator`, `switch_translator`, and `schema_list_translator`,
@@ -138,9 +139,10 @@
   the remaining librime gear components and deeper semantics: `speller`
   previous-match segment splitting and non-auto-commit composition behavior,
   `editor` variants, `navigator`, `selector`, `chord_composer`,
-  `shape_processor`/`shape_formatter`, `punct_segmentor`,
-  `fallback_segmentor`, full spelling algebra, full OpenCC conversion data, and
-  larger real-world processor/segmentor/translator/filter chains from
+  `shape_processor`/`shape_formatter`, deeper `punct_segmentor` behavior such
+  as segment-order interactions and `punct_number` translation through larger
+  chains, `fallback_segmentor`, full spelling algebra, full OpenCC conversion
+  data, and larger real-world processor/segmentor/translator/filter chains from
   distribution schemas.
 - Expand dictionary compatibility beyond source `.dict.yaml` parsing toward
   librime's compiled `.table.bin`, `.prism.bin`, `.reverse.bin`, pack

@@ -3677,6 +3677,7 @@ pub struct PunctuationTranslator {
     half_shape_entries: Vec<(String, Candidate)>,
     full_shape_entries: Vec<(String, Candidate)>,
     symbol_entries: Vec<(String, Candidate)>,
+    required_tags: Option<Vec<String>>,
 }
 
 impl PunctuationTranslator {
@@ -3707,6 +3708,7 @@ impl PunctuationTranslator {
             half_shape_entries: punctuation_candidates(half_shape_entries),
             full_shape_entries: punctuation_candidates(full_shape_entries),
             symbol_entries: punctuation_candidates(symbol_entries),
+            required_tags: None,
         }
     }
 
@@ -3720,6 +3722,13 @@ impl PunctuationTranslator {
             (";", "；"),
             (":", "："),
         ])
+    }
+
+    #[must_use]
+    pub fn with_required_tags(mut self, tags: impl IntoIterator<Item = impl Into<String>>) -> Self {
+        let tags = tags.into_iter().map(Into::into).collect::<Vec<_>>();
+        self.required_tags = (!tags.is_empty()).then_some(tags);
+        self
     }
 }
 
@@ -3739,6 +3748,26 @@ impl Translator for PunctuationTranslator {
             &self.half_shape_entries
         };
         self.translate_with_entries(input, entries)
+    }
+
+    fn translate_with_context(
+        &self,
+        input: &str,
+        status: &Status,
+        _options: &HashMap<String, bool>,
+        context: &Context,
+    ) -> Vec<Candidate> {
+        if self.required_tags.as_ref().is_some_and(|required_tags| {
+            !required_tags.iter().any(|tag| {
+                context
+                    .segment_tags
+                    .iter()
+                    .any(|segment_tag| segment_tag == tag)
+            })
+        }) {
+            return Vec::new();
+        }
+        self.translate_with_status(input, status)
     }
 }
 

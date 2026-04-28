@@ -130,6 +130,7 @@ struct SessionState {
     punctuation_processor: Option<PunctuationProcessor>,
     recognizer_processor: Option<RecognizerProcessor>,
     base_segment_tags: Vec<String>,
+    punct_segmentor: Option<PunctSegmentor>,
     affix_segmentors: Vec<AffixSegmentor>,
     matcher_segmentor: Option<MatcherSegmentor>,
     paging: bool,
@@ -152,6 +153,7 @@ impl SessionState {
             punctuation_processor: None,
             recognizer_processor: None,
             base_segment_tags: vec!["abc".to_owned()],
+            punct_segmentor: None,
             affix_segmentors: Vec::new(),
             matcher_segmentor: None,
             paging: false,
@@ -240,6 +242,12 @@ struct AffixSegmentor {
     prefix: String,
     suffix: String,
     extra_tags: Vec<String>,
+}
+
+struct PunctSegmentor {
+    half_shape_keys: HashSet<String>,
+    full_shape_keys: HashSet<String>,
+    digit_separators: String,
 }
 
 struct RecognizerProcessor {
@@ -2315,6 +2323,7 @@ fn apply_schema_to_session(session: &mut SessionState, schema_id: &str) {
     session.ascii_composer_pressed_switch_key = None;
     session.ascii_composer_inline_ascii = false;
     session.ascii_segmentor_enabled = false;
+    session.punct_segmentor = None;
     session.punctuation_processor = None;
     session.recognizer_processor = None;
     session.paging = false;
@@ -4446,6 +4455,7 @@ fn install_schema_segment_tags(session: &mut SessionState, schema_id: &str) {
     session.affix_segmentors.clear();
     session.matcher_segmentor = None;
     session.ascii_segmentor_enabled = false;
+    session.punct_segmentor = None;
 
     if let Some(Value::Sequence(segmentors)) =
         find_config_value(&schema_config, "engine/segmentors")
@@ -4465,6 +4475,14 @@ fn install_schema_segment_tags(session: &mut SessionState, schema_id: &str) {
                 &schema_config,
                 "abc_segmentor/extra_tags",
             ));
+        }
+        if segmentors
+            .iter()
+            .filter_map(Value::as_str)
+            .map(schema_component_prescription)
+            .any(|(component_name, _)| component_name == "punct_segmentor")
+        {
+            session.punct_segmentor = Some(load_schema_punct_segmentor(&schema_config));
         }
         session.affix_segmentors = load_schema_affix_segmentors(&schema_config, segmentors);
         session.matcher_segmentor = load_schema_matcher_segmentor(&schema_config, segmentors);
@@ -4695,6 +4713,35 @@ fn load_schema_affix_segmentors(
         .collect()
 }
 
+fn load_schema_punct_segmentor(schema_config: &Value) -> PunctSegmentor {
+    PunctSegmentor {
+        half_shape_keys: punctuation_shape_segment_keys(schema_config, "half_shape"),
+        full_shape_keys: punctuation_shape_segment_keys(schema_config, "full_shape"),
+        digit_separators: find_config_value(schema_config, "punctuator/digit_separators")
+            .and_then(config_scalar_string)
+            .unwrap_or_else(|| ".:".to_owned()),
+    }
+}
+
+fn punctuation_shape_segment_keys(schema_config: &Value, shape: &str) -> HashSet<String> {
+    let Some(Value::Mapping(mapping)) =
+        find_config_value(schema_config, &format!("punctuator/{shape}"))
+    else {
+        return HashSet::new();
+    };
+    mapping
+        .keys()
+        .filter_map(config_scalar_string)
+        .filter(|key| {
+            let mut chars = key.chars();
+            chars
+                .next()
+                .is_some_and(|ch| ch.is_ascii() && !ch.is_ascii_control())
+                && chars.next().is_none()
+        })
+        .collect()
+}
+
 fn load_schema_recognizer_patterns(schema_config: &Value, name_space: &str) -> Vec<MatcherPattern> {
     let Some(Value::Mapping(patterns)) =
         find_config_value(schema_config, &format!("{name_space}/patterns"))
@@ -4728,6 +4775,19 @@ fn update_session_segment_tags(session: &mut SessionState) {
             session.engine.set_segment_tags(raw_tags);
         }
         return;
+    }
+    if let Some(punct_segmentor) = &session.punct_segmentor {
+        if let Some(tag) = punct_segmentor.tag_for_input(
+            &input,
+            session.engine.status().is_full_shape,
+            session.engine.context().last_commit.as_deref(),
+        ) {
+            let punct_tags = vec![tag.to_owned()];
+            if session.engine.context().segment_tags != punct_tags {
+                session.engine.set_segment_tags(punct_tags);
+            }
+            return;
+        }
     }
     let mut tags = session.base_segment_tags.clone();
     for affix_segmentor in &session.affix_segmentors {
@@ -4771,6 +4831,38 @@ impl AffixSegmentor {
     }
 }
 
+impl PunctSegmentor {
+    fn tag_for_input(
+        &self,
+        input: &str,
+        full_shape: bool,
+        last_commit: Option<&str>,
+    ) -> Option<&'static str> {
+        if !self.accepts_input(input, full_shape) {
+            return None;
+        }
+        if input
+            .chars()
+            .next()
+            .is_some_and(|ch| self.digit_separators.contains(ch))
+            && last_commit.is_some_and(ends_with_ascii_digit)
+        {
+            Some("punct_number")
+        } else {
+            Some("punct")
+        }
+    }
+
+    fn accepts_input(&self, input: &str, full_shape: bool) -> bool {
+        let keys = if full_shape {
+            &self.full_shape_keys
+        } else {
+            &self.half_shape_keys
+        };
+        keys.contains(input)
+    }
+}
+
 impl MatcherSegmentor {
     fn match_tag(&self, input: &str) -> Option<&str> {
         if input.is_empty() {
@@ -4806,13 +4898,17 @@ fn install_schema_punctuation_translator_from_config(
     if half_shape_entries.is_empty() && full_shape_entries.is_empty() && symbol_entries.is_empty() {
         return;
     }
-    session
-        .engine
-        .add_translator(PunctuationTranslator::with_shape_and_symbol_entries(
-            half_shape_entries,
-            full_shape_entries,
-            symbol_entries,
-        ));
+    let translator = PunctuationTranslator::with_shape_and_symbol_entries(
+        half_shape_entries,
+        full_shape_entries,
+        symbol_entries,
+    );
+    let translator = if session.punct_segmentor.is_some() {
+        translator.with_required_tags(["punct", "punct_number"])
+    } else {
+        translator
+    };
+    session.engine.add_translator(translator);
 }
 
 fn install_schema_key_binder_processor(session: &mut SessionState, schema_id: &str) {

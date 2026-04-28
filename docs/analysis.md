@@ -94,7 +94,10 @@ The strongest compatibility progress is currently in two areas:
   `auto_select_pattern` gating, and focused previous-match auto-commit reuse
   with `express_editor`. The current `schema_list_translator` coverage includes
   current-schema-first ordering, selection commands, access-time recency sorting,
-  and `switcher/fix_schema_list_order`.
+  and `switcher/fix_schema_list_order`. Segmentor coverage now also includes a
+  focused `punct_segmentor` path for shape-mapped single ASCII punctuation keys,
+  where the punctuation segment is exclusive and suppresses ordinary table
+  translation competition.
 - Data compatibility: schema-loaded table dictionaries now feed real session
   candidates, and source dictionary parsing handles many librime/yaml-cpp edge
   cases around headers, YAML nulls, quoted scalars, `columns`, `import_tables`,
@@ -123,7 +126,8 @@ not just missing tests:
   components and deeper behaviors such as `speller` auto-select and
   max-code-length auto-selection handling, editor variants, `navigator`,
   `selector`,
-  `chord_composer`, `shape_processor`, `punct_segmentor`,
+  `chord_composer`, `shape_processor`, deeper `punct_segmentor` behavior such
+  as segment-order interactions and `punct_number` through larger chains,
   `fallback_segmentor`, and formatter behavior that are not yet equivalently
   modeled. `speller` still needs deeper previous-match segment splitting and
   non-auto-commit composition behavior.
