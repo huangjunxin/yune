@@ -6,6 +6,7 @@ mod navigator;
 mod punctuation;
 mod recognizer;
 mod selector;
+mod shape;
 mod speller;
 
 pub(crate) use ascii_composer::{
@@ -35,4 +36,5 @@ pub(crate) use recognizer::{install_schema_recognizer_processor, process_recogni
 pub(crate) use selector::{
     install_schema_selector_bindings, process_selector_layout_key, selector_configured_action,
 };
+pub(crate) use shape::{process_shape_processor, shape_formatted_ascii_text};
 pub(crate) use speller::{install_schema_speller_processor, process_speller_processor};
