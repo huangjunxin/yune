@@ -381,6 +381,7 @@ struct ChordComposerProcessor {
     recognized_chord: HashSet<char>,
     prompt: Option<String>,
     finish_on_first_release: bool,
+    was_composing: bool,
 }
 
 impl ChordComposerProcessor {
@@ -2297,6 +2298,7 @@ pub extern "C" fn RimeCommitComposition(session_id: RimeSessionId) -> Bool {
 
     session.paging = false;
     update_session_segment_tags(session);
+    sync_chord_composer_context_update(session);
     append_unread_commit(session, commit);
     TRUE
 }
@@ -2314,6 +2316,7 @@ pub extern "C" fn RimeClearComposition(session_id: RimeSessionId) {
         session.engine.clear_composition();
         session.paging = false;
         update_session_segment_tags(session);
+        sync_chord_composer_context_update(session);
     }
 }
 
@@ -2366,6 +2369,7 @@ pub unsafe extern "C" fn RimeSetInput(session_id: RimeSessionId, input: *const c
     session.engine.set_input(input);
     session.input_buffer = None;
     update_session_segment_tags(session);
+    sync_chord_composer_context_update(session);
     TRUE
 }
 
@@ -5464,6 +5468,7 @@ fn install_schema_chord_composer_processor(session: &mut SessionState, schema_id
         )
         .and_then(config_scalar_bool)
         .unwrap_or(false),
+        was_composing: false,
     });
 }
 
@@ -6596,6 +6601,7 @@ fn process_session_key_event(
 ) -> SessionKeyProcessResult {
     if let Some(result) = process_chord_composer_processor(session, key_event) {
         update_session_segment_tags(session);
+        sync_chord_composer_context_update(session);
         return result;
     }
     if let Some(commits) = process_key_binder_processor(session_id, session, key_event) {
@@ -6662,6 +6668,20 @@ fn process_session_key_event(
         SessionKeyProcessResult::Accepted
     } else {
         SessionKeyProcessResult::Noop
+    }
+}
+
+fn sync_chord_composer_context_update(session: &mut SessionState) {
+    let Some(composer) = session.chord_composer.as_mut() else {
+        return;
+    };
+    let is_composing =
+        !session.engine.context().composition.input.is_empty() || composer.prompt.is_some();
+    if is_composing {
+        composer.was_composing = true;
+    } else if composer.was_composing {
+        composer.was_composing = false;
+        composer.raw_sequence.clear();
     }
 }
 
