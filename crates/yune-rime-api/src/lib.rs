@@ -32,6 +32,7 @@ mod modules;
 mod notifications;
 mod runtime;
 mod schema_api;
+mod schema_selection;
 mod session;
 mod userdb;
 pub use abi::*;
@@ -51,6 +52,8 @@ use notifications::notify;
 pub use notifications::RimeSetNotificationHandler;
 pub use runtime::*;
 pub use schema_api::*;
+pub(crate) use schema_selection::apply_schema_to_session;
+pub use schema_selection::{RimeGetCurrentSchema, RimeSelectSchema};
 pub use session::*;
 pub use userdb::*;
 
@@ -895,144 +898,6 @@ pub unsafe extern "C" fn RimeGetProperty(
         copy_c_string_with_strncpy_semantics(property_value, value, buffer_size);
         true
     })
-}
-
-/// Copies the current session schema id into caller-provided storage.
-///
-/// # Safety
-///
-/// `schema_id` must point to writable storage of `buffer_size` bytes. Null
-/// buffers are rejected.
-#[no_mangle]
-pub unsafe extern "C" fn RimeGetCurrentSchema(
-    session_id: RimeSessionId,
-    schema_id: *mut c_char,
-    buffer_size: usize,
-) -> Bool {
-    if schema_id.is_null() {
-        return FALSE;
-    }
-
-    with_session(session_id, |session| {
-        let current_schema = session.engine.status().schema_id;
-        copy_c_string_with_strncpy_semantics(&current_schema, schema_id, buffer_size);
-        true
-    })
-}
-
-/// Selects the active schema id for a session.
-///
-/// # Safety
-///
-/// `schema_id` must be either null or point to a valid nul-terminated C string.
-/// Null schema ids are rejected.
-#[no_mangle]
-pub unsafe extern "C" fn RimeSelectSchema(
-    session_id: RimeSessionId,
-    schema_id: *const c_char,
-) -> Bool {
-    if schema_id.is_null() {
-        return FALSE;
-    }
-    // SAFETY: callers promise that `schema_id` is a valid nul-terminated
-    // string.
-    let schema_id = unsafe { CStr::from_ptr(schema_id) }
-        .to_string_lossy()
-        .into_owned();
-
-    let selected = with_session(session_id, |session| {
-        apply_schema_to_session(session, &schema_id);
-        true
-    });
-    if selected == TRUE {
-        let status = sessions()
-            .lock()
-            .expect("session registry should not be poisoned")
-            .sessions
-            .get(&session_id)
-            .map(|session| session.engine.status());
-        if let Some(status) = status {
-            notify(
-                session_id,
-                "schema",
-                &format!("{}/{}", status.schema_id, status.schema_name),
-            );
-        }
-    }
-    selected
-}
-
-fn apply_schema_to_session(session: &mut SessionState, schema_id: &str) {
-    let schema_name = deployed_schema_name(schema_id);
-    session.engine.set_schema(schema_id.to_owned(), schema_name);
-    session.engine.reset_translators();
-    session.engine.reset_filters();
-    session.key_binder = None;
-    session.speller = None;
-    session.editor_processor = None;
-    session.editor_bindings.clear();
-    session.editor_char_handler = None;
-    session.chord_composer = None;
-    session.engine.set_option("_auto_commit", false);
-    session.ascii_composer_enabled = false;
-    session.ascii_composer_switch_bindings.clear();
-    session.ascii_composer_pressed_switch_key = None;
-    session.ascii_composer_inline_ascii = false;
-    session.ascii_segmentor_enabled = false;
-    session.punct_segmentor = None;
-    session.fallback_segmentor_enabled = false;
-    session.punctuation_processor = None;
-    session.recognizer_processor = None;
-    session.selector_bindings = SelectorBindings::default();
-    session.navigator_bindings = NavigatorBindings::default();
-    session.navigator_delimiters = " ".to_owned();
-    session.navigator_syllable_jump_position = NavigatorSyllableJumpPosition::AfterDelimiter;
-    session.paging = false;
-    restore_switcher_saved_options(session, schema_id);
-    apply_schema_switch_resets(session, schema_id);
-    install_schema_segment_tags(session, schema_id);
-    install_schema_editor_processor(session, schema_id);
-    install_schema_chord_composer_processor(session, schema_id);
-    install_schema_ascii_composer_processor(session, schema_id);
-    install_schema_speller_processor(session, schema_id);
-    install_schema_recognizer_processor(session, schema_id);
-    install_schema_selector_bindings(session, schema_id);
-    install_schema_navigator_bindings(session, schema_id);
-    install_schema_key_binder_processor(session, schema_id);
-    install_schema_punctuation_processor(session, schema_id);
-    install_schema_translator_chain(session, schema_id);
-    install_schema_filter_chain(session, schema_id);
-    session.engine.clear_composition();
-    session.input_buffer = None;
-    session.unread_commit = None;
-}
-
-fn restore_switcher_saved_options(session: &mut SessionState, schema_id: &str) {
-    let schema_config =
-        load_runtime_config_root(&format!("{schema_id}.schema"), ConfigOpenKind::Deployed);
-    let save_options = schema_string_list(&schema_config, "switcher/save_options");
-    if save_options.is_empty() {
-        return;
-    }
-
-    let Some(user_config_path) = selected_runtime_config_path("user", ConfigOpenKind::User) else {
-        return;
-    };
-    let Some(user_config) = fs::read_to_string(user_config_path)
-        .ok()
-        .and_then(|text| serde_yaml::from_str::<Value>(&text).ok())
-    else {
-        return;
-    };
-
-    for option_name in save_options {
-        let Some(value) = find_config_value(&user_config, &format!("var/option/{option_name}"))
-            .and_then(config_scalar_bool)
-        else {
-            continue;
-        };
-        session.engine.set_option(option_name, value);
-    }
 }
 
 /// Returns a switch state label from the selected schema config.
@@ -1898,7 +1763,7 @@ fn selector_end_like_librime(session: &mut SessionState) -> Option<bool> {
     selector_home_like_librime(session)
 }
 
-fn install_schema_translator_chain(session: &mut SessionState, schema_id: &str) {
+pub(crate) fn install_schema_translator_chain(session: &mut SessionState, schema_id: &str) {
     let schema_config =
         load_runtime_config_root(&format!("{schema_id}.schema"), ConfigOpenKind::Deployed);
     let Some(Value::Sequence(translators)) =
@@ -2114,7 +1979,7 @@ fn install_schema_switch_translator_from_config(session: &mut SessionState, sche
     );
 }
 
-fn install_schema_filter_chain(session: &mut SessionState, schema_id: &str) {
+pub(crate) fn install_schema_filter_chain(session: &mut SessionState, schema_id: &str) {
     let schema_config =
         load_runtime_config_root(&format!("{schema_id}.schema"), ConfigOpenKind::Deployed);
     let Some(Value::Sequence(filters)) = find_config_value(&schema_config, "engine/filters") else {
@@ -2280,7 +2145,7 @@ fn schema_translator_tags(schema_config: &Value, name_space: &str) -> Vec<String
     tags
 }
 
-fn schema_string_list(schema_config: &Value, key: &str) -> Vec<String> {
+pub(crate) fn schema_string_list(schema_config: &Value, key: &str) -> Vec<String> {
     let Some(Value::Sequence(formulas)) = find_config_value(schema_config, key) else {
         return Vec::new();
     };
@@ -2291,7 +2156,7 @@ fn config_scalar_f32(value: &Value) -> Option<f32> {
     config_scalar_double(value).map(|number| number as f32)
 }
 
-fn install_schema_segment_tags(session: &mut SessionState, schema_id: &str) {
+pub(crate) fn install_schema_segment_tags(session: &mut SessionState, schema_id: &str) {
     let schema_config =
         load_runtime_config_root(&format!("{schema_id}.schema"), ConfigOpenKind::Deployed);
     let mut tags = vec!["abc".to_owned()];
@@ -2342,7 +2207,7 @@ fn install_schema_segment_tags(session: &mut SessionState, schema_id: &str) {
     update_session_segment_tags(session);
 }
 
-fn install_schema_ascii_composer_processor(session: &mut SessionState, schema_id: &str) {
+pub(crate) fn install_schema_ascii_composer_processor(session: &mut SessionState, schema_id: &str) {
     let schema_config =
         load_runtime_config_root(&format!("{schema_id}.schema"), ConfigOpenKind::Deployed);
     let Some(Value::Sequence(processors)) = find_config_value(&schema_config, "engine/processors")
@@ -2401,7 +2266,7 @@ fn ascii_mode_switch_style(style: &str) -> Option<AsciiModeSwitchStyle> {
     }
 }
 
-fn install_schema_editor_processor(session: &mut SessionState, schema_id: &str) {
+pub(crate) fn install_schema_editor_processor(session: &mut SessionState, schema_id: &str) {
     let schema_config =
         load_runtime_config_root(&format!("{schema_id}.schema"), ConfigOpenKind::Deployed);
     if schema_engine_processors_include(&schema_config, "express_editor") {
@@ -2478,7 +2343,7 @@ fn editor_char_handler_from_name(handler: &str) -> Option<Option<EditorCharHandl
     }
 }
 
-fn install_schema_chord_composer_processor(session: &mut SessionState, schema_id: &str) {
+pub(crate) fn install_schema_chord_composer_processor(session: &mut SessionState, schema_id: &str) {
     let schema_config =
         load_runtime_config_root(&format!("{schema_id}.schema"), ConfigOpenKind::Deployed);
     if !schema_engine_processors_include(&schema_config, "chord_composer") {
@@ -2572,7 +2437,7 @@ fn load_chord_composer_bindings(
     bindings
 }
 
-fn install_schema_speller_processor(session: &mut SessionState, schema_id: &str) {
+pub(crate) fn install_schema_speller_processor(session: &mut SessionState, schema_id: &str) {
     let schema_config =
         load_runtime_config_root(&format!("{schema_id}.schema"), ConfigOpenKind::Deployed);
     if !schema_engine_processors_include(&schema_config, "speller") {
@@ -2620,7 +2485,7 @@ fn install_schema_speller_processor(session: &mut SessionState, schema_id: &str)
     });
 }
 
-fn install_schema_recognizer_processor(session: &mut SessionState, schema_id: &str) {
+pub(crate) fn install_schema_recognizer_processor(session: &mut SessionState, schema_id: &str) {
     let schema_config =
         load_runtime_config_root(&format!("{schema_id}.schema"), ConfigOpenKind::Deployed);
     let Some(Value::Sequence(processors)) = find_config_value(&schema_config, "engine/processors")
@@ -2924,7 +2789,7 @@ fn install_schema_punctuation_translator_from_config(
     session.engine.add_translator(translator);
 }
 
-fn install_schema_key_binder_processor(session: &mut SessionState, schema_id: &str) {
+pub(crate) fn install_schema_key_binder_processor(session: &mut SessionState, schema_id: &str) {
     let schema_config =
         load_runtime_config_root(&format!("{schema_id}.schema"), ConfigOpenKind::Deployed);
     if !schema_engine_processors_include(&schema_config, "key_binder") {
@@ -3016,7 +2881,7 @@ fn install_schema_key_binder_processor(session: &mut SessionState, schema_id: &s
     }
 }
 
-fn install_schema_selector_bindings(session: &mut SessionState, schema_id: &str) {
+pub(crate) fn install_schema_selector_bindings(session: &mut SessionState, schema_id: &str) {
     let schema_config =
         load_runtime_config_root(&format!("{schema_id}.schema"), ConfigOpenKind::Deployed);
     load_selector_binding_section(
@@ -3082,7 +2947,7 @@ fn selector_binding_action_from_name(action: &str) -> Option<SelectorBindingActi
     Some(action)
 }
 
-fn install_schema_navigator_bindings(session: &mut SessionState, schema_id: &str) {
+pub(crate) fn install_schema_navigator_bindings(session: &mut SessionState, schema_id: &str) {
     let schema_config =
         load_runtime_config_root(&format!("{schema_id}.schema"), ConfigOpenKind::Deployed);
     session.navigator_delimiters = find_config_value(&schema_config, "speller/delimiter")
@@ -3198,7 +3063,7 @@ fn parse_single_key_binding_event(pattern: &str) -> Option<KeyEvent> {
     (events.len() == 1).then(|| events.remove(0))
 }
 
-fn install_schema_punctuation_processor(session: &mut SessionState, schema_id: &str) {
+pub(crate) fn install_schema_punctuation_processor(session: &mut SessionState, schema_id: &str) {
     let schema_config =
         load_runtime_config_root(&format!("{schema_id}.schema"), ConfigOpenKind::Deployed);
     if !schema_engine_processors_include(&schema_config, "punctuator")
@@ -3312,7 +3177,7 @@ fn schema_engine_processors_include(schema_config: &Value, processor_name: &str)
         .any(|(component_name, _)| component_name == processor_name)
 }
 
-fn apply_schema_switch_resets(session: &mut SessionState, schema_id: &str) {
+pub(crate) fn apply_schema_switch_resets(session: &mut SessionState, schema_id: &str) {
     let schema_config =
         load_runtime_config_root(&format!("{schema_id}.schema"), ConfigOpenKind::Deployed);
     let Some(Value::Sequence(switches)) = find_config_value(&schema_config, "switches") else {
@@ -5193,7 +5058,10 @@ fn runtime_config_roots(kind: ConfigOpenKind) -> Vec<String> {
     }
 }
 
-fn selected_runtime_config_path(resource_id: &str, kind: ConfigOpenKind) -> Option<PathBuf> {
+pub(crate) fn selected_runtime_config_path(
+    resource_id: &str,
+    kind: ConfigOpenKind,
+) -> Option<PathBuf> {
     let roots = runtime_config_roots(kind);
     roots
         .iter()
@@ -5297,7 +5165,7 @@ fn schema_access_time_quality(schema_id: &str) -> i64 {
     }
 }
 
-fn deployed_schema_name(schema_id: &str) -> String {
+pub(crate) fn deployed_schema_name(schema_id: &str) -> String {
     let schema_config =
         load_runtime_config_root(&format!("{schema_id}.schema"), ConfigOpenKind::Deployed);
     find_config_value(&schema_config, "schema/name")
