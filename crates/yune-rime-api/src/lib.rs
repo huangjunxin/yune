@@ -383,6 +383,15 @@ struct ChordComposerProcessor {
     finish_on_first_release: bool,
 }
 
+impl ChordComposerProcessor {
+    fn clear_chord_state(&mut self) {
+        self.raw_sequence.clear();
+        self.pressed_keys.clear();
+        self.recognized_chord.clear();
+        self.prompt = None;
+    }
+}
+
 #[derive(Clone, Copy)]
 enum ChordComposerBindingAction {
     CommitRawInput,
@@ -6673,32 +6682,26 @@ fn process_chord_composer_processor(
         && matches!(key_event.code, KeyCode::Backspace | KeyCode::Escape)
     {
         if let Some(composer) = session.chord_composer.as_mut() {
-            composer.raw_sequence.clear();
-            composer.pressed_keys.clear();
-            composer.recognized_chord.clear();
-            composer.prompt = None;
+            composer.clear_chord_state();
         }
         return None;
     }
 
     let KeyCode::Character(ch) = key_event.code else {
+        if let Some(composer) = session.chord_composer.as_mut() {
+            composer.clear_chord_state();
+        }
         return None;
     };
     let composer = session.chord_composer.as_mut()?;
 
     if !chord_composer_allows_modifiers(composer, key_event.modifiers) {
-        composer.raw_sequence.clear();
-        composer.pressed_keys.clear();
-        composer.recognized_chord.clear();
-        composer.prompt = None;
+        composer.clear_chord_state();
         return None;
     }
 
     if !composer.alphabet.contains(&ch) {
-        composer.raw_sequence.clear();
-        composer.pressed_keys.clear();
-        composer.recognized_chord.clear();
-        composer.prompt = None;
+        composer.clear_chord_state();
         return None;
     }
 

@@ -20769,6 +20769,118 @@ sort: original
 }
 
 #[test]
+fn schema_chord_composer_cancels_active_chord_on_function_key() {
+    let _guard = test_guard();
+    RimeCleanupAllSessions();
+    let root = unique_temp_dir("schema-chord-composer-function-cancel");
+    let shared = root.join("shared");
+    let user = root.join("user");
+    let staging = user.join("build");
+    fs::create_dir_all(&shared).expect("shared dir should be created");
+    fs::create_dir_all(&staging).expect("staging dir should be created");
+    fs::write(
+        staging.join("chord.schema.yaml"),
+        "\
+schema:
+  schema_id: chord
+  name: Chord
+engine:
+  processors:
+    - chord_composer
+  translators:
+    - table_translator
+chord_composer:
+  alphabet: a
+  output_format:
+    - xlit/a/x/
+  prompt_format:
+    - xform/^(.+)$/<$1>/
+translator:
+  dictionary: chord
+  enable_completion: false
+  enable_sentence: false
+",
+    )
+    .expect("schema config should be written");
+    fs::write(
+        shared.join("chord.dict.yaml"),
+        "\
+---
+name: chord
+version: '0.1'
+sort: original
+...
+
+形\tx\t100
+",
+    )
+    .expect("dictionary should be written");
+
+    let shared_c = CString::new(shared.to_string_lossy().as_ref()).expect("path is valid");
+    let user_c = CString::new(user.to_string_lossy().as_ref()).expect("path is valid");
+    let mut traits = empty_traits();
+    traits.shared_data_dir = shared_c.as_ptr();
+    traits.user_data_dir = user_c.as_ptr();
+    // SAFETY: traits points to valid storage and strings live for the call.
+    unsafe { RimeSetup(&traits) };
+
+    let session_id = RimeCreateSession();
+    let schema_id = CString::new("chord").expect("schema id should be valid");
+    // SAFETY: schema id is a valid NUL-terminated string.
+    assert_eq!(
+        unsafe { RimeSelectSchema(session_id, schema_id.as_ptr()) },
+        TRUE
+    );
+
+    assert_eq!(RimeProcessKey(session_id, 'a' as i32, 0), TRUE);
+
+    let mut context = empty_context();
+    // SAFETY: context points to writable storage initialized with positive
+    // `data_size`.
+    assert_eq!(unsafe { RimeGetContext(session_id, &mut context) }, TRUE);
+    // SAFETY: context composition preedit was allocated by `RimeGetContext`.
+    assert_eq!(
+        unsafe { CStr::from_ptr(context.composition.preedit) }.to_str(),
+        Ok("<a>")
+    );
+    // SAFETY: nested pointers were allocated by `RimeGetContext` above.
+    assert_eq!(unsafe { RimeFreeContext(&mut context) }, TRUE);
+
+    assert_eq!(RimeProcessKey(session_id, XK_RETURN, 0), FALSE);
+
+    let mut status = empty_status();
+    // SAFETY: status points to writable storage initialized with positive
+    // `data_size`.
+    assert_eq!(unsafe { RimeGetStatus(session_id, &mut status) }, TRUE);
+    assert_eq!(status.is_composing, FALSE);
+    // SAFETY: nested pointers were allocated by `RimeGetStatus` above.
+    assert_eq!(unsafe { RimeFreeStatus(&mut status) }, TRUE);
+
+    assert_eq!(
+        RimeProcessKey(session_id, 'a' as i32, K_RELEASE_MASK),
+        FALSE
+    );
+
+    let input = RimeGetInput(session_id);
+    assert!(!input.is_null());
+    // SAFETY: `RimeGetInput` returned a non-null session-owned C string.
+    assert_eq!(unsafe { CStr::from_ptr(input) }.to_str(), Ok(""));
+
+    let mut commit = RimeCommit {
+        data_size: 0,
+        text: std::ptr::null_mut(),
+    };
+    // SAFETY: `commit` points to valid writable storage for this test.
+    assert_eq!(unsafe { RimeGetCommit(session_id, &mut commit) }, FALSE);
+
+    assert_eq!(RimeDestroySession(session_id), TRUE);
+    let reset_traits = empty_traits();
+    // SAFETY: reset traits points to valid storage.
+    unsafe { RimeSetup(&reset_traits) };
+    fs::remove_dir_all(root).expect("temp dirs should be removed");
+}
+
+#[test]
 fn schema_chord_composer_binding_commits_raw_sequence() {
     let _guard = test_guard();
     RimeCleanupAllSessions();
