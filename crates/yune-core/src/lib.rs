@@ -1662,7 +1662,7 @@ pub fn parse_rime_reverse_bin_metadata(
     let bytes = bytes.as_ref();
     ensure_len(bytes, 64)?;
     let version = parse_rime_format_version(bytes, b"Rime::Reverse/")?;
-    if version < 3.0 - f64::EPSILON || version > 4.0 + f64::EPSILON {
+    if !(3.0 - f64::EPSILON..=4.0 + f64::EPSILON).contains(&version) {
         return Err(RimeCompiledMetadataError::UnsupportedVersion);
     }
 
@@ -1749,10 +1749,13 @@ pub fn rime_dict_rebuild_plan(
         None => return Err(RimeDictRebuildError::MissingSourceAndTable),
     };
 
-    let mut rebuild_prism = input.prism.is_none_or(|prism| {
-        prism.dict_file_checksum != dict_file_checksum
-            || prism.schema_file_checksum != input.schema_file_checksum
-    });
+    let mut rebuild_prism = match input.prism {
+        Some(prism) => {
+            prism.dict_file_checksum != dict_file_checksum
+                || prism.schema_file_checksum != input.schema_file_checksum
+        }
+        None => true,
+    };
 
     if input.reverse_dict_file_checksum != Some(dict_file_checksum) {
         rebuild_table = true;
@@ -1771,7 +1774,7 @@ pub fn rime_dict_rebuild_plan(
     })
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct TableEncoder {
     rules: Vec<TableEncodingRule>,
     exclude_pattern_sources: Vec<String>,
@@ -1786,18 +1789,6 @@ impl PartialEq for TableEncoder {
             && self.exclude_pattern_sources == other.exclude_pattern_sources
             && self.tail_anchor == other.tail_anchor
             && self.max_phrase_length == other.max_phrase_length
-    }
-}
-
-impl Default for TableEncoder {
-    fn default() -> Self {
-        Self {
-            rules: Vec::new(),
-            exclude_pattern_sources: Vec::new(),
-            exclude_patterns: Vec::new(),
-            tail_anchor: String::new(),
-            max_phrase_length: 0,
-        }
     }
 }
 
@@ -2312,9 +2303,7 @@ fn apply_rime_preset_vocabulary_weights(
     if !metadata.uses_preset_vocabulary() {
         return None;
     }
-    let Some(vocabulary) = vocabulary_loader(metadata.vocabulary_name()) else {
-        return None;
-    };
+    let vocabulary = vocabulary_loader(metadata.vocabulary_name())?;
     let vocabulary_weights = parse_rime_preset_vocabulary(&vocabulary);
     for entry in entries {
         let weight = entry.raw_weight.trim();
@@ -3497,9 +3486,10 @@ impl StaticTableTranslator {
                 let mut next_path = path.clone();
                 next_path.quality += candidate.quality.exp();
                 next_path.pieces.push(candidate.text.clone());
-                let replace = paths[end_pos]
-                    .as_ref()
-                    .is_none_or(|existing| next_path.quality > existing.quality);
+                let replace = match paths[end_pos].as_ref() {
+                    Some(existing) => next_path.quality > existing.quality,
+                    None => true,
+                };
                 if replace {
                     paths[end_pos] = Some(next_path);
                 }
@@ -4636,7 +4626,7 @@ impl CandidateFilter for ReverseLookupFilter {
             ) {
                 continue;
             }
-            if !candidate.comment.is_empty() && !(self.overwrite_comment || self.append_comment) {
+            if !(candidate.comment.is_empty() || self.overwrite_comment || self.append_comment) {
                 continue;
             }
 
@@ -4785,9 +4775,9 @@ struct SpellingAlgebra {
     formulas: Vec<SpellingAlgebraFormula>,
 }
 
-const SPELLING_ALGEBRA_FUZZY_PENALTY: f32 = -0.693_147_2;
-const SPELLING_ALGEBRA_ABBREVIATION_PENALTY: f32 = -0.693_147_2;
-const SPELLING_ALGEBRA_CORRECTION_PENALTY: f32 = -4.605_170_2;
+const SPELLING_ALGEBRA_FUZZY_PENALTY: f32 = -std::f32::consts::LN_2;
+const SPELLING_ALGEBRA_ABBREVIATION_PENALTY: f32 = -std::f32::consts::LN_2;
+const SPELLING_ALGEBRA_CORRECTION_PENALTY: f32 = -std::f32::consts::LN_10 * 2.0;
 
 impl SpellingAlgebra {
     fn parse(formulas: &[String]) -> Self {

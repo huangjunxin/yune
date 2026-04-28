@@ -634,7 +634,7 @@ fn rime_api_function_table_layout_matches_librime_header() {
         };
     }
 
-    assert_eq!(field_offset(api, std::ptr::addr_of!((*api).data_size)), 0);
+    assert_eq!(field_offset(api, std::ptr::addr_of!(api.data_size)), 0);
     assert_api_slot!(setup, 0);
     assert_api_slot!(set_notification_handler, 1);
     assert_api_slot!(initialize, 2);
@@ -756,7 +756,7 @@ fn rime_api_function_table_layout_matches_librime_header() {
     }
 
     assert_eq!(
-        field_offset(levers_api, std::ptr::addr_of!((*levers_api).data_size)),
+        field_offset(levers_api, std::ptr::addr_of!(levers_api.data_size)),
         0
     );
     assert_levers_slot!(custom_settings_init, 0);

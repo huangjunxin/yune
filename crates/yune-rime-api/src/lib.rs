@@ -4793,11 +4793,7 @@ fn selector_next_candidate_like_librime(
 fn selector_previous_page_like_librime(session: &mut SessionState) {
     let page_size = session_menu_page_size(session);
     let selected_index = session.engine.context().highlighted;
-    let index = if selected_index < page_size {
-        0
-    } else {
-        selected_index - page_size
-    };
+    let index = selected_index.saturating_sub(page_size);
     session.engine.highlight_candidate(index);
     session.paging = true;
 }
@@ -4844,11 +4840,9 @@ fn install_schema_translator_chain(session: &mut SessionState, schema_id: &str) 
     for translator in translators.iter().filter_map(Value::as_str) {
         let (component_name, name_space) = schema_component_prescription(translator);
         match component_name {
-            "punct_translator" => {
-                if !punctuation_translator_installed {
-                    install_schema_punctuation_translator_from_config(session, &schema_config);
-                    punctuation_translator_installed = true;
-                }
+            "punct_translator" if !punctuation_translator_installed => {
+                install_schema_punctuation_translator_from_config(session, &schema_config);
+                punctuation_translator_installed = true;
             }
             "table_translator" | "script_translator" | "r10n_translator" => {
                 install_schema_dictionary_translator_from_config(
@@ -6312,7 +6306,7 @@ fn schema_switch_translator_switches(schema_config: &Value) -> Vec<SwitchTransla
                 let state1 = switch_label_value(switch_map, "states", 1).unwrap_or_default();
                 return Some(
                     SwitchTranslatorSwitch::toggle(option_name, state0, state1)
-                        .with_abbrev(switch_abbrev_values(switch_map).into_iter()),
+                        .with_abbrev(switch_abbrev_values(switch_map)),
                 );
             }
 
@@ -6330,7 +6324,7 @@ fn schema_switch_translator_switches(schema_config: &Value) -> Vec<SwitchTransla
             } else {
                 Some(
                     SwitchTranslatorSwitch::radio(options, states)
-                        .with_abbrev(switch_abbrev_values(switch_map).into_iter()),
+                        .with_abbrev(switch_abbrev_values(switch_map)),
                 )
             }
         })
@@ -7445,9 +7439,7 @@ fn speller_auto_select_unique_candidate(
         .candidates
         .iter()
         .filter(|candidate| candidate.source == CandidateSource::Table);
-    let Some(_) = table_candidates.next() else {
-        return None;
-    };
+    let _ = table_candidates.next()?;
     if table_candidates.next().is_some() {
         return None;
     }
@@ -7476,9 +7468,7 @@ fn process_key_binder_processor(
     key_event: KeyEvent,
 ) -> Option<Vec<String>> {
     {
-        let Some(processor) = session.key_binder.as_mut() else {
-            return None;
-        };
+        let processor = session.key_binder.as_mut()?;
         if processor.redirecting {
             return None;
         }
@@ -7487,18 +7477,11 @@ fn process_key_binder_processor(
         }
     }
 
-    let Some(processor) = session.key_binder.as_ref() else {
-        return None;
-    };
-    let Some(bindings) = processor.bindings.get(&key_event) else {
-        return None;
-    };
-    let Some(binding_index) = bindings
+    let processor = session.key_binder.as_ref()?;
+    let bindings = processor.bindings.get(&key_event)?;
+    let binding_index = bindings
         .iter()
-        .position(|binding| key_binding_condition_matches(session, binding.condition))
-    else {
-        return None;
-    };
+        .position(|binding| key_binding_condition_matches(session, binding.condition))?;
 
     let action = bindings[binding_index].action.clone();
     match action {
