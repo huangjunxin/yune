@@ -155,8 +155,8 @@
   matching, tail-anchor indexing, raw-code encoding, source `.dict.yaml`
   encoder-setting parsing, and focused phrase lookup/injection through that
   parsed rule-based encoder, plus a focused librime-compatible
-  `ChecksumComputer`/dictionary-source checksum primitive for future compiled
-  data freshness checks.
+  `ChecksumComputer`/dictionary-source checksum primitive and table/prism/reverse
+  checksum rebuild-plan primitive for future compiled data freshness checks.
 - Tightened librime ABI lifecycle behavior for `RimeTraits`, session activity
   cleanup, `RimeFinalize`, deployment notifications, `RimeSyncUserData`,
   unread commit buffering, struct-layout coverage, menu page-size parsing,
@@ -194,7 +194,7 @@
   dictionaries at compiled-data level, deeper preset-vocabulary phrase
   injection, stem-column consumption in compiled reverse data and encoders,
   broader phrase lookup around the focused table-encoder primitive, correction
-  data, compiled binary checksum metadata, and rebuild heuristics.
+  data, compiled binary checksum metadata parsing, and rebuild execution.
 - Expand user dictionary compatibility beyond the current plain text userdb
   shims toward librime's LevelDB/userdb storage, snapshot merging, recovery,
   learning, and frequency update semantics.

@@ -1581,6 +1581,72 @@ where
     checksum.checksum()
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct RimePrismChecksumMetadata {
+    pub dict_file_checksum: u32,
+    pub schema_file_checksum: u32,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct RimeDictRebuildInput {
+    pub source_available: bool,
+    pub source_dict_file_checksum: u32,
+    pub schema_file_checksum: u32,
+    pub table_dict_file_checksum: Option<u32>,
+    pub prism: Option<RimePrismChecksumMetadata>,
+    pub reverse_dict_file_checksum: Option<u32>,
+    pub force_rebuild_table: bool,
+    pub force_rebuild_prism: bool,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct RimeDictRebuildPlan {
+    pub dict_file_checksum: u32,
+    pub rebuild_table: bool,
+    pub rebuild_prism: bool,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum RimeDictRebuildError {
+    MissingSourceAndTable,
+}
+
+pub fn rime_dict_rebuild_plan(
+    input: RimeDictRebuildInput,
+) -> Result<RimeDictRebuildPlan, RimeDictRebuildError> {
+    let mut dict_file_checksum = input.source_dict_file_checksum;
+    let mut rebuild_table = match input.table_dict_file_checksum {
+        Some(table_checksum) if input.source_available => table_checksum != dict_file_checksum,
+        Some(table_checksum) => {
+            dict_file_checksum = table_checksum;
+            false
+        }
+        None if input.source_available => true,
+        None => return Err(RimeDictRebuildError::MissingSourceAndTable),
+    };
+
+    let mut rebuild_prism = input.prism.is_none_or(|prism| {
+        prism.dict_file_checksum != dict_file_checksum
+            || prism.schema_file_checksum != input.schema_file_checksum
+    });
+
+    if input.reverse_dict_file_checksum != Some(dict_file_checksum) {
+        rebuild_table = true;
+    }
+    if input.source_available && input.force_rebuild_table {
+        rebuild_table = true;
+    }
+    if input.force_rebuild_prism {
+        rebuild_prism = true;
+    }
+
+    Ok(RimeDictRebuildPlan {
+        dict_file_checksum,
+        rebuild_table,
+        rebuild_prism,
+    })
+}
+
 #[derive(Clone, Debug)]
 pub struct TableEncoder {
     rules: Vec<TableEncodingRule>,
@@ -5815,12 +5881,13 @@ const fn select_index_from_digit(ch: char) -> usize {
 #[cfg(test)]
 mod tests {
     use super::{
-        parse_key_sequence, rime_checksum_bytes, rime_dict_source_checksum, Candidate,
-        CandidateFilter, CandidateRanker, CandidateSource, CharsetFilter, CodeCoords, Context,
-        Engine, HistoryTranslator, KeyCode, MockAiRanker, PunctuationTranslator, RerankResult,
-        ReverseLookupFilter, ReverseLookupTranslator, RimeChecksumComputer, SimplifierFilter,
-        SingleCharFilter, StaticTableTranslator, TableDictionary, TableEncoder, TaggedFilter,
-        Translator, UniquifierFilter,
+        parse_key_sequence, rime_checksum_bytes, rime_dict_rebuild_plan, rime_dict_source_checksum,
+        Candidate, CandidateFilter, CandidateRanker, CandidateSource, CharsetFilter, CodeCoords,
+        Context, Engine, HistoryTranslator, KeyCode, MockAiRanker, PunctuationTranslator,
+        RerankResult, ReverseLookupFilter, ReverseLookupTranslator, RimeChecksumComputer,
+        RimeDictRebuildError, RimeDictRebuildInput, RimeDictRebuildPlan, RimePrismChecksumMetadata,
+        SimplifierFilter, SingleCharFilter, StaticTableTranslator, TableDictionary, TableEncoder,
+        TaggedFilter, Translator, UniquifierFilter,
     };
 
     struct CommentTranslator;
@@ -7911,6 +7978,103 @@ mod tests {
                 Some(b"ignored vocabulary\n".as_slice()),
             ),
             0x1234_5678
+        );
+    }
+
+    #[test]
+    fn rime_dict_rebuild_plan_matches_librime_compiler_checksum_decisions() {
+        let input = RimeDictRebuildInput {
+            source_available: true,
+            source_dict_file_checksum: 0x1111_1111,
+            schema_file_checksum: 0x2222_2222,
+            table_dict_file_checksum: Some(0x1111_1111),
+            prism: Some(RimePrismChecksumMetadata {
+                dict_file_checksum: 0x1111_1111,
+                schema_file_checksum: 0x2222_2222,
+            }),
+            reverse_dict_file_checksum: Some(0x1111_1111),
+            force_rebuild_table: false,
+            force_rebuild_prism: false,
+        };
+        assert_eq!(
+            rime_dict_rebuild_plan(input),
+            Ok(RimeDictRebuildPlan {
+                dict_file_checksum: 0x1111_1111,
+                rebuild_table: false,
+                rebuild_prism: false,
+            })
+        );
+
+        let changed_source = RimeDictRebuildInput {
+            source_dict_file_checksum: 0x3333_3333,
+            ..input
+        };
+        assert_eq!(
+            rime_dict_rebuild_plan(changed_source),
+            Ok(RimeDictRebuildPlan {
+                dict_file_checksum: 0x3333_3333,
+                rebuild_table: true,
+                rebuild_prism: true,
+            })
+        );
+
+        let changed_schema = RimeDictRebuildInput {
+            schema_file_checksum: 0x4444_4444,
+            ..input
+        };
+        assert_eq!(
+            rime_dict_rebuild_plan(changed_schema),
+            Ok(RimeDictRebuildPlan {
+                dict_file_checksum: 0x1111_1111,
+                rebuild_table: false,
+                rebuild_prism: true,
+            })
+        );
+
+        let stale_reverse = RimeDictRebuildInput {
+            reverse_dict_file_checksum: Some(0x5555_5555),
+            ..input
+        };
+        assert_eq!(
+            rime_dict_rebuild_plan(stale_reverse),
+            Ok(RimeDictRebuildPlan {
+                dict_file_checksum: 0x1111_1111,
+                rebuild_table: true,
+                rebuild_prism: false,
+            })
+        );
+    }
+
+    #[test]
+    fn rime_dict_rebuild_plan_reuses_table_checksum_when_source_is_missing() {
+        let input = RimeDictRebuildInput {
+            source_available: false,
+            source_dict_file_checksum: 0,
+            schema_file_checksum: 0x2222_2222,
+            table_dict_file_checksum: Some(0x1111_1111),
+            prism: Some(RimePrismChecksumMetadata {
+                dict_file_checksum: 0x1111_1111,
+                schema_file_checksum: 0x2222_2222,
+            }),
+            reverse_dict_file_checksum: Some(0x1111_1111),
+            force_rebuild_table: true,
+            force_rebuild_prism: false,
+        };
+        assert_eq!(
+            rime_dict_rebuild_plan(input),
+            Ok(RimeDictRebuildPlan {
+                dict_file_checksum: 0x1111_1111,
+                rebuild_table: false,
+                rebuild_prism: false,
+            })
+        );
+
+        assert_eq!(
+            rime_dict_rebuild_plan(RimeDictRebuildInput {
+                table_dict_file_checksum: None,
+                ..input
+            }),
+            Err(RimeDictRebuildError::MissingSourceAndTable)
         );
     }
 
