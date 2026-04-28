@@ -27,12 +27,14 @@ mod config;
 mod config_compiler;
 mod ffi_memory;
 mod key_table;
+mod modules;
 mod runtime;
 pub use abi::*;
 use config::*;
 use config_compiler::*;
 use ffi_memory::*;
 pub use key_table::*;
+use modules::*;
 use runtime::*;
 
 const XK_BACKSPACE: c_int = 0xff08;
@@ -590,11 +592,6 @@ struct NotificationState {
     context_object: usize,
 }
 
-#[derive(Default)]
-struct ModuleRegistry {
-    modules_by_name: HashMap<String, usize>,
-}
-
 #[derive(Clone, Copy)]
 enum ConfigOpenKind {
     Deployed,
@@ -616,11 +613,6 @@ fn notification_state() -> &'static Mutex<NotificationState> {
     NOTIFICATION_STATE.get_or_init(|| Mutex::new(NotificationState::default()))
 }
 
-fn module_registry() -> &'static Mutex<ModuleRegistry> {
-    static MODULE_REGISTRY: OnceLock<Mutex<ModuleRegistry>> = OnceLock::new();
-    MODULE_REGISTRY.get_or_init(|| Mutex::new(ModuleRegistry::default()))
-}
-
 fn switcher_selection_registry() -> &'static Mutex<HashMap<usize, Option<Vec<String>>>> {
     static SWITCHER_SELECTION_REGISTRY: OnceLock<Mutex<HashMap<usize, Option<Vec<String>>>>> =
         OnceLock::new();
@@ -637,19 +629,6 @@ fn switcher_available_schema_registry() -> &'static Mutex<SwitcherAvailableSchem
     static SWITCHER_AVAILABLE_SCHEMA_REGISTRY: OnceLock<Mutex<SwitcherAvailableSchemaRegistry>> =
         OnceLock::new();
     SWITCHER_AVAILABLE_SCHEMA_REGISTRY.get_or_init(|| Mutex::new(HashMap::new()))
-}
-
-fn levers_module() -> *mut RimeModule {
-    static LEVERS_MODULE: OnceLock<usize> = OnceLock::new();
-    *LEVERS_MODULE.get_or_init(|| {
-        Box::into_raw(Box::new(RimeModule {
-            data_size: (std::mem::size_of::<RimeModule>() - std::mem::size_of::<c_int>()) as c_int,
-            module_name: c"levers".as_ptr(),
-            initialize: None,
-            finalize: None,
-            get_api: Some(rime_levers_get_api),
-        })) as usize
-    }) as *mut RimeModule
 }
 
 fn levers_api_entry() -> *mut RimeLeversApi {
@@ -870,67 +849,6 @@ pub extern "C" fn RimeSetNotificationHandler(
         .expect("notification state should not be poisoned");
     state.handler = handler;
     state.context_object = context_object as usize;
-}
-
-/// Registers a process-wide module pointer by its module name.
-///
-/// # Safety
-///
-/// `module` must be either null or point to a valid `RimeModule` whose
-/// `module_name`, when non-null, is a valid NUL-terminated C string. The caller
-/// retains ownership and must keep the module storage alive while it may be
-/// returned by `RimeFindModule`.
-#[no_mangle]
-pub unsafe extern "C" fn RimeRegisterModule(module: *mut RimeModule) -> Bool {
-    if module.is_null() {
-        return FALSE;
-    }
-
-    // SAFETY: callers promise `module` points to a valid RimeModule.
-    let module_ref = unsafe { &*module };
-    if module_ref.module_name.is_null() {
-        return FALSE;
-    }
-
-    // SAFETY: callers promise `module_name` is a valid NUL-terminated C string.
-    let module_name = unsafe { CStr::from_ptr(module_ref.module_name) }
-        .to_string_lossy()
-        .into_owned();
-    module_registry()
-        .lock()
-        .expect("module registry should not be poisoned")
-        .modules_by_name
-        .insert(module_name, module as usize);
-    TRUE
-}
-
-/// Finds a registered process-wide module by name.
-///
-/// # Safety
-///
-/// `module_name` must be either null or point to a valid NUL-terminated C
-/// string.
-#[no_mangle]
-pub unsafe extern "C" fn RimeFindModule(module_name: *const c_char) -> *mut RimeModule {
-    if module_name.is_null() {
-        return ptr::null_mut();
-    }
-
-    // SAFETY: callers promise `module_name` is a valid NUL-terminated C string.
-    let module_name = unsafe { CStr::from_ptr(module_name) }.to_string_lossy();
-    let registered = module_registry()
-        .lock()
-        .expect("module registry should not be poisoned")
-        .modules_by_name
-        .get(module_name.as_ref())
-        .copied();
-    if let Some(module) = registered {
-        return module as *mut RimeModule;
-    }
-    if module_name == "levers" {
-        return levers_module();
-    }
-    ptr::null_mut()
 }
 
 #[no_mangle]
