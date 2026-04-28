@@ -1582,6 +1582,130 @@ where
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct RimeTableBinMetadata {
+    pub dict_file_checksum: u32,
+    pub num_syllables: u32,
+    pub num_entries: u32,
+    pub string_table_size: u32,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct RimePrismBinMetadata {
+    pub dict_file_checksum: u32,
+    pub schema_file_checksum: u32,
+    pub num_syllables: u32,
+    pub num_spellings: u32,
+    pub double_array_size: u32,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct RimeReverseBinMetadata {
+    pub dict_file_checksum: u32,
+    pub key_trie_size: u32,
+    pub value_trie_size: u32,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum RimeCompiledMetadataError {
+    TooShort,
+    InvalidFormat,
+    UnsupportedVersion,
+    MissingRequiredSection,
+}
+
+pub fn parse_rime_table_bin_metadata(
+    bytes: impl AsRef<[u8]>,
+) -> Result<RimeTableBinMetadata, RimeCompiledMetadataError> {
+    let bytes = bytes.as_ref();
+    ensure_len(bytes, 68)?;
+    let version = parse_rime_format_version(bytes, b"Rime::Table/")?;
+    if version < 4.0 - f64::EPSILON {
+        return Err(RimeCompiledMetadataError::UnsupportedVersion);
+    }
+    if read_u32_le(bytes, 44)? == 0 || read_u32_le(bytes, 48)? == 0 {
+        return Err(RimeCompiledMetadataError::MissingRequiredSection);
+    }
+
+    Ok(RimeTableBinMetadata {
+        dict_file_checksum: read_u32_le(bytes, 32)?,
+        num_syllables: read_u32_le(bytes, 36)?,
+        num_entries: read_u32_le(bytes, 40)?,
+        string_table_size: read_u32_le(bytes, 64)?,
+    })
+}
+
+pub fn parse_rime_prism_bin_metadata(
+    bytes: impl AsRef<[u8]>,
+) -> Result<RimePrismBinMetadata, RimeCompiledMetadataError> {
+    let bytes = bytes.as_ref();
+    ensure_len(bytes, 320)?;
+    let version = parse_rime_format_version(bytes, b"Rime::Prism/")?;
+    if version < 4.0 - f64::EPSILON {
+        return Err(RimeCompiledMetadataError::UnsupportedVersion);
+    }
+    if read_u32_le(bytes, 52)? == 0 {
+        return Err(RimeCompiledMetadataError::MissingRequiredSection);
+    }
+
+    Ok(RimePrismBinMetadata {
+        dict_file_checksum: read_u32_le(bytes, 32)?,
+        schema_file_checksum: read_u32_le(bytes, 36)?,
+        num_syllables: read_u32_le(bytes, 40)?,
+        num_spellings: read_u32_le(bytes, 44)?,
+        double_array_size: read_u32_le(bytes, 48)?,
+    })
+}
+
+pub fn parse_rime_reverse_bin_metadata(
+    bytes: impl AsRef<[u8]>,
+) -> Result<RimeReverseBinMetadata, RimeCompiledMetadataError> {
+    let bytes = bytes.as_ref();
+    ensure_len(bytes, 64)?;
+    let version = parse_rime_format_version(bytes, b"Rime::Reverse/")?;
+    if version < 3.0 - f64::EPSILON || version > 4.0 + f64::EPSILON {
+        return Err(RimeCompiledMetadataError::UnsupportedVersion);
+    }
+
+    Ok(RimeReverseBinMetadata {
+        dict_file_checksum: read_u32_le(bytes, 32)?,
+        key_trie_size: read_u32_le(bytes, 52)?,
+        value_trie_size: read_u32_le(bytes, 60)?,
+    })
+}
+
+fn ensure_len(bytes: &[u8], len: usize) -> Result<(), RimeCompiledMetadataError> {
+    if bytes.len() < len {
+        return Err(RimeCompiledMetadataError::TooShort);
+    }
+    Ok(())
+}
+
+fn read_u32_le(bytes: &[u8], offset: usize) -> Result<u32, RimeCompiledMetadataError> {
+    let Some(value) = bytes.get(offset..offset + 4) else {
+        return Err(RimeCompiledMetadataError::TooShort);
+    };
+    Ok(u32::from_le_bytes([value[0], value[1], value[2], value[3]]))
+}
+
+fn parse_rime_format_version(
+    bytes: &[u8],
+    prefix: &[u8],
+) -> Result<f64, RimeCompiledMetadataError> {
+    let Some(format) = bytes.get(..32) else {
+        return Err(RimeCompiledMetadataError::TooShort);
+    };
+    if !format.starts_with(prefix) {
+        return Err(RimeCompiledMetadataError::InvalidFormat);
+    }
+    let version_end = format.iter().position(|byte| *byte == 0).unwrap_or(32);
+    let version = std::str::from_utf8(&format[prefix.len()..version_end])
+        .ok()
+        .and_then(|version| version.parse::<f64>().ok())
+        .ok_or(RimeCompiledMetadataError::InvalidFormat)?;
+    Ok(version)
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct RimePrismChecksumMetadata {
     pub dict_file_checksum: u32,
     pub schema_file_checksum: u32,
@@ -5881,13 +6005,16 @@ const fn select_index_from_digit(ch: char) -> usize {
 #[cfg(test)]
 mod tests {
     use super::{
-        parse_key_sequence, rime_checksum_bytes, rime_dict_rebuild_plan, rime_dict_source_checksum,
-        Candidate, CandidateFilter, CandidateRanker, CandidateSource, CharsetFilter, CodeCoords,
-        Context, Engine, HistoryTranslator, KeyCode, MockAiRanker, PunctuationTranslator,
-        RerankResult, ReverseLookupFilter, ReverseLookupTranslator, RimeChecksumComputer,
-        RimeDictRebuildError, RimeDictRebuildInput, RimeDictRebuildPlan, RimePrismChecksumMetadata,
-        SimplifierFilter, SingleCharFilter, StaticTableTranslator, TableDictionary, TableEncoder,
-        TaggedFilter, Translator, UniquifierFilter,
+        parse_key_sequence, parse_rime_prism_bin_metadata, parse_rime_reverse_bin_metadata,
+        parse_rime_table_bin_metadata, rime_checksum_bytes, rime_dict_rebuild_plan,
+        rime_dict_source_checksum, Candidate, CandidateFilter, CandidateRanker, CandidateSource,
+        CharsetFilter, CodeCoords, Context, Engine, HistoryTranslator, KeyCode, MockAiRanker,
+        PunctuationTranslator, RerankResult, ReverseLookupFilter, ReverseLookupTranslator,
+        RimeChecksumComputer, RimeCompiledMetadataError, RimeDictRebuildError,
+        RimeDictRebuildInput, RimeDictRebuildPlan, RimePrismBinMetadata, RimePrismChecksumMetadata,
+        RimeReverseBinMetadata, RimeTableBinMetadata, SimplifierFilter, SingleCharFilter,
+        StaticTableTranslator, TableDictionary, TableEncoder, TaggedFilter, Translator,
+        UniquifierFilter,
     };
 
     struct CommentTranslator;
@@ -8076,6 +8203,119 @@ mod tests {
             }),
             Err(RimeDictRebuildError::MissingSourceAndTable)
         );
+    }
+
+    #[test]
+    fn parses_librime_compiled_table_prism_and_reverse_metadata() {
+        let mut table = vec![0; 68];
+        put_c_string(&mut table, 0, b"Rime::Table/4.0");
+        put_u32_le(&mut table, 32, 0x1111_1111);
+        put_u32_le(&mut table, 36, 7);
+        put_u32_le(&mut table, 40, 11);
+        put_u32_le(&mut table, 44, 0x40);
+        put_u32_le(&mut table, 48, 0x44);
+        put_u32_le(&mut table, 64, 13);
+        assert_eq!(
+            parse_rime_table_bin_metadata(&table),
+            Ok(RimeTableBinMetadata {
+                dict_file_checksum: 0x1111_1111,
+                num_syllables: 7,
+                num_entries: 11,
+                string_table_size: 13,
+            })
+        );
+
+        let mut prism = vec![0; 320];
+        put_c_string(&mut prism, 0, b"Rime::Prism/4.0");
+        put_u32_le(&mut prism, 32, 0x2222_2222);
+        put_u32_le(&mut prism, 36, 0x3333_3333);
+        put_u32_le(&mut prism, 40, 17);
+        put_u32_le(&mut prism, 44, 19);
+        put_u32_le(&mut prism, 48, 23);
+        put_u32_le(&mut prism, 52, 0x50);
+        assert_eq!(
+            parse_rime_prism_bin_metadata(&prism),
+            Ok(RimePrismBinMetadata {
+                dict_file_checksum: 0x2222_2222,
+                schema_file_checksum: 0x3333_3333,
+                num_syllables: 17,
+                num_spellings: 19,
+                double_array_size: 23,
+            })
+        );
+
+        let mut reverse = vec![0; 64];
+        put_c_string(&mut reverse, 0, b"Rime::Reverse/3.1");
+        put_u32_le(&mut reverse, 32, 0x4444_4444);
+        put_u32_le(&mut reverse, 52, 29);
+        put_u32_le(&mut reverse, 60, 31);
+        assert_eq!(
+            parse_rime_reverse_bin_metadata(&reverse),
+            Ok(RimeReverseBinMetadata {
+                dict_file_checksum: 0x4444_4444,
+                key_trie_size: 29,
+                value_trie_size: 31,
+            })
+        );
+    }
+
+    #[test]
+    fn compiled_metadata_parser_matches_librime_load_rejection_cases() {
+        let mut table = vec![0; 68];
+        put_c_string(&mut table, 0, b"Rime::Table/3.0");
+        assert_eq!(
+            parse_rime_table_bin_metadata(&table),
+            Err(RimeCompiledMetadataError::UnsupportedVersion)
+        );
+        put_c_string(&mut table, 0, b"Rime::Table/4.0");
+        put_u32_le(&mut table, 44, 0x40);
+        assert_eq!(
+            parse_rime_table_bin_metadata(&table),
+            Err(RimeCompiledMetadataError::MissingRequiredSection)
+        );
+
+        let mut prism = vec![0; 320];
+        put_c_string(&mut prism, 0, b"Rime::Prism/3.9");
+        assert_eq!(
+            parse_rime_prism_bin_metadata(&prism),
+            Err(RimeCompiledMetadataError::UnsupportedVersion)
+        );
+        put_c_string(&mut prism, 0, b"Rime::Prism/4.0");
+        assert_eq!(
+            parse_rime_prism_bin_metadata(&prism),
+            Err(RimeCompiledMetadataError::MissingRequiredSection)
+        );
+
+        let mut reverse = vec![0; 64];
+        put_c_string(&mut reverse, 0, b"Rime::Reverse/2.9");
+        assert_eq!(
+            parse_rime_reverse_bin_metadata(&reverse),
+            Err(RimeCompiledMetadataError::UnsupportedVersion)
+        );
+        put_c_string(&mut reverse, 0, b"Rime::Reverse/4.1");
+        assert_eq!(
+            parse_rime_reverse_bin_metadata(&reverse),
+            Err(RimeCompiledMetadataError::UnsupportedVersion)
+        );
+
+        let mut invalid = vec![0; 68];
+        put_c_string(&mut invalid, 0, b"Rime::Wrong/4.0");
+        assert_eq!(
+            parse_rime_table_bin_metadata(&invalid),
+            Err(RimeCompiledMetadataError::InvalidFormat)
+        );
+        assert_eq!(
+            parse_rime_table_bin_metadata(&invalid[..20]),
+            Err(RimeCompiledMetadataError::TooShort)
+        );
+    }
+
+    fn put_c_string(bytes: &mut [u8], offset: usize, value: &[u8]) {
+        bytes[offset..offset + value.len()].copy_from_slice(value);
+    }
+
+    fn put_u32_le(bytes: &mut [u8], offset: usize, value: u32) {
+        bytes[offset..offset + 4].copy_from_slice(&value.to_le_bytes());
     }
 
     #[test]

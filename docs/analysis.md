@@ -152,10 +152,10 @@ The strongest compatibility progress is currently in two areas:
   every phrase character can be translated by coded word entries or stems. A
   focused librime-compatible CRC32 checksum primitive now covers the
   `ChecksumComputer` initial-remainder behavior, dictionary source/preset
-  vocabulary checksum ordering, and table/prism/reverse checksum rebuild
-  decisions used by `DictCompiler`, but learning, compiled binary metadata
-  parsing, compiled reverse-data consumption, and actual compiled rebuild
-  execution remain open.
+  vocabulary checksum ordering, table/prism/reverse checksum rebuild decisions
+  used by `DictCompiler`, and focused `.table.bin`/`.prism.bin`/`.reverse.bin`
+  metadata checksum/version parsing, but learning, compiled reverse-data
+  consumption, and actual compiled rebuild execution remain open.
 - ABI edge-case compatibility: recent coverage also locks down struct layouts,
   self-versioned cleanup, unread commit buffering, session lifetime after
   finalize, state-label indexing, selected-schema page-size parsing, deployment
@@ -203,7 +203,8 @@ not just missing tests:
   Librime also builds and consumes `.table.bin`, `.prism.bin`, `.reverse.bin`,
   pack dictionaries at compiled-data level, preset-vocabulary phrase injection,
   deeper stem-column consumption through compiled reverse data and encoders,
-  correction data, full binary checksum metadata parsing, and rebuild execution.
+  correction data, full binary payload parsing beyond the current checksum
+  metadata slice, and rebuild execution.
 - User dictionary support is currently a plain text compatibility shim. Librime
   also has LevelDB-backed userdb storage, snapshots, recovery, learning, and
   frequency update behavior.
