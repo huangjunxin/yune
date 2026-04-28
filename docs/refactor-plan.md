@@ -9,9 +9,12 @@ working plan, not as a permanent architecture document.
 The repository is functionally healthy but structurally crowded.
 
 - `cargo test --workspace` passes.
-- `cargo clippy --workspace --all-targets -- -D warnings` currently fails on
-  small cleanup and MSRV issues in `yune-core`.
-- `crates/yune-core/src/lib.rs` is about 10,955 lines.
+- `cargo clippy --workspace --all-targets -- -D warnings` passes.
+- Phase 0 is complete.
+- Phase 1 is complete for production `yune-core` modules. `lib.rs` now keeps the
+  public API surface and the existing unit tests, while implementation lives in
+  focused modules.
+- `crates/yune-core/src/lib.rs` is about 5,082 lines, mostly tests.
 - `crates/yune-rime-api/src/lib.rs` is about 10,000 lines.
 - `crates/yune-rime-api/src/tests.rs` is about 23,556 lines.
 - `crates/yune-rime-api/tests/frontend_client.rs` is about 4,069 lines.
