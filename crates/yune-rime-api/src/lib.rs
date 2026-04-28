@@ -17,8 +17,9 @@ use serde_yaml::{Mapping, Number, Value};
 use yune_core::{
     parse_key_sequence, CandidateSource, CharsetFilter, Engine, FoldedSwitchOptions,
     HistoryTranslator, KeyCode, KeyEvent, KeyModifiers, PunctuationTranslator, ReverseLookupFilter,
-    ReverseLookupTranslator, SimplifierFilter, SingleCharFilter, StaticTableTranslator,
-    SwitchTranslator, SwitchTranslatorSwitch, TableDictionary, TaggedFilter, UniquifierFilter,
+    ReverseLookupTranslator, SchemaListTranslator, SimplifierFilter, SingleCharFilter,
+    StaticTableTranslator, SwitchTranslator, SwitchTranslatorSwitch, TableDictionary, TaggedFilter,
+    UniquifierFilter,
 };
 
 mod abi;
@@ -3881,7 +3882,7 @@ fn select_candidate_or_switch(
     let Some(index) = index(session) else {
         return FALSE;
     };
-    if apply_switch_candidate(session, index) {
+    if apply_schema_list_candidate(session, index) || apply_switch_candidate(session, index) {
         session.paging = false;
         update_session_segment_tags(session);
         return TRUE;
@@ -3894,6 +3895,40 @@ fn select_candidate_or_switch(
     update_session_segment_tags(session);
     append_unread_commit(session, commit);
     TRUE
+}
+
+fn apply_schema_list_candidate(session: &mut SessionState, candidate_index: usize) -> bool {
+    let Some(candidate) = session.engine.context().candidates.get(candidate_index) else {
+        return false;
+    };
+    if candidate.source != CandidateSource::Schema {
+        return false;
+    }
+    let schema_index = session.engine.context().candidates[..=candidate_index]
+        .iter()
+        .filter(|candidate| candidate.source == CandidateSource::Schema)
+        .count()
+        - 1;
+    let Some(schema_id) = schema_list_selection_commands(session)
+        .get(schema_index)
+        .cloned()
+    else {
+        return false;
+    };
+    apply_schema_to_session(session, &schema_id);
+    true
+}
+
+fn schema_list_selection_commands(session: &SessionState) -> Vec<String> {
+    let current_schema = session.engine.status().schema_id;
+    let mut schema_ids = vec![current_schema.clone()];
+    schema_ids.extend(
+        deployed_schema_list_entries()
+            .into_iter()
+            .map(|(schema_id, _)| schema_id)
+            .filter(|schema_id| schema_id != &current_schema),
+    );
+    schema_ids
 }
 
 fn apply_switch_candidate(session: &mut SessionState, candidate_index: usize) -> bool {
@@ -4057,6 +4092,11 @@ fn install_schema_translator_chain(session: &mut SessionState, schema_id: &str) 
             ),
             "switch_translator" => {
                 install_schema_switch_translator_from_config(session, &schema_config);
+            }
+            "schema_list_translator" => {
+                session
+                    .engine
+                    .add_translator(SchemaListTranslator::new(deployed_schema_list_entries()));
             }
             _ => {}
         }

@@ -21,6 +21,7 @@ pub enum CandidateSource {
     History,
     Switch,
     Unfold,
+    Schema,
     Ai,
 }
 
@@ -37,6 +38,7 @@ impl CandidateSource {
             Self::History => "history",
             Self::Switch => "switch",
             Self::Unfold => "unfold",
+            Self::Schema => "schema",
             Self::Ai => "ai",
         }
     }
@@ -2933,6 +2935,57 @@ impl SwitchTranslator {
             }
         }
         labels
+    }
+}
+
+pub struct SchemaListTranslator {
+    entries: Vec<(String, String)>,
+}
+
+impl SchemaListTranslator {
+    #[must_use]
+    pub fn new(entries: impl IntoIterator<Item = (impl Into<String>, impl Into<String>)>) -> Self {
+        Self {
+            entries: entries
+                .into_iter()
+                .map(|(schema_id, schema_name)| (schema_id.into(), schema_name.into()))
+                .collect(),
+        }
+    }
+}
+
+impl Translator for SchemaListTranslator {
+    fn name(&self) -> &'static str {
+        "schema_list_translator"
+    }
+
+    fn translate(&self, _input: &str) -> Vec<Candidate> {
+        Vec::new()
+    }
+
+    fn translate_with_status(&self, input: &str, status: &Status) -> Vec<Candidate> {
+        if input.is_empty() {
+            return Vec::new();
+        }
+
+        let mut candidates = vec![Candidate {
+            text: status.schema_name.clone(),
+            comment: String::new(),
+            source: CandidateSource::Schema,
+            quality: 0.5,
+        }];
+        candidates.extend(
+            self.entries
+                .iter()
+                .filter(|(schema_id, _)| schema_id != &status.schema_id)
+                .map(|(_, schema_name)| Candidate {
+                    text: schema_name.clone(),
+                    comment: String::new(),
+                    source: CandidateSource::Schema,
+                    quality: 0.5,
+                }),
+        );
+        candidates
     }
 }
 

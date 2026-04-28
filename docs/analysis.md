@@ -83,8 +83,9 @@ The strongest compatibility progress is currently in two areas:
   schema-loaded `key_binder`, `punctuator`, `recognizer`, `ascii_composer`,
   `speller`, `ascii_segmentor`, `matcher`, `affix_segmentor`, `table_translator`,
   `script_translator`, `r10n_translator`, `reverse_lookup_translator`,
-  `history_translator`, `switch_translator`, `simplifier`, `uniquifier`,
-  `single_char_filter`, `charset_filter`/`cjk_minifier`, and
+  `history_translator`, `switch_translator`, `schema_list_translator`,
+  `simplifier`, `uniquifier`, `single_char_filter`,
+  `charset_filter`/`cjk_minifier`, and
   `reverse_lookup_filter` behavior through ABI-facing tests. The current
   `speller` coverage is the processor-level spelling gate for alphabet,
   delimiter, initials/finals, `use_space`, focused `auto_clear` modes, and
@@ -120,10 +121,12 @@ not just missing tests:
   components and deeper behaviors such as `speller` auto-select and
   max-code-length auto-selection handling, editor variants, `navigator`,
   `selector`,
-  `chord_composer`, `shape_processor`, `schema_list_translator`,
-  `punct_segmentor`, `fallback_segmentor`, and formatter behavior that are not
-  yet equivalently modeled. `speller` still needs deeper previous-match segment
-  splitting and non-auto-commit composition behavior.
+  `chord_composer`, `shape_processor`, `punct_segmentor`,
+  `fallback_segmentor`, and formatter behavior that are not yet equivalently
+  modeled. `speller` still needs deeper previous-match segment splitting and
+  non-auto-commit composition behavior. The current `schema_list_translator`
+  support is a focused subset and does not yet model librime's access-time
+  recency sorting or `fix_schema_list_order` behavior.
 - Existing schema-loaded translator/filter support is intentionally partial.
   Areas such as full spelling algebra, full OpenCC data and conversion chains,
   distribution-scale schema chains, and compiled-data interactions still need
