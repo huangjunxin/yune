@@ -94,6 +94,18 @@ fn notification_events() -> &'static Mutex<Vec<NotificationEvent>> {
     NOTIFICATION_EVENTS.get_or_init(|| Mutex::new(Vec::new()))
 }
 
+fn current_highlighted(session_id: super::RimeSessionId) -> usize {
+    super::sessions()
+        .lock()
+        .expect("session registry should not be poisoned")
+        .sessions
+        .get(&session_id)
+        .expect("session should exist")
+        .engine
+        .context()
+        .highlighted
+}
+
 extern "C" fn record_notification(
     context_object: *mut c_void,
     session_id: super::RimeSessionId,
@@ -11848,6 +11860,138 @@ fn control_up_down_keys_jump_syllable_span_like_librime_vertical_navigator_keys(
     // SAFETY: commit text was allocated by RimeGetCommit.
     assert_eq!(unsafe { RimeFreeCommit(&mut commit) }, TRUE);
     assert_eq!(RimeDestroySession(sequence_session_id), TRUE);
+}
+
+#[test]
+fn linear_selector_arrow_keys_follow_librime_layout_bindings() {
+    let _guard = test_guard();
+    RimeCleanupAllSessions();
+    let up = CString::new("Up").expect("key name should be valid");
+    let down = CString::new("Down").expect("key name should be valid");
+    let left = CString::new("Left").expect("key name should be valid");
+    let right = CString::new("Right").expect("key name should be valid");
+    // SAFETY: key names are valid NUL-terminated strings.
+    let up_keycode = unsafe { RimeGetKeycodeByName(up.as_ptr()) };
+    let down_keycode = unsafe { RimeGetKeycodeByName(down.as_ptr()) };
+    let left_keycode = unsafe { RimeGetKeycodeByName(left.as_ptr()) };
+    let right_keycode = unsafe { RimeGetKeycodeByName(right.as_ptr()) };
+
+    let session_id = RimeCreateSession();
+    {
+        let mut registry = super::sessions()
+            .lock()
+            .expect("session registry should not be poisoned");
+        let session = registry
+            .sessions
+            .get_mut(&session_id)
+            .expect("session should exist");
+        session.engine.add_translator(StaticTableTranslator::new([
+            ("ba", "八"),
+            ("ba", "吧"),
+            ("ba", "爸"),
+            ("ba", "巴"),
+            ("ba", "把"),
+            ("ba", "拔"),
+        ]));
+    }
+    let linear = CString::new("_linear").expect("option name should be valid");
+    // SAFETY: option name is a valid NUL-terminated string.
+    unsafe { RimeSetOption(session_id, linear.as_ptr(), TRUE) };
+
+    assert_eq!(RimeProcessKey(session_id, 'b' as c_int, 0), TRUE);
+    assert_eq!(RimeProcessKey(session_id, 'a' as c_int, 0), TRUE);
+    assert_eq!(current_highlighted(session_id), 0);
+
+    assert_eq!(RimeProcessKey(session_id, down_keycode, 0), TRUE);
+    assert_eq!(current_highlighted(session_id), 5);
+    assert_eq!(RimeProcessKey(session_id, up_keycode, 0), TRUE);
+    assert_eq!(current_highlighted(session_id), 0);
+
+    assert_eq!(RimeProcessKey(session_id, right_keycode, 0), TRUE);
+    assert_eq!(current_highlighted(session_id), 1);
+
+    RimeSetCaretPos(session_id, 1);
+    assert_eq!(RimeProcessKey(session_id, left_keycode, 0), TRUE);
+    assert_eq!(current_highlighted(session_id), 1);
+    assert_eq!(RimeGetCaretPos(session_id), 0);
+    assert_eq!(RimeDestroySession(session_id), TRUE);
+
+    let vertical_session_id = RimeCreateSession();
+    {
+        let mut registry = super::sessions()
+            .lock()
+            .expect("session registry should not be poisoned");
+        let session = registry
+            .sessions
+            .get_mut(&vertical_session_id)
+            .expect("session should exist");
+        session
+            .engine
+            .add_translator(StaticTableTranslator::new([("ba", "八"), ("ba", "吧")]));
+    }
+    let vertical = CString::new("_vertical").expect("option name should be valid");
+    // SAFETY: option name is a valid NUL-terminated string.
+    unsafe { RimeSetOption(vertical_session_id, vertical.as_ptr(), TRUE) };
+    assert_eq!(RimeProcessKey(vertical_session_id, 'b' as c_int, 0), TRUE);
+    assert_eq!(RimeProcessKey(vertical_session_id, 'a' as c_int, 0), TRUE);
+    assert_eq!(RimeProcessKey(vertical_session_id, left_keycode, 0), TRUE);
+    assert_eq!(current_highlighted(vertical_session_id), 1);
+    assert_eq!(RimeProcessKey(vertical_session_id, right_keycode, 0), TRUE);
+    assert_eq!(current_highlighted(vertical_session_id), 0);
+    assert_eq!(RimeDestroySession(vertical_session_id), TRUE);
+
+    let vertical_linear_session_id = RimeCreateSession();
+    {
+        let mut registry = super::sessions()
+            .lock()
+            .expect("session registry should not be poisoned");
+        let session = registry
+            .sessions
+            .get_mut(&vertical_linear_session_id)
+            .expect("session should exist");
+        session.engine.add_translator(StaticTableTranslator::new([
+            ("ba", "八"),
+            ("ba", "吧"),
+            ("ba", "爸"),
+            ("ba", "巴"),
+            ("ba", "把"),
+            ("ba", "拔"),
+        ]));
+    }
+    // SAFETY: option names are valid NUL-terminated strings.
+    unsafe {
+        RimeSetOption(vertical_linear_session_id, vertical.as_ptr(), TRUE);
+        RimeSetOption(vertical_linear_session_id, linear.as_ptr(), TRUE);
+    }
+    assert_eq!(
+        RimeProcessKey(vertical_linear_session_id, 'b' as c_int, 0),
+        TRUE
+    );
+    assert_eq!(
+        RimeProcessKey(vertical_linear_session_id, 'a' as c_int, 0),
+        TRUE
+    );
+    assert_eq!(
+        RimeProcessKey(vertical_linear_session_id, left_keycode, 0),
+        TRUE
+    );
+    assert_eq!(current_highlighted(vertical_linear_session_id), 5);
+    assert_eq!(
+        RimeProcessKey(vertical_linear_session_id, right_keycode, 0),
+        TRUE
+    );
+    assert_eq!(current_highlighted(vertical_linear_session_id), 0);
+    assert_eq!(
+        RimeProcessKey(vertical_linear_session_id, down_keycode, 0),
+        TRUE
+    );
+    assert_eq!(current_highlighted(vertical_linear_session_id), 1);
+    assert_eq!(
+        RimeProcessKey(vertical_linear_session_id, up_keycode, 0),
+        TRUE
+    );
+    assert_eq!(current_highlighted(vertical_linear_session_id), 0);
+    assert_eq!(RimeDestroySession(vertical_linear_session_id), TRUE);
 }
 
 #[test]

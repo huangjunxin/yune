@@ -1983,35 +1983,39 @@ pub extern "C" fn RimeProcessKey(session_id: RimeSessionId, keycode: c_int, mask
         return FALSE;
     }
     let mut accepted = false;
-    match key_event.code {
-        KeyCode::PreviousPage => {
-            let page_size = session_menu_page_size(session);
-            if session.engine.change_page_by(page_size, true) {
-                session.paging = true;
-                accepted = true;
+    if let Some(selector_accepted) = process_selector_layout_key(session, keycode, mask) {
+        accepted = selector_accepted;
+    } else {
+        match key_event.code {
+            KeyCode::PreviousPage => {
+                let page_size = session_menu_page_size(session);
+                if session.engine.change_page_by(page_size, true) {
+                    session.paging = true;
+                    accepted = true;
+                }
             }
-        }
-        KeyCode::NextPage => {
-            let page_size = session_menu_page_size(session);
-            if session.engine.change_page_by(page_size, false) {
-                session.paging = true;
-                accepted = true;
+            KeyCode::NextPage => {
+                let page_size = session_menu_page_size(session);
+                if session.engine.change_page_by(page_size, false) {
+                    session.paging = true;
+                    accepted = true;
+                }
             }
-        }
-        _ => match process_session_key_event(session_id, session, key_event) {
-            SessionKeyProcessResult::Noop => {
-                if let Some(commit) = process_shape_processor(session, key_event) {
+            _ => match process_session_key_event(session_id, session, key_event) {
+                SessionKeyProcessResult::Noop => {
+                    if let Some(commit) = process_shape_processor(session, key_event) {
+                        append_unread_commit(session, commit);
+                        return TRUE;
+                    }
+                    return FALSE;
+                }
+                SessionKeyProcessResult::Accepted => accepted = true,
+                SessionKeyProcessResult::Commit(commit) => {
                     append_unread_commit(session, commit);
                     return TRUE;
                 }
-                return FALSE;
-            }
-            SessionKeyProcessResult::Accepted => accepted = true,
-            SessionKeyProcessResult::Commit(commit) => {
-                append_unread_commit(session, commit);
-                return TRUE;
-            }
-        },
+            },
+        }
     }
 
     apply_visible_switch_radio_defaults(session);
@@ -4071,6 +4075,147 @@ fn shape_formatted_commit_text(session: &SessionState, text: &str) -> String {
 
 fn session_menu_page_size(session: &SessionState) -> usize {
     context_menu_settings(&session.engine.status().schema_id).page_size
+}
+
+#[derive(Clone, Copy)]
+enum SelectorLayoutAction {
+    PreviousCandidate,
+    NextCandidate,
+    PreviousPage,
+    NextPage,
+}
+
+fn process_selector_layout_key(
+    session: &mut SessionState,
+    keycode: c_int,
+    mask: c_int,
+) -> Option<bool> {
+    if mask != 0
+        || session.engine.context().composition.input.is_empty()
+        || session.engine.context().candidates.is_empty()
+        || session
+            .engine
+            .context()
+            .segment_tags
+            .iter()
+            .any(|tag| tag == "raw")
+    {
+        return None;
+    }
+
+    let is_vertical = session.engine.get_option("_vertical");
+    let is_linear =
+        session.engine.get_option("_linear") || session.engine.get_option("_horizontal");
+    let action = selector_layout_action(is_vertical, is_linear, keycode)?;
+    apply_selector_layout_action(session, action, is_linear)
+}
+
+fn selector_layout_action(
+    is_vertical: bool,
+    is_linear: bool,
+    keycode: c_int,
+) -> Option<SelectorLayoutAction> {
+    use SelectorLayoutAction::{NextCandidate, NextPage, PreviousCandidate, PreviousPage};
+
+    match (is_vertical, is_linear, keycode) {
+        (false, false, XK_UP | XK_KP_UP) => Some(PreviousCandidate),
+        (false, false, XK_DOWN | XK_KP_DOWN) => Some(NextCandidate),
+        (false, true, XK_LEFT | XK_KP_LEFT) => Some(PreviousCandidate),
+        (false, true, XK_RIGHT | XK_KP_RIGHT) => Some(NextCandidate),
+        (false, true, XK_UP | XK_KP_UP) => Some(PreviousPage),
+        (false, true, XK_DOWN | XK_KP_DOWN) => Some(NextPage),
+        (true, false, XK_RIGHT | XK_KP_RIGHT) => Some(PreviousCandidate),
+        (true, false, XK_LEFT | XK_KP_LEFT) => Some(NextCandidate),
+        (true, true, XK_UP | XK_KP_UP) => Some(PreviousCandidate),
+        (true, true, XK_DOWN | XK_KP_DOWN) => Some(NextCandidate),
+        (true, true, XK_RIGHT | XK_KP_RIGHT) => Some(PreviousPage),
+        (true, true, XK_LEFT | XK_KP_LEFT) => Some(NextPage),
+        (_, _, XK_PAGE_UP | XK_KP_PAGE_UP) => Some(PreviousPage),
+        (_, _, XK_PAGE_DOWN | XK_KP_PAGE_DOWN) => Some(NextPage),
+        _ => None,
+    }
+}
+
+fn apply_selector_layout_action(
+    session: &mut SessionState,
+    action: SelectorLayoutAction,
+    is_linear: bool,
+) -> Option<bool> {
+    match action {
+        SelectorLayoutAction::PreviousCandidate => {
+            selector_previous_candidate_like_librime(session, is_linear)
+        }
+        SelectorLayoutAction::NextCandidate => {
+            selector_next_candidate_like_librime(session, is_linear)
+        }
+        SelectorLayoutAction::PreviousPage => {
+            selector_previous_page_like_librime(session);
+            Some(true)
+        }
+        SelectorLayoutAction::NextPage => {
+            selector_next_page_like_librime(session);
+            Some(true)
+        }
+    }
+}
+
+fn selector_previous_candidate_like_librime(
+    session: &mut SessionState,
+    is_linear: bool,
+) -> Option<bool> {
+    let context = session.engine.context();
+    if is_linear && context.composition.caret < context.composition.input.len() {
+        return None;
+    }
+    let highlighted = context.highlighted;
+    if highlighted == 0 {
+        return (!is_linear).then_some(true);
+    }
+    session.engine.highlight_candidate(highlighted - 1);
+    session.paging = true;
+    Some(true)
+}
+
+fn selector_next_candidate_like_librime(
+    session: &mut SessionState,
+    is_linear: bool,
+) -> Option<bool> {
+    let context = session.engine.context();
+    if is_linear && context.composition.caret < context.composition.input.len() {
+        return None;
+    }
+    let next_index = context.highlighted + 1;
+    if next_index >= context.candidates.len() {
+        return Some(true);
+    }
+    session.engine.highlight_candidate(next_index);
+    session.paging = true;
+    Some(true)
+}
+
+fn selector_previous_page_like_librime(session: &mut SessionState) {
+    let page_size = session_menu_page_size(session);
+    let selected_index = session.engine.context().highlighted;
+    let index = if selected_index < page_size {
+        0
+    } else {
+        selected_index - page_size
+    };
+    session.engine.highlight_candidate(index);
+    session.paging = true;
+}
+
+fn selector_next_page_like_librime(session: &mut SessionState) {
+    let page_size = session_menu_page_size(session);
+    let context = session.engine.context();
+    let index = context.highlighted + page_size;
+    let page_start = (index / page_size) * page_size;
+    if context.candidates.len() <= page_start {
+        return;
+    }
+    let index = index.min(context.candidates.len() - 1);
+    session.engine.highlight_candidate(index);
+    session.paging = true;
 }
 
 fn install_schema_translator_chain(session: &mut SessionState, schema_id: &str) {
