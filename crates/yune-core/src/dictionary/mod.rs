@@ -1,5 +1,6 @@
 mod compiled;
 mod encoder;
+mod source;
 
 pub use compiled::{
     parse_rime_prism_bin_metadata, parse_rime_reverse_bin_metadata, parse_rime_table_bin_metadata,
@@ -8,3 +9,5 @@ pub use compiled::{
     RimePrismBinMetadata, RimePrismChecksumMetadata, RimeReverseBinMetadata, RimeTableBinMetadata,
 };
 pub use encoder::{CodeCoords, TableEncoder, TableEncoderFormulaError, TableEncodingRule};
+pub(crate) use source::normalize_table_code;
+pub use source::{TableDictionary, TableDictionaryParseError, TableEntry};
