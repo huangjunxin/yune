@@ -11995,6 +11995,91 @@ fn linear_selector_arrow_keys_follow_librime_layout_bindings() {
 }
 
 #[test]
+fn schema_selector_bindings_override_default_layout_keymap() {
+    let _guard = test_guard();
+    RimeCleanupAllSessions();
+    let root = unique_temp_dir("schema-selector-bindings");
+    let shared = root.join("shared");
+    let user = root.join("user");
+    let staging = user.join("build");
+    fs::create_dir_all(&shared).expect("shared dir should be created");
+    fs::create_dir_all(&staging).expect("staging dir should be created");
+    fs::write(
+        staging.join("luna.schema.yaml"),
+        "\
+schema:\n  schema_id: luna\n  name: Luna\nmenu:\n  page_size: 2\nselector:\n  bindings:\n    Control+j: next_candidate\n    Down: noop\n  linear:\n    bindings:\n      Control+k: previous_page\n",
+    )
+    .expect("schema config should be written");
+
+    let shared_c = CString::new(shared.to_string_lossy().as_ref()).expect("path is valid");
+    let user_c = CString::new(user.to_string_lossy().as_ref()).expect("path is valid");
+    let mut traits = empty_traits();
+    traits.shared_data_dir = shared_c.as_ptr();
+    traits.user_data_dir = user_c.as_ptr();
+    // SAFETY: traits points to valid storage and strings live for the call.
+    unsafe { RimeSetup(&traits) };
+
+    let down = CString::new("Down").expect("key name should be valid");
+    // SAFETY: key name is a valid NUL-terminated string.
+    let down_keycode = unsafe { RimeGetKeycodeByName(down.as_ptr()) };
+    assert_eq!(down_keycode, 0xff54);
+
+    let session_id = RimeCreateSession();
+    let schema_id = CString::new("luna").expect("schema id should be valid");
+    // SAFETY: schema id is a valid NUL-terminated string.
+    assert_eq!(
+        unsafe { RimeSelectSchema(session_id, schema_id.as_ptr()) },
+        TRUE
+    );
+    {
+        let mut registry = super::sessions()
+            .lock()
+            .expect("session registry should not be poisoned");
+        let session = registry
+            .sessions
+            .get_mut(&session_id)
+            .expect("session should exist");
+        session.engine.add_translator(StaticTableTranslator::new([
+            ("ba", "八"),
+            ("ba", "吧"),
+            ("ba", "爸"),
+            ("ba", "巴"),
+        ]));
+    }
+
+    assert_eq!(RimeProcessKey(session_id, 'b' as c_int, 0), TRUE);
+    assert_eq!(RimeProcessKey(session_id, 'a' as c_int, 0), TRUE);
+    assert_eq!(RimeProcessKey(session_id, down_keycode, 0), TRUE);
+    assert_eq!(current_highlighted(session_id), 0);
+
+    assert_eq!(
+        RimeProcessKey(session_id, 'j' as c_int, K_CONTROL_MASK),
+        TRUE
+    );
+    assert_eq!(current_highlighted(session_id), 1);
+    assert_eq!(
+        RimeProcessKey(session_id, 'j' as c_int, K_CONTROL_MASK),
+        TRUE
+    );
+    assert_eq!(current_highlighted(session_id), 2);
+
+    let linear = CString::new("_linear").expect("option name should be valid");
+    // SAFETY: option name is a valid NUL-terminated string.
+    unsafe { RimeSetOption(session_id, linear.as_ptr(), TRUE) };
+    assert_eq!(
+        RimeProcessKey(session_id, 'k' as c_int, K_CONTROL_MASK),
+        TRUE
+    );
+    assert_eq!(current_highlighted(session_id), 0);
+    assert_eq!(RimeDestroySession(session_id), TRUE);
+
+    let reset_traits = empty_traits();
+    // SAFETY: reset traits points to valid storage.
+    unsafe { RimeSetup(&reset_traits) };
+    fs::remove_dir_all(root).expect("temp dirs should be removed");
+}
+
+#[test]
 fn shift_up_down_keys_fall_back_to_control_syllable_jump_like_librime_navigator() {
     let _guard = test_guard();
     RimeCleanupAllSessions();

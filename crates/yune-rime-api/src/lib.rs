@@ -129,6 +129,7 @@ struct SessionState {
     ascii_segmentor_enabled: bool,
     punctuation_processor: Option<PunctuationProcessor>,
     recognizer_processor: Option<RecognizerProcessor>,
+    selector_bindings: SelectorBindings,
     base_segment_tags: Vec<String>,
     punct_segmentor: Option<PunctSegmentor>,
     affix_segmentors: Vec<AffixSegmentor>,
@@ -153,6 +154,7 @@ impl SessionState {
             ascii_segmentor_enabled: false,
             punctuation_processor: None,
             recognizer_processor: None,
+            selector_bindings: SelectorBindings::default(),
             base_segment_tags: vec!["abc".to_owned()],
             punct_segmentor: None,
             affix_segmentors: Vec::new(),
@@ -213,6 +215,20 @@ enum KeyBindingAction {
     Toggle(String),
     SetOption { option: String, value: bool },
     SelectSchema(String),
+}
+
+#[derive(Default)]
+struct SelectorBindings {
+    horizontal_stacked: HashMap<KeyEvent, SelectorBindingAction>,
+    horizontal_linear: HashMap<KeyEvent, SelectorBindingAction>,
+    vertical_stacked: HashMap<KeyEvent, SelectorBindingAction>,
+    vertical_linear: HashMap<KeyEvent, SelectorBindingAction>,
+}
+
+#[derive(Clone, Copy)]
+enum SelectorBindingAction {
+    Noop,
+    Action(SelectorLayoutAction),
 }
 
 struct KeyBindingSwitchOption {
@@ -1889,6 +1905,7 @@ pub extern "C" fn RimeProcessKey(session_id: RimeSessionId, keycode: c_int, mask
                     keycode,
                     XK_BACKSPACE | XK_DELETE | XK_LEFT | XK_RIGHT | XK_UP | XK_DOWN | XK_RETURN
                 ) || (('0' as c_int)..=('9' as c_int)).contains(&keycode)
+                    || (0x20..=0x7e).contains(&keycode)
                     || (XK_KP_0..=XK_KP_9).contains(&keycode)))
                 || (mask == K_SHIFT_MASK && keycode == XK_RETURN)
                 || (mask == K_SHIFT_MASK && keycode == XK_BACKSPACE)
@@ -1952,6 +1969,13 @@ pub extern "C" fn RimeProcessKey(session_id: RimeSessionId, keycode: c_int, mask
     let Some(key_event) = key_event_from_rime_keycode(keycode, mask) else {
         return FALSE;
     };
+    if mask == K_CONTROL_MASK
+        && (0x20..=0x7e).contains(&keycode)
+        && !(('0' as c_int)..=('9' as c_int)).contains(&keycode)
+        && !session_has_modified_printable_binding(session, key_event)
+    {
+        return FALSE;
+    }
 
     match process_ascii_composer_processor(session, key_event) {
         AsciiComposerProcessResult::Noop => {}
@@ -1983,7 +2007,8 @@ pub extern "C" fn RimeProcessKey(session_id: RimeSessionId, keycode: c_int, mask
         return FALSE;
     }
     let mut accepted = false;
-    if let Some(selector_accepted) = process_selector_layout_key(session, keycode, mask) {
+    if let Some(selector_accepted) = process_selector_layout_key(session, key_event, keycode, mask)
+    {
         accepted = selector_accepted;
     } else {
         match key_event.code {
@@ -2339,6 +2364,7 @@ fn apply_schema_to_session(session: &mut SessionState, schema_id: &str) {
     session.fallback_segmentor_enabled = false;
     session.punctuation_processor = None;
     session.recognizer_processor = None;
+    session.selector_bindings = SelectorBindings::default();
     session.paging = false;
     restore_switcher_saved_options(session, schema_id);
     apply_schema_switch_resets(session, schema_id);
@@ -2347,6 +2373,7 @@ fn apply_schema_to_session(session: &mut SessionState, schema_id: &str) {
     install_schema_ascii_composer_processor(session, schema_id);
     install_schema_speller_processor(session, schema_id);
     install_schema_recognizer_processor(session, schema_id);
+    install_schema_selector_bindings(session, schema_id);
     install_schema_key_binder_processor(session, schema_id);
     install_schema_punctuation_processor(session, schema_id);
     install_schema_translator_chain(session, schema_id);
@@ -4083,15 +4110,17 @@ enum SelectorLayoutAction {
     NextCandidate,
     PreviousPage,
     NextPage,
+    Home,
+    End,
 }
 
 fn process_selector_layout_key(
     session: &mut SessionState,
+    key_event: KeyEvent,
     keycode: c_int,
     mask: c_int,
 ) -> Option<bool> {
-    if mask != 0
-        || session.engine.context().composition.input.is_empty()
+    if session.engine.context().composition.input.is_empty()
         || session.engine.context().candidates.is_empty()
         || session
             .engine
@@ -4106,8 +4135,51 @@ fn process_selector_layout_key(
     let is_vertical = session.engine.get_option("_vertical");
     let is_linear =
         session.engine.get_option("_linear") || session.engine.get_option("_horizontal");
+    if let Some(action) = selector_configured_action(session, is_vertical, is_linear, key_event) {
+        return match action {
+            SelectorBindingAction::Noop => Some(false),
+            SelectorBindingAction::Action(action) => {
+                apply_selector_layout_action(session, action, is_linear)
+            }
+        };
+    }
+
+    if mask != 0 {
+        return None;
+    }
+
     let action = selector_layout_action(is_vertical, is_linear, keycode)?;
     apply_selector_layout_action(session, action, is_linear)
+}
+
+fn selector_configured_action(
+    session: &SessionState,
+    is_vertical: bool,
+    is_linear: bool,
+    key_event: KeyEvent,
+) -> Option<SelectorBindingAction> {
+    let bindings = match (is_vertical, is_linear) {
+        (false, false) => &session.selector_bindings.horizontal_stacked,
+        (false, true) => &session.selector_bindings.horizontal_linear,
+        (true, false) => &session.selector_bindings.vertical_stacked,
+        (true, true) => &session.selector_bindings.vertical_linear,
+    };
+    bindings.get(&key_event).copied()
+}
+
+fn session_has_modified_printable_binding(session: &SessionState, key_event: KeyEvent) -> bool {
+    if session
+        .key_binder
+        .as_ref()
+        .is_some_and(|processor| processor.bindings.contains_key(&key_event))
+    {
+        return true;
+    }
+
+    let is_vertical = session.engine.get_option("_vertical");
+    let is_linear =
+        session.engine.get_option("_linear") || session.engine.get_option("_horizontal");
+    selector_configured_action(session, is_vertical, is_linear, key_event).is_some()
 }
 
 fn selector_layout_action(
@@ -4156,6 +4228,8 @@ fn apply_selector_layout_action(
             selector_next_page_like_librime(session);
             Some(true)
         }
+        SelectorLayoutAction::Home => selector_home_like_librime(session),
+        SelectorLayoutAction::End => selector_end_like_librime(session),
     }
 }
 
@@ -4216,6 +4290,22 @@ fn selector_next_page_like_librime(session: &mut SessionState) {
     let index = index.min(context.candidates.len() - 1);
     session.engine.highlight_candidate(index);
     session.paging = true;
+}
+
+fn selector_home_like_librime(session: &mut SessionState) -> Option<bool> {
+    if session.engine.context().highlighted == 0 {
+        return None;
+    }
+    session.engine.highlight_candidate(0);
+    Some(true)
+}
+
+fn selector_end_like_librime(session: &mut SessionState) -> Option<bool> {
+    let context = session.engine.context();
+    if context.composition.caret < context.composition.input.len() {
+        return None;
+    }
+    selector_home_like_librime(session)
 }
 
 fn install_schema_translator_chain(session: &mut SessionState, schema_id: &str) {
@@ -5171,6 +5261,72 @@ fn install_schema_key_binder_processor(session: &mut SessionState, schema_id: &s
     if !processor.bindings.is_empty() {
         session.key_binder = Some(processor);
     }
+}
+
+fn install_schema_selector_bindings(session: &mut SessionState, schema_id: &str) {
+    let schema_config =
+        load_runtime_config_root(&format!("{schema_id}.schema"), ConfigOpenKind::Deployed);
+    load_selector_binding_section(
+        &schema_config,
+        "selector",
+        &mut session.selector_bindings.horizontal_stacked,
+    );
+    load_selector_binding_section(
+        &schema_config,
+        "selector/linear",
+        &mut session.selector_bindings.horizontal_linear,
+    );
+    load_selector_binding_section(
+        &schema_config,
+        "selector/vertical",
+        &mut session.selector_bindings.vertical_stacked,
+    );
+    load_selector_binding_section(
+        &schema_config,
+        "selector/vertical/linear",
+        &mut session.selector_bindings.vertical_linear,
+    );
+}
+
+fn load_selector_binding_section(
+    schema_config: &Value,
+    section: &str,
+    bindings: &mut HashMap<KeyEvent, SelectorBindingAction>,
+) {
+    let Some(Value::Mapping(config_bindings)) =
+        find_config_value(schema_config, &format!("{section}/bindings"))
+    else {
+        return;
+    };
+
+    for (key, action) in config_bindings {
+        let Some(key) = config_scalar_string(key) else {
+            continue;
+        };
+        let Some(key_event) = parse_single_key_binding_event(&key) else {
+            continue;
+        };
+        let Some(action) = action.as_str().and_then(selector_binding_action_from_name) else {
+            continue;
+        };
+        bindings.insert(key_event, action);
+    }
+}
+
+fn selector_binding_action_from_name(action: &str) -> Option<SelectorBindingAction> {
+    let action = match action {
+        "noop" => SelectorBindingAction::Noop,
+        "previous_candidate" => {
+            SelectorBindingAction::Action(SelectorLayoutAction::PreviousCandidate)
+        }
+        "next_candidate" => SelectorBindingAction::Action(SelectorLayoutAction::NextCandidate),
+        "previous_page" => SelectorBindingAction::Action(SelectorLayoutAction::PreviousPage),
+        "next_page" => SelectorBindingAction::Action(SelectorLayoutAction::NextPage),
+        "home" => SelectorBindingAction::Action(SelectorLayoutAction::Home),
+        "end" => SelectorBindingAction::Action(SelectorLayoutAction::End),
+        _ => return None,
+    };
+    Some(action)
 }
 
 fn insert_key_binding(bindings: &mut Vec<KeyBinding>, binding: KeyBinding) {
