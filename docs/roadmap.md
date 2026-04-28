@@ -121,6 +121,10 @@
   config selection, excluded types, tip comments, duplicate removal,
   single-character promotion, extended-CJK gating, and reverse-lookup comment
   updates on completion and sentence candidates.
+- Added focused full-shape `shape_formatter`/`shape_processor` coverage for
+  ABI commits: committed ASCII table text is converted to full-width text under
+  `full_shape`, and otherwise unhandled printable ASCII keys are post-processed
+  into full-width commits.
 - Tightened librime ABI lifecycle behavior for `RimeTraits`, session activity
   cleanup, `RimeFinalize`, deployment notifications, `RimeSyncUserData`,
   unread commit buffering, struct-layout coverage, menu page-size parsing,
@@ -141,10 +145,11 @@
   the remaining librime gear components and deeper semantics: `speller`
   previous-match segment splitting and non-auto-commit composition behavior,
   `editor` variants, `navigator`, `selector`, `chord_composer`,
-  `shape_processor`/`shape_formatter`, deeper `punct_segmentor` behavior such
-  as segment-order interactions and `punct_number` translation through larger
-  chains, deeper multi-segment `fallback_segmentor` behavior, full spelling
-  algebra, full OpenCC conversion data, and larger real-world
+  deeper `shape_processor`/`shape_formatter` interactions, deeper
+  `punct_segmentor` behavior such as segment-order interactions and
+  `punct_number` translation through larger chains, deeper multi-segment
+  `fallback_segmentor` behavior, full spelling algebra, full OpenCC conversion
+  data, and larger real-world
   processor/segmentor/translator/filter chains from distribution schemas.
 - Expand dictionary compatibility beyond source `.dict.yaml` parsing toward
   librime's compiled `.table.bin`, `.prism.bin`, `.reverse.bin`, pack

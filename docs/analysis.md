@@ -86,7 +86,8 @@ The strongest compatibility progress is currently in two areas:
   `history_translator`, `switch_translator`, `schema_list_translator`,
   `simplifier`, `uniquifier`, `single_char_filter`,
   `charset_filter`/`cjk_minifier`, and
-  `reverse_lookup_filter` behavior through ABI-facing tests. The current
+  `reverse_lookup_filter`, plus focused full-shape
+  `shape_processor`/`shape_formatter` behavior through ABI-facing tests. The current
   `speller` coverage is the processor-level spelling gate for alphabet,
   delimiter, initials/finals, `use_space`, focused `auto_clear` modes, and
   max-code-length preselection before the next initial, plus focused
@@ -99,7 +100,9 @@ The strongest compatibility progress is currently in two areas:
   where the punctuation segment is exclusive and suppresses ordinary table
   translation competition, plus a focused `fallback_segmentor` path where an
   otherwise unclaimed segment is tagged `raw` and does not feed default `abc`
-  table translation.
+  table translation. The current shape coverage formats committed ASCII text
+  under `full_shape` and post-processes otherwise unhandled printable ASCII
+  keys into full-width commits.
 - Data compatibility: schema-loaded table dictionaries now feed real session
   candidates, and source dictionary parsing handles many librime/yaml-cpp edge
   cases around headers, YAML nulls, quoted scalars, `columns`, `import_tables`,
@@ -128,8 +131,9 @@ not just missing tests:
   components and deeper behaviors such as `speller` auto-select and
   max-code-length auto-selection handling, editor variants, `navigator`,
   `selector`,
-  `chord_composer`, `shape_processor`, deeper `punct_segmentor` behavior such
-  as segment-order interactions and `punct_number` through larger chains,
+  `chord_composer`, deeper `shape_processor`/`shape_formatter` interactions,
+  deeper `punct_segmentor` behavior such as segment-order interactions and
+  `punct_number` through larger chains,
   deeper multi-segment `fallback_segmentor`, and formatter behavior that are not
   yet equivalently modeled. `speller` still needs deeper previous-match segment
   splitting and non-auto-commit composition behavior.

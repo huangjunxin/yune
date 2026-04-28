@@ -20156,7 +20156,7 @@ punctuator:
 
     assert_eq!(RimeProcessKey(session_id, '2' as i32, 0), TRUE);
     assert_eq!(RimeProcessKey(session_id, ' ' as i32, 0), TRUE);
-    assert_eq!(read_commit(), "2");
+    assert_eq!(read_commit(), "２");
 
     assert_eq!(RimeProcessKey(session_id, '.' as i32, 0), TRUE);
     assert_eq!(read_commit(), "．");
@@ -20297,7 +20297,7 @@ punctuator:
 
     assert_eq!(RimeProcessKey(session_id, '4' as i32, 0), TRUE);
     assert_eq!(RimeProcessKey(session_id, ' ' as i32, 0), TRUE);
-    assert_eq!(read_commit(), "4");
+    assert_eq!(read_commit(), "４");
     assert_eq!(RimeProcessKey(session_id, '.' as i32, 0), TRUE);
     assert_eq!(context_state(), (".".to_owned(), vec!["．".to_owned()]));
     assert_eq!(RimeProcessKey(session_id, '5' as i32, 0), TRUE);

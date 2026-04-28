@@ -1999,7 +1999,13 @@ pub extern "C" fn RimeProcessKey(session_id: RimeSessionId, keycode: c_int, mask
             }
         }
         _ => match process_session_key_event(session_id, session, key_event) {
-            SessionKeyProcessResult::Noop => return FALSE,
+            SessionKeyProcessResult::Noop => {
+                if let Some(commit) = process_shape_processor(session, key_event) {
+                    append_unread_commit(session, commit);
+                    return TRUE;
+                }
+                return FALSE;
+            }
             SessionKeyProcessResult::Accepted => accepted = true,
             SessionKeyProcessResult::Commit(commit) => {
                 append_unread_commit(session, commit);
@@ -4052,10 +4058,15 @@ fn apply_visible_switch_radio_defaults(session: &mut SessionState) {
 }
 
 fn append_unread_commit(session: &mut SessionState, commit: String) {
+    let commit = shape_formatted_commit_text(session, &commit);
     match &mut session.unread_commit {
         Some(buffer) => buffer.push_str(&commit),
         None => session.unread_commit = Some(commit),
     }
+}
+
+fn shape_formatted_commit_text(session: &SessionState, text: &str) -> String {
+    shape_formatted_ascii_text(text, session.engine.status().is_full_shape)
 }
 
 fn session_menu_page_size(session: &SessionState) -> usize {
@@ -5762,6 +5773,24 @@ fn process_recognizer_processor(session: &mut SessionState, key_event: KeyEvent)
     }
     session.engine.set_input(input);
     true
+}
+
+fn process_shape_processor(session: &SessionState, key_event: KeyEvent) -> Option<String> {
+    if !session.engine.status().is_full_shape
+        || key_event.modifiers.control
+        || key_event.modifiers.alt
+        || key_event.modifiers.super_key
+        || key_event.modifiers.release
+    {
+        return None;
+    }
+    let KeyCode::Character(ch) = key_event.code else {
+        return None;
+    };
+    if !('\u{20}'..='\u{7e}').contains(&ch) {
+        return None;
+    }
+    Some(shape_formatted_ascii_text(&ch.to_string(), true))
 }
 
 fn process_speller_processor(
