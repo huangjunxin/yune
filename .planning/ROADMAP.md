@@ -1,0 +1,124 @@
+# Roadmap: Yune
+
+## Overview
+
+This milestone turns Yune's focused compatibility surface into a stronger
+frontend and data-compatibility validation track. It starts with a RIME
+API-backed CLI frontend surrogate, uses that to harden ABI behavior against real
+frontend expectations, then deepens schema, compiled dictionary, and user
+dictionary compatibility while preserving the module boundaries created by the
+recent refactor.
+
+## Phases
+
+**Phase Numbering:**
+- Integer phases (1, 2, 3): Planned milestone work
+- Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
+
+Decimal phases appear between their surrounding integers in numeric order.
+
+- [ ] **Phase 1: CLI Frontend Surrogate** - Drive `yune-rime-api` from `yune-cli` and lock in structure rules for future slices.
+- [ ] **Phase 2: Native ABI Validation And Runtime Safety** - Exercise real frontend-like loading paths and harden ABI/resource boundaries.
+- [ ] **Phase 3: Schema Pipeline Depth** - Expand focused schema behavior toward deeper librime gear semantics.
+- [ ] **Phase 4: Compiled Dictionary Data** - Move from source dictionary parsing and metadata checks toward compiled payload consumption and rebuild execution.
+- [ ] **Phase 5: UserDB And Scaling Hardening** - Extend user dictionary compatibility and finish quality/test ownership cleanup for the milestone.
+
+## Phase Details
+
+### Phase 1: CLI Frontend Surrogate
+**Goal**: Developers can use `yune-cli` as a scriptable frontend surrogate that exercises `yune-rime-api` setup, schema selection, key processing, and transcript replay.
+**Depends on**: Nothing (first phase)
+**Requirements**: CLI-01, CLI-02, CLI-03, CLI-04, CLI-05, QUAL-01, QUAL-02
+**Success Criteria** (what must be TRUE):
+  1. Developer can initialize the RIME service from `yune-cli` with explicit shared/user data paths.
+  2. Developer can deploy, select a schema, create a session, process keys, and destroy the session through ABI calls.
+  3. Developer can inspect commit text, preedit, candidates, highlight index, and status after each CLI key event.
+  4. Developer can replay a key transcript through the ABI and compare deterministic output.
+  5. Every new behavior added in this phase lives in an owned module with matching focused tests, not in `main.rs` or `lib.rs`.
+**Plans**: 3 plans
+
+Plans:
+- [ ] 01-01: Implement RIME API service setup, schema deployment/selection, and session lifecycle in `crates/yune-cli/src/rime_frontend.rs`.
+- [ ] 01-02: Add interactive rendering and transcript replay output through `crates/yune-cli/src/render.rs` and `crates/yune-cli/src/transcript.rs`.
+- [ ] 01-03: Add focused CLI/ABI tests and document the module/test ownership rule for future compatibility slices.
+
+### Phase 2: Native ABI Validation And Runtime Safety
+**Goal**: The ABI surface is validated against at least one real frontend or native frontend-like loader, and runtime safety gaps discovered there are converted into tests and fixes.
+**Depends on**: Phase 1
+**Requirements**: ABI-01, ABI-02, ABI-03, ABI-04
+**Success Criteria** (what must be TRUE):
+  1. Developer can run a real frontend client or native frontend-like loader against the current ABI and capture failures as reproducible notes or fixtures.
+  2. Struct layout, lifetime, notification, deployment, and session lifecycle gaps found during validation have focused regression coverage.
+  3. Resource IDs from C APIs and schema YAML are rejected when they contain path traversal, absolute paths, separators, or other filesystem syntax.
+  4. Repeated initialize/finalize, module, notification, switcher, and session lifecycle paths remain deterministic under the validation suite.
+**Plans**: 3 plans
+
+Plans:
+- [ ] 02-01: Build or run a native frontend validation harness and record observed ABI/frontend gaps.
+- [ ] 02-02: Fix and test lifecycle, notification, deployment, and session behavior exposed by native validation.
+- [ ] 02-03: Add logical resource-ID validation for config, dictionary, custom-settings, and userdb paths.
+
+### Phase 3: Schema Pipeline Depth
+**Goal**: Schema-loaded behavior covers deeper librime semantics across the processor, segmentor, translator, filter, and gear components that remain outside the current focused subset.
+**Depends on**: Phase 2
+**Requirements**: SCHEMA-01, SCHEMA-02, SCHEMA-03, SCHEMA-04, SCHEMA-05
+**Success Criteria** (what must be TRUE):
+  1. `speller` previous-match segment splitting and non-auto-commit composition behavior are covered by ABI-facing tests.
+  2. `editor`, `navigator`, and `selector` segment/selection span behavior works across deeper candidate and segment interactions.
+  3. `chord_composer`, shape, punctuation, and fallback segmentor behavior is tested in larger processing chains, not only isolated focused paths.
+  4. `memory`, `poet`/`grammar`, `contextual_translation`, and `unity_table_encoder` each have either a compatibility increment or an explicit documented deferral.
+  5. Larger distribution schema chains produce documented comparisons against librime for spelling algebra, OpenCC, and correction/tolerance behavior.
+**Plans**: 4 plans
+
+Plans:
+- [ ] 03-01: Expand speller, editor, navigator, selector, chord, shape, punctuation, and fallback processor coverage.
+- [ ] 03-02: Add compatibility decisions or increments for remaining librime gear components.
+- [ ] 03-03: Compare larger distribution schema chains against librime and convert differences into focused fixtures.
+- [ ] 03-04: Broaden spelling algebra, correction/tolerance, and OpenCC behavior where current focused coverage is insufficient.
+
+### Phase 4: Compiled Dictionary Data
+**Goal**: Dictionary loading and rebuild behavior move beyond source parsing and metadata checks toward compiled librime data compatibility.
+**Depends on**: Phase 3
+**Requirements**: DATA-01, DATA-02, DATA-03, DATA-04
+**Success Criteria** (what must be TRUE):
+  1. Runtime dictionary loading can consume compiled `.table.bin`, `.prism.bin`, and `.reverse.bin` payloads beyond checksum metadata.
+  2. Rebuild execution handles source-vs-prebuilt fallback, table/prism/reverse freshness, and pack checksum chaining.
+  3. Stem-column data, reverse-db `dict_settings`, preset vocabulary injection, and UniTE-style encoder payloads are consumed where schemas rely on them.
+  4. Correction data and tolerance search inputs are represented in the compiled-data path and covered by schema-loaded lookup tests.
+**Plans**: 4 plans
+
+Plans:
+- [ ] 04-01: Implement compiled table/prism/reverse payload readers and runtime fallback from source dictionaries.
+- [ ] 04-02: Implement rebuild execution and pack checksum chaining around the existing rebuild-plan primitive.
+- [ ] 04-03: Consume stem, `dict_settings`, preset vocabulary, and UniTE encoder payloads in reverse/encoder paths.
+- [ ] 04-04: Represent correction/tolerance data in compiled lookup and validate behavior against librime.
+
+### Phase 5: UserDB And Scaling Hardening
+**Goal**: User dictionary behavior and remaining quality concerns are strong enough for longer-running frontend-style sessions and future milestone planning.
+**Depends on**: Phase 4
+**Requirements**: USERDB-01, USERDB-02, USERDB-03, QUAL-03, QUAL-04
+**Success Criteria** (what must be TRUE):
+  1. User dictionary storage has a librime-compatible LevelDB/userdb path or a documented compatible abstraction beyond the plain text shim.
+  2. Snapshot backup, restore, recovery, sync, and transaction rollback behavior match librime-observable semantics.
+  3. Learning, frequency updates, predictive lookup, and backdated scan behavior are represented in runtime candidate ranking and persistence.
+  4. Remaining oversized compatibility tests are split along ownership boundaries where that reduces future risk.
+  5. Implementation phases close with focused tests, formatting, relevant package tests, and workspace tests when shared behavior changes.
+**Plans**: 3 plans
+
+Plans:
+- [ ] 05-01: Add userdb storage, snapshot, recovery, sync, and rollback compatibility beyond plain text shims.
+- [ ] 05-02: Add learning, frequency update, predictive lookup, and backdated scan behavior to runtime candidate/userdb flow.
+- [ ] 05-03: Split remaining oversized tests where useful and codify phase quality gates for future GSD execution.
+
+## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 1. CLI Frontend Surrogate | 0/3 | Not started | - |
+| 2. Native ABI Validation And Runtime Safety | 0/3 | Not started | - |
+| 3. Schema Pipeline Depth | 0/4 | Not started | - |
+| 4. Compiled Dictionary Data | 0/4 | Not started | - |
+| 5. UserDB And Scaling Hardening | 0/3 | Not started | - |
