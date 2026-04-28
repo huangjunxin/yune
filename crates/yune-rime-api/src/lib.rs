@@ -4953,8 +4953,10 @@ fn install_schema_dictionary_translator_from_config(
     let comment_format = schema_comment_format(schema_config, name_space);
     let dictionary_exclude =
         schema_string_list(schema_config, &format!("{name_space}/dictionary_exclude"));
+    let spelling_algebra = schema_string_list(schema_config, "speller/algebra");
     session.engine.add_translator(
         StaticTableTranslator::from_dictionary(dictionary)
+            .with_spelling_algebra(&spelling_algebra)
             .with_completion(enable_completion)
             .with_charset_filter(enable_charset_filter)
             .with_sentence(enable_sentence)

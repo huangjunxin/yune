@@ -2383,6 +2383,15 @@ impl StaticTableTranslator {
         self
     }
 
+    #[must_use]
+    pub fn with_spelling_algebra(mut self, formulas: &[String]) -> Self {
+        let algebra = SpellingAlgebra::parse(formulas);
+        if !algebra.is_empty() {
+            self.entries = algebra.expand_entries(self.entries);
+        }
+        self
+    }
+
     fn lookup_code<'a>(&self, input: &'a str) -> &'a str {
         input.trim_end_matches(|ch| self.delimiters.contains(ch))
     }
@@ -3810,6 +3819,182 @@ impl CommentFormatFormula {
             }
         }
     }
+}
+
+#[derive(Clone, Default)]
+struct SpellingAlgebra {
+    formulas: Vec<SpellingAlgebraFormula>,
+}
+
+impl SpellingAlgebra {
+    fn parse(formulas: &[String]) -> Self {
+        let mut parsed = Vec::new();
+        for formula in formulas {
+            let Some(parsed_formula) = SpellingAlgebraFormula::parse(formula) else {
+                return Self::default();
+            };
+            parsed.push(parsed_formula);
+        }
+        Self { formulas: parsed }
+    }
+
+    fn is_empty(&self) -> bool {
+        self.formulas.is_empty()
+    }
+
+    fn expand_entries(&self, mut entries: Vec<(String, Candidate)>) -> Vec<(String, Candidate)> {
+        for formula in &self.formulas {
+            let mut next = Vec::new();
+            for (code, candidate) in entries {
+                let mut transformed = code.clone();
+                let applied = formula.apply(&mut transformed);
+                if applied {
+                    if formula.keep_original() {
+                        next.push((code, candidate.clone()));
+                    }
+                    if formula.add_transformed() && !transformed.is_empty() {
+                        next.push((transformed, candidate));
+                    }
+                } else {
+                    next.push((code, candidate));
+                }
+            }
+            entries = dedupe_spelling_algebra_entries(next);
+        }
+        entries
+    }
+}
+
+#[derive(Clone)]
+enum SpellingAlgebraFormula {
+    Transliterate(Vec<(char, char)>),
+    Transform {
+        pattern: Regex,
+        replacement: String,
+        keep_original: bool,
+        add_transformed: bool,
+    },
+    Erase(Regex),
+}
+
+impl SpellingAlgebraFormula {
+    fn parse(definition: &str) -> Option<Self> {
+        let separator = definition.chars().find(|ch| !ch.is_ascii_lowercase())?;
+        let args = definition.split(separator).collect::<Vec<_>>();
+        match args.first().copied()? {
+            "xlit" => Self::parse_xlit(&args),
+            "xform" => Self::parse_transform(&args, false, true),
+            "derive" | "fuzz" | "abbrev" => Self::parse_transform(&args, true, true),
+            "erase" => Self::parse_erase(&args),
+            _ => None,
+        }
+    }
+
+    fn parse_xlit(args: &[&str]) -> Option<Self> {
+        if args.len() < 3 {
+            return None;
+        }
+        let left = args[1].chars().collect::<Vec<_>>();
+        let right = args[2].chars().collect::<Vec<_>>();
+        if left.len() != right.len() {
+            return None;
+        }
+        Some(Self::Transliterate(left.into_iter().zip(right).collect()))
+    }
+
+    fn parse_transform(args: &[&str], keep_original: bool, add_transformed: bool) -> Option<Self> {
+        if args.len() < 3 || args[1].is_empty() {
+            return None;
+        }
+        Some(Self::Transform {
+            pattern: Regex::new(args[1]).ok()?,
+            replacement: args[2].to_owned(),
+            keep_original,
+            add_transformed,
+        })
+    }
+
+    fn parse_erase(args: &[&str]) -> Option<Self> {
+        if args.len() < 2 || args[1].is_empty() {
+            return None;
+        }
+        Some(Self::Erase(Regex::new(args[1]).ok()?))
+    }
+
+    fn keep_original(&self) -> bool {
+        match self {
+            Self::Transform { keep_original, .. } => *keep_original,
+            _ => false,
+        }
+    }
+
+    fn add_transformed(&self) -> bool {
+        !matches!(self, Self::Erase(_))
+    }
+
+    fn apply(&self, value: &mut String) -> bool {
+        match self {
+            Self::Transliterate(char_map) => {
+                let mut modified = false;
+                let transformed = value
+                    .chars()
+                    .map(|ch| {
+                        if let Some((_, replacement)) =
+                            char_map.iter().find(|(source, _)| *source == ch)
+                        {
+                            modified = true;
+                            *replacement
+                        } else {
+                            ch
+                        }
+                    })
+                    .collect::<String>();
+                if modified {
+                    *value = transformed;
+                }
+                modified
+            }
+            Self::Transform {
+                pattern,
+                replacement,
+                add_transformed,
+                ..
+            } => {
+                let transformed = pattern
+                    .replace_all(value, replacement.as_str())
+                    .into_owned();
+                let modified = transformed != *value;
+                if modified && *add_transformed {
+                    *value = transformed;
+                }
+                modified
+            }
+            Self::Erase(pattern) => {
+                let should_erase = pattern
+                    .find(value)
+                    .is_some_and(|matched| matched.start() == 0 && matched.end() == value.len());
+                if should_erase {
+                    value.clear();
+                }
+                should_erase
+            }
+        }
+    }
+}
+
+fn dedupe_spelling_algebra_entries(entries: Vec<(String, Candidate)>) -> Vec<(String, Candidate)> {
+    let mut seen = HashSet::new();
+    let mut deduped = Vec::new();
+    for (code, candidate) in entries {
+        if seen.insert((
+            code.clone(),
+            candidate.text.clone(),
+            candidate.comment.clone(),
+        )) {
+            deduped.push((code, candidate));
+        }
+    }
+    deduped
 }
 
 pub struct PunctuationTranslator {
@@ -8241,6 +8426,40 @@ sort: original
             .collect::<Vec<_>>();
         assert_eq!(texts, ["包", "b"]);
         assert_eq!(sources, ["completion", "echo"]);
+    }
+
+    #[test]
+    fn static_table_translator_expands_librime_spelling_algebra() {
+        let dictionary = TableDictionary::parse_rime_dict_yaml(
+            r#"
+---
+name: algebra
+version: "0.1"
+sort: original
+...
+
+略	lue	0
+女	nv	0
+"#,
+        )
+        .expect("dictionary should parse");
+        let formulas = vec!["xform/^lue$/lve/".to_owned(), "derive/^nv$/nu/".to_owned()];
+        let translator =
+            StaticTableTranslator::from_dictionary(dictionary).with_spelling_algebra(&formulas);
+
+        assert_eq!(translator.translate("lue").len(), 0);
+
+        let lve = translator.translate("lve");
+        assert_eq!(lve[0].text, "略");
+        assert_eq!(lve[0].comment, "lue");
+
+        let nv = translator.translate("nv");
+        assert_eq!(nv[0].text, "女");
+        assert_eq!(nv[0].comment, "nv");
+
+        let nu = translator.translate("nu");
+        assert_eq!(nu[0].text, "女");
+        assert_eq!(nu[0].comment, "nv");
     }
 
     #[test]

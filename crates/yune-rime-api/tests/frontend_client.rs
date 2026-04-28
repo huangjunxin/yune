@@ -3076,6 +3076,119 @@ schema:\n  schema_id: auto_select_pattern\n  name: Auto Select Pattern\nengine:\
 }
 
 #[test]
+fn frontend_style_schema_speller_algebra_expands_table_lookup_spellings() {
+    let _guard = test_guard();
+    let api = rime_get_api();
+    assert!(!api.is_null());
+    let api = unsafe { &*api };
+
+    let setup = api.setup.expect("frontend requires setup");
+    let cleanup_all_sessions = api
+        .cleanup_all_sessions
+        .expect("frontend requires cleanup_all_sessions");
+    cleanup_all_sessions();
+
+    let create_session = api
+        .create_session
+        .expect("frontend requires create_session");
+    let destroy_session = api
+        .destroy_session
+        .expect("frontend requires destroy_session");
+    let process_key = api.process_key.expect("frontend requires process_key");
+    let select_schema = api.select_schema.expect("frontend requires select_schema");
+    let get_context = api.get_context.expect("frontend requires get_context");
+    let free_context = api.free_context.expect("frontend requires free_context");
+
+    let root = unique_temp_dir("schema-speller-algebra");
+    let shared = root.join("shared");
+    let user = root.join("user");
+    let staging = user.join("build");
+    fs::create_dir_all(&shared).expect("shared dir should be created");
+    fs::create_dir_all(&staging).expect("staging dir should be created");
+    fs::write(
+        staging.join("algebra.schema.yaml"),
+        "\
+schema:\n  schema_id: algebra\n  name: Algebra\nengine:\n  processors:\n    - speller\n  translators:\n    - table_translator\nspeller:\n  alphabet: elnuv\n  algebra:\n    - xform/^lue$/lve/\n    - derive/^nv$/nu/\ntranslator:\n  dictionary: algebra\n  enable_completion: false\n  enable_sentence: false\n",
+    )
+    .expect("schema config should be written");
+    fs::write(
+        shared.join("algebra.dict.yaml"),
+        "\
+---\nname: algebra\nversion: '1'\nsort: original\ncolumns: [code, text, weight]\n...\nlue\t略\t1\nnv\t女\t1\n",
+    )
+    .expect("dictionary should be written");
+
+    let shared_c = CString::new(shared.to_string_lossy().as_ref()).expect("path is valid");
+    let user_c = CString::new(user.to_string_lossy().as_ref()).expect("path is valid");
+    let mut traits = empty_traits();
+    traits.shared_data_dir = shared_c.as_ptr();
+    traits.user_data_dir = user_c.as_ptr();
+    unsafe { setup(&traits) };
+
+    let lve_session_id = create_session();
+    assert_ne!(lve_session_id, 0);
+    let schema_id = CString::new("algebra").expect("schema id should be valid");
+    assert_eq!(
+        unsafe { select_schema(lve_session_id, schema_id.as_ptr()) },
+        TRUE
+    );
+    for ch in "lve".chars() {
+        assert_eq!(process_key(lve_session_id, ch as i32, 0), TRUE);
+    }
+    let mut context = empty_context();
+    assert_eq!(unsafe { get_context(lve_session_id, &mut context) }, TRUE);
+    let candidates = unsafe {
+        std::slice::from_raw_parts(
+            context.menu.candidates,
+            context.menu.num_candidates as usize,
+        )
+    };
+    assert_eq!(
+        unsafe { CStr::from_ptr(candidates[0].text) }.to_str(),
+        Ok("略")
+    );
+    assert_eq!(
+        unsafe { CStr::from_ptr(candidates[0].comment) }.to_str(),
+        Ok("lue")
+    );
+    assert_eq!(unsafe { free_context(&mut context) }, TRUE);
+    assert_eq!(destroy_session(lve_session_id), TRUE);
+
+    let nu_session_id = create_session();
+    assert_ne!(nu_session_id, 0);
+    assert_eq!(
+        unsafe { select_schema(nu_session_id, schema_id.as_ptr()) },
+        TRUE
+    );
+    for ch in "nu".chars() {
+        assert_eq!(process_key(nu_session_id, ch as i32, 0), TRUE);
+    }
+    let mut context = empty_context();
+    assert_eq!(unsafe { get_context(nu_session_id, &mut context) }, TRUE);
+    let candidates = unsafe {
+        std::slice::from_raw_parts(
+            context.menu.candidates,
+            context.menu.num_candidates as usize,
+        )
+    };
+    assert_eq!(
+        unsafe { CStr::from_ptr(candidates[0].text) }.to_str(),
+        Ok("女")
+    );
+    assert_eq!(
+        unsafe { CStr::from_ptr(candidates[0].comment) }.to_str(),
+        Ok("nv")
+    );
+    assert_eq!(unsafe { free_context(&mut context) }, TRUE);
+    assert_eq!(destroy_session(nu_session_id), TRUE);
+
+    cleanup_all_sessions();
+    let reset_traits = empty_traits();
+    unsafe { setup(&reset_traits) };
+    fs::remove_dir_all(root).expect("temp dirs should be removed");
+}
+
+#[test]
 fn frontend_style_schema_speller_auto_selects_previous_match_with_express_editor() {
     let _guard = test_guard();
     let api = rime_get_api();
