@@ -2,6 +2,7 @@ mod ascii_composer;
 mod editor;
 mod key_binder;
 mod navigator;
+mod punctuation;
 mod recognizer;
 mod selector;
 mod speller;
@@ -19,6 +20,10 @@ pub(crate) use key_binder::{
 pub(crate) use navigator::{
     install_schema_navigator_bindings, navigator_configured_action,
     process_navigator_configured_key, process_navigator_delimiter_key,
+};
+pub(crate) use punctuation::{
+    install_schema_punctuation_processor, install_schema_punctuation_translator_from_config,
+    process_punctuation_processor,
 };
 pub(crate) use recognizer::{install_schema_recognizer_processor, process_recognizer_processor};
 pub(crate) use selector::{
