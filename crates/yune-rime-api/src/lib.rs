@@ -6828,6 +6828,9 @@ fn feed_chord_composer_output(
             && event.modifiers.is_empty()
         {
             if let KeyCode::Character(ch) = event.code {
+                if let Some(composer) = session.chord_composer.as_mut() {
+                    composer.raw_sequence.clear();
+                }
                 commits.push(session.engine.record_commit(ch.to_string()));
             }
         }

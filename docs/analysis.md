@@ -124,7 +124,8 @@ The strongest compatibility progress is currently in two areas:
   `commit_raw_input` bindings that commit the original raw key sequence, plus
   focused ABI-visible modifier chord options for control, shift, alt, super,
   and caps-lock `Lock` modified printable keys, plus active-chord cancellation
-  when a non-chording function key interrupts held chord state.
+  when a non-chording function key interrupts held chord state, plus raw-sequence
+  clearing when generated chord output falls through to direct ASCII commits.
   `punct_number`
   translation now keeps digit separators literal, with full-shape formatting,
   instead of applying the ordinary punctuation mapping after a numeric commit.
@@ -164,7 +165,7 @@ not just missing tests:
   deeper `selector` navigator fallback interaction behavior beyond the current
   focused raw-tag, layout, and configured-binding coverage,
   deeper `editor` segment/selection semantics, deeper `chord_composer` behavior
-  such as remaining raw-sequence lifecycle edge cases,
+  such as remaining raw-sequence lifecycle edge cases around context updates,
   deeper `shape_processor`/`shape_formatter` interactions,
   deeper `punct_segmentor` behavior such as segment-order interactions and
   `punct_number` through larger chains beyond the focused digit-separator

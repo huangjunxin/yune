@@ -113,7 +113,8 @@
   segments while keys are held, plus `commit_raw_input` bindings for the
   original raw key sequence, focused modifier chord options for control, shift,
   alt, super, and caps-lock `Lock` modified printable keys, focused active-chord
-  cancellation on non-chording function keys, plus ASCII mode switch-key
+  cancellation on non-chording function keys, focused raw-sequence clearing
+  after generated chord output direct-commits ASCII, plus ASCII mode switch-key
   handling.
 - Expanded schema-loaded segmentor coverage for `ascii_segmentor`, `matcher`,
   namespaced `affix_segmentor`, focused `punct_segmentor`, and focused
@@ -165,7 +166,7 @@
   deeper `editor` variant behavior such as full segment/selection semantics,
   deeper `navigator` candidate/segment span semantics, deeper
   `selector` navigator fallback interactions beyond the current focused coverage,
-  deeper `chord_composer` behavior such as remaining raw-sequence lifecycle edge cases,
+  deeper `chord_composer` behavior such as remaining raw-sequence lifecycle edge cases around context updates,
   deeper `shape_processor`/`shape_formatter` interactions, deeper
   `punct_segmentor` behavior such as segment-order interactions and
   `punct_number` translation through larger chains beyond the focused
