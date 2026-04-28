@@ -68,6 +68,13 @@ Only after this runner exists should core modules be rewritten in Rust.
 The initial runner now has a companion frontend-style ABI client. The ABI tests
 exercise `yune-rime-api` through the exported `RimeApi` function table, which
 keeps the test shape closer to real frontend integration than direct Rust calls.
+The next useful validation step before native frontend adapters is to turn
+`yune-cli` from a core-only fixture runner into an interactive CLI input-method
+frontend that drives `yune-rime-api`: initialize the service with real
+`shared_data_dir` and `user_data_dir` paths, deploy/select schemas, create a
+session, process keys, and display commits, preedit, candidates, highlighted
+index, and status after each event. This should also keep a scriptable transcript
+mode so key sequences can be replayed and compared against librime output.
 
 The strongest compatibility progress is currently in these areas:
 
@@ -173,7 +180,12 @@ not just missing tests:
 - Real frontend integration is still unproven. The ABI shape is covered by a
   frontend-style client, but clients such as Squirrel, Weasel, ibus-rime, and
   fcitx-rime may expose lifetime, notification, deployment, or session edge
-  cases that synthetic tests do not.
+  cases that synthetic tests do not. An interactive `yune-cli` frontend would
+  be a valuable frontend-surrogate for validating real schema loading, session
+  use, candidate display, paging, selection, commits, and status updates through
+  the ABI, but it would not exercise OS input-method framework protocols,
+  dynamic frontend loading, GUI composition windows, focus changes, or native
+  frontend callback timing.
 - The schema pipeline is still a subset. The current focused coverage now
   reaches many high-value gears, but librime's source tree still has deeper
   behavior around `speller` auto-selection and max-code-length interactions,

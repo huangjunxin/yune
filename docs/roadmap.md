@@ -172,9 +172,17 @@
   Rust designs, cleaner abstractions, stronger typing, deterministic tests, and
   better algorithms where they preserve or intentionally extend the external
   contract.
+- Build `yune-cli` into a frontend-surrogate input method that drives
+  `yune-rime-api` rather than `yune-core` directly: initialize with real shared
+  and user data directories, deploy and select schemas, create sessions, process
+  interactive keys, render commits/preedit/candidates/highlight/status after
+  each event, and provide a transcript replay mode for comparing key sequences
+  against librime.
 - Run the current ABI against real frontend clients such as Squirrel, Weasel,
   ibus-rime, fcitx-rime, or fcitx5-rime, and record any struct-layout,
-  lifetime, notification, deployment, and session-behavior gaps.
+  lifetime, notification, deployment, and session-behavior gaps. Treat the CLI
+  frontend as a useful intermediate validation layer, not as proof that native
+  frontend integration is complete.
 - Continue broadening schema coverage beyond the current focused subset toward
   the remaining librime gear components and deeper semantics: `speller`
   previous-match segment splitting and non-auto-commit composition behavior,
