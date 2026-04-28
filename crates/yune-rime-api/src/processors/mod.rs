@@ -1,6 +1,7 @@
 mod ascii_composer;
 mod editor;
 mod recognizer;
+mod speller;
 
 pub(crate) use ascii_composer::{
     install_schema_ascii_composer_processor, is_ascii_composer_modifier_key,
@@ -9,3 +10,4 @@ pub(crate) use ascii_composer::{
 };
 pub(crate) use editor::{install_schema_editor_processor, process_editor_processor};
 pub(crate) use recognizer::{install_schema_recognizer_processor, process_recognizer_processor};
+pub(crate) use speller::{install_schema_speller_processor, process_speller_processor};
