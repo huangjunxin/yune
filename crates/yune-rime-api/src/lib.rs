@@ -66,9 +66,7 @@ const XK_SUPER_L: c_int = 0xffeb;
 const XK_SUPER_R: c_int = 0xffec;
 const K_SHIFT_MASK: c_int = 1 << 0;
 const K_CONTROL_MASK: c_int = 1 << 2;
-#[cfg(test)]
 const K_ALT_MASK: c_int = 1 << 3;
-#[cfg(test)]
 const K_SUPER_MASK: c_int = 1 << 26;
 const K_RELEASE_MASK: c_int = 1 << 30;
 const DEFAULT_PAGE_SIZE: usize = 5;
@@ -372,6 +370,11 @@ struct ChordComposerProcessor {
     output_format: ChordProjection,
     prompt_format: ChordProjection,
     bindings: HashMap<KeyEvent, ChordComposerBindingAction>,
+    use_control: bool,
+    use_alt: bool,
+    use_shift: bool,
+    use_super: bool,
+    use_caps: bool,
     raw_sequence: String,
     pressed_keys: HashSet<char>,
     recognized_chord: HashSet<char>,
@@ -2112,10 +2115,22 @@ pub extern "C" fn RimeProcessKey(session_id: RimeSessionId, keycode: c_int, mask
                 || (mask == K_SHIFT_MASK
                     && matches!(keycode, XK_HOME | XK_END | XK_KP_HOME | XK_KP_END))
                 || (mask == K_SHIFT_MASK && (0x20..=0x7e).contains(&keycode))
+                || (mask == K_ALT_MASK && (0x20..=0x7e).contains(&keycode))
+                || (mask == K_SUPER_MASK && (0x20..=0x7e).contains(&keycode))
                 || (mask == (K_CONTROL_MASK | K_SHIFT_MASK)
                     && (keycode == XK_RETURN
                         || (('0' as c_int)..=('9' as c_int)).contains(&keycode)
-                        || (XK_KP_0..=XK_KP_9).contains(&keycode)))
+                        || (XK_KP_0..=XK_KP_9).contains(&keycode)
+                        || (0x20..=0x7e).contains(&keycode)))
+                || ((mask & K_RELEASE_MASK) != 0
+                    && (mask
+                        & !(K_RELEASE_MASK
+                            | K_CONTROL_MASK
+                            | K_SHIFT_MASK
+                            | K_ALT_MASK
+                            | K_SUPER_MASK))
+                        == 0
+                    && (0x20..=0x7e).contains(&keycode))
                 || (mask == K_RELEASE_MASK && (0x20..=0x7e).contains(&keycode))
                 || (mask == K_RELEASE_MASK && is_ascii_composer_modifier_key(keycode))))
     {
@@ -2163,10 +2178,11 @@ pub extern "C" fn RimeProcessKey(session_id: RimeSessionId, keycode: c_int, mask
     let Some(key_event) = key_event_from_rime_keycode(keycode, mask) else {
         return FALSE;
     };
-    if mask == K_CONTROL_MASK
+    if (mask == K_CONTROL_MASK || mask == K_ALT_MASK || mask == K_SUPER_MASK)
         && (0x20..=0x7e).contains(&keycode)
         && !(('0' as c_int)..=('9' as c_int)).contains(&keycode)
         && !session_has_modified_printable_binding(session, key_event)
+        && !session_chord_composer_accepts_printable(session, key_event)
     {
         return FALSE;
     }
@@ -4133,29 +4149,25 @@ fn key_event_from_rime_keycode(keycode: c_int, mask: c_int) -> Option<KeyEvent> 
         0x20..=0x7e => KeyCode::Character(char::from_u32(keycode as u32)?),
         _ => return None,
     };
-    let modifiers = match mask {
-        0 => KeyModifiers::default(),
-        K_SHIFT_MASK => KeyModifiers {
-            shift: true,
-            ..KeyModifiers::default()
-        },
-        K_CONTROL_MASK => KeyModifiers {
-            control: true,
-            ..KeyModifiers::default()
-        },
-        K_RELEASE_MASK => KeyModifiers {
-            release: true,
-            ..KeyModifiers::default()
-        },
-        combined if combined == (K_CONTROL_MASK | K_SHIFT_MASK) => KeyModifiers {
-            control: true,
-            shift: true,
-            ..KeyModifiers::default()
-        },
-        _ => return None,
-    };
+    let modifiers = key_modifiers_from_rime_mask(mask)?;
 
     Some(KeyEvent { code, modifiers })
+}
+
+fn key_modifiers_from_rime_mask(mask: c_int) -> Option<KeyModifiers> {
+    let supported_mask = K_SHIFT_MASK | K_CONTROL_MASK | K_ALT_MASK | K_SUPER_MASK | K_RELEASE_MASK;
+    if mask & !supported_mask != 0 {
+        return None;
+    }
+
+    Some(KeyModifiers {
+        shift: mask & K_SHIFT_MASK != 0,
+        control: mask & K_CONTROL_MASK != 0,
+        alt: mask & K_ALT_MASK != 0,
+        super_key: mask & K_SUPER_MASK != 0,
+        release: mask & K_RELEASE_MASK != 0,
+        ..KeyModifiers::default()
+    })
 }
 
 fn select_candidate_or_switch(
@@ -4446,6 +4458,17 @@ fn session_has_modified_printable_binding(session: &SessionState, key_event: Key
             .chord_composer
             .as_ref()
             .is_some_and(|processor| processor.bindings.contains_key(&key_event))
+}
+
+fn session_chord_composer_accepts_printable(session: &SessionState, key_event: KeyEvent) -> bool {
+    let Some(composer) = session.chord_composer.as_ref() else {
+        return false;
+    };
+    let KeyCode::Character(ch) = key_event.code else {
+        return false;
+    };
+    composer.alphabet.contains(&ch)
+        && chord_composer_allows_modifiers(composer, key_event.modifiers)
 }
 
 fn process_navigator_configured_key(
@@ -5398,6 +5421,21 @@ fn install_schema_chord_composer_processor(session: &mut SessionState, schema_id
             "chord_composer/prompt_format",
         )),
         bindings: load_chord_composer_bindings(&schema_config),
+        use_control: find_config_value(&schema_config, "chord_composer/use_control")
+            .and_then(config_scalar_bool)
+            .unwrap_or(false),
+        use_alt: find_config_value(&schema_config, "chord_composer/use_alt")
+            .and_then(config_scalar_bool)
+            .unwrap_or(false),
+        use_shift: find_config_value(&schema_config, "chord_composer/use_shift")
+            .and_then(config_scalar_bool)
+            .unwrap_or(false),
+        use_super: find_config_value(&schema_config, "chord_composer/use_super")
+            .and_then(config_scalar_bool)
+            .unwrap_or(false),
+        use_caps: find_config_value(&schema_config, "chord_composer/use_caps")
+            .and_then(config_scalar_bool)
+            .unwrap_or(false),
         raw_sequence: String::new(),
         pressed_keys: HashSet::new(),
         recognized_chord: HashSet::new(),
@@ -6639,14 +6677,7 @@ fn process_chord_composer_processor(
     };
     let composer = session.chord_composer.as_mut()?;
 
-    if key_event.modifiers.control
-        || key_event.modifiers.alt
-        || key_event.modifiers.shift
-        || key_event.modifiers.lock
-        || key_event.modifiers.super_key
-        || key_event.modifiers.hyper
-        || key_event.modifiers.meta
-    {
+    if !chord_composer_allows_modifiers(composer, key_event.modifiers) {
         composer.raw_sequence.clear();
         composer.pressed_keys.clear();
         composer.recognized_chord.clear();
@@ -6678,13 +6709,33 @@ fn process_chord_composer_processor(
         return Some(SessionKeyProcessResult::Accepted);
     }
 
-    if session.engine.context().composition.input.is_empty() || !composer.raw_sequence.is_empty() {
+    let should_buffer_raw = !key_event.modifiers.control
+        && !key_event.modifiers.alt
+        && !key_event.modifiers.super_key
+        && !key_event.modifiers.lock;
+    if should_buffer_raw
+        && (session.engine.context().composition.input.is_empty()
+            || !composer.raw_sequence.is_empty())
+    {
         composer.raw_sequence.push(ch);
     }
     composer.pressed_keys.insert(ch);
     composer.recognized_chord.insert(ch);
     composer.prompt = chord_composer_prompt(composer);
     Some(SessionKeyProcessResult::Accepted)
+}
+
+fn chord_composer_allows_modifiers(
+    composer: &ChordComposerProcessor,
+    modifiers: KeyModifiers,
+) -> bool {
+    (!modifiers.control || composer.use_control)
+        && (!modifiers.alt || composer.use_alt)
+        && (!modifiers.shift || composer.use_shift)
+        && (!modifiers.super_key || composer.use_super)
+        && (!modifiers.lock || composer.use_caps)
+        && !modifiers.hyper
+        && !modifiers.meta
 }
 
 fn apply_chord_composer_binding(
