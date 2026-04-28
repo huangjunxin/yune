@@ -126,7 +126,8 @@
   `history_translator`, `switch_translator`, and `schema_list_translator`,
   including namespace aliases, tag gating, completion toggles, sentence
   fallback, candidate quality, `dictionary_exclude`, `comment_format`, pack
-  dictionaries, persisted switcher options, folded switch menus, radio
+  dictionaries, focused preset-vocabulary weight lookup/scaling for coded
+  source entries, persisted switcher options, folded switch menus, radio
   defaults, state-label ABI indexing, schema-list ordering, schema selection
   commands, schema-list access-time recency sorting, and
   `switcher/fix_schema_list_order`.
@@ -172,8 +173,8 @@
   processor/segmentor/translator/filter chains from distribution schemas.
 - Expand dictionary compatibility beyond source `.dict.yaml` parsing toward
   librime's compiled `.table.bin`, `.prism.bin`, `.reverse.bin`, pack
-  dictionaries at compiled-data level, preset vocabulary, stem columns,
-  encoders, correction data, checksums, and rebuild heuristics.
+  dictionaries at compiled-data level, preset-vocabulary phrase injection,
+  stem columns, encoders, correction data, checksums, and rebuild heuristics.
 - Expand user dictionary compatibility beyond the current plain text userdb
   shims toward librime's LevelDB/userdb storage, snapshot merging, recovery,
   learning, and frequency update semantics.

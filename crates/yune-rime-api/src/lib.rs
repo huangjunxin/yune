@@ -5150,11 +5150,15 @@ fn load_schema_table_dictionary(
     let dictionary_path = selected_runtime_data_path(&format!("{dictionary_name}.dict.yaml"))?;
     let dictionary_yaml = fs::read_to_string(dictionary_path).ok()?;
     let packs = schema_dictionary_packs(schema_config, name_space);
-    TableDictionary::parse_rime_dict_yaml_with_imports_and_packs(
+    TableDictionary::parse_rime_dict_yaml_with_imports_packs_and_vocabulary(
         &dictionary_yaml,
         packs,
         |import_table| {
             selected_runtime_data_path(&format!("{import_table}.dict.yaml"))
+                .and_then(|path| fs::read_to_string(path).ok())
+        },
+        |vocabulary| {
+            selected_runtime_data_path(&format!("{vocabulary}.txt"))
                 .and_then(|path| fs::read_to_string(path).ok())
         },
     )

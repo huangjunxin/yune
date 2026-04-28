@@ -1543,8 +1543,23 @@ impl TableDictionary {
         packs: impl IntoIterator<Item = impl AsRef<str>>,
         mut import_loader: impl FnMut(&str) -> Option<String>,
     ) -> Result<Self, TableDictionaryParseError> {
+        Self::parse_rime_dict_yaml_with_imports_packs_and_vocabulary(
+            input,
+            packs,
+            &mut import_loader,
+            |_| None,
+        )
+    }
+
+    pub fn parse_rime_dict_yaml_with_imports_packs_and_vocabulary(
+        input: &str,
+        packs: impl IntoIterator<Item = impl AsRef<str>>,
+        mut import_loader: impl FnMut(&str) -> Option<String>,
+        mut vocabulary_loader: impl FnMut(&str) -> Option<String>,
+    ) -> Result<Self, TableDictionaryParseError> {
         let (metadata, mut entries) = parse_rime_dict_yaml_parts(input)?;
         append_rime_import_table_entries(&metadata, &mut entries, &mut import_loader)?;
+        apply_rime_preset_vocabulary_weights(&metadata, &mut entries, &mut vocabulary_loader);
         let mut entries = finalize_rime_table_entries(&metadata, entries);
 
         for pack in packs {
@@ -1565,6 +1580,11 @@ impl TableDictionary {
             {
                 continue;
             }
+            apply_rime_preset_vocabulary_weights(
+                &pack_metadata,
+                &mut pack_entries,
+                &mut vocabulary_loader,
+            );
             let mut pack_entries = finalize_rime_table_entries(&pack_metadata, pack_entries);
             entries.append(&mut pack_entries);
         }
@@ -1673,6 +1693,31 @@ fn finalize_rime_table_entries(
     entries
 }
 
+fn apply_rime_preset_vocabulary_weights(
+    metadata: &RimeTableMetadata,
+    entries: &mut [RimeParsedTableEntry],
+    vocabulary_loader: &mut impl FnMut(&str) -> Option<String>,
+) {
+    if !metadata.uses_preset_vocabulary() {
+        return;
+    }
+    let Some(vocabulary) = vocabulary_loader(metadata.vocabulary_name()) else {
+        return;
+    };
+    let vocabulary = parse_rime_preset_vocabulary(&vocabulary);
+    for entry in entries {
+        let weight = entry.raw_weight.trim();
+        let Some(vocabulary_weight) = vocabulary.get(&entry.entry.text).copied() else {
+            continue;
+        };
+        if weight.is_empty() {
+            entry.entry.weight = vocabulary_weight;
+        } else if weight.ends_with('%') {
+            entry.entry.weight = vocabulary_weight * parse_rime_entry_weight_percentage(weight);
+        }
+    }
+}
+
 fn sort_rime_table_entries(metadata: &RimeTableMetadata, entries: &mut [TableEntry]) {
     if metadata.sort_by_weight {
         entries.sort_by(|left, right| {
@@ -1724,6 +1769,8 @@ struct RimeTableMetadata {
     reading_list: Option<RimeTableHeaderList>,
     pending_list_clear: Option<RimeTableHeaderList>,
     sort_by_weight: bool,
+    use_preset_vocabulary: bool,
+    vocabulary: Option<String>,
     name: Option<String>,
     has_name: bool,
     has_version: bool,
@@ -1732,6 +1779,7 @@ struct RimeTableMetadata {
 #[derive(Clone, Debug)]
 struct RimeParsedTableEntry {
     entry: TableEntry,
+    raw_weight: String,
     single_syllable_duplicate_key: Option<(String, String)>,
 }
 
@@ -1743,6 +1791,8 @@ impl Default for RimeTableMetadata {
             reading_list: None,
             pending_list_clear: None,
             sort_by_weight: true,
+            use_preset_vocabulary: false,
+            vocabulary: None,
             name: None,
             has_name: false,
             has_version: false,
@@ -1791,6 +1841,16 @@ impl RimeTableMetadata {
             return;
         }
 
+        if let Some(use_preset_vocabulary) = rime_header_value(trimmed, "use_preset_vocabulary") {
+            self.use_preset_vocabulary = parse_yaml_bool(use_preset_vocabulary).unwrap_or(false);
+            return;
+        }
+
+        if let Some(vocabulary) = rime_header_value(trimmed, "vocabulary") {
+            self.vocabulary = parse_yaml_scalar_node(vocabulary);
+            return;
+        }
+
         if let Some(name) = rime_header_value(trimmed, "name") {
             if let Some(name) = parse_yaml_scalar_node(name) {
                 self.has_name = true;
@@ -1811,6 +1871,17 @@ impl RimeTableMetadata {
         self.has_name && self.has_version
     }
 
+    fn uses_preset_vocabulary(&self) -> bool {
+        self.use_preset_vocabulary || self.vocabulary.is_some()
+    }
+
+    fn vocabulary_name(&self) -> &str {
+        self.vocabulary
+            .as_deref()
+            .filter(|vocabulary| !vocabulary.is_empty())
+            .unwrap_or("essay")
+    }
+
     fn parse_entry(&self, line: &str) -> Option<RimeParsedTableEntry> {
         let fields = line.split('\t').collect::<Vec<_>>();
         let text_column = self.column_index("text")?;
@@ -1829,10 +1900,17 @@ impl RimeTableMetadata {
             .and_then(|column| fields.get(column))
             .map(|value| parse_rime_entry_weight(value))
             .unwrap_or(0.0);
+        let raw_weight = self
+            .column_index("weight")
+            .and_then(|column| fields.get(column))
+            .copied()
+            .unwrap_or("")
+            .to_owned();
         let single_syllable_duplicate_key =
             (rime_code_syllable_count(code) == 1).then(|| (text.to_owned(), code.to_owned()));
         Some(RimeParsedTableEntry {
             entry: TableEntry::new(code, text, weight),
+            raw_weight,
             single_syllable_duplicate_key,
         })
     }
@@ -1981,6 +2059,14 @@ fn parse_yaml_scalar_node(input: &str) -> Option<String> {
     Some(parse_yaml_scalar_value(value))
 }
 
+fn parse_yaml_bool(input: &str) -> Option<bool> {
+    match parse_yaml_scalar_node(input)?.to_ascii_lowercase().as_str() {
+        "true" | "yes" | "on" | "1" => Some(true),
+        "false" | "no" | "off" | "0" => Some(false),
+        _ => None,
+    }
+}
+
 fn parse_yaml_scalar_value(value: &str) -> String {
     if let Some(value) = value
         .strip_prefix('\'')
@@ -2083,6 +2169,44 @@ fn parse_rime_entry_weight(input: &str) -> f32 {
         .rev()
         .find_map(|end| value[..end].parse::<f32>().ok())
         .unwrap_or(0.0)
+}
+
+fn parse_rime_entry_weight_percentage(input: &str) -> f32 {
+    input
+        .trim()
+        .strip_suffix('%')
+        .map(str::trim)
+        .and_then(|value| value.parse::<f32>().ok())
+        .unwrap_or(100.0)
+        / 100.0
+}
+
+fn parse_rime_preset_vocabulary(input: &str) -> HashMap<String, f32> {
+    let mut vocabulary = HashMap::new();
+    let mut comments_enabled = true;
+    for line in input.lines() {
+        let line = line.trim_end();
+        if line.is_empty() {
+            continue;
+        }
+        if comments_enabled && line.starts_with('#') {
+            if line == "# no comment" {
+                comments_enabled = false;
+            }
+            continue;
+        }
+
+        let fields = line.split('\t').collect::<Vec<_>>();
+        let Some(phrase) = fields.first().copied().filter(|phrase| !phrase.is_empty()) else {
+            continue;
+        };
+        let weight = fields
+            .get(1)
+            .map(|value| parse_rime_entry_weight(value))
+            .unwrap_or(0.0);
+        vocabulary.insert(phrase.to_owned(), weight);
+    }
+    vocabulary
 }
 
 fn rime_code_syllable_count(code: &str) -> usize {
@@ -2448,6 +2572,21 @@ impl StaticTableTranslator {
     ) -> Result<Self, TableDictionaryParseError> {
         TableDictionary::parse_rime_dict_yaml_with_imports_and_packs(input, packs, import_loader)
             .map(Self::from_dictionary)
+    }
+
+    pub fn parse_rime_dict_yaml_with_imports_packs_and_vocabulary(
+        input: &str,
+        packs: impl IntoIterator<Item = impl AsRef<str>>,
+        import_loader: impl FnMut(&str) -> Option<String>,
+        vocabulary_loader: impl FnMut(&str) -> Option<String>,
+    ) -> Result<Self, TableDictionaryParseError> {
+        TableDictionary::parse_rime_dict_yaml_with_imports_packs_and_vocabulary(
+            input,
+            packs,
+            import_loader,
+            vocabulary_loader,
+        )
+        .map(Self::from_dictionary)
     }
 }
 
@@ -7396,6 +7535,66 @@ ba	吧	3
         assert_eq!(entries[2].text, "八");
         assert_eq!(entries[3].text, "爸");
         assert_eq!(entries[3].weight, 1.0);
+    }
+
+    #[test]
+    fn parses_rime_dict_yaml_preset_vocabulary_weights() {
+        let mut requested_vocabulary = Vec::new();
+        let dictionary = TableDictionary::parse_rime_dict_yaml_with_imports_packs_and_vocabulary(
+            r#"
+---
+name: primary
+version: "0.1"
+sort: by_weight
+vocabulary: custom
+import_tables:
+  - secondary
+...
+
+八	ba
+吧	ba	50%
+白	bai	7
+"#,
+            std::iter::empty::<&str>(),
+            |name| {
+                (name == "secondary").then(|| {
+                    r#"
+---
+name: secondary
+version: "0.1"
+sort: original
+...
+
+爸	ba
+"#
+                    .to_owned()
+                })
+            },
+            |name| {
+                requested_vocabulary.push(name.to_owned());
+                (name == "custom").then(|| {
+                    "\
+八\t8
+吧\t6
+爸\t9
+"
+                    .to_owned()
+                })
+            },
+        )
+        .expect("dictionary with preset vocabulary weights should parse");
+
+        let entries = dictionary.entries();
+        assert_eq!(requested_vocabulary, ["custom"]);
+        assert_eq!(entries.len(), 4);
+        assert_eq!(entries[0].text, "爸");
+        assert_eq!(entries[0].weight, 9.0);
+        assert_eq!(entries[1].text, "八");
+        assert_eq!(entries[1].weight, 8.0);
+        assert_eq!(entries[2].text, "吧");
+        assert_eq!(entries[2].weight, 3.0);
+        assert_eq!(entries[3].text, "白");
+        assert_eq!(entries[3].weight, 7.0);
     }
 
     #[test]
