@@ -4,10 +4,10 @@ use serde_yaml::Value;
 use yune_core::{KeyCode, KeyEvent};
 
 use crate::{
-    config_scalar_string, find_config_value, load_runtime_config_root, schema_component_prescription,
-    AsciiComposerProcessResult, AsciiModeSwitchStyle, ConfigOpenKind, RimeGetKeycodeByName,
-    SessionState, K_RELEASE_MASK, XK_ALT_L, XK_ALT_R, XK_CAPS_LOCK, XK_CONTROL_L, XK_CONTROL_R,
-    XK_SHIFT_L, XK_SHIFT_R, XK_SUPER_L, XK_SUPER_R,
+    config_scalar_string, find_config_value, load_runtime_config_root,
+    schema_component_prescription, AsciiComposerProcessResult, AsciiModeSwitchStyle,
+    ConfigOpenKind, RimeGetKeycodeByName, SessionState, K_RELEASE_MASK, XK_ALT_L, XK_ALT_R,
+    XK_CAPS_LOCK, XK_CONTROL_L, XK_CONTROL_R, XK_SHIFT_L, XK_SHIFT_R, XK_SUPER_L, XK_SUPER_R,
 };
 
 pub(crate) fn install_schema_ascii_composer_processor(session: &mut SessionState, schema_id: &str) {
