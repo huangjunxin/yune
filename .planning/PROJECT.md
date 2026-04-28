@@ -3,18 +3,19 @@
 ## What This Is
 
 Yune is a Rust input-method engine project that uses librime as the external
-compatibility oracle while avoiding a direct C++ architecture clone. It already
-has a deterministic core, a focused RIME-style C ABI shim, schema-loaded
-compatibility slices, and frontend-style ABI tests. The next milestone is to
-turn that compatibility surface into a stronger frontend and data-compatibility
-validation path without losing the clean module boundaries established by the
-recent refactor.
+compatibility oracle while building toward an AI-native input engine that
+librime cannot provide. It already has a deterministic core, a focused
+RIME-style C ABI shim, schema-loaded compatibility slices, frontend-style ABI
+tests, and an initial non-blocking candidate reranking hook. The current
+milestone strengthens the compatibility foundation; the next product milestone
+should define the LLM-native candidate, context, memory, and privacy layers on
+top of that foundation.
 
 ## Core Value
 
-Existing RIME schemas and frontends should behave predictably through Yune's
-Rust implementation, with every compatibility difference measurable against
-librime before it is accepted.
+Yune should preserve predictable classic RIME input while making AI/LLM
+assistance a first-class, local-first, non-blocking source of candidates,
+ranking, context, and memory.
 
 ## Requirements
 
@@ -57,13 +58,17 @@ librime before it is accepted.
   librime-style storage, recovery, learning, and frequency behavior.
 - [ ] Preserve module and test ownership boundaries for every new compatibility
   slice so future work does not collapse back into single-file accumulation.
+- [ ] Define the AI-native input layer as a separate milestone, including
+  provider interfaces, context policy, memory policy, deterministic fallback,
+  and privacy boundaries.
 
 ### Out of Scope
 
 - Full C++ librime plugin ABI compatibility — defer until a real frontend or
   distribution requirement makes it necessary.
-- Cloud inference as a required runtime dependency — classic input behavior must
-  remain local-first and low latency.
+- Cloud inference as a required runtime dependency — classic input behavior and
+  the first AI-native layer must remain local-first and low latency, with remote
+  LLM use treated as optional enhancement.
 - A new graphical end-user frontend — the CLI frontend is a validation
   surrogate, not native UI integration.
 - Rewriting working compatibility slices during mechanical refactors — preserve
@@ -85,11 +90,14 @@ currently owns fixture execution and has a reserved RIME frontend entry point,
 and `crates/yune-schema/src/lib.rs` owns the typed schema subset parser.
 
 The strongest current coverage is in ABI surface tests, schema-loaded focused
-behavior, config/deployment compatibility, source dictionary parsing, and
-mechanical module organization. The highest-risk remaining areas are native
-frontend lifecycle behavior, resource path validation, process-wide ABI state,
-compiled dictionary payloads, LevelDB/userdb behavior, distribution-scale
-performance, and unmodeled librime gear components.
+behavior, config/deployment compatibility, source dictionary parsing, optional
+candidate reranking hooks, and mechanical module organization. The highest-risk
+remaining compatibility areas are native frontend lifecycle behavior, resource
+path validation, process-wide ABI state, compiled dictionary payloads,
+LevelDB/userdb behavior, distribution-scale performance, and unmodeled librime
+gear components. The highest-risk product area is designing AI-native input
+without letting LLM latency, nondeterminism, or privacy exposure break classic
+typing.
 
 ## Constraints
 
@@ -109,6 +117,12 @@ performance, and unmodeled librime gear components.
   `.reverse.bin` payloads remain a required direction.
 - **Security**: Runtime resource identifiers must be treated as logical IDs, not
   arbitrary filesystem paths.
+- **AI-native design**: LLM-backed behavior must be layered as candidate
+  providers, rankers, context providers, and memory stores with timeout/fallback
+  policy. AI results must be source-labeled, optional, and safe to discard.
+- **Privacy**: Context and memory collection must be opt-in, inspectable,
+  clearable, and disabled for sensitive contexts. Remote model calls cannot be
+  required for baseline input.
 
 ## Key Decisions
 
@@ -117,6 +131,7 @@ performance, and unmodeled librime gear components.
 | Use librime as compatibility oracle, not architecture template | Existing schemas and frontends depend on librime contracts, but Rust can model internals more cleanly | ✓ Good |
 | Build compatibility fixtures and ABI tests before replacing deeper engine modules | Behavior must be measurable before differences can be classified as improvements or regressions | ✓ Good |
 | Keep AI ranking optional and local-first | Classic input must remain predictable and low latency without network access | — Pending |
+| Treat AI-native input as a separate product layer above compatibility | librime cannot guide LLM-native behavior, so Yune needs explicit provider, context, memory, fallback, and privacy contracts | — Pending |
 | Treat the recent refactor as a structural rule for future feature work | Large single-file accumulation slowed review, search, focused testing, and extraction | — Pending |
 | Keep plugin ABI compatibility deferred | Plugin compatibility is expensive and not yet required by a concrete frontend or schema migration path | — Pending |
 

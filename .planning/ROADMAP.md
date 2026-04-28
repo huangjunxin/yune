@@ -7,7 +7,10 @@ frontend and data-compatibility validation track. It starts with a RIME
 API-backed CLI frontend surrogate, uses that to harden ABI behavior against real
 frontend expectations, then deepens schema, compiled dictionary, and user
 dictionary compatibility while preserving the module boundaries created by the
-recent refactor.
+recent refactor. AI-native input is the product direction after this foundation:
+it should be planned as a separate layer of providers, rankers, context policy,
+memory policy, and privacy controls rather than mixed into librime compatibility
+work.
 
 ## Phases
 
@@ -122,3 +125,67 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | 3. Schema Pipeline Depth | 0/4 | Not started | - |
 | 4. Compiled Dictionary Data | 0/4 | Not started | - |
 | 5. UserDB And Scaling Hardening | 0/3 | Not started | - |
+
+## Future Milestone: AI-Native Input Layer
+
+This milestone is intentionally not folded into Phases 1-5. The compatibility
+milestone keeps classic input measurable and stable; the AI-native milestone
+defines behavior that librime cannot serve as an oracle for.
+
+### Candidate Provider Architecture
+
+**Goal**: AI can provide candidates without replacing classic translators.
+
+Expected requirements:
+- `AiCandidateProvider` or equivalent provider interface receives bounded input
+  context and returns source-labeled candidates.
+- AI candidates use explicit source metadata and confidence/latency metadata.
+- Classic candidates remain available when AI is disabled, pending, or failed.
+- AI candidates do not auto-commit by default.
+
+### Non-Blocking Ranking And Merge Policy
+
+**Goal**: AI can rerank or merge candidates without adding typing latency.
+
+Expected requirements:
+- Ranking has a strict timeout budget and deterministic fallback.
+- Late AI results are safe to discard or apply only at stable UI boundaries.
+- Merge policy defines ordering between table, completion, sentence, userdb, and
+  AI candidates.
+- Tests use mock providers so behavior remains deterministic.
+
+### Context And Privacy Policy
+
+**Goal**: Yune can use context without turning the input method into an
+uncontrolled data exfiltration path.
+
+Expected requirements:
+- Context providers classify app, field, preceding text, cursor state, schema,
+  and candidate-list data by sensitivity.
+- Sensitive contexts disable learning and remote calls.
+- Users can inspect, clear, and disable memory.
+- Remote LLM calls are optional enhancements; baseline AI-native behavior should
+  work with local/mock providers.
+
+### Memory And Personalization
+
+**Goal**: Yune can learn useful language preferences while keeping user control.
+
+Expected requirements:
+- Memory store captures user vocabulary, phrase preferences, domain terms,
+  code/project names, and style preferences through explicit policy.
+- Memory updates are separated from librime-compatible userdb behavior until the
+  interaction contract is clear.
+- Personalization can influence ranking and completion without corrupting
+  classic dictionary/userdb compatibility.
+
+### CLI Playground Before Native Exposure
+
+**Goal**: AI-native behavior is observable in the CLI frontend surrogate before
+native frontends depend on it.
+
+Expected requirements:
+- CLI can enable mock/local AI providers per run.
+- Transcript output records AI source, timeout/fallback decisions, and merge
+  results.
+- Native frontends keep AI disabled by default until the CLI behavior is stable.

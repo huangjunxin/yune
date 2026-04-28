@@ -1,7 +1,7 @@
 # Requirements: Yune
 
 **Defined:** 2026-04-28
-**Core Value:** Existing RIME schemas and frontends should behave predictably through Yune's Rust implementation, with every compatibility difference measurable against librime before it is accepted.
+**Core Value:** Yune should preserve predictable classic RIME input while making AI/LLM assistance a first-class, local-first, non-blocking source of candidates, ranking, context, and memory.
 
 ## v1 Requirements
 
@@ -67,8 +67,13 @@ Deferred to future releases. Tracked but not in the current roadmap.
 
 ### AI Extension Layer
 
-- **AI-01**: Candidate reranking supports a production local model bridge.
-- **AI-02**: Contextual phrase completion and personalized suggestions are available behind opt-in Yune-native extension points.
+- **AI-01**: Engine exposes an `AiCandidateProvider` or equivalent interface that can provide candidates without replacing classic translators.
+- **AI-02**: Candidate ranking supports local model and rule-backed implementations with deterministic timeout/fallback behavior.
+- **AI-03**: Contextual phrase and sentence completion can produce source-labeled AI candidates without allowing AI candidates to auto-commit by default.
+- **AI-04**: Context providers define what app, field, preceding text, cursor, schema, and candidate-list data may be shared with AI providers.
+- **AI-05**: Memory store records user vocabulary, phrase preferences, and domain terms through explicit, inspectable, clearable policy.
+- **AI-06**: Privacy policy disables learning and remote calls for sensitive contexts and keeps classic input fully functional when AI is disabled.
+- **AI-07**: CLI frontend surrogate can demonstrate AI candidate/ranking behavior with mock and local providers before native frontends expose it.
 
 ## Out of Scope
 
