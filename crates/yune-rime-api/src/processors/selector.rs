@@ -1,10 +1,10 @@
 use std::{collections::HashMap, os::raw::c_int};
 
 use serde_yaml::Value;
-use yune_core::KeyEvent;
+use yune_core::{KeyCode, KeyEvent};
 
 use crate::{
-    config_scalar_string, find_config_value, load_runtime_config_root,
+    config_scalar_string, context_menu_settings, find_config_value, load_runtime_config_root,
     parse_single_key_binding_event, session_menu_page_size, ConfigOpenKind, SelectorBindingAction,
     SelectorLayoutAction, SessionState, XK_DOWN, XK_KP_DOWN, XK_KP_LEFT, XK_KP_PAGE_DOWN,
     XK_KP_PAGE_UP, XK_KP_RIGHT, XK_KP_UP, XK_LEFT, XK_PAGE_DOWN, XK_PAGE_UP, XK_RIGHT, XK_UP,
@@ -249,4 +249,40 @@ fn selector_binding_action_from_name(action: &str) -> Option<SelectorBindingActi
         _ => return None,
     };
     Some(action)
+}
+
+pub(crate) fn process_alternative_select_key(
+    session: &mut SessionState,
+    key_event: KeyEvent,
+) -> Option<Option<String>> {
+    if key_event.modifiers.control
+        || key_event.modifiers.alt
+        || key_event.modifiers.super_key
+        || key_event.modifiers.release
+        || session.engine.context().candidates.is_empty()
+    {
+        return None;
+    }
+    let KeyCode::Character(ch) = key_event.code else {
+        return None;
+    };
+    if !ch.is_ascii() || !('\u{20}'..='\u{7e}').contains(&ch) {
+        return None;
+    }
+
+    let menu_settings = context_menu_settings(&session.engine.status().schema_id);
+    let select_keys = menu_settings.select_keys.as_deref()?;
+    let Some(index) = select_keys
+        .bytes()
+        .position(|select_key| select_key == ch as u8)
+    else {
+        return ch.is_ascii_digit().then_some(None);
+    };
+    if index >= menu_settings.page_size {
+        return Some(None);
+    }
+
+    let page_start =
+        (session.engine.context().highlighted / menu_settings.page_size) * menu_settings.page_size;
+    Some(session.engine.select_candidate(page_start + index))
 }
