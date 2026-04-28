@@ -181,6 +181,7 @@ struct SpellerProcessor {
     finals: String,
     max_code_length: usize,
     auto_select: bool,
+    auto_select_pattern: Option<Regex>,
     auto_clear: SpellerAutoClear,
     use_space: bool,
 }
@@ -4512,6 +4513,9 @@ fn install_schema_speller_processor(session: &mut SessionState, schema_id: &str)
         auto_select: find_config_value(&schema_config, "speller/auto_select")
             .and_then(config_scalar_bool)
             .unwrap_or(false),
+        auto_select_pattern: find_config_value(&schema_config, "speller/auto_select_pattern")
+            .and_then(config_scalar_string)
+            .and_then(|pattern| Regex::new(&pattern).ok()),
         auto_clear: find_config_value(&schema_config, "speller/auto_clear")
             .and_then(config_scalar_string)
             .and_then(|value| match value.as_str() {
@@ -5645,6 +5649,7 @@ fn process_speller_processor(
     let auto_clear = speller.auto_clear;
     let max_code_length = speller.max_code_length;
     let auto_select = speller.auto_select;
+    let auto_select_pattern = speller.auto_select_pattern.clone();
     let is_initial = ch != ' ' && speller.initials.contains(ch);
     let delimiters = speller.delimiters.clone();
     let commit = if is_initial
@@ -5667,7 +5672,14 @@ fn process_speller_processor(
     session.engine.set_input(input);
     let commit = commit.or_else(|| {
         auto_select
-            .then(|| speller_auto_select_unique_candidate(session, max_code_length, &delimiters))
+            .then(|| {
+                speller_auto_select_unique_candidate(
+                    session,
+                    max_code_length,
+                    auto_select_pattern.as_ref(),
+                    &delimiters,
+                )
+            })
             .flatten()
     });
     if auto_clear == SpellerAutoClear::Auto
@@ -5729,14 +5741,22 @@ fn speller_auto_select_at_max_code_length(
 fn speller_auto_select_unique_candidate(
     session: &mut SessionState,
     max_code_length: usize,
+    auto_select_pattern: Option<&Regex>,
     delimiters: &str,
 ) -> Option<String> {
     let context = session.engine.context();
     let input = &context.composition.input;
-    if input.is_empty()
-        || input.contains(|ch| delimiters.contains(ch))
-        || (max_code_length != 0 && input.len() < max_code_length)
-    {
+    if input.is_empty() || input.contains(|ch| delimiters.contains(ch)) {
+        return None;
+    }
+    let matches_auto_select_rule = if let Some(pattern) = auto_select_pattern {
+        pattern
+            .find(input)
+            .is_some_and(|matched| matched.start() == 0 && matched.end() == input.len())
+    } else {
+        max_code_length == 0 || input.len() >= max_code_length
+    };
+    if !matches_auto_select_rule {
         return None;
     }
     let mut table_candidates = context

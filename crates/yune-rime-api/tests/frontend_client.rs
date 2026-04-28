@@ -2561,6 +2561,105 @@ schema:\n  schema_id: auto_select_ambiguous\n  name: Auto Select Ambiguous\nengi
 }
 
 #[test]
+fn frontend_style_schema_speller_auto_select_pattern_gates_unique_candidate() {
+    let _guard = test_guard();
+    let api = rime_get_api();
+    assert!(!api.is_null());
+    let api = unsafe { &*api };
+
+    let setup = api.setup.expect("frontend requires setup");
+    let cleanup_all_sessions = api
+        .cleanup_all_sessions
+        .expect("frontend requires cleanup_all_sessions");
+    cleanup_all_sessions();
+
+    let create_session = api
+        .create_session
+        .expect("frontend requires create_session");
+    let destroy_session = api
+        .destroy_session
+        .expect("frontend requires destroy_session");
+    let process_key = api.process_key.expect("frontend requires process_key");
+    let select_schema = api.select_schema.expect("frontend requires select_schema");
+    let get_input = api.get_input.expect("frontend requires get_input");
+    let get_commit = api.get_commit.expect("frontend requires get_commit");
+    let free_commit = api.free_commit.expect("frontend requires free_commit");
+
+    let root = unique_temp_dir("schema-speller-auto-select-pattern");
+    let shared = root.join("shared");
+    let user = root.join("user");
+    let staging = user.join("build");
+    fs::create_dir_all(&shared).expect("shared dir should be created");
+    fs::create_dir_all(&staging).expect("staging dir should be created");
+    fs::write(
+        staging.join("auto_select_pattern.schema.yaml"),
+        "\
+schema:\n  schema_id: auto_select_pattern\n  name: Auto Select Pattern\nengine:\n  processors:\n    - speller\n  translators:\n    - table_translator\nspeller:\n  alphabet: abc\n  auto_select: true\n  auto_select_pattern: ab\n  max_code_length: 3\ntranslator:\n  dictionary: auto_select_pattern\n  enable_completion: false\n  enable_sentence: false\n",
+    )
+    .expect("pattern schema config should be written");
+    fs::write(
+        shared.join("auto_select_pattern.dict.yaml"),
+        "\
+---\nname: auto_select_pattern\nversion: '1'\nsort: original\ncolumns: [code, text, weight]\n...\nab\tAB\t1\nac\tAC\t1\n",
+    )
+    .expect("pattern dictionary should be written");
+
+    let shared_c = CString::new(shared.to_string_lossy().as_ref()).expect("path is valid");
+    let user_c = CString::new(user.to_string_lossy().as_ref()).expect("path is valid");
+    let mut traits = empty_traits();
+    traits.shared_data_dir = shared_c.as_ptr();
+    traits.user_data_dir = user_c.as_ptr();
+    unsafe { setup(&traits) };
+
+    let matching_session_id = create_session();
+    assert_ne!(matching_session_id, 0);
+    let schema_id = CString::new("auto_select_pattern").expect("schema id should be valid");
+    assert_eq!(
+        unsafe { select_schema(matching_session_id, schema_id.as_ptr()) },
+        TRUE
+    );
+    assert_eq!(process_key(matching_session_id, 'a' as i32, 0), TRUE);
+    let mut commit = empty_commit();
+    assert_eq!(
+        unsafe { get_commit(matching_session_id, &mut commit) },
+        FALSE
+    );
+    assert_eq!(process_key(matching_session_id, 'b' as i32, 0), TRUE);
+    assert_eq!(
+        unsafe { get_commit(matching_session_id, &mut commit) },
+        TRUE
+    );
+    assert_eq!(unsafe { CStr::from_ptr(commit.text) }.to_str(), Ok("AB"));
+    assert_eq!(unsafe { free_commit(&mut commit) }, TRUE);
+    let input = get_input(matching_session_id);
+    assert!(!input.is_null());
+    assert_eq!(unsafe { CStr::from_ptr(input) }.to_str(), Ok(""));
+    assert_eq!(destroy_session(matching_session_id), TRUE);
+
+    let nonmatching_session_id = create_session();
+    assert_ne!(nonmatching_session_id, 0);
+    assert_eq!(
+        unsafe { select_schema(nonmatching_session_id, schema_id.as_ptr()) },
+        TRUE
+    );
+    assert_eq!(process_key(nonmatching_session_id, 'a' as i32, 0), TRUE);
+    assert_eq!(process_key(nonmatching_session_id, 'c' as i32, 0), TRUE);
+    assert_eq!(
+        unsafe { get_commit(nonmatching_session_id, &mut commit) },
+        FALSE
+    );
+    let input = get_input(nonmatching_session_id);
+    assert!(!input.is_null());
+    assert_eq!(unsafe { CStr::from_ptr(input) }.to_str(), Ok("ac"));
+    assert_eq!(destroy_session(nonmatching_session_id), TRUE);
+
+    cleanup_all_sessions();
+    let reset_traits = empty_traits();
+    unsafe { setup(&reset_traits) };
+    fs::remove_dir_all(root).expect("temp dirs should be removed");
+}
+
+#[test]
 fn frontend_style_api_table_can_simulate_key_sequences() {
     let _guard = test_guard();
     let api = rime_get_api();
