@@ -1,4 +1,5 @@
 mod compiled;
+mod encoder;
 
 pub use compiled::{
     parse_rime_prism_bin_metadata, parse_rime_reverse_bin_metadata, parse_rime_table_bin_metadata,
@@ -6,3 +7,4 @@ pub use compiled::{
     RimeCompiledMetadataError, RimeDictRebuildError, RimeDictRebuildInput, RimeDictRebuildPlan,
     RimePrismBinMetadata, RimePrismChecksumMetadata, RimeReverseBinMetadata, RimeTableBinMetadata,
 };
+pub use encoder::{CodeCoords, TableEncoder, TableEncoderFormulaError, TableEncodingRule};
