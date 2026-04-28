@@ -1,6 +1,7 @@
 mod ascii_composer;
 mod editor;
 mod key_binder;
+mod navigator;
 mod recognizer;
 mod speller;
 
@@ -13,6 +14,10 @@ pub(crate) use editor::{install_schema_editor_processor, process_editor_processo
 pub(crate) use key_binder::{
     install_schema_key_binder_processor, process_key_binder_processor,
     select_key_binding_radio_option, update_key_binding_paging_state, KeyBinderProcessor,
+};
+pub(crate) use navigator::{
+    install_schema_navigator_bindings, navigator_configured_action,
+    process_navigator_configured_key, process_navigator_delimiter_key,
 };
 pub(crate) use recognizer::{install_schema_recognizer_processor, process_recognizer_processor};
 pub(crate) use speller::{install_schema_speller_processor, process_speller_processor};
