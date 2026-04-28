@@ -107,8 +107,10 @@ The strongest compatibility progress is currently in two areas:
   schema-configured selector binding overrides including `noop` removal and
   modified printable accept keys. Focused `navigator` coverage now includes
   schema-configured horizontal/vertical binding overrides, `noop` removal, and
-  modified printable accept keys, plus delimiter-derived syllable stops and
-  `navigator/syllable_jump_position: before_delimiter`. The current shape
+  modified printable accept keys, plus delimiter-derived syllable stops,
+  `navigator/syllable_jump_position: before_delimiter`, and the librime
+  distinction between looping syllable actions and configured no-loop syllable
+  actions at delimiter-derived boundaries. The current shape
   coverage formats committed ASCII text under `full_shape` and
   post-processes otherwise unhandled printable ASCII keys into full-width
   commits.
@@ -139,8 +141,8 @@ not just missing tests:
   reaches many high-value gears, but librime's source tree also registers
   components and deeper behaviors such as `speller` auto-select and
   max-code-length auto-selection handling, editor variants, deeper `navigator`
-  behavior such as full span-aware syllable jumps beyond delimiter-derived
-  stops,
+  behavior such as full candidate/segment span-aware syllable jumps beyond
+  delimiter-derived stops,
   deeper `selector` navigator fallback interaction behavior beyond the current
   focused raw-tag, layout, and configured-binding coverage,
   `chord_composer`, deeper `shape_processor`/`shape_formatter` interactions,

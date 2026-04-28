@@ -4319,12 +4319,14 @@ fn apply_navigator_action(session: &mut SessionState, action: NavigatorAction) {
             session.engine.move_caret_right_by_char();
         }
         NavigatorAction::LeftBySyllable | NavigatorAction::LeftBySyllableNoLoop => {
-            if !move_caret_left_by_delimited_syllable(session) {
+            let loop_at_boundary = matches!(action, NavigatorAction::LeftBySyllable);
+            if !move_caret_left_by_delimited_syllable(session, loop_at_boundary) {
                 session.engine.move_caret_left_by_syllable();
             }
         }
         NavigatorAction::RightBySyllable | NavigatorAction::RightBySyllableNoLoop => {
-            if !move_caret_right_by_delimited_syllable(session) {
+            let loop_at_boundary = matches!(action, NavigatorAction::RightBySyllable);
+            if !move_caret_right_by_delimited_syllable(session, loop_at_boundary) {
                 session.engine.move_caret_right_by_syllable();
             }
         }
@@ -4343,11 +4345,14 @@ fn apply_navigator_action(session: &mut SessionState, action: NavigatorAction) {
     }
 }
 
-fn move_caret_left_by_delimited_syllable(session: &mut SessionState) -> bool {
+fn move_caret_left_by_delimited_syllable(
+    session: &mut SessionState,
+    loop_at_boundary: bool,
+) -> bool {
     let context = session.engine.context();
     let input = &context.composition.input;
     let caret = context.composition.caret.min(input.len());
-    if input.is_empty() || caret == 0 || !input.is_ascii() {
+    if input.is_empty() || !input.is_ascii() {
         return false;
     }
 
@@ -4356,18 +4361,34 @@ fn move_caret_left_by_delimited_syllable(session: &mut SessionState) -> bool {
         &session.navigator_delimiters,
         session.navigator_syllable_jump_position,
     );
-    let Some(next_caret) = stops.into_iter().rev().find(|stop| *stop < caret) else {
+    let next_caret = stops
+        .iter()
+        .rev()
+        .copied()
+        .find(|stop| *stop < caret)
+        .or_else(|| {
+            loop_at_boundary
+                .then(|| stops.iter().rev().copied().find(|stop| *stop < input.len()))
+                .flatten()
+        });
+    let Some(next_caret) = next_caret else {
         return false;
     };
+    if next_caret == caret {
+        return false;
+    }
     session.engine.set_caret_pos(next_caret);
     true
 }
 
-fn move_caret_right_by_delimited_syllable(session: &mut SessionState) -> bool {
+fn move_caret_right_by_delimited_syllable(
+    session: &mut SessionState,
+    loop_at_boundary: bool,
+) -> bool {
     let context = session.engine.context();
     let input = &context.composition.input;
     let caret = context.composition.caret.min(input.len());
-    if input.is_empty() || caret >= input.len() || !input.is_ascii() {
+    if input.is_empty() || !input.is_ascii() {
         return false;
     }
 
@@ -4376,9 +4397,21 @@ fn move_caret_right_by_delimited_syllable(session: &mut SessionState) -> bool {
         &session.navigator_delimiters,
         session.navigator_syllable_jump_position,
     );
-    let Some(next_caret) = stops.into_iter().find(|stop| *stop > caret) else {
+    let next_caret = stops
+        .iter()
+        .copied()
+        .find(|stop| *stop > caret)
+        .or_else(|| {
+            loop_at_boundary
+                .then(|| stops.iter().copied().find(|stop| *stop > 0))
+                .flatten()
+        });
+    let Some(next_caret) = next_caret else {
         return false;
     };
+    if next_caret == caret {
+        return false;
+    }
     session.engine.set_caret_pos(next_caret);
     true
 }

@@ -12174,7 +12174,7 @@ schema:\n  schema_id: after\n  name: After\nspeller:\n  delimiter: \"'\"\n",
     fs::write(
         staging.join("before.schema.yaml"),
         "\
-schema:\n  schema_id: before\n  name: Before\nspeller:\n  delimiter: \"'\"\nnavigator:\n  syllable_jump_position: before_delimiter\n",
+schema:\n  schema_id: before\n  name: Before\nspeller:\n  delimiter: \"'\"\nnavigator:\n  syllable_jump_position: before_delimiter\n  bindings:\n    Control+h: left_by_syllable_no_loop\n    Control+l: right_by_syllable_no_loop\n",
     )
     .expect("before schema config should be written");
 
@@ -12207,6 +12207,18 @@ schema:\n  schema_id: before\n  name: Before\nspeller:\n  delimiter: \"'\"\nnavi
         TRUE
     );
     assert_eq!(RimeGetCaretPos(session_id), 3);
+    RimeSetCaretPos(session_id, 0);
+    assert_eq!(
+        RimeProcessKey(session_id, left_keycode, K_CONTROL_MASK),
+        TRUE
+    );
+    assert_eq!(RimeGetCaretPos(session_id), 3);
+    RimeSetCaretPos(session_id, 5);
+    assert_eq!(
+        RimeProcessKey(session_id, right_keycode, K_CONTROL_MASK),
+        TRUE
+    );
+    assert_eq!(RimeGetCaretPos(session_id), 3);
 
     let before_schema = CString::new("before").expect("schema id should be valid");
     // SAFETY: schema id is a valid NUL-terminated string.
@@ -12228,6 +12240,41 @@ schema:\n  schema_id: before\n  name: Before\nspeller:\n  delimiter: \"'\"\nnavi
         TRUE
     );
     assert_eq!(RimeGetCaretPos(session_id), 2);
+    RimeSetCaretPos(session_id, 0);
+    assert_eq!(
+        RimeProcessKey(session_id, left_keycode, K_CONTROL_MASK),
+        TRUE
+    );
+    assert_eq!(RimeGetCaretPos(session_id), 2);
+    RimeSetCaretPos(session_id, 5);
+    assert_eq!(
+        RimeProcessKey(session_id, right_keycode, K_CONTROL_MASK),
+        TRUE
+    );
+    assert_eq!(RimeGetCaretPos(session_id), 2);
+    RimeSetCaretPos(session_id, 0);
+    assert_eq!(
+        RimeProcessKey(session_id, 'h' as c_int, K_CONTROL_MASK),
+        TRUE
+    );
+    assert_eq!(RimeGetCaretPos(session_id), 0);
+    RimeSetCaretPos(session_id, 5);
+    assert_eq!(
+        RimeProcessKey(session_id, 'l' as c_int, K_CONTROL_MASK),
+        TRUE
+    );
+    assert_eq!(RimeGetCaretPos(session_id), 5);
+    RimeSetCaretPos(session_id, 4);
+    assert_eq!(
+        RimeProcessKey(session_id, 'h' as c_int, K_CONTROL_MASK),
+        TRUE
+    );
+    assert_eq!(RimeGetCaretPos(session_id), 2);
+    assert_eq!(
+        RimeProcessKey(session_id, 'l' as c_int, K_CONTROL_MASK),
+        TRUE
+    );
+    assert_eq!(RimeGetCaretPos(session_id), 5);
     assert_eq!(RimeDestroySession(session_id), TRUE);
 
     let reset_traits = empty_traits();
