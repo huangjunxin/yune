@@ -3991,7 +3991,7 @@ impl Engine {
         match ch {
             '\u{8}' | '\u{7f}' => self.backspace(),
             ' ' => self.commit_highlighted(),
-            '0'..='9' if !self.context.candidates.is_empty() => {
+            '0'..='9' if self.has_selectable_candidates() => {
                 self.commit_candidate_at_page_index(select_index_from_digit(ch))
             }
             _ if !ch.is_control() => {
@@ -4013,11 +4013,11 @@ impl Engine {
         if is_exact_control_shift_modifier(key_event.modifiers) {
             match key_event.code {
                 KeyCode::Character(ch)
-                    if ch.is_ascii_digit() && !self.context.candidates.is_empty() =>
+                    if ch.is_ascii_digit() && self.has_selectable_candidates() =>
                 {
                     return self.commit_candidate_at_page_index(select_index_from_digit(ch));
                 }
-                KeyCode::KeypadDigit(ch) if !self.context.candidates.is_empty() => {
+                KeyCode::KeypadDigit(ch) if self.has_selectable_candidates() => {
                     return self.commit_candidate_at_page_index(select_index_from_digit(ch));
                 }
                 _ => {}
@@ -4083,7 +4083,7 @@ impl Engine {
                 KeyCode::Character(ch) if ch == ' ' || is_printable_ascii(ch) => {
                     return self.process_char(ch);
                 }
-                KeyCode::KeypadDigit(ch) if !self.context.candidates.is_empty() => {
+                KeyCode::KeypadDigit(ch) if self.has_selectable_candidates() => {
                     return self.commit_candidate_at_page_index(select_index_from_digit(ch));
                 }
                 _ => {}
@@ -4119,11 +4119,11 @@ impl Engine {
                     return None;
                 }
                 KeyCode::Character(ch)
-                    if ch.is_ascii_digit() && !self.context.candidates.is_empty() =>
+                    if ch.is_ascii_digit() && self.has_selectable_candidates() =>
                 {
                     return self.commit_candidate_at_page_index(select_index_from_digit(ch));
                 }
-                KeyCode::KeypadDigit(ch) if !self.context.candidates.is_empty() => {
+                KeyCode::KeypadDigit(ch) if self.has_selectable_candidates() => {
                     return self.commit_candidate_at_page_index(select_index_from_digit(ch));
                 }
                 _ => {}
@@ -4136,7 +4136,7 @@ impl Engine {
 
         match key_event.code {
             KeyCode::Character(ch) => self.process_char(ch),
-            KeyCode::KeypadDigit(ch) if !self.context.candidates.is_empty() => {
+            KeyCode::KeypadDigit(ch) if self.has_selectable_candidates() => {
                 self.commit_candidate_at_page_index(select_index_from_digit(ch))
             }
             KeyCode::KeypadDigit(_) => None,
@@ -4287,7 +4287,7 @@ impl Engine {
     }
 
     pub fn change_page_by(&mut self, page_size: usize, backward: bool) -> bool {
-        if self.context.candidates.is_empty() {
+        if !self.has_selectable_candidates() {
             return false;
         }
 
@@ -4306,7 +4306,7 @@ impl Engine {
     }
 
     pub fn previous_candidate(&mut self) -> bool {
-        if self.context.candidates.is_empty() {
+        if !self.has_selectable_candidates() {
             return false;
         }
         if self.context.highlighted == 0 {
@@ -4316,7 +4316,7 @@ impl Engine {
     }
 
     pub fn next_candidate(&mut self) -> bool {
-        if self.context.candidates.is_empty() {
+        if !self.has_selectable_candidates() {
             return false;
         }
         let next_index = self.context.highlighted + 1;
@@ -4327,13 +4327,18 @@ impl Engine {
     }
 
     pub fn first_candidate(&mut self) -> bool {
-        if self.context.candidates.is_empty() {
+        if !self.has_selectable_candidates() {
             return false;
         }
         if self.context.highlighted == 0 {
             return false;
         }
         self.highlight_candidate(0)
+    }
+
+    fn has_selectable_candidates(&self) -> bool {
+        !self.context.candidates.is_empty()
+            && !self.context.segment_tags.iter().any(|tag| tag == "raw")
     }
 
     pub fn clear_composition(&mut self) {
@@ -6482,6 +6487,18 @@ mod tests {
         assert_eq!(commits, vec!["吧"]);
         assert_eq!(engine.context().last_commit.as_deref(), Some("吧"));
         assert!(!engine.status().is_composing);
+    }
+
+    #[test]
+    fn raw_segments_do_not_select_candidates_like_librime_selector() {
+        let mut engine = Engine::new();
+
+        assert_eq!(engine.process_char('a'), None);
+        engine.set_segment_tags(["raw"]);
+        assert_eq!(engine.process_char('1'), None);
+
+        assert_eq!(engine.context().composition.input, "a1");
+        assert_eq!(engine.context().last_commit, None);
     }
 
     #[test]

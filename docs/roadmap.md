@@ -97,7 +97,8 @@
   initials/finals gating, speller `use_space`, focused `auto_clear` modes, and
   max-code-length preselection before the next initial, focused `auto_select`
   exact-table unique-candidate commits, focused `auto_select_pattern` gating,
-  focused previous-match auto-commit reuse with `express_editor`, and ASCII mode
+  focused previous-match auto-commit reuse with `express_editor`, focused
+  `selector` raw-segment exclusion for candidate selection, and ASCII mode
   switch-key handling.
 - Expanded schema-loaded segmentor coverage for `ascii_segmentor`, `matcher`,
   namespaced `affix_segmentor`, focused `punct_segmentor`, and focused
@@ -144,7 +145,8 @@
 - Continue broadening schema coverage beyond the current focused subset toward
   the remaining librime gear components and deeper semantics: `speller`
   previous-match segment splitting and non-auto-commit composition behavior,
-  `editor` variants, `navigator`, `selector`, `chord_composer`,
+  `editor` variants, `navigator`, deeper `selector` layout/key-binding
+  behavior beyond raw-segment exclusion, `chord_composer`,
   deeper `shape_processor`/`shape_formatter` interactions, deeper
   `punct_segmentor` behavior such as segment-order interactions and
   `punct_number` translation through larger chains, deeper multi-segment

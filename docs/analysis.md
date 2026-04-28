@@ -100,8 +100,10 @@ The strongest compatibility progress is currently in two areas:
   where the punctuation segment is exclusive and suppresses ordinary table
   translation competition, plus a focused `fallback_segmentor` path where an
   otherwise unclaimed segment is tagged `raw` and does not feed default `abc`
-  table translation. The current shape coverage formats committed ASCII text
-  under `full_shape` and post-processes otherwise unhandled printable ASCII
+  table translation. Focused `selector` coverage now also honors librime's raw
+  segment exclusion so fallback/raw compositions are not committed by numeric
+  candidate selection keys. The current shape coverage formats committed ASCII
+  text under `full_shape` and post-processes otherwise unhandled printable ASCII
   keys into full-width commits.
 - Data compatibility: schema-loaded table dictionaries now feed real session
   candidates, and source dictionary parsing handles many librime/yaml-cpp edge
@@ -130,7 +132,8 @@ not just missing tests:
   reaches many high-value gears, but librime's source tree also registers
   components and deeper behaviors such as `speller` auto-select and
   max-code-length auto-selection handling, editor variants, `navigator`,
-  `selector`,
+  deeper `selector` layout and key-binding behavior beyond the focused raw-tag
+  exclusion,
   `chord_composer`, deeper `shape_processor`/`shape_formatter` interactions,
   deeper `punct_segmentor` behavior such as segment-order interactions and
   `punct_number` through larger chains,
