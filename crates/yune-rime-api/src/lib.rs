@@ -125,6 +125,7 @@ struct SessionState {
     editor_processor: Option<EditorProcessor>,
     editor_bindings: HashMap<KeyEvent, EditorBindingAction>,
     editor_char_handler: Option<EditorCharHandler>,
+    chord_composer: Option<ChordComposerProcessor>,
     ascii_composer_enabled: bool,
     ascii_composer_switch_bindings: HashMap<c_int, AsciiModeSwitchStyle>,
     ascii_composer_pressed_switch_key: Option<c_int>,
@@ -156,6 +157,7 @@ impl SessionState {
             editor_processor: None,
             editor_bindings: HashMap::new(),
             editor_char_handler: None,
+            chord_composer: None,
             ascii_composer_enabled: false,
             ascii_composer_switch_bindings: HashMap::new(),
             ascii_composer_pressed_switch_key: None,
@@ -364,6 +366,26 @@ struct PunctuationProcessor {
     pending_digit_separator: Option<String>,
 }
 
+struct ChordComposerProcessor {
+    alphabet: Vec<char>,
+    output_format: ChordProjection,
+    pressed_keys: HashSet<char>,
+    recognized_chord: HashSet<char>,
+    finish_on_first_release: bool,
+}
+
+#[derive(Clone, Default)]
+struct ChordProjection {
+    formulas: Vec<ChordProjectionFormula>,
+}
+
+#[derive(Clone)]
+enum ChordProjectionFormula {
+    Transliterate(Vec<(char, char)>),
+    Transform { pattern: Regex, replacement: String },
+    Erase(Regex),
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum EditorProcessor {
     Express,
@@ -391,6 +413,102 @@ enum SessionKeyProcessResult {
     Accepted,
     Commit(String),
     RejectedCommit(String),
+}
+
+impl ChordProjection {
+    fn parse(formulas: &[String]) -> Self {
+        let mut parsed = Vec::new();
+        for formula in formulas {
+            let Some(parsed_formula) = ChordProjectionFormula::parse(formula) else {
+                return Self::default();
+            };
+            parsed.push(parsed_formula);
+        }
+        Self { formulas: parsed }
+    }
+
+    fn apply(&self, value: &mut String) {
+        for formula in &self.formulas {
+            formula.apply(value);
+            if value.is_empty() {
+                break;
+            }
+        }
+    }
+}
+
+impl ChordProjectionFormula {
+    fn parse(definition: &str) -> Option<Self> {
+        let separator = definition.chars().find(|ch| !ch.is_ascii_lowercase())?;
+        let args = definition.split(separator).collect::<Vec<_>>();
+        match args.first().copied()? {
+            "xlit" => Self::parse_xlit(&args),
+            "xform" => Self::parse_xform(&args),
+            "erase" => Self::parse_erase(&args),
+            _ => None,
+        }
+    }
+
+    fn parse_xlit(args: &[&str]) -> Option<Self> {
+        if args.len() < 3 {
+            return None;
+        }
+        let left = args[1].chars().collect::<Vec<_>>();
+        let right = args[2].chars().collect::<Vec<_>>();
+        if left.len() != right.len() {
+            return None;
+        }
+        Some(Self::Transliterate(left.into_iter().zip(right).collect()))
+    }
+
+    fn parse_xform(args: &[&str]) -> Option<Self> {
+        if args.len() < 3 || args[1].is_empty() {
+            return None;
+        }
+        Some(Self::Transform {
+            pattern: Regex::new(args[1]).ok()?,
+            replacement: args[2].to_owned(),
+        })
+    }
+
+    fn parse_erase(args: &[&str]) -> Option<Self> {
+        if args.len() < 2 || args[1].is_empty() {
+            return None;
+        }
+        Some(Self::Erase(Regex::new(args[1]).ok()?))
+    }
+
+    fn apply(&self, value: &mut String) {
+        match self {
+            Self::Transliterate(char_map) => {
+                let transformed = value
+                    .chars()
+                    .map(|ch| {
+                        char_map
+                            .iter()
+                            .find_map(|(source, replacement)| {
+                                (*source == ch).then_some(*replacement)
+                            })
+                            .unwrap_or(ch)
+                    })
+                    .collect::<String>();
+                *value = transformed;
+            }
+            Self::Transform {
+                pattern,
+                replacement,
+            } => {
+                *value = pattern
+                    .replace_all(value, replacement.as_str())
+                    .into_owned();
+            }
+            Self::Erase(pattern) => {
+                if pattern.is_match(value) {
+                    value.clear();
+                }
+            }
+        }
+    }
 }
 
 impl Default for SessionState {
@@ -1988,6 +2106,7 @@ pub extern "C" fn RimeProcessKey(session_id: RimeSessionId, keycode: c_int, mask
                     && (keycode == XK_RETURN
                         || (('0' as c_int)..=('9' as c_int)).contains(&keycode)
                         || (XK_KP_0..=XK_KP_9).contains(&keycode)))
+                || (mask == K_RELEASE_MASK && (0x20..=0x7e).contains(&keycode))
                 || (mask == K_RELEASE_MASK && is_ascii_composer_modifier_key(keycode))))
     {
         return FALSE;
@@ -2430,6 +2549,7 @@ fn apply_schema_to_session(session: &mut SessionState, schema_id: &str) {
     session.editor_processor = None;
     session.editor_bindings.clear();
     session.editor_char_handler = None;
+    session.chord_composer = None;
     session.engine.set_option("_auto_commit", false);
     session.ascii_composer_enabled = false;
     session.ascii_composer_switch_bindings.clear();
@@ -2449,6 +2569,7 @@ fn apply_schema_to_session(session: &mut SessionState, schema_id: &str) {
     apply_schema_switch_resets(session, schema_id);
     install_schema_segment_tags(session, schema_id);
     install_schema_editor_processor(session, schema_id);
+    install_schema_chord_composer_processor(session, schema_id);
     install_schema_ascii_composer_processor(session, schema_id);
     install_schema_speller_processor(session, schema_id);
     install_schema_recognizer_processor(session, schema_id);
@@ -3985,6 +4106,10 @@ fn key_event_from_rime_keycode(keycode: c_int, mask: c_int) -> Option<KeyEvent> 
             control: true,
             ..KeyModifiers::default()
         },
+        K_RELEASE_MASK => KeyModifiers {
+            release: true,
+            ..KeyModifiers::default()
+        },
         combined if combined == (K_CONTROL_MASK | K_SHIFT_MASK) => KeyModifiers {
             control: true,
             shift: true,
@@ -5200,6 +5325,40 @@ fn editor_char_handler_from_name(handler: &str) -> Option<Option<EditorCharHandl
     }
 }
 
+fn install_schema_chord_composer_processor(session: &mut SessionState, schema_id: &str) {
+    let schema_config =
+        load_runtime_config_root(&format!("{schema_id}.schema"), ConfigOpenKind::Deployed);
+    if !schema_engine_processors_include(&schema_config, "chord_composer") {
+        return;
+    }
+
+    let alphabet = find_config_value(&schema_config, "chord_composer/alphabet")
+        .and_then(config_scalar_string)
+        .unwrap_or_default()
+        .chars()
+        .collect::<Vec<_>>();
+    if alphabet.is_empty() {
+        return;
+    }
+
+    session.engine.set_option("_chord_typing", true);
+    session.chord_composer = Some(ChordComposerProcessor {
+        alphabet,
+        output_format: ChordProjection::parse(&schema_string_list(
+            &schema_config,
+            "chord_composer/output_format",
+        )),
+        pressed_keys: HashSet::new(),
+        recognized_chord: HashSet::new(),
+        finish_on_first_release: find_config_value(
+            &schema_config,
+            "chord_composer/finish_chord_on_first_key_release",
+        )
+        .and_then(config_scalar_bool)
+        .unwrap_or(false),
+    });
+}
+
 fn install_schema_speller_processor(session: &mut SessionState, schema_id: &str) {
     let schema_config =
         load_runtime_config_root(&format!("{schema_id}.schema"), ConfigOpenKind::Deployed);
@@ -6294,6 +6453,10 @@ fn process_session_key_event(
     session: &mut SessionState,
     key_event: KeyEvent,
 ) -> SessionKeyProcessResult {
+    if let Some(result) = process_chord_composer_processor(session, key_event) {
+        update_session_segment_tags(session);
+        return result;
+    }
     if let Some(commits) = process_key_binder_processor(session_id, session, key_event) {
         update_session_segment_tags(session);
         return if commits.is_empty() {
@@ -6301,6 +6464,9 @@ fn process_session_key_event(
         } else {
             SessionKeyProcessResult::Commit(commits.concat())
         };
+    }
+    if key_event.modifiers.release {
+        return SessionKeyProcessResult::Noop;
     }
     if process_recognizer_processor(session, key_event) {
         update_session_segment_tags(session);
@@ -6355,6 +6521,104 @@ fn process_session_key_event(
         SessionKeyProcessResult::Accepted
     } else {
         SessionKeyProcessResult::Noop
+    }
+}
+
+fn process_chord_composer_processor(
+    session: &mut SessionState,
+    key_event: KeyEvent,
+) -> Option<SessionKeyProcessResult> {
+    if session.engine.get_option("ascii_mode") {
+        return None;
+    }
+    let KeyCode::Character(ch) = key_event.code else {
+        return None;
+    };
+    let composer = session.chord_composer.as_mut()?;
+
+    if key_event.modifiers.control
+        || key_event.modifiers.alt
+        || key_event.modifiers.shift
+        || key_event.modifiers.lock
+        || key_event.modifiers.super_key
+        || key_event.modifiers.hyper
+        || key_event.modifiers.meta
+    {
+        composer.pressed_keys.clear();
+        composer.recognized_chord.clear();
+        return None;
+    }
+
+    if !composer.alphabet.contains(&ch) {
+        composer.pressed_keys.clear();
+        composer.recognized_chord.clear();
+        return None;
+    }
+
+    if key_event.modifiers.release {
+        let was_pressed = composer.pressed_keys.remove(&ch);
+        if !was_pressed {
+            return Some(SessionKeyProcessResult::Noop);
+        }
+        if !composer.recognized_chord.is_empty()
+            && (composer.finish_on_first_release || composer.pressed_keys.is_empty())
+        {
+            let mut code = serialize_chord_composer_code(composer);
+            composer.recognized_chord.clear();
+            return Some(feed_chord_composer_output(session, &mut code));
+        }
+        return Some(SessionKeyProcessResult::Accepted);
+    }
+
+    composer.pressed_keys.insert(ch);
+    composer.recognized_chord.insert(ch);
+    Some(SessionKeyProcessResult::Accepted)
+}
+
+fn serialize_chord_composer_code(composer: &ChordComposerProcessor) -> String {
+    let mut code = composer
+        .alphabet
+        .iter()
+        .filter(|ch| composer.recognized_chord.contains(ch))
+        .collect::<String>();
+    composer.output_format.apply(&mut code);
+    code
+}
+
+fn feed_chord_composer_output(
+    session: &mut SessionState,
+    code: &mut str,
+) -> SessionKeyProcessResult {
+    if code.is_empty() {
+        return SessionKeyProcessResult::Accepted;
+    }
+    let Ok(events) = parse_key_sequence(code) else {
+        return SessionKeyProcessResult::Accepted;
+    };
+
+    let mut commits = Vec::new();
+    for event in events {
+        let before_input = session.engine.context().composition.input.clone();
+        let before_highlighted = session.engine.context().highlighted;
+        if let Some(commit) = session.engine.process_key_event(event) {
+            commits.push(commit);
+            continue;
+        }
+        let context = session.engine.context();
+        if context.composition.input == before_input
+            && context.highlighted == before_highlighted
+            && event.modifiers.is_empty()
+        {
+            if let KeyCode::Character(ch) = event.code {
+                commits.push(session.engine.record_commit(ch.to_string()));
+            }
+        }
+    }
+
+    if commits.is_empty() {
+        SessionKeyProcessResult::Accepted
+    } else {
+        SessionKeyProcessResult::Commit(commits.concat())
     }
 }
 

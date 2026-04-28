@@ -116,10 +116,13 @@ The strongest compatibility progress is currently in two areas:
   modified printable accept keys, plus delimiter-derived syllable stops,
   `navigator/syllable_jump_position: before_delimiter`, and the librime
   distinction between looping syllable actions and configured no-loop syllable
-  actions at delimiter-derived boundaries. `punct_number` translation now keeps
-  digit separators literal, with full-shape formatting, instead of applying the
-  ordinary punctuation mapping after a numeric commit. The current shape
-  coverage formats committed ASCII text under `full_shape` and
+  actions at delimiter-derived boundaries. Focused `chord_composer` coverage now
+  includes schema-loaded printable chording keys, key-release completion,
+  alphabet-order chord serialization, and `output_format` projection before the
+  generated key sequence feeds the ordinary session pipeline. `punct_number`
+  translation now keeps digit separators literal, with full-shape formatting,
+  instead of applying the ordinary punctuation mapping after a numeric commit.
+  The current shape coverage formats committed ASCII text under `full_shape` and
   post-processes otherwise unhandled printable ASCII keys into full-width
   commits.
 - Data compatibility: schema-loaded table dictionaries now feed real session
@@ -153,7 +156,8 @@ not just missing tests:
   delimiter-derived stops,
   deeper `selector` navigator fallback interaction behavior beyond the current
   focused raw-tag, layout, and configured-binding coverage,
-  deeper `editor` segment/selection semantics, `chord_composer`,
+  deeper `editor` segment/selection semantics, deeper `chord_composer` behavior
+  such as prompt segments, raw-sequence commit bindings, and modifier chords,
   deeper `shape_processor`/`shape_formatter` interactions,
   deeper `punct_segmentor` behavior such as segment-order interactions and
   `punct_number` through larger chains beyond the focused digit-separator

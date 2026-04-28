@@ -107,8 +107,9 @@
   Return raw-input commits, focused schema-configured `editor/bindings`
   overrides for commit, deletion, `noop`, and modified printable keys, focused
   schema-configured `editor/char_handler` defaults and overrides for
-  printable-key `direct_commit`, `add_to_input`, and `noop`, plus
-  ASCII mode switch-key handling.
+  printable-key `direct_commit`, `add_to_input`, and `noop`, focused
+  `chord_composer` printable-key chord serialization on release with
+  `output_format` projection, plus ASCII mode switch-key handling.
 - Expanded schema-loaded segmentor coverage for `ascii_segmentor`, `matcher`,
   namespaced `affix_segmentor`, focused `punct_segmentor`, and focused
   `fallback_segmentor` subsets,
@@ -158,7 +159,8 @@
   deeper `editor` variant behavior such as full segment/selection semantics,
   deeper `navigator` candidate/segment span semantics, deeper
   `selector` navigator fallback interactions beyond the current focused coverage,
-  `chord_composer`,
+  deeper `chord_composer` behavior such as prompt segments, raw-sequence commit
+  bindings, and modifier chords,
   deeper `shape_processor`/`shape_formatter` interactions, deeper
   `punct_segmentor` behavior such as segment-order interactions and
   `punct_number` translation through larger chains beyond the focused
