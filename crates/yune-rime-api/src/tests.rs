@@ -37,8 +37,8 @@ use super::{
     RimeSetInput, RimeSetNotificationHandler, RimeSetOption, RimeSetProperty, RimeSetup,
     RimeSetupLogging, RimeSimulateKeySequence, RimeStartMaintenance,
     RimeStartMaintenanceOnWorkspaceChange, RimeStatus, RimeSyncUserData, RimeTraits,
-    RimeUserConfigOpen, RimeUserDictIterator, FALSE, K_ALT_MASK, K_CONTROL_MASK, K_RELEASE_MASK,
-    K_SHIFT_MASK, K_SUPER_MASK, TRUE, XK_RETURN,
+    RimeUserConfigOpen, RimeUserDictIterator, FALSE, K_ALT_MASK, K_CONTROL_MASK, K_LOCK_MASK,
+    K_RELEASE_MASK, K_SHIFT_MASK, K_SUPER_MASK, TRUE, XK_RETURN,
 };
 
 #[derive(Debug, PartialEq, Eq)]
@@ -20923,6 +20923,8 @@ translator:
         schema("super", "use_super"),
     )
     .expect("super schema should be written");
+    fs::write(staging.join("caps.schema.yaml"), schema("caps", "use_caps"))
+        .expect("caps schema should be written");
     fs::write(
         shared.join("chord.dict.yaml"),
         "\
@@ -20968,6 +20970,11 @@ sort: original
     );
     assert_eq!(
         RimeProcessKey(session_id, 'a' as i32, K_CONTROL_MASK | K_RELEASE_MASK),
+        FALSE
+    );
+    assert_eq!(RimeProcessKey(session_id, 'a' as i32, K_LOCK_MASK), FALSE);
+    assert_eq!(
+        RimeProcessKey(session_id, 'a' as i32, K_LOCK_MASK | K_RELEASE_MASK),
         FALSE
     );
     assert_eq!(current_input(), "");
@@ -21020,6 +21027,19 @@ sort: original
     assert_eq!(RimeProcessKey(session_id, 'a' as i32, K_SUPER_MASK), TRUE);
     assert_eq!(
         RimeProcessKey(session_id, 'a' as i32, K_SUPER_MASK | K_RELEASE_MASK),
+        TRUE
+    );
+    assert_eq!(current_input(), "x");
+
+    let caps_schema = CString::new("caps").expect("schema id should be valid");
+    // SAFETY: schema id is a valid NUL-terminated string.
+    assert_eq!(
+        unsafe { RimeSelectSchema(session_id, caps_schema.as_ptr()) },
+        TRUE
+    );
+    assert_eq!(RimeProcessKey(session_id, 'a' as i32, K_LOCK_MASK), TRUE);
+    assert_eq!(
+        RimeProcessKey(session_id, 'a' as i32, K_LOCK_MASK | K_RELEASE_MASK),
         TRUE
     );
     assert_eq!(current_input(), "x");

@@ -122,8 +122,8 @@ The strongest compatibility progress is currently in two areas:
   before the generated key sequence feeds the ordinary session pipeline,
   ABI-visible `prompt_format` prompt segments while keys are held, and
   `commit_raw_input` bindings that commit the original raw key sequence, plus
-  focused ABI-visible modifier chord options for control, shift, alt, and super
-  modified printable keys.
+  focused ABI-visible modifier chord options for control, shift, alt, super,
+  and caps-lock `Lock` modified printable keys.
   `punct_number`
   translation now keeps digit separators literal, with full-shape formatting,
   instead of applying the ordinary punctuation mapping after a numeric commit.
@@ -163,7 +163,7 @@ not just missing tests:
   deeper `selector` navigator fallback interaction behavior beyond the current
   focused raw-tag, layout, and configured-binding coverage,
   deeper `editor` segment/selection semantics, deeper `chord_composer` behavior
-  such as raw-sequence lifecycle edge cases and caps-modified chords,
+  such as raw-sequence lifecycle edge cases,
   deeper `shape_processor`/`shape_formatter` interactions,
   deeper `punct_segmentor` behavior such as segment-order interactions and
   `punct_number` through larger chains beyond the focused digit-separator

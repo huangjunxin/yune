@@ -65,6 +65,7 @@ const XK_ALT_R: c_int = 0xffea;
 const XK_SUPER_L: c_int = 0xffeb;
 const XK_SUPER_R: c_int = 0xffec;
 const K_SHIFT_MASK: c_int = 1 << 0;
+const K_LOCK_MASK: c_int = 1 << 1;
 const K_CONTROL_MASK: c_int = 1 << 2;
 const K_ALT_MASK: c_int = 1 << 3;
 const K_SUPER_MASK: c_int = 1 << 26;
@@ -2115,6 +2116,7 @@ pub extern "C" fn RimeProcessKey(session_id: RimeSessionId, keycode: c_int, mask
                 || (mask == K_SHIFT_MASK
                     && matches!(keycode, XK_HOME | XK_END | XK_KP_HOME | XK_KP_END))
                 || (mask == K_SHIFT_MASK && (0x20..=0x7e).contains(&keycode))
+                || (mask == K_LOCK_MASK && (0x20..=0x7e).contains(&keycode))
                 || (mask == K_ALT_MASK && (0x20..=0x7e).contains(&keycode))
                 || (mask == K_SUPER_MASK && (0x20..=0x7e).contains(&keycode))
                 || (mask == (K_CONTROL_MASK | K_SHIFT_MASK)
@@ -2127,6 +2129,7 @@ pub extern "C" fn RimeProcessKey(session_id: RimeSessionId, keycode: c_int, mask
                         & !(K_RELEASE_MASK
                             | K_CONTROL_MASK
                             | K_SHIFT_MASK
+                            | K_LOCK_MASK
                             | K_ALT_MASK
                             | K_SUPER_MASK))
                         == 0
@@ -2178,7 +2181,7 @@ pub extern "C" fn RimeProcessKey(session_id: RimeSessionId, keycode: c_int, mask
     let Some(key_event) = key_event_from_rime_keycode(keycode, mask) else {
         return FALSE;
     };
-    if (mask == K_CONTROL_MASK || mask == K_ALT_MASK || mask == K_SUPER_MASK)
+    if (mask == K_CONTROL_MASK || mask == K_LOCK_MASK || mask == K_ALT_MASK || mask == K_SUPER_MASK)
         && (0x20..=0x7e).contains(&keycode)
         && !(('0' as c_int)..=('9' as c_int)).contains(&keycode)
         && !session_has_modified_printable_binding(session, key_event)
@@ -4155,13 +4158,15 @@ fn key_event_from_rime_keycode(keycode: c_int, mask: c_int) -> Option<KeyEvent> 
 }
 
 fn key_modifiers_from_rime_mask(mask: c_int) -> Option<KeyModifiers> {
-    let supported_mask = K_SHIFT_MASK | K_CONTROL_MASK | K_ALT_MASK | K_SUPER_MASK | K_RELEASE_MASK;
+    let supported_mask =
+        K_SHIFT_MASK | K_LOCK_MASK | K_CONTROL_MASK | K_ALT_MASK | K_SUPER_MASK | K_RELEASE_MASK;
     if mask & !supported_mask != 0 {
         return None;
     }
 
     Some(KeyModifiers {
         shift: mask & K_SHIFT_MASK != 0,
+        lock: mask & K_LOCK_MASK != 0,
         control: mask & K_CONTROL_MASK != 0,
         alt: mask & K_ALT_MASK != 0,
         super_key: mask & K_SUPER_MASK != 0,
