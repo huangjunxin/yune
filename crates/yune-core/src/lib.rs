@@ -2828,9 +2828,6 @@ impl Translator for SwitchTranslator {
                     states,
                     ..
                 } => {
-                    if states.iter().any(String::is_empty) {
-                        continue;
-                    }
                     let current_state = runtime_options.get(option_name).copied().unwrap_or(false);
                     let current_index = usize::from(current_state);
                     candidates.push(Candidate {

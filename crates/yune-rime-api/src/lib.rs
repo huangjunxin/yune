@@ -4971,7 +4971,7 @@ fn schema_switch_translator_switches(schema_config: &Value) -> Vec<SwitchTransla
             };
             if let Some(option_name) = switch_scalar_field(switch_map, "name") {
                 let state0 = switch_label_value(switch_map, "states", 0)?;
-                let state1 = switch_label_value(switch_map, "states", 1)?;
+                let state1 = switch_label_value(switch_map, "states", 1).unwrap_or_default();
                 return Some(
                     SwitchTranslatorSwitch::toggle(option_name, state0, state1)
                         .with_abbrev(switch_abbrev_values(switch_map).into_iter()),
@@ -5027,9 +5027,7 @@ fn schema_switch_selection_commands(schema_config: &Value) -> Vec<SwitchSelectio
             continue;
         };
         if let Some(option_name) = switch_scalar_field(switch_map, "name") {
-            if switch_label_value(switch_map, "states", 0).is_some()
-                && switch_label_value(switch_map, "states", 1).is_some()
-            {
+            if switch_label_value(switch_map, "states", 0).is_some() {
                 commands.push(SwitchSelectionCommand::Toggle(option_name));
             }
             continue;
@@ -5091,7 +5089,10 @@ fn schema_switch_label_values(switch_map: &Mapping, key: &str) -> Vec<String> {
     let Some(Value::Sequence(values)) = switch_map.get(Value::String(key.to_owned())) else {
         return Vec::new();
     };
-    values.iter().filter_map(config_scalar_string).collect()
+    values
+        .iter()
+        .map(|value| config_scalar_string(value).unwrap_or_default())
+        .collect()
 }
 
 fn switch_label_value(switch_map: &Mapping, key: &str, state_index: usize) -> Option<String> {
