@@ -13236,6 +13236,89 @@ ascii_composer:
 }
 
 #[test]
+fn schema_ascii_composer_inline_ascii_mode_ends_with_composition() {
+    let _guard = test_guard();
+    RimeCleanupAllSessions();
+    let root = unique_temp_dir("schema-ascii-composer-inline-ascii");
+    let shared = root.join("shared");
+    let user = root.join("user");
+    let staging = user.join("build");
+    fs::create_dir_all(&shared).expect("shared dir should be created");
+    fs::create_dir_all(&staging).expect("staging dir should be created");
+    fs::write(
+        staging.join("luna.schema.yaml"),
+        "\
+schema:
+  schema_id: luna
+  name: Luna
+engine:
+  processors:
+    - ascii_composer
+  segmentors:
+    - abc_segmentor
+ascii_composer:
+  switch_key:
+    Shift_L: inline_ascii
+",
+    )
+    .expect("schema config should be written");
+    let shared_c = CString::new(shared.to_string_lossy().as_ref()).expect("path is valid");
+    let user_c = CString::new(user.to_string_lossy().as_ref()).expect("path is valid");
+    let mut traits = empty_traits();
+    traits.shared_data_dir = shared_c.as_ptr();
+    traits.user_data_dir = user_c.as_ptr();
+    // SAFETY: traits points to valid storage and strings live for the call.
+    unsafe { RimeSetup(&traits) };
+
+    let session_id = RimeCreateSession();
+    let schema_id = CString::new("luna").expect("schema id should be valid");
+    // SAFETY: schema id is a valid NUL-terminated string.
+    assert_eq!(
+        unsafe { RimeSelectSchema(session_id, schema_id.as_ptr()) },
+        TRUE
+    );
+    assert_eq!(RimeProcessKey(session_id, 'n' as c_int, 0), TRUE);
+    assert_eq!(RimeProcessKey(session_id, 'i' as c_int, 0), TRUE);
+
+    let shift_l = CString::new("Shift_L").expect("key name should be valid");
+    // SAFETY: key name is a valid NUL-terminated C string.
+    let shift_l_keycode = unsafe { RimeGetKeycodeByName(shift_l.as_ptr()) };
+    assert_eq!(RimeProcessKey(session_id, shift_l_keycode, 0), FALSE);
+    assert_eq!(
+        RimeProcessKey(session_id, shift_l_keycode, K_RELEASE_MASK),
+        FALSE
+    );
+
+    let ascii_mode = CString::new("ascii_mode").expect("option name should be valid");
+    // SAFETY: option name is a valid NUL-terminated C string.
+    assert_eq!(
+        unsafe { RimeGetOption(session_id, ascii_mode.as_ptr()) },
+        TRUE
+    );
+    assert_eq!(RimeProcessKey(session_id, 'x' as c_int, 0), TRUE);
+    let mut context = empty_context();
+    // SAFETY: context points to writable storage initialized with positive
+    // `data_size`.
+    assert_eq!(unsafe { RimeGetContext(session_id, &mut context) }, TRUE);
+    assert_eq!(context.composition.length, 3);
+    // SAFETY: nested pointers were allocated by `RimeGetContext` above.
+    assert_eq!(unsafe { RimeFreeContext(&mut context) }, TRUE);
+
+    RimeClearComposition(session_id);
+    // SAFETY: option name is a valid NUL-terminated C string.
+    assert_eq!(
+        unsafe { RimeGetOption(session_id, ascii_mode.as_ptr()) },
+        FALSE
+    );
+
+    assert_eq!(RimeDestroySession(session_id), TRUE);
+    let reset_traits = empty_traits();
+    // SAFETY: reset traits points to valid storage.
+    unsafe { RimeSetup(&reset_traits) };
+    fs::remove_dir_all(root).expect("temp dirs should be removed");
+}
+
+#[test]
 fn schema_ascii_composer_switch_key_falls_back_to_default_commit_text() {
     let _guard = test_guard();
     RimeCleanupAllSessions();

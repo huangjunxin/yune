@@ -121,6 +121,7 @@ struct SessionState {
     ascii_composer_enabled: bool,
     ascii_composer_switch_bindings: HashMap<c_int, AsciiModeSwitchStyle>,
     ascii_composer_pressed_switch_key: Option<c_int>,
+    ascii_composer_inline_ascii: bool,
     ascii_segmentor_enabled: bool,
     punctuation_processor: Option<PunctuationProcessor>,
     recognizer_processor: Option<RecognizerProcessor>,
@@ -141,6 +142,7 @@ impl SessionState {
             ascii_composer_enabled: false,
             ascii_composer_switch_bindings: HashMap::new(),
             ascii_composer_pressed_switch_key: None,
+            ascii_composer_inline_ascii: false,
             ascii_segmentor_enabled: false,
             punctuation_processor: None,
             recognizer_processor: None,
@@ -2246,6 +2248,7 @@ fn apply_schema_to_session(session: &mut SessionState, schema_id: &str) {
     session.ascii_composer_enabled = false;
     session.ascii_composer_switch_bindings.clear();
     session.ascii_composer_pressed_switch_key = None;
+    session.ascii_composer_inline_ascii = false;
     session.ascii_segmentor_enabled = false;
     session.punctuation_processor = None;
     session.recognizer_processor = None;
@@ -4381,7 +4384,11 @@ fn load_schema_recognizer_patterns(schema_config: &Value, name_space: &str) -> V
 }
 
 fn update_session_segment_tags(session: &mut SessionState) {
-    let input = session.engine.context().composition.input.as_str();
+    let input = session.engine.context().composition.input.clone();
+    if session.ascii_composer_inline_ascii && input.is_empty() {
+        session.ascii_composer_inline_ascii = false;
+        session.engine.set_option("ascii_mode", false);
+    }
     if session.ascii_segmentor_enabled && session.engine.status().is_ascii_mode && !input.is_empty()
     {
         let raw_tags = vec!["raw".to_owned()];
@@ -4392,7 +4399,7 @@ fn update_session_segment_tags(session: &mut SessionState) {
     }
     let mut tags = session.base_segment_tags.clone();
     for affix_segmentor in &session.affix_segmentors {
-        if affix_segmentor.matches(input) {
+        if affix_segmentor.matches(&input) {
             let mut affix_tags = vec![affix_segmentor.tag.clone()];
             for extra_tag in &affix_segmentor.extra_tags {
                 if !affix_tags.iter().any(|existing| existing == extra_tag) {
@@ -4406,7 +4413,7 @@ fn update_session_segment_tags(session: &mut SessionState) {
         }
     }
     if let Some(matcher) = &session.matcher_segmentor {
-        if let Some(tag) = matcher.match_tag(input) {
+        if let Some(tag) = matcher.match_tag(&input) {
             if !tags.iter().any(|existing| existing == tag) {
                 tags.push(tag.to_owned());
             }
@@ -5058,7 +5065,8 @@ fn switch_ascii_mode(
     style: AsciiModeSwitchStyle,
 ) -> Option<String> {
     let mut commit = None;
-    if !session.engine.context().composition.input.is_empty() {
+    let was_composing = !session.engine.context().composition.input.is_empty();
+    if was_composing {
         match style {
             AsciiModeSwitchStyle::InlineAscii => {}
             AsciiModeSwitchStyle::CommitText => {
@@ -5074,6 +5082,8 @@ fn switch_ascii_mode(
             }
         }
     }
+    session.ascii_composer_inline_ascii =
+        was_composing && ascii_mode && style == AsciiModeSwitchStyle::InlineAscii;
     session.engine.set_option("ascii_mode", ascii_mode);
     commit
 }
