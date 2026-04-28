@@ -99,7 +99,9 @@ The strongest compatibility progress is currently in two areas:
   includes schema-loaded `express_editor` Return committing raw input instead of
   the highlighted candidate, plus schema-configured `editor/bindings` overrides
   for focused commit, deletion, and `noop` behavior through modified printable
-  ABI keys. Segmentor coverage now also includes a
+  ABI keys, plus focused `editor/char_handler` defaults and overrides for
+  printable-key `direct_commit`, `add_to_input`, and `noop`. Segmentor coverage
+  now also includes a
   focused `punct_segmentor` path for shape-mapped single ASCII punctuation keys,
   where the punctuation segment is exclusive and suppresses ordinary table
   translation competition, plus a focused `fallback_segmentor` path where an
@@ -151,7 +153,7 @@ not just missing tests:
   delimiter-derived stops,
   deeper `selector` navigator fallback interaction behavior beyond the current
   focused raw-tag, layout, and configured-binding coverage,
-  deeper `editor` segment/selection semantics and `char_handler`, `chord_composer`,
+  deeper `editor` segment/selection semantics, `chord_composer`,
   deeper `shape_processor`/`shape_formatter` interactions,
   deeper `punct_segmentor` behavior such as segment-order interactions and
   `punct_number` through larger chains beyond the focused digit-separator

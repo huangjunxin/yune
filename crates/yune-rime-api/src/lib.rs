@@ -124,6 +124,7 @@ struct SessionState {
     speller: Option<SpellerProcessor>,
     editor_processor: Option<EditorProcessor>,
     editor_bindings: HashMap<KeyEvent, EditorBindingAction>,
+    editor_char_handler: Option<EditorCharHandler>,
     ascii_composer_enabled: bool,
     ascii_composer_switch_bindings: HashMap<c_int, AsciiModeSwitchStyle>,
     ascii_composer_pressed_switch_key: Option<c_int>,
@@ -154,6 +155,7 @@ impl SessionState {
             speller: None,
             editor_processor: None,
             editor_bindings: HashMap::new(),
+            editor_char_handler: None,
             ascii_composer_enabled: false,
             ascii_composer_switch_bindings: HashMap::new(),
             ascii_composer_pressed_switch_key: None,
@@ -368,6 +370,12 @@ enum EditorProcessor {
     Fluid,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum EditorCharHandler {
+    DirectCommit,
+    AddToInput,
+}
+
 enum PunctuationProcessResult {
     Accepted,
     Commit(String),
@@ -382,6 +390,7 @@ enum SessionKeyProcessResult {
     Noop,
     Accepted,
     Commit(String),
+    RejectedCommit(String),
 }
 
 impl Default for SessionState {
@@ -2099,6 +2108,10 @@ pub extern "C" fn RimeProcessKey(session_id: RimeSessionId, keycode: c_int, mask
                     append_unread_commit(session, commit);
                     return TRUE;
                 }
+                SessionKeyProcessResult::RejectedCommit(commit) => {
+                    append_unread_commit(session, commit);
+                    return FALSE;
+                }
             },
         }
     }
@@ -2416,6 +2429,7 @@ fn apply_schema_to_session(session: &mut SessionState, schema_id: &str) {
     session.speller = None;
     session.editor_processor = None;
     session.editor_bindings.clear();
+    session.editor_char_handler = None;
     session.engine.set_option("_auto_commit", false);
     session.ascii_composer_enabled = false;
     session.ascii_composer_switch_bindings.clear();
@@ -3370,10 +3384,12 @@ pub unsafe extern "C" fn RimeSimulateKeySequence(
     };
 
     for key_event in key_events {
-        if let SessionKeyProcessResult::Commit(commit) =
-            process_session_key_event(session_id, session, key_event)
-        {
-            append_unread_commit(session, commit);
+        match process_session_key_event(session_id, session, key_event) {
+            SessionKeyProcessResult::Commit(commit)
+            | SessionKeyProcessResult::RejectedCommit(commit) => {
+                append_unread_commit(session, commit)
+            }
+            SessionKeyProcessResult::Noop | SessionKeyProcessResult::Accepted => {}
         }
     }
     TRUE
@@ -5112,15 +5128,23 @@ fn install_schema_editor_processor(session: &mut SessionState, schema_id: &str) 
         load_runtime_config_root(&format!("{schema_id}.schema"), ConfigOpenKind::Deployed);
     if schema_engine_processors_include(&schema_config, "express_editor") {
         session.editor_processor = Some(EditorProcessor::Express);
+        session.editor_char_handler = Some(EditorCharHandler::DirectCommit);
         session.engine.set_option("_auto_commit", true);
     } else if schema_engine_processors_include(&schema_config, "fluid_editor")
         || schema_engine_processors_include(&schema_config, "fluency_editor")
     {
         session.editor_processor = Some(EditorProcessor::Fluid);
+        session.editor_char_handler = Some(EditorCharHandler::AddToInput);
         session.engine.set_option("_auto_commit", false);
     }
     if session.editor_processor.is_some() {
         load_editor_binding_section(&schema_config, &mut session.editor_bindings);
+        if let Some(handler) = find_config_value(&schema_config, "editor/char_handler")
+            .and_then(config_scalar_string)
+            .and_then(|handler| editor_char_handler_from_name(&handler))
+        {
+            session.editor_char_handler = handler;
+        }
     }
 }
 
@@ -5165,6 +5189,15 @@ fn editor_binding_action_from_name(action: &str) -> Option<EditorBindingAction> 
         _ => return None,
     };
     Some(action)
+}
+
+fn editor_char_handler_from_name(handler: &str) -> Option<Option<EditorCharHandler>> {
+    match handler {
+        "direct_commit" => Some(Some(EditorCharHandler::DirectCommit)),
+        "add_to_input" => Some(Some(EditorCharHandler::AddToInput)),
+        "noop" => Some(None),
+        _ => None,
+    }
 }
 
 fn install_schema_speller_processor(session: &mut SessionState, schema_id: &str) {
@@ -6329,18 +6362,26 @@ fn process_editor_processor(
     session: &mut SessionState,
     key_event: KeyEvent,
 ) -> Option<SessionKeyProcessResult> {
-    if session.engine.context().composition.input.is_empty() || key_event.modifiers.release {
+    if session.editor_processor.is_none() || key_event.modifiers.release {
         return None;
     }
 
-    if let Some(action) = session.editor_bindings.get(&key_event).copied() {
-        return match action {
-            EditorBindingAction::Noop => Some(SessionKeyProcessResult::Accepted),
-            EditorBindingAction::Action(action) => Some(apply_editor_action(session, action)),
-        };
+    let is_composing = !session.engine.context().composition.input.is_empty();
+    if is_composing {
+        if let Some(action) = session.editor_bindings.get(&key_event).copied() {
+            return match action {
+                EditorBindingAction::Noop => Some(SessionKeyProcessResult::Accepted),
+                EditorBindingAction::Action(action) => Some(apply_editor_action(session, action)),
+            };
+        }
     }
 
-    if session.editor_processor == Some(EditorProcessor::Express)
+    if let Some(result) = process_editor_char_handler(session, key_event) {
+        return Some(result);
+    }
+
+    if is_composing
+        && session.editor_processor == Some(EditorProcessor::Express)
         && key_event.code == KeyCode::Return
     {
         if key_event.modifiers.is_empty() {
@@ -6367,6 +6408,43 @@ fn process_editor_processor(
     }
 
     None
+}
+
+fn process_editor_char_handler(
+    session: &mut SessionState,
+    key_event: KeyEvent,
+) -> Option<SessionKeyProcessResult> {
+    if key_event.modifiers.control
+        || key_event.modifiers.alt
+        || key_event.modifiers.super_key
+        || key_event.modifiers.hyper
+        || key_event.modifiers.meta
+    {
+        return None;
+    }
+    let KeyCode::Character(ch) = key_event.code else {
+        return None;
+    };
+    if !('\u{21}'..'\u{7f}').contains(&ch) {
+        return None;
+    }
+
+    match session.editor_char_handler {
+        Some(EditorCharHandler::AddToInput) => {
+            let mut input = session.engine.context().composition.input.clone();
+            input.push(ch);
+            session.engine.set_input(input);
+            Some(SessionKeyProcessResult::Accepted)
+        }
+        Some(EditorCharHandler::DirectCommit) => {
+            let commit = session.engine.commit_composition();
+            Some(commit.map_or(
+                SessionKeyProcessResult::Noop,
+                SessionKeyProcessResult::RejectedCommit,
+            ))
+        }
+        None => Some(SessionKeyProcessResult::Noop),
+    }
 }
 
 fn apply_editor_action(
@@ -6981,10 +7059,10 @@ fn redirect_key_binding_events(
     }
     let mut commits = Vec::new();
     for event in events {
-        if let SessionKeyProcessResult::Commit(commit) =
-            process_session_key_event(session_id, session, event)
-        {
-            commits.push(commit);
+        match process_session_key_event(session_id, session, event) {
+            SessionKeyProcessResult::Commit(commit)
+            | SessionKeyProcessResult::RejectedCommit(commit) => commits.push(commit),
+            SessionKeyProcessResult::Noop | SessionKeyProcessResult::Accepted => {}
         }
     }
     if let Some(processor) = session.key_binder.as_mut() {

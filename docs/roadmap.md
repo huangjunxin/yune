@@ -105,7 +105,9 @@
   `navigator/syllable_jump_position` delimiter stops, and delimiter-derived
   navigator syllable loop/no-loop boundary behavior, focused `express_editor`
   Return raw-input commits, focused schema-configured `editor/bindings`
-  overrides for commit, deletion, `noop`, and modified printable keys, plus
+  overrides for commit, deletion, `noop`, and modified printable keys, focused
+  schema-configured `editor/char_handler` defaults and overrides for
+  printable-key `direct_commit`, `add_to_input`, and `noop`, plus
   ASCII mode switch-key handling.
 - Expanded schema-loaded segmentor coverage for `ascii_segmentor`, `matcher`,
   namespaced `affix_segmentor`, focused `punct_segmentor`, and focused
@@ -153,8 +155,8 @@
 - Continue broadening schema coverage beyond the current focused subset toward
   the remaining librime gear components and deeper semantics: `speller`
   previous-match segment splitting and non-auto-commit composition behavior,
-  deeper `editor` variant behavior such as full segment/selection semantics and
-  `char_handler`, deeper `navigator` candidate/segment span semantics, deeper
+  deeper `editor` variant behavior such as full segment/selection semantics,
+  deeper `navigator` candidate/segment span semantics, deeper
   `selector` navigator fallback interactions beyond the current focused coverage,
   `chord_composer`,
   deeper `shape_processor`/`shape_formatter` interactions, deeper
