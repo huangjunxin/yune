@@ -110,7 +110,9 @@ The strongest compatibility progress is currently in two areas:
   modified printable accept keys, plus delimiter-derived syllable stops,
   `navigator/syllable_jump_position: before_delimiter`, and the librime
   distinction between looping syllable actions and configured no-loop syllable
-  actions at delimiter-derived boundaries. The current shape
+  actions at delimiter-derived boundaries. `punct_number` translation now keeps
+  digit separators literal, with full-shape formatting, instead of applying the
+  ordinary punctuation mapping after a numeric commit. The current shape
   coverage formats committed ASCII text under `full_shape` and
   post-processes otherwise unhandled printable ASCII keys into full-width
   commits.
@@ -147,7 +149,8 @@ not just missing tests:
   focused raw-tag, layout, and configured-binding coverage,
   `chord_composer`, deeper `shape_processor`/`shape_formatter` interactions,
   deeper `punct_segmentor` behavior such as segment-order interactions and
-  `punct_number` through larger chains,
+  `punct_number` through larger chains beyond the focused digit-separator
+  translator path,
   deeper multi-segment `fallback_segmentor`, and formatter behavior that are not
   yet equivalently modeled. `speller` still needs deeper previous-match segment
   splitting and non-auto-commit composition behavior.

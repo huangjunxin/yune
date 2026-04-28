@@ -3757,6 +3757,20 @@ impl Translator for PunctuationTranslator {
         _options: &HashMap<String, bool>,
         context: &Context,
     ) -> Vec<Candidate> {
+        if context
+            .segment_tags
+            .iter()
+            .any(|segment_tag| segment_tag == "punct_number")
+            && !input.is_empty()
+        {
+            let text = shape_formatted_ascii_text(input, status.is_full_shape);
+            return vec![Candidate {
+                comment: punctuation_candidate_comment(&text).to_owned(),
+                text,
+                source: CandidateSource::Punctuation,
+                quality: 1.0,
+            }];
+        }
         if self.required_tags.as_ref().is_some_and(|required_tags| {
             !required_tags.iter().any(|tag| {
                 context
@@ -3830,6 +3844,20 @@ fn punctuation_candidate_comment(punct: &str) -> &'static str {
     } else {
         ""
     }
+}
+
+fn shape_formatted_ascii_text(text: &str, full_shape: bool) -> String {
+    if !full_shape {
+        return text.to_owned();
+    }
+    text.chars()
+        .map(|ch| match ch {
+            ' ' => '\u{3000}',
+            '!'..='~' => char::from_u32(ch as u32 + 0xfee0)
+                .expect("printable ASCII has a full-shape compatibility form"),
+            _ => ch,
+        })
+        .collect()
 }
 
 fn is_librime_half_shape_punct(ch: char) -> bool {
@@ -8869,6 +8897,24 @@ sort: by_weight
             .process_key_sequence("/copyright")
             .expect("keys should parse");
         assert_eq!(engine.context().candidates[0].comment, "");
+    }
+
+    #[test]
+    fn punctuation_translator_keeps_digit_separator_literal_for_punct_number() {
+        let mut engine = Engine::new();
+        engine.add_translator(
+            PunctuationTranslator::with_shape_entries([(".", "。")], [(".", "。")])
+                .with_required_tags(["punct", "punct_number"]),
+        );
+        engine.set_segment_tags(["punct_number"]);
+
+        engine.process_char('.');
+        assert_eq!(engine.context().candidates[0].text, ".");
+        assert_eq!(engine.context().candidates[0].comment, "〔半角〕");
+
+        engine.set_option("full_shape", true);
+        assert_eq!(engine.context().candidates[0].text, "．");
+        assert_eq!(engine.context().candidates[0].comment, "〔全角〕");
     }
 
     #[test]

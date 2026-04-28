@@ -110,8 +110,9 @@
   `fallback_segmentor` subsets,
   including recognizer-pattern tags, namespace fallback behavior, sorted pattern
   precedence, raw ASCII tags, exclusive affix-tag behavior for prefixed reverse
-  lookup, exclusive single-key shape punctuation tags, and raw fallback tagging
-  for otherwise unclaimed input.
+  lookup, exclusive single-key shape punctuation tags, focused `punct_number`
+  digit-separator translation after numeric commits, and raw fallback tagging for
+  otherwise unclaimed input.
 - Expanded schema-loaded translator coverage for `table_translator`,
   `script_translator`, `r10n_translator`, `reverse_lookup_translator`,
   `history_translator`, `switch_translator`, and `schema_list_translator`,
@@ -155,9 +156,9 @@
   `chord_composer`,
   deeper `shape_processor`/`shape_formatter` interactions, deeper
   `punct_segmentor` behavior such as segment-order interactions and
-  `punct_number` translation through larger chains, deeper multi-segment
-  `fallback_segmentor` behavior, full spelling algebra, full OpenCC conversion
-  data, and larger real-world
+  `punct_number` translation through larger chains beyond the focused
+  digit-separator path, deeper multi-segment `fallback_segmentor` behavior, full
+  spelling algebra, full OpenCC conversion data, and larger real-world
   processor/segmentor/translator/filter chains from distribution schemas.
 - Expand dictionary compatibility beyond source `.dict.yaml` parsing toward
   librime's compiled `.table.bin`, `.prism.bin`, `.reverse.bin`, pack
