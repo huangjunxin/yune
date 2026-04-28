@@ -1856,7 +1856,9 @@ impl TableDictionary {
     ) -> Result<Self, TableDictionaryParseError> {
         let (metadata, mut entries) = parse_rime_dict_yaml_parts(input)?;
         append_rime_import_table_entries(&metadata, &mut entries, &mut import_loader)?;
-        apply_rime_preset_vocabulary_weights(&metadata, &mut entries, &mut vocabulary_loader);
+        let vocabulary =
+            apply_rime_preset_vocabulary_weights(&metadata, &mut entries, &mut vocabulary_loader);
+        apply_rime_table_encoder_phrase_entries(&metadata, &mut entries, vocabulary.as_deref());
         let mut dictionary = finalize_rime_table_entries(&metadata, entries);
 
         for pack in packs {
@@ -1877,10 +1879,15 @@ impl TableDictionary {
             {
                 continue;
             }
-            apply_rime_preset_vocabulary_weights(
+            let vocabulary = apply_rime_preset_vocabulary_weights(
                 &pack_metadata,
                 &mut pack_entries,
                 &mut vocabulary_loader,
+            );
+            apply_rime_table_encoder_phrase_entries(
+                &pack_metadata,
+                &mut pack_entries,
+                vocabulary.as_deref(),
             );
             let mut pack_dictionary = finalize_rime_table_entries(&pack_metadata, pack_entries);
             dictionary.entries.append(&mut pack_dictionary.entries);
@@ -2046,17 +2053,17 @@ fn apply_rime_preset_vocabulary_weights(
     metadata: &RimeTableMetadata,
     entries: &mut [RimeParsedTableEntry],
     vocabulary_loader: &mut impl FnMut(&str) -> Option<String>,
-) {
+) -> Option<String> {
     if !metadata.uses_preset_vocabulary() {
-        return;
+        return None;
     }
     let Some(vocabulary) = vocabulary_loader(metadata.vocabulary_name()) else {
-        return;
+        return None;
     };
-    let vocabulary = parse_rime_preset_vocabulary(&vocabulary);
+    let vocabulary_weights = parse_rime_preset_vocabulary(&vocabulary);
     for entry in entries {
         let weight = entry.raw_weight.trim();
-        let Some(vocabulary_weight) = vocabulary.get(&entry.entry.text).copied() else {
+        let Some(vocabulary_weight) = vocabulary_weights.get(&entry.entry.text).copied() else {
             continue;
         };
         if weight.is_empty() {
@@ -2064,6 +2071,155 @@ fn apply_rime_preset_vocabulary_weights(
         } else if weight.ends_with('%') {
             entry.entry.weight = vocabulary_weight * parse_rime_entry_weight_percentage(weight);
         }
+    }
+    Some(vocabulary)
+}
+
+fn apply_rime_table_encoder_phrase_entries(
+    metadata: &RimeTableMetadata,
+    entries: &mut Vec<RimeParsedTableEntry>,
+    vocabulary: Option<&str>,
+) {
+    if !metadata.encoder.loaded() {
+        return;
+    }
+
+    let source_collection = entries
+        .iter()
+        .map(|entry| entry.entry.text.clone())
+        .collect::<HashSet<_>>();
+    let phrase_encoder = RimeTablePhraseEncoder::new(metadata, entries);
+    let mut encoded_entries = entries
+        .iter()
+        .filter(|entry| entry.entry.code.is_empty())
+        .flat_map(|entry| {
+            phrase_encoder.encode_phrase_entries(&entry.entry.text, entry.entry.weight)
+        })
+        .collect::<Vec<_>>();
+
+    if let Some(vocabulary) = vocabulary {
+        for (phrase, weight) in parse_rime_preset_vocabulary_entries(vocabulary) {
+            if source_collection.contains(&phrase)
+                || !metadata.is_qualified_preset_phrase(&phrase, weight)
+            {
+                continue;
+            }
+            encoded_entries.extend(phrase_encoder.encode_phrase_entries(&phrase, weight));
+        }
+    }
+
+    entries.retain(|entry| !entry.entry.code.is_empty());
+    entries.extend(encoded_entries);
+}
+
+struct RimeTablePhraseEncoder<'a> {
+    metadata: &'a RimeTableMetadata,
+    stems: HashMap<String, Vec<String>>,
+    words: HashMap<String, Vec<(String, f32)>>,
+    total_weight: HashMap<String, f32>,
+}
+
+impl<'a> RimeTablePhraseEncoder<'a> {
+    const DFS_LIMIT: usize = 32;
+
+    fn new(metadata: &'a RimeTableMetadata, entries: &[RimeParsedTableEntry]) -> Self {
+        let stems = collect_rime_table_stems(entries);
+        let mut words: HashMap<String, Vec<(String, f32)>> = HashMap::new();
+        let mut total_weight: HashMap<String, f32> = HashMap::new();
+        let mut seen_words = HashSet::new();
+        for entry in entries {
+            if entry.entry.code.is_empty() || entry.single_syllable_duplicate_key.is_none() {
+                continue;
+            }
+            let key = (entry.entry.text.clone(), entry.entry.code.clone());
+            if !seen_words.insert(key) {
+                continue;
+            }
+            words
+                .entry(entry.entry.text.clone())
+                .or_default()
+                .push((entry.entry.code.clone(), entry.entry.weight));
+            *total_weight.entry(entry.entry.text.clone()).or_default() += entry.entry.weight;
+        }
+
+        Self {
+            metadata,
+            stems,
+            words,
+            total_weight,
+        }
+    }
+
+    fn encode_phrase_entries(&self, phrase: &str, weight: f32) -> Vec<RimeParsedTableEntry> {
+        self.encode_phrase(phrase)
+            .into_iter()
+            .map(|code| RimeParsedTableEntry {
+                entry: TableEntry::new(code, phrase, weight),
+                raw_weight: weight.to_string(),
+                raw_stem: None,
+                single_syllable_duplicate_key: None,
+            })
+            .collect()
+    }
+
+    fn encode_phrase(&self, phrase: &str) -> Vec<String> {
+        let phrase_length = phrase.chars().count();
+        if phrase_length > self.metadata.encoder.max_phrase_length() {
+            return Vec::new();
+        }
+        let characters = phrase.chars().map(|ch| ch.to_string()).collect::<Vec<_>>();
+        let mut raw_code = Vec::new();
+        let mut limit = Self::DFS_LIMIT;
+        let mut encoded = Vec::new();
+        self.dfs_encode(&characters, 0, &mut raw_code, &mut limit, &mut encoded);
+        encoded
+    }
+
+    fn dfs_encode(
+        &self,
+        characters: &[String],
+        start: usize,
+        raw_code: &mut Vec<String>,
+        limit: &mut usize,
+        encoded: &mut Vec<String>,
+    ) {
+        if start == characters.len() {
+            *limit = limit.saturating_sub(1);
+            if let Some(code) = self.metadata.encoder.encode(raw_code) {
+                encoded.push(code);
+            }
+            return;
+        }
+
+        for code in self.translate_word(&characters[start]) {
+            if self.metadata.encoder.is_code_excluded(&code) {
+                continue;
+            }
+            raw_code.push(code);
+            self.dfs_encode(characters, start + 1, raw_code, limit, encoded);
+            raw_code.pop();
+            if *limit == 0 {
+                return;
+            }
+        }
+    }
+
+    fn translate_word(&self, word: &str) -> Vec<String> {
+        if let Some(stems) = self.stems.get(word) {
+            return stems.clone();
+        }
+
+        let Some(words) = self.words.get(word) else {
+            return Vec::new();
+        };
+        let min_weight = self.total_weight.get(word).copied().unwrap_or_default() * 0.05;
+        let mut codes = words
+            .iter()
+            .filter(|(_, weight)| *weight >= min_weight)
+            .map(|(code, _)| code.clone())
+            .collect::<Vec<_>>();
+        codes.sort();
+        codes
     }
 }
 
@@ -2120,6 +2276,8 @@ struct RimeTableMetadata {
     sort_by_weight: bool,
     use_preset_vocabulary: bool,
     vocabulary: Option<String>,
+    max_phrase_length: usize,
+    min_phrase_weight: f32,
     encoder: TableEncoder,
     in_encoder: bool,
     encoder_list: Option<RimeEncoderList>,
@@ -2147,6 +2305,8 @@ impl Default for RimeTableMetadata {
             sort_by_weight: true,
             use_preset_vocabulary: false,
             vocabulary: None,
+            max_phrase_length: 0,
+            min_phrase_weight: 0.0,
             encoder: TableEncoder::new(),
             in_encoder: false,
             encoder_list: None,
@@ -2240,6 +2400,16 @@ impl RimeTableMetadata {
             return;
         }
 
+        if let Some(max_phrase_length) = rime_header_value(trimmed, "max_phrase_length") {
+            self.max_phrase_length = parse_yaml_usize(max_phrase_length).unwrap_or(0);
+            return;
+        }
+
+        if let Some(min_phrase_weight) = rime_header_value(trimmed, "min_phrase_weight") {
+            self.min_phrase_weight = parse_yaml_f32(min_phrase_weight).unwrap_or(0.0);
+            return;
+        }
+
         if let Some(name) = rime_header_value(trimmed, "name") {
             if let Some(name) = parse_yaml_scalar_node(name) {
                 self.has_name = true;
@@ -2275,6 +2445,16 @@ impl RimeTableMetadata {
             .as_deref()
             .filter(|vocabulary| !vocabulary.is_empty())
             .unwrap_or("essay")
+    }
+
+    fn is_qualified_preset_phrase(&self, phrase: &str, weight: f32) -> bool {
+        if self.max_phrase_length > 0 && phrase.chars().count() > self.max_phrase_length {
+            return false;
+        }
+        if self.min_phrase_weight > 0.0 && weight < self.min_phrase_weight {
+            return false;
+        }
+        true
     }
 
     fn parse_entry(&self, line: &str) -> Option<RimeParsedTableEntry> {
@@ -2573,6 +2753,10 @@ fn parse_yaml_usize(input: &str) -> Option<usize> {
     parse_yaml_scalar_node(input)?.parse().ok()
 }
 
+fn parse_yaml_f32(input: &str) -> Option<f32> {
+    parse_yaml_scalar_node(input)?.parse().ok()
+}
+
 fn parse_yaml_usize_pair(input: &str) -> Option<(usize, usize)> {
     let items = parse_inline_yaml_list(input)?;
     if items.len() != 2 {
@@ -2696,7 +2880,13 @@ fn parse_rime_entry_weight_percentage(input: &str) -> f32 {
 }
 
 fn parse_rime_preset_vocabulary(input: &str) -> HashMap<String, f32> {
-    let mut vocabulary = HashMap::new();
+    parse_rime_preset_vocabulary_entries(input)
+        .into_iter()
+        .collect()
+}
+
+fn parse_rime_preset_vocabulary_entries(input: &str) -> Vec<(String, f32)> {
+    let mut vocabulary = Vec::new();
     let mut comments_enabled = true;
     for line in input.lines() {
         let line = line.trim_end();
@@ -2718,7 +2908,7 @@ fn parse_rime_preset_vocabulary(input: &str) -> HashMap<String, f32> {
             .get(1)
             .map(|value| parse_rime_entry_weight(value))
             .unwrap_or(0.0);
-        vocabulary.insert(phrase.to_owned(), weight);
+        vocabulary.push((phrase.to_owned(), weight));
     }
     vocabulary
 }
@@ -7743,6 +7933,65 @@ encoder:
             encoder.encode(&["zyx'wvu'tsr", "qpo'nmlk'jih", "gfedcba"]),
             Some("zqga".to_owned())
         );
+    }
+
+    #[test]
+    fn parses_rime_dict_yaml_rule_encoder_phrase_entries_like_librime_entry_collector() {
+        let dictionary = TableDictionary::parse_rime_dict_yaml_with_imports_packs_and_vocabulary(
+            r#"
+---
+name: encoder_phrase_sample
+version: "0.1"
+sort: by_weight
+use_preset_vocabulary: true
+max_phrase_length: 2
+min_phrase_weight: 10
+encoder:
+  rules:
+    - length_equal: 2
+      formula: "AaBa"
+...
+
+你	ni	10
+好	hao	9
+您	nin	8
+你好		50%
+"#,
+            std::iter::empty::<&str>(),
+            |_| None,
+            |name| {
+                (name == "essay").then(|| {
+                    "\
+你好\t12
+您好\t11
+你好啊\t20
+低频\t9
+"
+                    .to_owned()
+                })
+            },
+        )
+        .expect("rule-based encoder phrases should parse");
+
+        let entries = dictionary.entries();
+        let encoded_source_phrase = entries
+            .iter()
+            .find(|entry| entry.text == "你好")
+            .expect("source phrase should be encoded");
+        assert_eq!(encoded_source_phrase.code, "nh");
+        assert_eq!(encoded_source_phrase.weight, 6.0);
+        assert!(!entries
+            .iter()
+            .any(|entry| entry.text == "你好" && entry.code.is_empty()));
+
+        let injected_phrase = entries
+            .iter()
+            .find(|entry| entry.text == "您好")
+            .expect("preset phrase should be injected when all characters are encodable");
+        assert_eq!(injected_phrase.code, "nh");
+        assert_eq!(injected_phrase.weight, 11.0);
+        assert!(!entries.iter().any(|entry| entry.text == "你好啊"));
+        assert!(!entries.iter().any(|entry| entry.text == "低频"));
     }
 
     #[test]

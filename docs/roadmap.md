@@ -133,9 +133,10 @@
   including namespace aliases, tag gating, completion toggles, sentence
   fallback, candidate quality, `dictionary_exclude`, `comment_format`, pack
   dictionaries, focused preset-vocabulary weight lookup/scaling for coded
-  source entries, persisted switcher options, folded switch menus, radio
-  defaults, state-label ABI indexing, schema-list ordering, schema selection
-  commands, schema-list access-time recency sorting, and
+  source entries, focused rule-based table-encoder phrase injection for uncoded
+  source rows and preset vocabulary phrases, persisted switcher options, folded
+  switch menus, radio defaults, state-label ABI indexing, schema-list ordering,
+  schema selection commands, schema-list access-time recency sorting, and
   `switcher/fix_schema_list_order`.
 - Expanded schema-loaded filter coverage for `simplifier`, `uniquifier`,
   `single_char_filter`, `charset_filter`/`cjk_minifier`, and
@@ -151,8 +152,9 @@
   column metadata for coded entries, deduped per entry text, as groundwork for
   reverse data and encoder compatibility, and added a focused Rust table-encoder
   primitive for librime-compatible `encoder/rules` formulas, exclude-pattern
-  matching, tail-anchor indexing, raw-code encoding, and source `.dict.yaml`
-  encoder-setting parsing.
+  matching, tail-anchor indexing, raw-code encoding, source `.dict.yaml`
+  encoder-setting parsing, and focused phrase lookup/injection through that
+  parsed rule-based encoder.
 - Tightened librime ABI lifecycle behavior for `RimeTraits`, session activity
   cleanup, `RimeFinalize`, deployment notifications, `RimeSyncUserData`,
   unread commit buffering, struct-layout coverage, menu page-size parsing,
@@ -187,10 +189,10 @@
   processor/segmentor/translator/filter chains from distribution schemas.
 - Expand dictionary compatibility beyond source `.dict.yaml` parsing toward
   librime's compiled `.table.bin`, `.prism.bin`, `.reverse.bin`, pack
-  dictionaries at compiled-data level, preset-vocabulary phrase injection,
-  stem-column consumption in compiled reverse data and encoders, phrase lookup
-  around the focused table-encoder primitive, correction data, checksums, and
-  rebuild heuristics.
+  dictionaries at compiled-data level, deeper preset-vocabulary phrase
+  injection, stem-column consumption in compiled reverse data and encoders,
+  broader phrase lookup around the focused table-encoder primitive, correction
+  data, checksums, and rebuild heuristics.
 - Expand user dictionary compatibility beyond the current plain text userdb
   shims toward librime's LevelDB/userdb storage, snapshot merging, recovery,
   learning, and frequency update semantics.
