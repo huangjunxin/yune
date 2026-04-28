@@ -172,17 +172,17 @@
   Rust designs, cleaner abstractions, stronger typing, deterministic tests, and
   better algorithms where they preserve or intentionally extend the external
   contract.
-- Continue the mechanical refactor track in `docs/refactor-plan.md` before
-  starting another large compatibility push: finish the remaining
-  `yune-rime-api` session/context/status/commit, schema-installation, and
-  processor splits; then split the large RIME API test file. Keep these commits
-  behavior-preserving and backed by the normal quality gates.
+- Treat the mechanical refactor track in `docs/refactor-plan.md` as complete
+  for the current code shape. Keep future compatibility work within the new
+  module boundaries, and only split further when a new behavior slice exposes a
+  real ownership problem.
 - Build `yune-cli` into a frontend-surrogate input method that drives
   `yune-rime-api` rather than `yune-core` directly: initialize with real shared
   and user data directories, deploy and select schemas, create sessions, process
   interactive keys, render commits/preedit/candidates/highlight/status after
   each event, and provide a transcript replay mode for comparing key sequences
-  against librime.
+  against librime. The preparatory CLI module split is complete; the remaining
+  work is the actual RIME API-backed frontend implementation.
 - Run the current ABI against real frontend clients such as Squirrel, Weasel,
   ibus-rime, fcitx-rime, or fcitx5-rime, and record any struct-layout,
   lifetime, notification, deployment, and session-behavior gaps. Treat the CLI

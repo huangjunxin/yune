@@ -14,16 +14,25 @@ The repository is functionally healthy but structurally crowded.
 - Phase 1 is complete for production `yune-core` modules. `lib.rs` now keeps the
   public API surface and the existing unit tests, while implementation lives in
   focused modules.
-- Phase 2 is in progress. The low-risk RIME API moves have started to reduce
-  `lib.rs`, but session, context/status/commit, schema installation, and
-  processor dispatch still need to be split.
+- Phase 2 is complete for the current `yune-rime-api` production shape.
+  `lib.rs` keeps ABI-facing exports and glue, while session, context/status,
+  schema selection/install, processor behavior, deployment, levers, config,
+  candidate, memory, runtime, module, notification, and userdb helpers live in
+  focused modules.
+- Phase 3 is complete for `yune-rime-api` unit tests. The test parent module now
+  keeps shared helpers, while compatibility cases live in named child modules.
+- Phase 4 is complete as a preparatory split. `yune-cli` still behaves as the
+  existing core-backed fixture runner, but its argument parsing, fixture checks,
+  sample runner, transcript JSON, rendering, and reserved RIME frontend entry
+  point are separated.
 - `crates/yune-core/src/lib.rs` is about 5,082 lines, mostly tests.
-- `crates/yune-rime-api/src/lib.rs` is about 5,956 lines after the current
-  Phase 2 API splits.
-- `crates/yune-rime-api/src/tests.rs` is about 23,556 lines.
+- `crates/yune-rime-api/src/lib.rs` is about 1,851 lines after the Phase 2
+  split.
+- `crates/yune-rime-api/src/tests/mod.rs` is about 338 lines after the Phase 3
+  split.
 - `crates/yune-rime-api/tests/frontend_client.rs` is about 4,069 lines.
-- `crates/yune-cli/src/main.rs` is still small, but it is about to grow when it
-  becomes the CLI frontend-surrogate described in `roadmap.md`.
+- `crates/yune-cli/src/main.rs` is about 41 lines after the Phase 4 preparatory
+  split.
 
 The immediate problem is not a broken design. The problem is that compatibility
 increments are accumulating inside large files, which makes future librime
@@ -135,7 +144,7 @@ Recommended order:
 Goal: keep ABI exports visible while moving implementation details behind
 focused modules.
 
-Current progress:
+Completed layout:
 
 - `config_api.rs` owns config open/load/read/write/update entrypoints plus
   state-label and simulated-key-sequence APIs.
@@ -145,97 +154,41 @@ Current progress:
   helpers, and user dictionary manager API surface.
 - `candidate_api.rs` owns candidate-list iterator entrypoints.
 - `schema_api.rs` owns `RimeGetSchemaList` and schema-list population.
-- `lib.rs` still owns session lifecycle, key processing, context/status/commit
-  entrypoints, schema selection, schema installation, processor behavior, and
-  several cross-cutting session helpers.
+- `session.rs` owns the session registry, session lifecycle, and session
+  activity helpers.
+- `context_api.rs` owns context/status/commit entrypoints.
+- `schema_selection.rs`, `schema_install.rs`, `schema_translator_filters.rs`,
+  `schema_segment_tags.rs`, and `schema_switch_resets.rs` own schema selection
+  and installation helpers.
+- `processors/` owns `ascii_composer`, `chord_composer`, `editor`,
+  `key_binder`, `navigator`, `punctuation`, `recognizer`, `selector`, `shape`,
+  and `speller` behavior.
+- `deployment.rs`, `runtime.rs`, `modules.rs`, `notifications.rs`,
+  `api_table.rs`, `key_table.rs`, and `userdb.rs` own their corresponding
+  runtime and ABI support surfaces.
+- `lib.rs` intentionally remains the ABI export index and cross-module glue.
 
-Suggested module layout:
-
-- `session.rs`
-  - `SessionRegistry`
-  - `SessionState`
-  - session lifecycle helpers
-  - `with_session`
-- `runtime.rs`
-  - `RuntimePaths`
-  - `RimeSetup`
-  - runtime path getters
-  - installation metadata
-- `ffi_memory.rs`
-  - C string allocation/freeing helpers
-  - context/status/schema-list clearing
-  - versioned struct-member checks
-- `api_table.rs`
-  - `RimeGetApi`
-  - function table construction
-  - levers module table construction
-- `modules.rs`
-  - module registry
-  - built-in levers module lookup
-- `schema_install/mod.rs`
-  - schema selection
-  - translator/filter/processor/segmentor installation
-  - schema component prescription parsing
-- `processors/mod.rs`
-  - key processing dispatch
-  - `ascii_composer`
-  - `chord_composer`
-  - `editor`
-  - `key_binder`
-  - `punctuator`
-  - `recognizer`
-  - `speller`
-  - selector/navigator key handling
-- `deployment.rs`
-  - maintenance
-  - workspace update
-  - schema deploy
-  - build-info freshness
-  - cleanup tasks
-- `userdb.rs`
-  - current plain userdb shim
-  - backup/restore/import/export/sync helpers
-- `levers.rs`
-  - custom settings
-  - schema lists
-  - user dictionary manager API surface
-
-Remaining recommended order:
-
-1. Split session registry and lifecycle into `session.rs`, including
-   `SessionRegistry`, `SessionState`, `sessions`, `with_session`, session
-   activity helpers, and create/find/destroy/cleanup entrypoints.
-2. Split context/status/commit entrypoints into a focused ABI module after
-   `session.rs` owns the session access helpers.
-3. Split schema selection and switch-state restore helpers only after the
-   session boundary is stable.
-4. Split schema installation helpers into `schema_install/` in small groups:
-   translator chain, filter chain, segment tags, switch resets, and component
-   prescription parsing.
-5. Split processor implementations one component at a time: `ascii_composer`,
-   `chord_composer`, `editor`, `key_binder`, `punctuator`, `recognizer`,
-   `speller`, selector, and navigator.
-6. Move deployment/userdb helpers only when their current module boundaries show
-   real remaining mixed responsibility. Avoid churn in files that are already
-   readable.
-7. Keep exported `extern "C"` functions easy to find from `lib.rs` until the
-   module layout proves stable.
+Further extraction should be driven by new compatibility work, not by file size
+alone.
 
 ## Phase 3: Split Tests
 
 Goal: make compatibility intent easier to locate.
 
-Suggested layout:
+Completed layout:
 
 - `crates/yune-rime-api/src/tests/mod.rs`
 - `crates/yune-rime-api/src/tests/abi.rs`
+- `crates/yune-rime-api/src/tests/candidate_api.rs`
+- `crates/yune-rime-api/src/tests/config_api.rs`
+- `crates/yune-rime-api/src/tests/context_status.rs`
 - `crates/yune-rime-api/src/tests/deployment.rs`
 - `crates/yune-rime-api/src/tests/levers.rs`
 - `crates/yune-rime-api/src/tests/runtime.rs`
+- `crates/yune-rime-api/src/tests/schema_api.rs`
 - `crates/yune-rime-api/src/tests/schema_processors.rs`
-- `crates/yune-rime-api/src/tests/schema_segmentors.rs`
-- `crates/yune-rime-api/src/tests/schema_translators.rs`
-- `crates/yune-rime-api/src/tests/schema_filters.rs`
+- `crates/yune-rime-api/src/tests/schema_selection.rs`
+- `crates/yune-rime-api/src/tests/session_api.rs`
 - `crates/yune-rime-api/src/tests/userdb.rs`
 
 For `frontend_client.rs`, split only after `yune-cli` frontend-surrogate work is
@@ -264,9 +217,16 @@ Suggested module layout before implementing the interactive frontend:
   - human-readable interactive CLI output
 - `fixture.rs`
   - existing fixture check compatibility, if retained
+- `sample_core.rs`
+  - existing core-backed sample fixture runner retained until the frontend
+    surrogate replaces it
 
 The CLI should drive `yune-rime-api`, not `yune-core` directly, once it becomes
 the frontend-surrogate input method.
+
+Current status: the preparatory module split is complete. `rime_frontend.rs` is
+reserved for the upcoming `yune-rime-api` implementation; the current `run` and
+`check` commands intentionally keep their prior behavior.
 
 ## What Not To Refactor Yet
 
