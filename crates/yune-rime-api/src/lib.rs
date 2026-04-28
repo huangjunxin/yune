@@ -29,6 +29,7 @@ mod deployment;
 mod ffi_memory;
 mod key_table;
 mod modules;
+mod notifications;
 mod runtime;
 mod userdb;
 pub use abi::*;
@@ -38,6 +39,8 @@ pub use deployment::*;
 use ffi_memory::*;
 pub use key_table::*;
 pub use modules::*;
+use notifications::notify;
+pub use notifications::RimeSetNotificationHandler;
 pub use runtime::*;
 pub use userdb::*;
 
@@ -590,12 +593,6 @@ struct ContextMenuSettings {
 
 type SwitcherAvailableSchemaRegistry = HashMap<usize, Option<Vec<LeverSchemaInfo>>>;
 
-#[derive(Default)]
-struct NotificationState {
-    handler: Option<RimeNotificationHandler>,
-    context_object: usize,
-}
-
 #[derive(Clone, Copy)]
 enum ConfigOpenKind {
     Deployed,
@@ -610,11 +607,6 @@ fn sessions() -> &'static Mutex<SessionRegistry> {
 fn service_started() -> &'static AtomicBool {
     static SERVICE_STARTED: AtomicBool = AtomicBool::new(false);
     &SERVICE_STARTED
-}
-
-fn notification_state() -> &'static Mutex<NotificationState> {
-    static NOTIFICATION_STATE: OnceLock<Mutex<NotificationState>> = OnceLock::new();
-    NOTIFICATION_STATE.get_or_init(|| Mutex::new(NotificationState::default()))
 }
 
 fn switcher_selection_registry() -> &'static Mutex<HashMap<usize, Option<Vec<String>>>> {
@@ -825,18 +817,6 @@ pub extern "C" fn rime_get_api() -> *mut RimeApi {
 #[no_mangle]
 pub extern "C" fn rime_levers_get_api() -> *mut RimeCustomApi {
     levers_api_entry().cast::<RimeCustomApi>()
-}
-
-#[no_mangle]
-pub extern "C" fn RimeSetNotificationHandler(
-    handler: Option<RimeNotificationHandler>,
-    context_object: *mut c_void,
-) {
-    let mut state = notification_state()
-        .lock()
-        .expect("notification state should not be poisoned");
-    state.handler = handler;
-    state.context_object = context_object as usize;
 }
 
 #[no_mangle]
@@ -7809,30 +7789,6 @@ fn label_list_value(switch_map: &Mapping, key: &str, state_index: usize) -> Opti
 
 fn first_unicode_byte_length(value: &str) -> usize {
     value.chars().next().map_or(0, |first| first.len_utf8())
-}
-
-pub(crate) fn notify(session_id: RimeSessionId, message_type: &str, message_value: &str) {
-    let (handler, context_object) = {
-        let state = notification_state()
-            .lock()
-            .expect("notification state should not be poisoned");
-        let Some(handler) = state.handler else {
-            return;
-        };
-        (handler, state.context_object)
-    };
-    let Ok(message_type) = CString::new(message_type) else {
-        return;
-    };
-    let Ok(message_value) = CString::new(message_value) else {
-        return;
-    };
-    handler(
-        context_object as *mut c_void,
-        session_id,
-        message_type.as_ptr(),
-        message_value.as_ptr(),
-    );
 }
 
 unsafe fn levers_custom_settings_mut(
