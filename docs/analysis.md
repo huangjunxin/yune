@@ -95,7 +95,9 @@ The strongest compatibility progress is currently in two areas:
   `auto_select_pattern` gating, and focused previous-match auto-commit reuse
   with `express_editor`. The current `schema_list_translator` coverage includes
   current-schema-first ordering, selection commands, access-time recency sorting,
-  and `switcher/fix_schema_list_order`. Segmentor coverage now also includes a
+  and `switcher/fix_schema_list_order`. Focused editor-variant coverage now also
+  includes schema-loaded `express_editor` Return committing raw input instead of
+  the highlighted candidate. Segmentor coverage now also includes a
   focused `punct_segmentor` path for shape-mapped single ASCII punctuation keys,
   where the punctuation segment is exclusive and suppresses ordinary table
   translation competition, plus a focused `fallback_segmentor` path where an
@@ -147,7 +149,8 @@ not just missing tests:
   delimiter-derived stops,
   deeper `selector` navigator fallback interaction behavior beyond the current
   focused raw-tag, layout, and configured-binding coverage,
-  `chord_composer`, deeper `shape_processor`/`shape_formatter` interactions,
+  deeper `editor` configured bindings and `char_handler`, `chord_composer`,
+  deeper `shape_processor`/`shape_formatter` interactions,
   deeper `punct_segmentor` behavior such as segment-order interactions and
   `punct_number` through larger chains beyond the focused digit-separator
   translator path,

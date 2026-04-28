@@ -20445,6 +20445,138 @@ Alpha\ta\t100
 }
 
 #[test]
+fn schema_express_editor_return_commits_raw_input() {
+    let _guard = test_guard();
+    RimeCleanupAllSessions();
+    let root = unique_temp_dir("schema-express-editor-return");
+    let shared = root.join("shared");
+    let user = root.join("user");
+    let staging = user.join("build");
+    fs::create_dir_all(&shared).expect("shared dir should be created");
+    fs::create_dir_all(&staging).expect("staging dir should be created");
+    fs::write(
+        staging.join("fluid.schema.yaml"),
+        "\
+schema:
+  schema_id: fluid
+  name: Fluid
+engine:
+  processors:
+    - speller
+    - fluid_editor
+  translators:
+    - table_translator
+speller:
+  alphabet: in
+translator:
+  dictionary: luna
+  enable_completion: false
+  enable_sentence: false
+",
+    )
+    .expect("fluid schema config should be written");
+    fs::write(
+        staging.join("express.schema.yaml"),
+        "\
+schema:
+  schema_id: express
+  name: Express
+engine:
+  processors:
+    - speller
+    - express_editor
+  translators:
+    - table_translator
+speller:
+  alphabet: in
+translator:
+  dictionary: luna
+  enable_completion: false
+  enable_sentence: false
+",
+    )
+    .expect("express schema config should be written");
+    fs::write(
+        shared.join("luna.dict.yaml"),
+        "\
+---
+name: luna
+version: '0.1'
+sort: original
+...
+
+你\tni\t100
+",
+    )
+    .expect("dictionary should be written");
+
+    let shared_c = CString::new(shared.to_string_lossy().as_ref()).expect("path is valid");
+    let user_c = CString::new(user.to_string_lossy().as_ref()).expect("path is valid");
+    let mut traits = empty_traits();
+    traits.shared_data_dir = shared_c.as_ptr();
+    traits.user_data_dir = user_c.as_ptr();
+    // SAFETY: traits points to valid storage and strings live for the call.
+    unsafe { RimeSetup(&traits) };
+
+    let return_key = CString::new("Return").expect("key name should be valid");
+    // SAFETY: key name is a valid NUL-terminated string.
+    let return_keycode = unsafe { RimeGetKeycodeByName(return_key.as_ptr()) };
+    assert_eq!(return_keycode, 0xff0d);
+
+    let commit_text = |session_id| {
+        let mut commit = RimeCommit {
+            data_size: std::mem::size_of::<RimeCommit>() as i32,
+            text: std::ptr::null_mut(),
+        };
+        // SAFETY: commit points to writable storage.
+        assert_eq!(unsafe { RimeGetCommit(session_id, &mut commit) }, TRUE);
+        // SAFETY: `RimeGetCommit` returned true and populated a valid C string.
+        let text = unsafe { CStr::from_ptr(commit.text) }
+            .to_str()
+            .expect("commit should be valid UTF-8")
+            .to_owned();
+        // SAFETY: commit.text was allocated by the shim above.
+        assert_eq!(unsafe { RimeFreeCommit(&mut commit) }, TRUE);
+        text
+    };
+
+    let fluid_session = RimeCreateSession();
+    let fluid_schema = CString::new("fluid").expect("schema id should be valid");
+    // SAFETY: schema id is a valid NUL-terminated string.
+    assert_eq!(
+        unsafe { RimeSelectSchema(fluid_session, fluid_schema.as_ptr()) },
+        TRUE
+    );
+    assert_eq!(RimeProcessKey(fluid_session, 'n' as i32, 0), TRUE);
+    assert_eq!(RimeProcessKey(fluid_session, 'i' as i32, 0), TRUE);
+    assert_eq!(RimeProcessKey(fluid_session, return_keycode, 0), TRUE);
+    assert_eq!(commit_text(fluid_session), "你");
+    assert_eq!(RimeDestroySession(fluid_session), TRUE);
+
+    let express_session = RimeCreateSession();
+    let express_schema = CString::new("express").expect("schema id should be valid");
+    // SAFETY: schema id is a valid NUL-terminated string.
+    assert_eq!(
+        unsafe { RimeSelectSchema(express_session, express_schema.as_ptr()) },
+        TRUE
+    );
+    assert_eq!(RimeProcessKey(express_session, 'n' as i32, 0), TRUE);
+    assert_eq!(RimeProcessKey(express_session, 'i' as i32, 0), TRUE);
+    assert_eq!(RimeProcessKey(express_session, return_keycode, 0), TRUE);
+    assert_eq!(commit_text(express_session), "ni");
+    let input = RimeGetInput(express_session);
+    assert!(!input.is_null());
+    // SAFETY: `RimeGetInput` returned a non-null session-owned C string.
+    assert_eq!(unsafe { CStr::from_ptr(input) }.to_str(), Ok(""));
+    assert_eq!(RimeDestroySession(express_session), TRUE);
+
+    let reset_traits = empty_traits();
+    // SAFETY: reset traits points to valid storage.
+    unsafe { RimeSetup(&reset_traits) };
+    fs::remove_dir_all(root).expect("temp dirs should be removed");
+}
+
+#[test]
 fn schema_punctuator_processor_commits_unique_punctuation() {
     let _guard = test_guard();
     RimeCleanupAllSessions();

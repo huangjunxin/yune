@@ -122,6 +122,7 @@ struct SessionState {
     input_buffer: Option<CString>,
     key_binder: Option<KeyBinderProcessor>,
     speller: Option<SpellerProcessor>,
+    editor_processor: Option<EditorProcessor>,
     ascii_composer_enabled: bool,
     ascii_composer_switch_bindings: HashMap<c_int, AsciiModeSwitchStyle>,
     ascii_composer_pressed_switch_key: Option<c_int>,
@@ -150,6 +151,7 @@ impl SessionState {
             input_buffer: None,
             key_binder: None,
             speller: None,
+            editor_processor: None,
             ascii_composer_enabled: false,
             ascii_composer_switch_bindings: HashMap::new(),
             ascii_composer_pressed_switch_key: None,
@@ -334,6 +336,12 @@ struct PunctuationProcessor {
     symbol_pairs: HashMap<String, [String; 2]>,
     pair_oddness: HashMap<String, usize>,
     pending_digit_separator: Option<String>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum EditorProcessor {
+    Express,
+    Fluid,
 }
 
 enum PunctuationProcessResult {
@@ -2382,6 +2390,7 @@ fn apply_schema_to_session(session: &mut SessionState, schema_id: &str) {
     session.engine.reset_filters();
     session.key_binder = None;
     session.speller = None;
+    session.editor_processor = None;
     session.engine.set_option("_auto_commit", false);
     session.ascii_composer_enabled = false;
     session.ascii_composer_switch_bindings.clear();
@@ -5076,10 +5085,12 @@ fn install_schema_editor_processor(session: &mut SessionState, schema_id: &str) 
     let schema_config =
         load_runtime_config_root(&format!("{schema_id}.schema"), ConfigOpenKind::Deployed);
     if schema_engine_processors_include(&schema_config, "express_editor") {
+        session.editor_processor = Some(EditorProcessor::Express);
         session.engine.set_option("_auto_commit", true);
     } else if schema_engine_processors_include(&schema_config, "fluid_editor")
         || schema_engine_processors_include(&schema_config, "fluency_editor")
     {
+        session.editor_processor = Some(EditorProcessor::Fluid);
         session.engine.set_option("_auto_commit", false);
     }
 }
@@ -6219,6 +6230,10 @@ fn process_session_key_event(
             SessionKeyProcessResult::Noop
         };
     }
+    if let Some(result) = process_editor_processor(session, key_event) {
+        update_session_segment_tags(session);
+        return result;
+    }
     let before_input = session.engine.context().composition.input.clone();
     let before_highlighted = session.engine.context().highlighted;
     let commit = session.engine.process_key_event(key_event);
@@ -6236,6 +6251,43 @@ fn process_session_key_event(
     } else {
         SessionKeyProcessResult::Noop
     }
+}
+
+fn process_editor_processor(
+    session: &mut SessionState,
+    key_event: KeyEvent,
+) -> Option<SessionKeyProcessResult> {
+    if session.editor_processor != Some(EditorProcessor::Express)
+        || session.engine.context().composition.input.is_empty()
+        || key_event.modifiers.release
+        || key_event.code != KeyCode::Return
+    {
+        return None;
+    }
+
+    if key_event.modifiers.is_empty() {
+        let commit = session.engine.commit_raw_input();
+        return Some(commit.map_or(
+            SessionKeyProcessResult::Accepted,
+            SessionKeyProcessResult::Commit,
+        ));
+    }
+
+    if key_event.modifiers.control
+        && !key_event.modifiers.shift
+        && !key_event.modifiers.alt
+        && !key_event.modifiers.super_key
+        && !key_event.modifiers.hyper
+        && !key_event.modifiers.meta
+    {
+        let commit = session.engine.commit_script_text();
+        return Some(commit.map_or(
+            SessionKeyProcessResult::Accepted,
+            SessionKeyProcessResult::Commit,
+        ));
+    }
+
+    None
 }
 
 fn process_ascii_composer_processor(

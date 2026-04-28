@@ -4545,7 +4545,7 @@ impl Engine {
         Some(text)
     }
 
-    fn commit_script_text(&mut self) -> Option<String> {
+    pub fn commit_script_text(&mut self) -> Option<String> {
         if self.context.composition.preedit.is_empty() {
             return None;
         }
