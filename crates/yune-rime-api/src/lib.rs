@@ -2308,6 +2308,7 @@ fn apply_schema_to_session(session: &mut SessionState, schema_id: &str) {
     session.engine.reset_filters();
     session.key_binder = None;
     session.speller = None;
+    session.engine.set_option("_auto_commit", false);
     session.ascii_composer_enabled = false;
     session.ascii_composer_switch_bindings.clear();
     session.ascii_composer_pressed_switch_key = None;
@@ -2319,6 +2320,7 @@ fn apply_schema_to_session(session: &mut SessionState, schema_id: &str) {
     restore_switcher_saved_options(session, schema_id);
     apply_schema_switch_resets(session, schema_id);
     install_schema_segment_tags(session, schema_id);
+    install_schema_editor_processor(session, schema_id);
     install_schema_ascii_composer_processor(session, schema_id);
     install_schema_speller_processor(session, schema_id);
     install_schema_recognizer_processor(session, schema_id);
@@ -4483,6 +4485,18 @@ fn ascii_mode_switch_style(style: &str) -> Option<AsciiModeSwitchStyle> {
     }
 }
 
+fn install_schema_editor_processor(session: &mut SessionState, schema_id: &str) {
+    let schema_config =
+        load_runtime_config_root(&format!("{schema_id}.schema"), ConfigOpenKind::Deployed);
+    if schema_engine_processors_include(&schema_config, "express_editor") {
+        session.engine.set_option("_auto_commit", true);
+    } else if schema_engine_processors_include(&schema_config, "fluid_editor")
+        || schema_engine_processors_include(&schema_config, "fluency_editor")
+    {
+        session.engine.set_option("_auto_commit", false);
+    }
+}
+
 fn install_schema_speller_processor(session: &mut SessionState, schema_id: &str) {
     let schema_config =
         load_runtime_config_root(&format!("{schema_id}.schema"), ConfigOpenKind::Deployed);
@@ -5666,22 +5680,38 @@ fn process_speller_processor(
     {
         session.engine.clear_composition();
     }
+    let previous_match = speller_previous_match_backup(
+        session,
+        auto_select,
+        max_code_length,
+        auto_select_pattern.as_ref(),
+    );
 
     let mut input = session.engine.context().composition.input.clone();
     input.push(ch);
+    let appended_input = input.clone();
     session.engine.set_input(input);
-    let commit = commit.or_else(|| {
-        auto_select
-            .then(|| {
-                speller_auto_select_unique_candidate(
-                    session,
-                    max_code_length,
-                    auto_select_pattern.as_ref(),
-                    &delimiters,
-                )
-            })
-            .flatten()
-    });
+    let commit = commit
+        .or_else(|| {
+            speller_auto_select_previous_match(
+                session,
+                previous_match,
+                &appended_input,
+                &delimiters,
+            )
+        })
+        .or_else(|| {
+            auto_select
+                .then(|| {
+                    speller_auto_select_unique_candidate(
+                        session,
+                        max_code_length,
+                        auto_select_pattern.as_ref(),
+                        &delimiters,
+                    )
+                })
+                .flatten()
+        });
     if auto_clear == SpellerAutoClear::Auto
         && speller_auto_clear_condition(session, auto_clear, max_code_length)
     {
@@ -5736,6 +5766,72 @@ fn speller_auto_select_at_max_code_length(
         .candidates
         .get(context.highlighted)
         .is_some_and(|candidate| candidate.source == CandidateSource::Table)
+}
+
+fn speller_previous_match_backup(
+    session: &SessionState,
+    auto_select: bool,
+    max_code_length: usize,
+    auto_select_pattern: Option<&Regex>,
+) -> Option<(String, usize, yune_core::Candidate)> {
+    if !auto_select || max_code_length > 0 || auto_select_pattern.is_some() {
+        return None;
+    }
+    let context = session.engine.context();
+    if !speller_context_has_menu(context) {
+        return None;
+    }
+    let candidate = context.candidates.get(context.highlighted)?;
+    (candidate.source == CandidateSource::Table).then(|| {
+        (
+            context.composition.input.clone(),
+            context.highlighted,
+            candidate.clone(),
+        )
+    })
+}
+
+fn speller_auto_select_previous_match(
+    session: &mut SessionState,
+    previous_match: Option<(String, usize, yune_core::Candidate)>,
+    appended_input: &str,
+    delimiters: &str,
+) -> Option<String> {
+    if !session.engine.get_option("_auto_commit")
+        || speller_context_has_menu(session.engine.context())
+    {
+        return None;
+    }
+    let (previous_input, previous_highlighted, previous_candidate) = previous_match?;
+    if previous_input.is_empty()
+        || !appended_input.starts_with(&previous_input)
+        || previous_input.contains(|ch| delimiters.contains(ch))
+    {
+        return None;
+    }
+
+    let rest = appended_input[previous_input.len()..].to_owned();
+    session.engine.set_input(previous_input);
+    let still_matches_previous = session
+        .engine
+        .context()
+        .candidates
+        .get(previous_highlighted)
+        .is_some_and(|candidate| {
+            candidate.source == previous_candidate.source
+                && candidate.text == previous_candidate.text
+        });
+    if !still_matches_previous || !session.engine.highlight_candidate(previous_highlighted) {
+        session.engine.set_input(appended_input.to_owned());
+        return None;
+    }
+    let commit = session.engine.commit_composition();
+    if commit.is_some() {
+        session.engine.set_input(rest);
+    } else {
+        session.engine.set_input(appended_input.to_owned());
+    }
+    commit
 }
 
 fn speller_auto_select_unique_candidate(
