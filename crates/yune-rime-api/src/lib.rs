@@ -368,11 +368,14 @@ struct PunctuationProcessor {
 
 struct ChordComposerProcessor {
     alphabet: Vec<char>,
+    algebra: ChordProjection,
     output_format: ChordProjection,
+    prompt_format: ChordProjection,
     bindings: HashMap<KeyEvent, ChordComposerBindingAction>,
     raw_sequence: String,
     pressed_keys: HashSet<char>,
     recognized_chord: HashSet<char>,
+    prompt: Option<String>,
     finish_on_first_release: bool,
 }
 
@@ -3656,7 +3659,7 @@ pub unsafe extern "C" fn RimeGetContext(
 
     clear_context(context);
 
-    let (snapshot, hide_candidate) = {
+    let (snapshot, hide_candidate, chord_prompt) = {
         let mut registry = sessions()
             .lock()
             .expect("session registry should not be poisoned");
@@ -3667,6 +3670,10 @@ pub unsafe extern "C" fn RimeGetContext(
         (
             session.engine.snapshot(),
             session.engine.get_option("_hide_candidate"),
+            session
+                .chord_composer
+                .as_ref()
+                .and_then(|composer| composer.prompt.clone()),
         )
     };
     let menu_settings = context_menu_settings(&snapshot.status.schema_id);
@@ -3678,11 +3685,26 @@ pub unsafe extern "C" fn RimeGetContext(
         None => None,
     };
     let composition = snapshot.context.composition;
-    if !composition.input.is_empty() {
-        let Ok(preedit) = CString::new(composition.preedit) else {
+    if !composition.input.is_empty() || chord_prompt.is_some() {
+        let (preedit_text, length, cursor_pos, sel_start, sel_end) =
+            if let Some(chord_prompt) = chord_prompt.filter(|_| composition.input.is_empty()) {
+                let length = chord_prompt.len() as c_int;
+                (chord_prompt, length, 0, 0, 0)
+            } else {
+                (
+                    composition.preedit,
+                    composition.input.len() as c_int,
+                    composition.caret as c_int,
+                    0,
+                    composition.input.len() as c_int,
+                )
+            };
+        let Ok(preedit) = CString::new(preedit_text) else {
             return FALSE;
         };
-        let commit_text_preview = if unsafe { context_has_commit_text_preview(context) } {
+        let commit_text_preview = if composition.input.is_empty() {
+            None
+        } else if unsafe { context_has_commit_text_preview(context) } {
             let preview = snapshot
                 .context
                 .candidates
@@ -3700,10 +3722,10 @@ pub unsafe extern "C" fn RimeGetContext(
         // SAFETY: `context` is non-null and points to caller-owned writable
         // storage; `preedit` is converted into owned C storage for the caller.
         unsafe {
-            (*context).composition.length = composition.input.len() as c_int;
-            (*context).composition.cursor_pos = composition.caret as c_int;
-            (*context).composition.sel_start = 0;
-            (*context).composition.sel_end = composition.input.len() as c_int;
+            (*context).composition.length = length;
+            (*context).composition.cursor_pos = cursor_pos;
+            (*context).composition.sel_start = sel_start;
+            (*context).composition.sel_end = sel_end;
             (*context).composition.preedit = preedit.into_raw();
             if let Some(commit_text_preview) = commit_text_preview {
                 (*context).commit_text_preview = commit_text_preview.into_raw();
@@ -3832,7 +3854,15 @@ pub unsafe extern "C" fn RimeGetStatus(session_id: RimeSessionId, status: *mut R
     let Some(session) = registry.get_session_mut(session_id) else {
         return FALSE;
     };
-    let snapshot = session.engine.status();
+    let mut snapshot = session.engine.status();
+    if session
+        .chord_composer
+        .as_ref()
+        .and_then(|composer| composer.prompt.as_ref())
+        .is_some()
+    {
+        snapshot.is_composing = true;
+    }
     let Ok(schema_id) = CString::new(snapshot.schema_id) else {
         return FALSE;
     };
@@ -5355,14 +5385,23 @@ fn install_schema_chord_composer_processor(session: &mut SessionState, schema_id
     session.engine.set_option("_chord_typing", true);
     session.chord_composer = Some(ChordComposerProcessor {
         alphabet,
+        algebra: ChordProjection::parse(&schema_string_list(
+            &schema_config,
+            "chord_composer/algebra",
+        )),
         output_format: ChordProjection::parse(&schema_string_list(
             &schema_config,
             "chord_composer/output_format",
+        )),
+        prompt_format: ChordProjection::parse(&schema_string_list(
+            &schema_config,
+            "chord_composer/prompt_format",
         )),
         bindings: load_chord_composer_bindings(&schema_config),
         raw_sequence: String::new(),
         pressed_keys: HashSet::new(),
         recognized_chord: HashSet::new(),
+        prompt: None,
         finish_on_first_release: find_config_value(
             &schema_config,
             "chord_composer/finish_chord_on_first_key_release",
@@ -6583,6 +6622,18 @@ fn process_chord_composer_processor(
         return Some(apply_chord_composer_binding(session, action));
     }
 
+    if !key_event.modifiers.release
+        && matches!(key_event.code, KeyCode::Backspace | KeyCode::Escape)
+    {
+        if let Some(composer) = session.chord_composer.as_mut() {
+            composer.raw_sequence.clear();
+            composer.pressed_keys.clear();
+            composer.recognized_chord.clear();
+            composer.prompt = None;
+        }
+        return None;
+    }
+
     let KeyCode::Character(ch) = key_event.code else {
         return None;
     };
@@ -6599,6 +6650,7 @@ fn process_chord_composer_processor(
         composer.raw_sequence.clear();
         composer.pressed_keys.clear();
         composer.recognized_chord.clear();
+        composer.prompt = None;
         return None;
     }
 
@@ -6606,6 +6658,7 @@ fn process_chord_composer_processor(
         composer.raw_sequence.clear();
         composer.pressed_keys.clear();
         composer.recognized_chord.clear();
+        composer.prompt = None;
         return None;
     }
 
@@ -6619,6 +6672,7 @@ fn process_chord_composer_processor(
         {
             let mut code = serialize_chord_composer_code(composer);
             composer.recognized_chord.clear();
+            composer.prompt = None;
             return Some(feed_chord_composer_output(session, &mut code));
         }
         return Some(SessionKeyProcessResult::Accepted);
@@ -6629,6 +6683,7 @@ fn process_chord_composer_processor(
     }
     composer.pressed_keys.insert(ch);
     composer.recognized_chord.insert(ch);
+    composer.prompt = chord_composer_prompt(composer);
     Some(SessionKeyProcessResult::Accepted)
 }
 
@@ -6641,7 +6696,10 @@ fn apply_chord_composer_binding(
             let raw_sequence = session
                 .chord_composer
                 .as_mut()
-                .map(|composer| std::mem::take(&mut composer.raw_sequence))
+                .map(|composer| {
+                    composer.prompt = None;
+                    std::mem::take(&mut composer.raw_sequence)
+                })
                 .unwrap_or_default();
             if raw_sequence.is_empty() {
                 return SessionKeyProcessResult::Noop;
@@ -6661,8 +6719,25 @@ fn serialize_chord_composer_code(composer: &ChordComposerProcessor) -> String {
         .iter()
         .filter(|ch| composer.recognized_chord.contains(ch))
         .collect::<String>();
+    composer.algebra.apply(&mut code);
     composer.output_format.apply(&mut code);
     code
+}
+
+fn chord_composer_prompt(composer: &ChordComposerProcessor) -> Option<String> {
+    if composer.recognized_chord.is_empty()
+        || (composer.recognized_chord.len() == 1 && composer.recognized_chord.contains(&' '))
+    {
+        return None;
+    }
+    let mut prompt = composer
+        .alphabet
+        .iter()
+        .filter(|ch| composer.recognized_chord.contains(ch))
+        .collect::<String>();
+    composer.algebra.apply(&mut prompt);
+    composer.prompt_format.apply(&mut prompt);
+    (!prompt.is_empty()).then_some(prompt)
 }
 
 fn feed_chord_composer_output(

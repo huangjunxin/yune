@@ -109,8 +109,9 @@
   schema-configured `editor/char_handler` defaults and overrides for
   printable-key `direct_commit`, `add_to_input`, and `noop`, focused
   `chord_composer` printable-key chord serialization on release with
-  `output_format` projection plus `commit_raw_input` bindings for the original
-  raw key sequence, plus ASCII mode switch-key handling.
+  `algebra`/`output_format` projection, ABI-visible `prompt_format` prompt
+  segments while keys are held, plus `commit_raw_input` bindings for the
+  original raw key sequence, plus ASCII mode switch-key handling.
 - Expanded schema-loaded segmentor coverage for `ascii_segmentor`, `matcher`,
   namespaced `affix_segmentor`, focused `punct_segmentor`, and focused
   `fallback_segmentor` subsets,
@@ -160,8 +161,8 @@
   deeper `editor` variant behavior such as full segment/selection semantics,
   deeper `navigator` candidate/segment span semantics, deeper
   `selector` navigator fallback interactions beyond the current focused coverage,
-  deeper `chord_composer` behavior such as prompt segments, raw-sequence
-  lifecycle edge cases, and modifier chords,
+  deeper `chord_composer` behavior such as raw-sequence lifecycle edge cases and
+  modifier chords,
   deeper `shape_processor`/`shape_formatter` interactions, deeper
   `punct_segmentor` behavior such as segment-order interactions and
   `punct_number` translation through larger chains beyond the focused
