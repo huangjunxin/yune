@@ -369,9 +369,16 @@ struct PunctuationProcessor {
 struct ChordComposerProcessor {
     alphabet: Vec<char>,
     output_format: ChordProjection,
+    bindings: HashMap<KeyEvent, ChordComposerBindingAction>,
+    raw_sequence: String,
     pressed_keys: HashSet<char>,
     recognized_chord: HashSet<char>,
     finish_on_first_release: bool,
+}
+
+#[derive(Clone, Copy)]
+enum ChordComposerBindingAction {
+    CommitRawInput,
 }
 
 #[derive(Clone, Default)]
@@ -4405,6 +4412,10 @@ fn session_has_modified_printable_binding(session: &SessionState, key_event: Key
     selector_configured_action(session, is_vertical, is_linear, key_event).is_some()
         || navigator_configured_action(session, is_vertical, key_event).is_some()
         || session.editor_bindings.contains_key(&key_event)
+        || session
+            .chord_composer
+            .as_ref()
+            .is_some_and(|processor| processor.bindings.contains_key(&key_event))
 }
 
 fn process_navigator_configured_key(
@@ -5348,6 +5359,8 @@ fn install_schema_chord_composer_processor(session: &mut SessionState, schema_id
             &schema_config,
             "chord_composer/output_format",
         )),
+        bindings: load_chord_composer_bindings(&schema_config),
+        raw_sequence: String::new(),
         pressed_keys: HashSet::new(),
         recognized_chord: HashSet::new(),
         finish_on_first_release: find_config_value(
@@ -5357,6 +5370,39 @@ fn install_schema_chord_composer_processor(session: &mut SessionState, schema_id
         .and_then(config_scalar_bool)
         .unwrap_or(false),
     });
+}
+
+fn load_chord_composer_bindings(
+    schema_config: &Value,
+) -> HashMap<KeyEvent, ChordComposerBindingAction> {
+    let Some(Value::Mapping(config_bindings)) =
+        find_config_value(schema_config, "chord_composer/bindings")
+    else {
+        return HashMap::new();
+    };
+
+    let mut bindings = HashMap::new();
+    for (key, action) in config_bindings {
+        let Some(key) = config_scalar_string(key) else {
+            continue;
+        };
+        let Some(key_event) = parse_single_key_binding_event(&key) else {
+            continue;
+        };
+        let Some(action) = action.as_str() else {
+            continue;
+        };
+        match action {
+            "commit_raw_input" => {
+                bindings.insert(key_event, ChordComposerBindingAction::CommitRawInput);
+            }
+            "noop" => {
+                bindings.remove(&key_event);
+            }
+            _ => {}
+        }
+    }
+    bindings
 }
 
 fn install_schema_speller_processor(session: &mut SessionState, schema_id: &str) {
@@ -6531,6 +6577,12 @@ fn process_chord_composer_processor(
     if session.engine.get_option("ascii_mode") {
         return None;
     }
+    let composer = session.chord_composer.as_ref()?;
+
+    if let Some(action) = composer.bindings.get(&key_event).copied() {
+        return Some(apply_chord_composer_binding(session, action));
+    }
+
     let KeyCode::Character(ch) = key_event.code else {
         return None;
     };
@@ -6544,12 +6596,14 @@ fn process_chord_composer_processor(
         || key_event.modifiers.hyper
         || key_event.modifiers.meta
     {
+        composer.raw_sequence.clear();
         composer.pressed_keys.clear();
         composer.recognized_chord.clear();
         return None;
     }
 
     if !composer.alphabet.contains(&ch) {
+        composer.raw_sequence.clear();
         composer.pressed_keys.clear();
         composer.recognized_chord.clear();
         return None;
@@ -6570,9 +6624,35 @@ fn process_chord_composer_processor(
         return Some(SessionKeyProcessResult::Accepted);
     }
 
+    if session.engine.context().composition.input.is_empty() || !composer.raw_sequence.is_empty() {
+        composer.raw_sequence.push(ch);
+    }
     composer.pressed_keys.insert(ch);
     composer.recognized_chord.insert(ch);
     Some(SessionKeyProcessResult::Accepted)
+}
+
+fn apply_chord_composer_binding(
+    session: &mut SessionState,
+    action: ChordComposerBindingAction,
+) -> SessionKeyProcessResult {
+    match action {
+        ChordComposerBindingAction::CommitRawInput => {
+            let raw_sequence = session
+                .chord_composer
+                .as_mut()
+                .map(|composer| std::mem::take(&mut composer.raw_sequence))
+                .unwrap_or_default();
+            if raw_sequence.is_empty() {
+                return SessionKeyProcessResult::Noop;
+            }
+            session.engine.set_input(raw_sequence);
+            session.engine.commit_raw_input().map_or(
+                SessionKeyProcessResult::Accepted,
+                SessionKeyProcessResult::Commit,
+            )
+        }
+    }
 }
 
 fn serialize_chord_composer_code(composer: &ChordComposerProcessor) -> String {
