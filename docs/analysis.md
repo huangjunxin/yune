@@ -81,11 +81,13 @@ The strongest compatibility progress is currently in two areas:
   behavior.
 - Schema pipeline compatibility: focused librime-style subsets now cover
   schema-loaded `key_binder`, `punctuator`, `recognizer`, `ascii_composer`,
-  `ascii_segmentor`, `matcher`, `affix_segmentor`, `table_translator`,
+  `speller`, `ascii_segmentor`, `matcher`, `affix_segmentor`, `table_translator`,
   `script_translator`, `r10n_translator`, `reverse_lookup_translator`,
   `history_translator`, `switch_translator`, `simplifier`, `uniquifier`,
   `single_char_filter`, `charset_filter`/`cjk_minifier`, and
-  `reverse_lookup_filter` behavior through ABI-facing tests.
+  `reverse_lookup_filter` behavior through ABI-facing tests. The current
+  `speller` coverage is the processor-level spelling gate for alphabet,
+  delimiter, initials/finals, and `use_space`, not full speller automation.
 - Data compatibility: schema-loaded table dictionaries now feed real session
   candidates, and source dictionary parsing handles many librime/yaml-cpp edge
   cases around headers, YAML nulls, quoted scalars, `columns`, `import_tables`,
@@ -111,7 +113,8 @@ not just missing tests:
   cases that synthetic tests do not.
 - The schema pipeline is still a subset. The current focused coverage now
   reaches many high-value gears, but librime's source tree also registers
-  components such as `speller`, editor variants, `navigator`, `selector`,
+  components and deeper behaviors such as `speller` auto-select/auto-clear and
+  max-code-length handling, editor variants, `navigator`, `selector`,
   `chord_composer`, `shape_processor`, `schema_list_translator`,
   `punct_segmentor`, `fallback_segmentor`, and formatter behavior that are not
   yet equivalently modeled.

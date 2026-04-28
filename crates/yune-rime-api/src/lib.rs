@@ -120,6 +120,7 @@ struct SessionState {
     unread_commit: Option<String>,
     input_buffer: Option<CString>,
     key_binder: Option<KeyBinderProcessor>,
+    speller: Option<SpellerProcessor>,
     ascii_composer_enabled: bool,
     ascii_composer_switch_bindings: HashMap<c_int, AsciiModeSwitchStyle>,
     ascii_composer_pressed_switch_key: Option<c_int>,
@@ -141,6 +142,7 @@ impl SessionState {
             unread_commit: None,
             input_buffer: None,
             key_binder: None,
+            speller: None,
             ascii_composer_enabled: false,
             ascii_composer_switch_bindings: HashMap::new(),
             ascii_composer_pressed_switch_key: None,
@@ -170,6 +172,14 @@ struct KeyBinderProcessor {
 struct KeyBinding {
     condition: KeyBindingCondition,
     action: KeyBindingAction,
+}
+
+struct SpellerProcessor {
+    alphabet: String,
+    delimiters: String,
+    initials: String,
+    finals: String,
+    use_space: bool,
 }
 
 #[derive(Clone, Copy, Eq, PartialEq)]
@@ -264,6 +274,12 @@ struct PunctuationProcessor {
 }
 
 enum PunctuationProcessResult {
+    Accepted,
+    Commit(String),
+}
+
+enum SessionKeyProcessResult {
+    Noop,
     Accepted,
     Commit(String),
 }
@@ -1938,29 +1954,36 @@ pub extern "C" fn RimeProcessKey(session_id: RimeSessionId, keycode: c_int, mask
     {
         return FALSE;
     }
+    let mut accepted = false;
     match key_event.code {
         KeyCode::PreviousPage => {
             let page_size = session_menu_page_size(session);
             if session.engine.change_page_by(page_size, true) {
                 session.paging = true;
+                accepted = true;
             }
         }
         KeyCode::NextPage => {
             let page_size = session_menu_page_size(session);
             if session.engine.change_page_by(page_size, false) {
                 session.paging = true;
+                accepted = true;
             }
         }
-        _ => {
-            if let Some(commit) = process_session_key_event(session_id, session, key_event) {
+        _ => match process_session_key_event(session_id, session, key_event) {
+            SessionKeyProcessResult::Noop => return FALSE,
+            SessionKeyProcessResult::Accepted => accepted = true,
+            SessionKeyProcessResult::Commit(commit) => {
                 append_unread_commit(session, commit);
                 return TRUE;
             }
-        }
+        },
     }
 
     apply_visible_switch_radio_defaults(session);
-    bool_from(matches!(key_event.code, KeyCode::Character(ch) if ch != ' ') || was_composing)
+    bool_from(
+        accepted || matches!(key_event.code, KeyCode::Character(ch) if ch != ' ') || was_composing,
+    )
 }
 
 #[no_mangle]
@@ -2267,6 +2290,7 @@ fn apply_schema_to_session(session: &mut SessionState, schema_id: &str) {
     session.engine.reset_translators();
     session.engine.reset_filters();
     session.key_binder = None;
+    session.speller = None;
     session.ascii_composer_enabled = false;
     session.ascii_composer_switch_bindings.clear();
     session.ascii_composer_pressed_switch_key = None;
@@ -2279,6 +2303,7 @@ fn apply_schema_to_session(session: &mut SessionState, schema_id: &str) {
     apply_schema_switch_resets(session, schema_id);
     install_schema_segment_tags(session, schema_id);
     install_schema_ascii_composer_processor(session, schema_id);
+    install_schema_speller_processor(session, schema_id);
     install_schema_recognizer_processor(session, schema_id);
     install_schema_key_binder_processor(session, schema_id);
     install_schema_punctuation_processor(session, schema_id);
@@ -3210,7 +3235,9 @@ pub unsafe extern "C" fn RimeSimulateKeySequence(
     };
 
     for key_event in key_events {
-        if let Some(commit) = process_session_key_event(session_id, session, key_event) {
+        if let SessionKeyProcessResult::Commit(commit) =
+            process_session_key_event(session_id, session, key_event)
+        {
             append_unread_commit(session, commit);
         }
     }
@@ -4439,6 +4466,35 @@ fn ascii_mode_switch_style(style: &str) -> Option<AsciiModeSwitchStyle> {
     }
 }
 
+fn install_schema_speller_processor(session: &mut SessionState, schema_id: &str) {
+    let schema_config =
+        load_runtime_config_root(&format!("{schema_id}.schema"), ConfigOpenKind::Deployed);
+    if !schema_engine_processors_include(&schema_config, "speller") {
+        return;
+    }
+
+    let alphabet = find_config_value(&schema_config, "speller/alphabet")
+        .and_then(config_scalar_string)
+        .unwrap_or_else(|| "zyxwvutsrqponmlkjihgfedcba".to_owned());
+    let initials = find_config_value(&schema_config, "speller/initials")
+        .and_then(config_scalar_string)
+        .filter(|initials| !initials.is_empty())
+        .unwrap_or_else(|| alphabet.clone());
+    session.speller = Some(SpellerProcessor {
+        alphabet,
+        delimiters: find_config_value(&schema_config, "speller/delimiter")
+            .and_then(config_scalar_string)
+            .unwrap_or_default(),
+        initials,
+        finals: find_config_value(&schema_config, "speller/finals")
+            .and_then(config_scalar_string)
+            .unwrap_or_default(),
+        use_space: find_config_value(&schema_config, "speller/use_space")
+            .and_then(config_scalar_bool)
+            .unwrap_or(false),
+    });
+}
+
 fn install_schema_recognizer_processor(session: &mut SessionState, schema_id: &str) {
     let schema_config =
         load_runtime_config_root(&format!("{schema_id}.schema"), ConfigOpenKind::Deployed);
@@ -5259,14 +5315,18 @@ fn process_session_key_event(
     session_id: RimeSessionId,
     session: &mut SessionState,
     key_event: KeyEvent,
-) -> Option<String> {
+) -> SessionKeyProcessResult {
     if let Some(commits) = process_key_binder_processor(session_id, session, key_event) {
         update_session_segment_tags(session);
-        return (!commits.is_empty()).then(|| commits.concat());
+        return if commits.is_empty() {
+            SessionKeyProcessResult::Accepted
+        } else {
+            SessionKeyProcessResult::Commit(commits.concat())
+        };
     }
     if process_recognizer_processor(session, key_event) {
         update_session_segment_tags(session);
-        return None;
+        return SessionKeyProcessResult::Accepted;
     }
     if let Some(result) = process_punctuation_processor(session, key_event) {
         let commit = match result {
@@ -5274,18 +5334,43 @@ fn process_session_key_event(
             PunctuationProcessResult::Commit(commit) => Some(session.engine.record_commit(commit)),
         };
         update_session_segment_tags(session);
-        return commit;
+        return commit.map_or(
+            SessionKeyProcessResult::Accepted,
+            SessionKeyProcessResult::Commit,
+        );
     }
     if let Some(commit) = process_alternative_select_key(session, key_event) {
         update_session_segment_tags(session);
-        return commit;
+        return commit.map_or(
+            SessionKeyProcessResult::Accepted,
+            SessionKeyProcessResult::Commit,
+        );
+    }
+    if let Some(accepted) = process_speller_processor(session, key_event) {
+        update_session_segment_tags(session);
+        return if accepted {
+            SessionKeyProcessResult::Accepted
+        } else {
+            SessionKeyProcessResult::Noop
+        };
     }
     let before_input = session.engine.context().composition.input.clone();
     let before_highlighted = session.engine.context().highlighted;
     let commit = session.engine.process_key_event(key_event);
     update_key_binding_paging_state(session, key_event, &before_input, before_highlighted);
     update_session_segment_tags(session);
-    commit
+    if let Some(commit) = commit {
+        return SessionKeyProcessResult::Commit(commit);
+    }
+    let context = session.engine.context();
+    if !before_input.is_empty()
+        || context.composition.input != before_input
+        || context.highlighted != before_highlighted
+    {
+        SessionKeyProcessResult::Accepted
+    } else {
+        SessionKeyProcessResult::Noop
+    }
 }
 
 fn process_ascii_composer_processor(
@@ -5469,6 +5554,68 @@ fn process_recognizer_processor(session: &mut SessionState, key_event: KeyEvent)
     true
 }
 
+fn process_speller_processor(session: &mut SessionState, key_event: KeyEvent) -> Option<bool> {
+    if key_event.modifiers.control
+        || key_event.modifiers.alt
+        || key_event.modifiers.super_key
+        || key_event.modifiers.release
+    {
+        return None;
+    }
+    let KeyCode::Character(ch) = key_event.code else {
+        return None;
+    };
+    if !('\u{20}'..'\u{7f}').contains(&ch) {
+        return None;
+    }
+    let Some(speller) = &session.speller else {
+        return None;
+    };
+    if ch == ' ' {
+        if !speller.use_space || key_event.modifiers.shift {
+            return None;
+        }
+    } else {
+        let is_alphabet = speller.alphabet.contains(ch);
+        let is_delimiter = speller.delimiters.contains(ch);
+        if !is_alphabet && !is_delimiter {
+            let can_select_candidate =
+                ch.is_ascii_digit() && !session.engine.context().candidates.is_empty();
+            return if can_select_candidate {
+                None
+            } else {
+                Some(false)
+            };
+        }
+        let is_initial = speller.initials.contains(ch);
+        if !is_initial
+            && speller.expecting_initial(
+                session.engine.context().composition.caret,
+                &session.engine.context().composition.input,
+            )
+        {
+            return Some(false);
+        }
+    }
+
+    let mut input = session.engine.context().composition.input.clone();
+    input.push(ch);
+    session.engine.set_input(input);
+    Some(true)
+}
+
+impl SpellerProcessor {
+    fn expecting_initial(&self, caret_pos: usize, input: &str) -> bool {
+        if caret_pos == 0 {
+            return true;
+        }
+        let previous_char = input[..caret_pos].chars().last();
+        previous_char.map_or(true, |ch| {
+            self.finals.contains(ch) || !self.alphabet.contains(ch)
+        })
+    }
+}
+
 fn process_key_binder_processor(
     session_id: RimeSessionId,
     session: &mut SessionState,
@@ -5565,7 +5712,9 @@ fn redirect_key_binding_events(
     }
     let mut commits = Vec::new();
     for event in events {
-        if let Some(commit) = process_session_key_event(session_id, session, event) {
+        if let SessionKeyProcessResult::Commit(commit) =
+            process_session_key_event(session_id, session, event)
+        {
             commits.push(commit);
         }
     }
