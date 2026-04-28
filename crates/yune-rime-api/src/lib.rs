@@ -3867,13 +3867,12 @@ fn apply_switch_candidate(session: &mut SessionState, candidate_index: usize) ->
 }
 
 fn apply_visible_switch_radio_defaults(session: &mut SessionState) {
-    if !session
-        .engine
-        .context()
-        .candidates
-        .iter()
-        .any(|candidate| candidate.source == CandidateSource::Switch)
-    {
+    if !session.engine.context().candidates.iter().any(|candidate| {
+        matches!(
+            candidate.source,
+            CandidateSource::Switch | CandidateSource::Unfold
+        )
+    }) {
         return;
     }
 

@@ -2917,12 +2917,10 @@ impl SwitchTranslator {
                     states,
                     abbrev,
                 } => {
-                    let Some(selected_index) = options
+                    let selected_index = options
                         .iter()
                         .position(|option| options_get_bool(runtime_options, option))
-                    else {
-                        continue;
-                    };
+                        .unwrap_or(0);
                     if !states
                         .get(selected_index)
                         .is_some_and(|state| !state.is_empty())
