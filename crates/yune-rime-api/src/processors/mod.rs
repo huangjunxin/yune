@@ -3,6 +3,7 @@ mod editor;
 mod key_binder;
 mod navigator;
 mod recognizer;
+mod selector;
 mod speller;
 
 pub(crate) use ascii_composer::{
@@ -20,4 +21,7 @@ pub(crate) use navigator::{
     process_navigator_configured_key, process_navigator_delimiter_key,
 };
 pub(crate) use recognizer::{install_schema_recognizer_processor, process_recognizer_processor};
+pub(crate) use selector::{
+    install_schema_selector_bindings, process_selector_layout_key, selector_configured_action,
+};
 pub(crate) use speller::{install_schema_speller_processor, process_speller_processor};

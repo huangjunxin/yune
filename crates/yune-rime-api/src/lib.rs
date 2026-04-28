@@ -68,21 +68,21 @@ const XK_ESCAPE: c_int = 0xff1b;
 const XK_RETURN: c_int = 0xff0d;
 const XK_DELETE: c_int = 0xffff;
 const XK_HOME: c_int = 0xff50;
-const XK_LEFT: c_int = 0xff51;
-const XK_UP: c_int = 0xff52;
-const XK_RIGHT: c_int = 0xff53;
-const XK_DOWN: c_int = 0xff54;
-const XK_PAGE_UP: c_int = 0xff55;
-const XK_PAGE_DOWN: c_int = 0xff56;
+pub(crate) const XK_LEFT: c_int = 0xff51;
+pub(crate) const XK_UP: c_int = 0xff52;
+pub(crate) const XK_RIGHT: c_int = 0xff53;
+pub(crate) const XK_DOWN: c_int = 0xff54;
+pub(crate) const XK_PAGE_UP: c_int = 0xff55;
+pub(crate) const XK_PAGE_DOWN: c_int = 0xff56;
 const XK_END: c_int = 0xff57;
 const XK_KP_ENTER: c_int = 0xff8d;
 const XK_KP_HOME: c_int = 0xff95;
-const XK_KP_LEFT: c_int = 0xff96;
-const XK_KP_UP: c_int = 0xff97;
-const XK_KP_RIGHT: c_int = 0xff98;
-const XK_KP_DOWN: c_int = 0xff99;
-const XK_KP_PAGE_UP: c_int = 0xff9a;
-const XK_KP_PAGE_DOWN: c_int = 0xff9b;
+pub(crate) const XK_KP_LEFT: c_int = 0xff96;
+pub(crate) const XK_KP_UP: c_int = 0xff97;
+pub(crate) const XK_KP_RIGHT: c_int = 0xff98;
+pub(crate) const XK_KP_DOWN: c_int = 0xff99;
+pub(crate) const XK_KP_PAGE_UP: c_int = 0xff9a;
+pub(crate) const XK_KP_PAGE_DOWN: c_int = 0xff9b;
 const XK_KP_END: c_int = 0xff9c;
 const XK_KP_0: c_int = 0xffb0;
 const XK_KP_9: c_int = 0xffb9;
@@ -150,14 +150,14 @@ pub(crate) enum EditorAction {
 
 #[derive(Default)]
 pub(crate) struct SelectorBindings {
-    horizontal_stacked: HashMap<KeyEvent, SelectorBindingAction>,
-    horizontal_linear: HashMap<KeyEvent, SelectorBindingAction>,
-    vertical_stacked: HashMap<KeyEvent, SelectorBindingAction>,
-    vertical_linear: HashMap<KeyEvent, SelectorBindingAction>,
+    pub(crate) horizontal_stacked: HashMap<KeyEvent, SelectorBindingAction>,
+    pub(crate) horizontal_linear: HashMap<KeyEvent, SelectorBindingAction>,
+    pub(crate) vertical_stacked: HashMap<KeyEvent, SelectorBindingAction>,
+    pub(crate) vertical_linear: HashMap<KeyEvent, SelectorBindingAction>,
 }
 
 #[derive(Clone, Copy)]
-enum SelectorBindingAction {
+pub(crate) enum SelectorBindingAction {
     Noop,
     Action(SelectorLayoutAction),
 }
@@ -1278,12 +1278,12 @@ fn shape_formatted_commit_text(session: &SessionState, text: &str) -> String {
     shape_formatted_ascii_text(text, session.engine.status().is_full_shape)
 }
 
-fn session_menu_page_size(session: &SessionState) -> usize {
+pub(crate) fn session_menu_page_size(session: &SessionState) -> usize {
     context_menu_settings(&session.engine.status().schema_id).page_size
 }
 
 #[derive(Clone, Copy)]
-enum SelectorLayoutAction {
+pub(crate) enum SelectorLayoutAction {
     PreviousCandidate,
     NextCandidate,
     PreviousPage,
@@ -1306,59 +1306,6 @@ pub(crate) enum NavigatorAction {
     RightBySyllableNoLoop,
     Home,
     End,
-}
-
-fn process_selector_layout_key(
-    session: &mut SessionState,
-    key_event: KeyEvent,
-    keycode: c_int,
-    mask: c_int,
-) -> Option<bool> {
-    if session.engine.context().composition.input.is_empty()
-        || session.engine.context().candidates.is_empty()
-        || session
-            .engine
-            .context()
-            .segment_tags
-            .iter()
-            .any(|tag| tag == "raw")
-    {
-        return None;
-    }
-
-    let is_vertical = session.engine.get_option("_vertical");
-    let is_linear =
-        session.engine.get_option("_linear") || session.engine.get_option("_horizontal");
-    if let Some(action) = selector_configured_action(session, is_vertical, is_linear, key_event) {
-        return match action {
-            SelectorBindingAction::Noop => Some(false),
-            SelectorBindingAction::Action(action) => {
-                apply_selector_layout_action(session, action, is_linear)
-            }
-        };
-    }
-
-    if mask != 0 {
-        return None;
-    }
-
-    let action = selector_layout_action(is_vertical, is_linear, keycode)?;
-    apply_selector_layout_action(session, action, is_linear)
-}
-
-fn selector_configured_action(
-    session: &SessionState,
-    is_vertical: bool,
-    is_linear: bool,
-    key_event: KeyEvent,
-) -> Option<SelectorBindingAction> {
-    let bindings = match (is_vertical, is_linear) {
-        (false, false) => &session.selector_bindings.horizontal_stacked,
-        (false, true) => &session.selector_bindings.horizontal_linear,
-        (true, false) => &session.selector_bindings.vertical_stacked,
-        (true, true) => &session.selector_bindings.vertical_linear,
-    };
-    bindings.get(&key_event).copied()
 }
 
 fn session_has_modified_printable_binding(session: &SessionState, key_event: KeyEvent) -> bool {
@@ -1391,128 +1338,6 @@ fn session_chord_composer_accepts_printable(session: &SessionState, key_event: K
     };
     composer.alphabet.contains(&ch)
         && chord_composer_allows_modifiers(composer, key_event.modifiers)
-}
-
-fn selector_layout_action(
-    is_vertical: bool,
-    is_linear: bool,
-    keycode: c_int,
-) -> Option<SelectorLayoutAction> {
-    use SelectorLayoutAction::{NextCandidate, NextPage, PreviousCandidate, PreviousPage};
-
-    match (is_vertical, is_linear, keycode) {
-        (false, false, XK_UP | XK_KP_UP) => Some(PreviousCandidate),
-        (false, false, XK_DOWN | XK_KP_DOWN) => Some(NextCandidate),
-        (false, true, XK_LEFT | XK_KP_LEFT) => Some(PreviousCandidate),
-        (false, true, XK_RIGHT | XK_KP_RIGHT) => Some(NextCandidate),
-        (false, true, XK_UP | XK_KP_UP) => Some(PreviousPage),
-        (false, true, XK_DOWN | XK_KP_DOWN) => Some(NextPage),
-        (true, false, XK_RIGHT | XK_KP_RIGHT) => Some(PreviousCandidate),
-        (true, false, XK_LEFT | XK_KP_LEFT) => Some(NextCandidate),
-        (true, true, XK_UP | XK_KP_UP) => Some(PreviousCandidate),
-        (true, true, XK_DOWN | XK_KP_DOWN) => Some(NextCandidate),
-        (true, true, XK_RIGHT | XK_KP_RIGHT) => Some(PreviousPage),
-        (true, true, XK_LEFT | XK_KP_LEFT) => Some(NextPage),
-        (_, _, XK_PAGE_UP | XK_KP_PAGE_UP) => Some(PreviousPage),
-        (_, _, XK_PAGE_DOWN | XK_KP_PAGE_DOWN) => Some(NextPage),
-        _ => None,
-    }
-}
-
-fn apply_selector_layout_action(
-    session: &mut SessionState,
-    action: SelectorLayoutAction,
-    is_linear: bool,
-) -> Option<bool> {
-    match action {
-        SelectorLayoutAction::PreviousCandidate => {
-            selector_previous_candidate_like_librime(session, is_linear)
-        }
-        SelectorLayoutAction::NextCandidate => {
-            selector_next_candidate_like_librime(session, is_linear)
-        }
-        SelectorLayoutAction::PreviousPage => {
-            selector_previous_page_like_librime(session);
-            Some(true)
-        }
-        SelectorLayoutAction::NextPage => {
-            selector_next_page_like_librime(session);
-            Some(true)
-        }
-        SelectorLayoutAction::Home => selector_home_like_librime(session),
-        SelectorLayoutAction::End => selector_end_like_librime(session),
-    }
-}
-
-fn selector_previous_candidate_like_librime(
-    session: &mut SessionState,
-    is_linear: bool,
-) -> Option<bool> {
-    let context = session.engine.context();
-    if is_linear && context.composition.caret < context.composition.input.len() {
-        return None;
-    }
-    let highlighted = context.highlighted;
-    if highlighted == 0 {
-        return (!is_linear).then_some(true);
-    }
-    session.engine.highlight_candidate(highlighted - 1);
-    session.paging = true;
-    Some(true)
-}
-
-fn selector_next_candidate_like_librime(
-    session: &mut SessionState,
-    is_linear: bool,
-) -> Option<bool> {
-    let context = session.engine.context();
-    if is_linear && context.composition.caret < context.composition.input.len() {
-        return None;
-    }
-    let next_index = context.highlighted + 1;
-    if next_index >= context.candidates.len() {
-        return Some(true);
-    }
-    session.engine.highlight_candidate(next_index);
-    session.paging = true;
-    Some(true)
-}
-
-fn selector_previous_page_like_librime(session: &mut SessionState) {
-    let page_size = session_menu_page_size(session);
-    let selected_index = session.engine.context().highlighted;
-    let index = selected_index.saturating_sub(page_size);
-    session.engine.highlight_candidate(index);
-    session.paging = true;
-}
-
-fn selector_next_page_like_librime(session: &mut SessionState) {
-    let page_size = session_menu_page_size(session);
-    let context = session.engine.context();
-    let index = context.highlighted + page_size;
-    let page_start = (index / page_size) * page_size;
-    if context.candidates.len() <= page_start {
-        return;
-    }
-    let index = index.min(context.candidates.len() - 1);
-    session.engine.highlight_candidate(index);
-    session.paging = true;
-}
-
-fn selector_home_like_librime(session: &mut SessionState) -> Option<bool> {
-    if session.engine.context().highlighted == 0 {
-        return None;
-    }
-    session.engine.highlight_candidate(0);
-    Some(true)
-}
-
-fn selector_end_like_librime(session: &mut SessionState) -> Option<bool> {
-    let context = session.engine.context();
-    if context.composition.caret < context.composition.input.len() {
-        return None;
-    }
-    selector_home_like_librime(session)
 }
 
 pub(crate) fn install_schema_chord_composer_processor(session: &mut SessionState, schema_id: &str) {
@@ -1630,72 +1455,6 @@ pub(crate) fn install_schema_punctuation_translator_from_config(
         translator
     };
     session.engine.add_translator(translator);
-}
-
-pub(crate) fn install_schema_selector_bindings(session: &mut SessionState, schema_id: &str) {
-    let schema_config =
-        load_runtime_config_root(&format!("{schema_id}.schema"), ConfigOpenKind::Deployed);
-    load_selector_binding_section(
-        &schema_config,
-        "selector",
-        &mut session.selector_bindings.horizontal_stacked,
-    );
-    load_selector_binding_section(
-        &schema_config,
-        "selector/linear",
-        &mut session.selector_bindings.horizontal_linear,
-    );
-    load_selector_binding_section(
-        &schema_config,
-        "selector/vertical",
-        &mut session.selector_bindings.vertical_stacked,
-    );
-    load_selector_binding_section(
-        &schema_config,
-        "selector/vertical/linear",
-        &mut session.selector_bindings.vertical_linear,
-    );
-}
-
-fn load_selector_binding_section(
-    schema_config: &Value,
-    section: &str,
-    bindings: &mut HashMap<KeyEvent, SelectorBindingAction>,
-) {
-    let Some(Value::Mapping(config_bindings)) =
-        find_config_value(schema_config, &format!("{section}/bindings"))
-    else {
-        return;
-    };
-
-    for (key, action) in config_bindings {
-        let Some(key) = config_scalar_string(key) else {
-            continue;
-        };
-        let Some(key_event) = parse_single_key_binding_event(&key) else {
-            continue;
-        };
-        let Some(action) = action.as_str().and_then(selector_binding_action_from_name) else {
-            continue;
-        };
-        bindings.insert(key_event, action);
-    }
-}
-
-fn selector_binding_action_from_name(action: &str) -> Option<SelectorBindingAction> {
-    let action = match action {
-        "noop" => SelectorBindingAction::Noop,
-        "previous_candidate" => {
-            SelectorBindingAction::Action(SelectorLayoutAction::PreviousCandidate)
-        }
-        "next_candidate" => SelectorBindingAction::Action(SelectorLayoutAction::NextCandidate),
-        "previous_page" => SelectorBindingAction::Action(SelectorLayoutAction::PreviousPage),
-        "next_page" => SelectorBindingAction::Action(SelectorLayoutAction::NextPage),
-        "home" => SelectorBindingAction::Action(SelectorLayoutAction::Home),
-        "end" => SelectorBindingAction::Action(SelectorLayoutAction::End),
-        _ => return None,
-    };
-    Some(action)
 }
 
 pub(crate) fn parse_single_key_binding_event(pattern: &str) -> Option<KeyEvent> {
