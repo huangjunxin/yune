@@ -15,10 +15,10 @@ use std::{
 use regex::Regex;
 use serde_yaml::{Mapping, Number, Value};
 use yune_core::{
-    parse_key_sequence, CandidateSource, CharsetFilter, Engine, HistoryTranslator, KeyCode,
-    KeyEvent, KeyModifiers, PunctuationTranslator, ReverseLookupFilter, ReverseLookupTranslator,
-    SimplifierFilter, SingleCharFilter, StaticTableTranslator, SwitchTranslator,
-    SwitchTranslatorSwitch, TableDictionary, TaggedFilter, UniquifierFilter,
+    parse_key_sequence, CandidateSource, CharsetFilter, Engine, FoldedSwitchOptions,
+    HistoryTranslator, KeyCode, KeyEvent, KeyModifiers, PunctuationTranslator, ReverseLookupFilter,
+    ReverseLookupTranslator, SimplifierFilter, SingleCharFilter, StaticTableTranslator,
+    SwitchTranslator, SwitchTranslatorSwitch, TableDictionary, TaggedFilter, UniquifierFilter,
 };
 
 mod abi;
@@ -3826,6 +3826,10 @@ fn apply_switch_candidate(session: &mut SessionState, candidate_index: usize) ->
     let Some(candidate) = session.engine.context().candidates.get(candidate_index) else {
         return false;
     };
+    if candidate.source == CandidateSource::Unfold {
+        session.engine.set_option("_fold_options", false);
+        return true;
+    }
     if candidate.source != CandidateSource::Switch {
         return false;
     }
@@ -4068,9 +4072,10 @@ fn install_schema_switch_translator_from_config(session: &mut SessionState, sche
     if switches.is_empty() {
         return;
     }
-    session
-        .engine
-        .add_translator(SwitchTranslator::new(switches));
+    session.engine.add_translator(
+        SwitchTranslator::new(switches)
+            .with_folded_options(schema_folded_switch_options(schema_config)),
+    );
 }
 
 fn install_schema_filter_chain(session: &mut SessionState, schema_id: &str) {
@@ -4869,7 +4874,10 @@ fn schema_switch_translator_switches(schema_config: &Value) -> Vec<SwitchTransla
             if let Some(option_name) = switch_scalar_field(switch_map, "name") {
                 let state0 = switch_label_value(switch_map, "states", 0)?;
                 let state1 = switch_label_value(switch_map, "states", 1)?;
-                return Some(SwitchTranslatorSwitch::toggle(option_name, state0, state1));
+                return Some(
+                    SwitchTranslatorSwitch::toggle(option_name, state0, state1)
+                        .with_abbrev(switch_abbrev_values(switch_map).into_iter()),
+                );
             }
 
             let Value::Sequence(options) = switch_map.get(Value::String("options".to_owned()))?
@@ -4884,10 +4892,30 @@ fn schema_switch_translator_switches(schema_config: &Value) -> Vec<SwitchTransla
             if options.is_empty() || states.is_empty() {
                 None
             } else {
-                Some(SwitchTranslatorSwitch::radio(options, states))
+                Some(
+                    SwitchTranslatorSwitch::radio(options, states)
+                        .with_abbrev(switch_abbrev_values(switch_map).into_iter()),
+                )
             }
         })
         .collect()
+}
+
+fn schema_folded_switch_options(schema_config: &Value) -> FoldedSwitchOptions {
+    FoldedSwitchOptions {
+        prefix: find_config_value(schema_config, "switcher/option_list_prefix")
+            .and_then(config_scalar_string)
+            .unwrap_or_default(),
+        suffix: find_config_value(schema_config, "switcher/option_list_suffix")
+            .and_then(config_scalar_string)
+            .unwrap_or_default(),
+        separator: find_config_value(schema_config, "switcher/option_list_separator")
+            .and_then(config_scalar_string)
+            .unwrap_or_else(|| " ".to_owned()),
+        abbreviate_options: find_config_value(schema_config, "switcher/abbreviate_options")
+            .and_then(config_scalar_bool)
+            .unwrap_or(false),
+    }
 }
 
 fn schema_switch_selection_commands(schema_config: &Value) -> Vec<SwitchSelectionCommand> {
@@ -4944,6 +4972,13 @@ fn switch_label_value(switch_map: &Mapping, key: &str, state_index: usize) -> Op
         return None;
     };
     values.get(state_index).and_then(config_scalar_string)
+}
+
+fn switch_abbrev_values(switch_map: &Mapping) -> Vec<Option<String>> {
+    let Some(Value::Sequence(values)) = switch_map.get(Value::String("abbrev".to_owned())) else {
+        return Vec::new();
+    };
+    values.iter().map(config_scalar_string).collect()
 }
 
 fn punctuation_entries_from_config(schema_config: &Value, shape: &str) -> Vec<(String, String)> {

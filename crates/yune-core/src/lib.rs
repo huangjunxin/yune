@@ -20,6 +20,7 @@ pub enum CandidateSource {
     ReverseLookup,
     History,
     Switch,
+    Unfold,
     Ai,
 }
 
@@ -35,6 +36,7 @@ impl CandidateSource {
             Self::ReverseLookup => "reverse_lookup",
             Self::History => "history",
             Self::Switch => "switch",
+            Self::Unfold => "unfold",
             Self::Ai => "ai",
         }
     }
@@ -2702,10 +2704,12 @@ pub enum SwitchTranslatorSwitch {
     Toggle {
         option_name: String,
         states: [String; 2],
+        abbrev: [Option<String>; 2],
     },
     Radio {
         options: Vec<String>,
         states: Vec<String>,
+        abbrev: Vec<Option<String>>,
     },
 }
 
@@ -2719,6 +2723,7 @@ impl SwitchTranslatorSwitch {
         Self::Toggle {
             option_name: option_name.into(),
             states: [state0.into(), state1.into()],
+            abbrev: [None, None],
         }
     }
 
@@ -2730,12 +2735,35 @@ impl SwitchTranslatorSwitch {
         Self::Radio {
             options: options.into_iter().map(Into::into).collect(),
             states: states.into_iter().map(Into::into).collect(),
+            abbrev: Vec::new(),
         }
+    }
+
+    #[must_use]
+    pub fn with_abbrev(
+        mut self,
+        abbrev: impl IntoIterator<Item = Option<impl Into<String>>>,
+    ) -> Self {
+        match &mut self {
+            Self::Toggle { abbrev: values, .. } => {
+                for (index, value) in abbrev.into_iter().take(2).enumerate() {
+                    values[index] = value.map(Into::into);
+                }
+            }
+            Self::Radio { abbrev: values, .. } => {
+                *values = abbrev
+                    .into_iter()
+                    .map(|value| value.map(Into::into))
+                    .collect();
+            }
+        }
+        self
     }
 }
 
 pub struct SwitchTranslator {
     switches: Vec<SwitchTranslatorSwitch>,
+    folded_options: FoldedSwitchOptions,
 }
 
 impl SwitchTranslator {
@@ -2743,6 +2771,32 @@ impl SwitchTranslator {
     pub fn new(switches: impl IntoIterator<Item = SwitchTranslatorSwitch>) -> Self {
         Self {
             switches: switches.into_iter().collect(),
+            folded_options: FoldedSwitchOptions::default(),
+        }
+    }
+
+    #[must_use]
+    pub fn with_folded_options(mut self, folded_options: FoldedSwitchOptions) -> Self {
+        self.folded_options = folded_options;
+        self
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct FoldedSwitchOptions {
+    pub prefix: String,
+    pub suffix: String,
+    pub separator: String,
+    pub abbreviate_options: bool,
+}
+
+impl Default for FoldedSwitchOptions {
+    fn default() -> Self {
+        Self {
+            prefix: String::new(),
+            suffix: String::new(),
+            separator: " ".to_owned(),
+            abbreviate_options: false,
         }
     }
 }
@@ -2772,6 +2826,7 @@ impl Translator for SwitchTranslator {
                 SwitchTranslatorSwitch::Toggle {
                     option_name,
                     states,
+                    ..
                 } => {
                     if states.iter().any(String::is_empty) {
                         continue;
@@ -2785,7 +2840,9 @@ impl Translator for SwitchTranslator {
                         quality: 0.5,
                     });
                 }
-                SwitchTranslatorSwitch::Radio { options, states } => {
+                SwitchTranslatorSwitch::Radio {
+                    options, states, ..
+                } => {
                     if options.is_empty() || states.is_empty() {
                         continue;
                     }
@@ -2811,8 +2868,87 @@ impl Translator for SwitchTranslator {
                 }
             }
         }
+        if options_get_bool(runtime_options, "_fold_options") {
+            let labels = self.folded_option_labels(runtime_options);
+            if labels.len() > 1 {
+                return vec![Candidate {
+                    text: format!(
+                        "{}{}{}",
+                        self.folded_options.prefix,
+                        labels.join(&self.folded_options.separator),
+                        self.folded_options.suffix
+                    ),
+                    comment: String::new(),
+                    source: CandidateSource::Unfold,
+                    quality: 0.5,
+                }];
+            }
+        }
         candidates
     }
+}
+
+impl SwitchTranslator {
+    fn folded_option_labels(&self, runtime_options: &HashMap<String, bool>) -> Vec<String> {
+        let mut labels = Vec::new();
+        for the_switch in &self.switches {
+            match the_switch {
+                SwitchTranslatorSwitch::Toggle {
+                    option_name,
+                    states,
+                    abbrev,
+                } => {
+                    let current_state =
+                        usize::from(runtime_options.get(option_name).copied().unwrap_or(false));
+                    if !states
+                        .get(current_state)
+                        .is_some_and(|state| !state.is_empty())
+                    {
+                        continue;
+                    }
+                    labels.push(folded_state_label(
+                        &states[current_state],
+                        abbrev.get(current_state).and_then(Option::as_deref),
+                        self.folded_options.abbreviate_options,
+                    ));
+                }
+                SwitchTranslatorSwitch::Radio {
+                    options,
+                    states,
+                    abbrev,
+                } => {
+                    let Some(selected_index) = options
+                        .iter()
+                        .position(|option| options_get_bool(runtime_options, option))
+                    else {
+                        continue;
+                    };
+                    if !states
+                        .get(selected_index)
+                        .is_some_and(|state| !state.is_empty())
+                    {
+                        continue;
+                    }
+                    labels.push(folded_state_label(
+                        &states[selected_index],
+                        abbrev.get(selected_index).and_then(Option::as_deref),
+                        self.folded_options.abbreviate_options,
+                    ));
+                }
+            }
+        }
+        labels
+    }
+}
+
+fn folded_state_label(state: &str, abbrev: Option<&str>, abbreviate: bool) -> String {
+    if !abbreviate {
+        return state.to_owned();
+    }
+    if let Some(abbrev) = abbrev {
+        return abbrev.to_owned();
+    }
+    state.chars().next().into_iter().collect()
 }
 
 fn options_get_bool(options: &HashMap<String, bool>, option: &str) -> bool {
