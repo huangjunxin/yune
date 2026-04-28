@@ -5,6 +5,26 @@
 Do not start with a full librime rewrite. Start with a compatibility harness and
 AI extension points, then replace modules only after behavior is measurable.
 
+## Compatibility, Not Cloning
+
+Yune should use librime as the oracle for externally observable compatibility,
+not as an internal architecture template. Schema semantics, config behavior,
+candidate output, C ABI expectations, deployed data compatibility, and frontend
+integration should be compared against librime because existing users and
+frontends depend on those contracts.
+
+Internal implementation should still be idiomatic Rust and can deliberately
+depart from librime's C++ structure when that produces a simpler or stronger
+system. Better typed configuration models, deterministic engine state,
+pipeline traits, storage abstractions, dictionary indexes, cache invalidation,
+incremental rebuilds, test harnesses, and optional AI extension points are all
+valid improvements when they preserve compatibility at the boundary.
+
+When Yune intentionally improves behavior beyond librime, the compatibility
+boundary must be explicit. Classic input behavior should remain predictable,
+and new behavior should be opt-in or isolated behind Yune-native extension
+points unless a real frontend or schema migration requires a different choice.
+
 ## Why Not Full Rewrite First
 
 librime's value is not only its C++ implementation. The hard parts are:
@@ -59,11 +79,22 @@ The strongest compatibility progress is currently in two areas:
   librime-style include/patch directives, custom patches, build-info freshness,
   schema deployment, workspace update, task dispatch, and staging/user-data
   behavior.
+- Schema pipeline compatibility: focused librime-style subsets now cover
+  schema-loaded `key_binder`, `punctuator`, `recognizer`, `ascii_composer`,
+  `ascii_segmentor`, `matcher`, `affix_segmentor`, `table_translator`,
+  `script_translator`, `r10n_translator`, `reverse_lookup_translator`,
+  `history_translator`, `switch_translator`, `simplifier`, `uniquifier`,
+  `single_char_filter`, `charset_filter`/`cjk_minifier`, and
+  `reverse_lookup_filter` behavior through ABI-facing tests.
 - Data compatibility: schema-loaded table dictionaries now feed real session
   candidates, and source dictionary parsing handles many librime/yaml-cpp edge
   cases around headers, YAML nulls, quoted scalars, `columns`, `import_tables`,
   duplicate rows, literal hash-prefixed entries, raw text whitespace, and row
   weights.
+- ABI edge-case compatibility: recent coverage also locks down struct layouts,
+  self-versioned cleanup, unread commit buffering, session lifetime after
+  finalize, state-label indexing, selected-schema page-size parsing, deployment
+  notifications, and sync notifications.
 
 This does not make Yune a complete librime replacement yet. It does make
 frontend and dictionary behavior measurable at a much finer granularity, which
@@ -78,12 +109,19 @@ not just missing tests:
   frontend-style client, but clients such as Squirrel, Weasel, ibus-rime, and
   fcitx-rime may expose lifetime, notification, deployment, or session edge
   cases that synthetic tests do not.
-- The schema pipeline is still a subset. Librime's processor, segmentor,
-  translator, filter, switch, punctuator, reverse lookup, OpenCC, and schema
-  dependency behavior remain larger than the current Yune fixtures.
+- The schema pipeline is still a subset. The current focused coverage now
+  reaches many high-value gears, but librime's source tree also registers
+  components such as `speller`, editor variants, `navigator`, `selector`,
+  `chord_composer`, `shape_processor`, `schema_list_translator`,
+  `punct_segmentor`, `fallback_segmentor`, and formatter behavior that are not
+  yet equivalently modeled.
+- Existing schema-loaded translator/filter support is intentionally partial.
+  Areas such as full spelling algebra, full OpenCC data and conversion chains,
+  distribution-scale schema chains, and compiled-data interactions still need
+  direct comparison against librime behavior.
 - Dictionary compatibility currently focuses on source `.dict.yaml` loading.
   Librime also builds and consumes `.table.bin`, `.prism.bin`, `.reverse.bin`,
-  pack dictionaries, spelling algebra output, preset vocabulary, stem columns,
+  pack dictionaries at compiled-data level, preset vocabulary, stem columns,
   encoder rules, correction data, checksums, and rebuild heuristics.
 - User dictionary support is currently a plain text compatibility shim. Librime
   also has LevelDB-backed userdb storage, snapshots, recovery, learning, and

@@ -87,19 +87,57 @@
 - Aligned RIME config hex integer parsing with librime behavior for unsigned
   values that wrap through C `int` conversion.
 
+### M7: Schema Pipeline Compatibility
+
+- Expanded schema-loaded processor coverage for librime-style `key_binder`,
+  `punctuator`, `recognizer`, and `ascii_composer` behavior, including
+  preset imports, namespaced prescriptions, paging and redirect bindings,
+  switch option updates, punctuation cycling, paired punctuation, digit
+  separators, recognizer `use_space`, and ASCII mode switch-key handling.
+- Expanded schema-loaded segmentor coverage for `ascii_segmentor`, `matcher`,
+  and namespaced `affix_segmentor`, including recognizer-pattern tags,
+  namespace fallback behavior, sorted pattern precedence, raw ASCII tags, and
+  exclusive affix-tag behavior for prefixed reverse lookup.
+- Expanded schema-loaded translator coverage for `table_translator`,
+  `script_translator`, `r10n_translator`, `reverse_lookup_translator`,
+  `history_translator`, and `switch_translator`, including namespace aliases,
+  tag gating, completion toggles, sentence fallback, candidate quality,
+  `dictionary_exclude`, `comment_format`, pack dictionaries, persisted
+  switcher options, folded switch menus, radio defaults, and state-label ABI
+  indexing.
+- Expanded schema-loaded filter coverage for `simplifier`, `uniquifier`,
+  `single_char_filter`, `charset_filter`/`cjk_minifier`, and
+  `reverse_lookup_filter`, including tag gating, namespace aliases, OpenCC
+  config selection, excluded types, tip comments, duplicate removal,
+  single-character promotion, extended-CJK gating, and reverse-lookup comment
+  updates on completion and sentence candidates.
+- Tightened librime ABI lifecycle behavior for `RimeTraits`, session activity
+  cleanup, `RimeFinalize`, deployment notifications, `RimeSyncUserData`,
+  unread commit buffering, struct-layout coverage, menu page-size parsing,
+  and switch state-label lookup.
+
 ## Next
 
+- Treat `/Users/trenton/Projects/librime` as the compatibility oracle for
+  user-visible behavior, schema semantics, ABI contracts, and migration support,
+  but do not clone librime's internal architecture by default. Prefer idiomatic
+  Rust designs, cleaner abstractions, stronger typing, deterministic tests, and
+  better algorithms where they preserve or intentionally extend the external
+  contract.
 - Run the current ABI against real frontend clients such as Squirrel, Weasel,
   ibus-rime, fcitx-rime, or fcitx5-rime, and record any struct-layout,
   lifetime, notification, deployment, and session-behavior gaps.
-- Continue broadening schema coverage beyond current fixtures, especially
-  processor/segmentor/translator/filter chains, switches, punctuator behavior,
-  reverse lookup, OpenCC conversion, and schema dependencies used by real
-  distributions.
+- Continue broadening schema coverage beyond the current focused subset toward
+  the remaining librime gear components and deeper semantics: `speller`,
+  `editor` variants, `navigator`, `selector`, `chord_composer`,
+  `shape_processor`/`shape_formatter`, `schema_list_translator`,
+  `punct_segmentor`, `fallback_segmentor`, full spelling algebra, full OpenCC
+  conversion data, and larger real-world processor/segmentor/translator/filter
+  chains from distribution schemas.
 - Expand dictionary compatibility beyond source `.dict.yaml` parsing toward
   librime's compiled `.table.bin`, `.prism.bin`, `.reverse.bin`, pack
-  dictionaries, spelling algebra, preset vocabulary, stem columns, encoders,
-  correction data, checksums, and rebuild heuristics.
+  dictionaries at compiled-data level, preset vocabulary, stem columns,
+  encoders, correction data, checksums, and rebuild heuristics.
 - Expand user dictionary compatibility beyond the current plain text userdb
   shims toward librime's LevelDB/userdb storage, snapshot merging, recovery,
   learning, and frequency update semantics.
