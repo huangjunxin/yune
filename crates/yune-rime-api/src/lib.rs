@@ -57,6 +57,7 @@ const XK_SHIFT_L: c_int = 0xffe1;
 const XK_SHIFT_R: c_int = 0xffe2;
 const XK_CONTROL_L: c_int = 0xffe3;
 const XK_CONTROL_R: c_int = 0xffe4;
+const XK_CAPS_LOCK: c_int = 0xffe5;
 const XK_ALT_L: c_int = 0xffe9;
 const XK_ALT_R: c_int = 0xffea;
 const XK_SUPER_L: c_int = 0xffeb;
@@ -1875,6 +1876,16 @@ pub extern "C" fn RimeProcessKey(session_id: RimeSessionId, keycode: c_int, mask
 
     if keycode == XK_EISU_TOGGLE && mask == 0 {
         if let Some(commit) = process_ascii_composer_switch_key(session, keycode) {
+            if let Some(commit) = commit {
+                append_unread_commit(session, commit);
+            }
+            update_session_segment_tags(session);
+            return TRUE;
+        }
+        return FALSE;
+    }
+    if keycode == XK_CAPS_LOCK && mask == 0 {
+        if let Some(commit) = process_ascii_composer_caps_lock_switch_key(session) {
             if let Some(commit) = commit {
                 append_unread_commit(session, commit);
             }
@@ -5057,6 +5068,24 @@ fn switch_ascii_mode_with_key(session: &mut SessionState, keycode: c_int) -> Opt
         return None;
     }
     switch_ascii_mode(session, new_mode, style)
+}
+
+fn process_ascii_composer_caps_lock_switch_key(
+    session: &mut SessionState,
+) -> Option<Option<String>> {
+    if !session.ascii_composer_enabled {
+        return None;
+    }
+    let mut style = *session.ascii_composer_switch_bindings.get(&XK_CAPS_LOCK)?;
+    if matches!(
+        style,
+        AsciiModeSwitchStyle::InlineAscii
+            | AsciiModeSwitchStyle::SetAsciiMode
+            | AsciiModeSwitchStyle::UnsetAsciiMode
+    ) {
+        style = AsciiModeSwitchStyle::Clear;
+    }
+    Some(switch_ascii_mode(session, true, style))
 }
 
 fn switch_ascii_mode(
