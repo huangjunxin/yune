@@ -179,7 +179,17 @@ struct SpellerProcessor {
     delimiters: String,
     initials: String,
     finals: String,
+    max_code_length: usize,
+    auto_clear: SpellerAutoClear,
     use_space: bool,
+}
+
+#[derive(Clone, Copy, Eq, PartialEq)]
+enum SpellerAutoClear {
+    None,
+    Auto,
+    Manual,
+    MaxLength,
 }
 
 #[derive(Clone, Copy, Eq, PartialEq)]
@@ -4489,6 +4499,19 @@ fn install_schema_speller_processor(session: &mut SessionState, schema_id: &str)
         finals: find_config_value(&schema_config, "speller/finals")
             .and_then(config_scalar_string)
             .unwrap_or_default(),
+        max_code_length: find_config_value(&schema_config, "speller/max_code_length")
+            .and_then(config_scalar_int)
+            .and_then(|value| usize::try_from(value).ok())
+            .unwrap_or(0),
+        auto_clear: find_config_value(&schema_config, "speller/auto_clear")
+            .and_then(config_scalar_string)
+            .and_then(|value| match value.as_str() {
+                "auto" => Some(SpellerAutoClear::Auto),
+                "manual" => Some(SpellerAutoClear::Manual),
+                "max_length" => Some(SpellerAutoClear::MaxLength),
+                _ => None,
+            })
+            .unwrap_or(SpellerAutoClear::None),
         use_space: find_config_value(&schema_config, "speller/use_space")
             .and_then(config_scalar_bool)
             .unwrap_or(false),
@@ -5598,9 +5621,24 @@ fn process_speller_processor(session: &mut SessionState, key_event: KeyEvent) ->
         }
     }
 
+    let auto_clear = speller.auto_clear;
+    let max_code_length = speller.max_code_length;
+    if matches!(
+        auto_clear,
+        SpellerAutoClear::Manual | SpellerAutoClear::MaxLength
+    ) && speller_auto_clear_condition(session, auto_clear, max_code_length)
+    {
+        session.engine.clear_composition();
+    }
+
     let mut input = session.engine.context().composition.input.clone();
     input.push(ch);
     session.engine.set_input(input);
+    if auto_clear == SpellerAutoClear::Auto
+        && speller_auto_clear_condition(session, auto_clear, max_code_length)
+    {
+        session.engine.clear_composition();
+    }
     Some(true)
 }
 
@@ -5614,6 +5652,27 @@ impl SpellerProcessor {
             self.finals.contains(ch) || !self.alphabet.contains(ch)
         })
     }
+}
+
+fn speller_auto_clear_condition(
+    session: &SessionState,
+    auto_clear: SpellerAutoClear,
+    max_code_length: usize,
+) -> bool {
+    let context = session.engine.context();
+    if speller_context_has_menu(context) || context.composition.input.is_empty() {
+        return false;
+    }
+    auto_clear != SpellerAutoClear::MaxLength
+        || max_code_length == 0
+        || context.composition.input.len() >= max_code_length
+}
+
+fn speller_context_has_menu(context: &yune_core::Context) -> bool {
+    context
+        .candidates
+        .iter()
+        .any(|candidate| candidate.source != CandidateSource::Echo)
 }
 
 fn process_key_binder_processor(
