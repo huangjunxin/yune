@@ -22,13 +22,20 @@ fn lifecycle_safety_repeated_setup_initialize_finalize_is_deterministic() {
         unsafe { RimeSetup(&traits) };
         unsafe { RimeInitialize(&traits) };
         let session_id = RimeCreateSession();
-        assert_ne!(session_id, 0, "iteration {iteration} creates a usable session");
+        assert_ne!(
+            session_id, 0,
+            "iteration {iteration} creates a usable session"
+        );
         assert_eq!(RimeFindSession(session_id), TRUE);
         assert_eq!(RimeDestroySession(session_id), TRUE);
         assert_eq!(RimeFindSession(session_id), FALSE);
 
         RimeFinalize();
-        assert_eq!(RimeCreateSession(), 0, "finalize stops new session creation");
+        assert_eq!(
+            RimeCreateSession(),
+            0,
+            "finalize stops new session creation"
+        );
         assert_eq!(RimeFindSession(session_id), FALSE);
         fs::remove_dir_all(root).expect("temp dirs should be removed");
     }
@@ -115,7 +122,10 @@ fn lifecycle_safety_schema_switching_and_deployment_emit_ordered_notifications()
     }
     assert_eq!(RimeStartMaintenance(TRUE), TRUE);
     assert_eq!(RimeDeployWorkspace(), TRUE);
-    assert_eq!(RimeDeploySchema(c"sample_schema.schema.yaml".as_ptr()), TRUE);
+    assert_eq!(
+        RimeDeploySchema(c"sample_schema.schema.yaml".as_ptr()),
+        TRUE
+    );
 
     let events = notification_events()
         .lock()
