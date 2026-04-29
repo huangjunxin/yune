@@ -2538,6 +2538,10 @@ mod tests {
         bytes[offset..offset + 4].copy_from_slice(&value.to_bits().to_le_bytes());
     }
 
+    fn put_f32_le_extend(bytes: &mut Vec<u8>, value: f32) {
+        bytes.extend_from_slice(&value.to_bits().to_le_bytes());
+    }
+
     fn put_offset(bytes: &mut [u8], field_offset: usize, target: usize) {
         let raw = i32::try_from(target as isize - field_offset as isize)
             .expect("fixture offset should fit i32");
@@ -2616,6 +2620,26 @@ mod tests {
         bytes
     }
 
+    fn compiled_table_advanced_fixture() -> Vec<u8> {
+        let mut bytes = compiled_table_fixture();
+        bytes.extend_from_slice(b"YUNE-TABLE-ADV\0");
+        put_u32_le_extend(&mut bytes, 1);
+        put_len_string(&mut bytes, "明");
+        put_u32_le_extend(&mut bytes, 1);
+        put_len_string(&mut bytes, "a'b");
+        put_u32_le_extend(&mut bytes, 2);
+        put_len_string(&mut bytes, "您好");
+        put_len_string(&mut bytes, "nh");
+        put_f32_le_extend(&mut bytes, 11.0);
+        put_len_string(&mut bytes, "你好");
+        put_len_string(&mut bytes, "nh");
+        put_f32_le_extend(&mut bytes, 6.0);
+        put_u32_le_extend(&mut bytes, 1);
+        put_u32_le_extend(&mut bytes, 2);
+        put_len_string(&mut bytes, "AaBa");
+        bytes
+    }
+
     fn put_u32_le_extend(bytes: &mut Vec<u8>, value: u32) {
         bytes.extend_from_slice(&value.to_le_bytes());
     }
@@ -2635,6 +2659,22 @@ mod tests {
         assert_eq!(entries[0].text, "八");
         assert_eq!(entries[0].weight, 2.0);
         assert_eq!(entries[1].text, "爸");
+    }
+
+    #[test]
+    fn parses_compiled_table_advanced_payload_stems_vocabulary_and_encoder_entries() {
+        let dictionary = parse_rime_table_bin_dictionary(compiled_table_advanced_fixture())
+            .expect("advanced compiled table should parse");
+        assert_eq!(dictionary.stems_for("明"), Some(&["a'b".to_owned()][..]));
+        assert!(dictionary
+            .entries()
+            .iter()
+            .any(|entry| entry.text == "您好" && entry.code == "nh" && entry.weight == 11.0));
+        assert!(dictionary
+            .entries()
+            .iter()
+            .any(|entry| entry.text == "你好" && entry.code == "nh"));
+        assert!(dictionary.encoder().loaded());
     }
 
     #[test]
@@ -2659,6 +2699,32 @@ mod tests {
             .map(|entry| entry.text.as_str())
             .collect::<Vec<_>>();
         assert_eq!(texts, ["八", "爸"]);
+    }
+
+    #[test]
+    fn parses_compiled_reverse_dict_settings_and_stems() {
+        let mut bytes = compiled_reverse_fixture();
+        put_u32_le_extend(&mut bytes, 2);
+        put_len_string(&mut bytes, "tail_anchor");
+        put_len_string(&mut bytes, "'");
+        put_len_string(&mut bytes, "rules/0/formula");
+        put_len_string(&mut bytes, "AaBa");
+        put_u32_le_extend(&mut bytes, 1);
+        put_len_string(&mut bytes, "明");
+        put_u32_le_extend(&mut bytes, 1);
+        put_len_string(&mut bytes, "a'b");
+
+        let dictionary = parse_rime_reverse_bin_dictionary(bytes)
+            .expect("advanced compiled reverse should parse");
+        assert_eq!(
+            dictionary.dict_settings().get("tail_anchor"),
+            Some(&"'".to_owned())
+        );
+        assert_eq!(
+            dictionary.dict_settings().get("rules/0/formula"),
+            Some(&"AaBa".to_owned())
+        );
+        assert_eq!(dictionary.stems_for("明"), Some(&["a'b".to_owned()][..]));
     }
 
     #[test]
