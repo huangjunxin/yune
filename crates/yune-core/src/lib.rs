@@ -2802,7 +2802,50 @@ columns: [text, code, stem]
             dictionary.stems().get("明").cloned(),
             Some(vec!["a'b".to_owned(), "a'c".to_owned()])
         );
+        assert_eq!(
+            dictionary.stems_for("明"),
+            Some(&["a'b".to_owned(), "a'c".to_owned()][..])
+        );
         assert!(!dictionary.stems().contains_key("未编码"));
+        assert_eq!(dictionary.stems_for("未编码"), None);
+    }
+
+    #[test]
+    fn parses_rime_dict_yaml_reverse_dict_settings_as_read_only_contract() {
+        let dictionary = TableDictionary::parse_rime_dict_yaml(
+            r#"
+---
+name: reverse_settings_sample
+version: "0.1"
+dict_settings:
+  use_rule_based_encoder: true
+  tail_anchor: "'"
+  rules:
+    - length_equal: 2
+      formula: "AaBa"
+...
+
+明	ab	1
+"#,
+        )
+        .expect("dictionary should parse");
+
+        assert_eq!(
+            dictionary.dict_settings().get("use_rule_based_encoder"),
+            Some(&"true".to_owned())
+        );
+        assert_eq!(
+            dictionary.dict_settings().get("tail_anchor"),
+            Some(&"'".to_owned())
+        );
+        assert_eq!(
+            dictionary.dict_settings().get("rules/0/length_equal"),
+            Some(&"2".to_owned())
+        );
+        assert_eq!(
+            dictionary.dict_settings().get("rules/0/formula"),
+            Some(&"AaBa".to_owned())
+        );
     }
 
     #[test]
