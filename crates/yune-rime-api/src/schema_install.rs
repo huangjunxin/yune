@@ -135,7 +135,10 @@ fn install_schema_dictionary_translator_from_config(
             record_dictionary_source_fallback(session, reason);
             dictionary
         }
-        DictionaryLoadOutcome::NoUsablePath { dictionary_id, reason } => {
+        DictionaryLoadOutcome::NoUsablePath {
+            dictionary_id,
+            reason,
+        } => {
             record_dictionary_load_failure(session, dictionary_id, reason);
             return;
         }
@@ -209,7 +212,10 @@ fn install_schema_reverse_lookup_translator_from_config(
             record_dictionary_source_fallback(session, reason);
             dictionary
         }
-        DictionaryLoadOutcome::NoUsablePath { dictionary_id, reason } => {
+        DictionaryLoadOutcome::NoUsablePath {
+            dictionary_id,
+            reason,
+        } => {
             record_dictionary_load_failure(session, dictionary_id, reason);
             return;
         }
@@ -218,16 +224,26 @@ fn install_schema_reverse_lookup_translator_from_config(
         .and_then(config_scalar_string)
         .filter(|target| !target.is_empty())
         .unwrap_or_else(|| "translator".to_owned());
-    let reverse_dictionary = match load_schema_table_dictionary(schema_config, &target_namespace) {
-        DictionaryLoadOutcome::Compiled(dictionary) => Some(dictionary),
-        DictionaryLoadOutcome::SourceFallback { dictionary, reason } => {
+    let reverse_dictionary = match load_schema_reverse_dictionary(schema_config, &target_namespace)
+        .or_else(|| {
+            Some(load_schema_table_dictionary(
+                schema_config,
+                &target_namespace,
+            ))
+        }) {
+        Some(DictionaryLoadOutcome::Compiled(dictionary)) => Some(dictionary),
+        Some(DictionaryLoadOutcome::SourceFallback { dictionary, reason }) => {
             record_dictionary_source_fallback(session, reason);
             Some(dictionary)
         }
-        DictionaryLoadOutcome::NoUsablePath { dictionary_id, reason } => {
+        Some(DictionaryLoadOutcome::NoUsablePath {
+            dictionary_id,
+            reason,
+        }) => {
             record_dictionary_load_failure(session, dictionary_id, reason);
             None
         }
+        None => None,
     };
     let prefix = find_config_value(schema_config, &format!("{name_space}/prefix"))
         .and_then(config_scalar_string)
@@ -447,16 +463,22 @@ fn install_schema_reverse_lookup_filter_from_config(
     schema_config: &Value,
     name_space: &str,
 ) {
-    let reverse_dictionary = match load_schema_table_dictionary(schema_config, name_space) {
-        DictionaryLoadOutcome::Compiled(dictionary) => dictionary,
-        DictionaryLoadOutcome::SourceFallback { dictionary, reason } => {
+    let reverse_dictionary = match load_schema_reverse_dictionary(schema_config, name_space)
+        .or_else(|| Some(load_schema_table_dictionary(schema_config, name_space)))
+    {
+        Some(DictionaryLoadOutcome::Compiled(dictionary)) => dictionary,
+        Some(DictionaryLoadOutcome::SourceFallback { dictionary, reason }) => {
             record_dictionary_source_fallback(session, reason);
             dictionary
         }
-        DictionaryLoadOutcome::NoUsablePath { dictionary_id, reason } => {
+        Some(DictionaryLoadOutcome::NoUsablePath {
+            dictionary_id,
+            reason,
+        }) => {
             record_dictionary_load_failure(session, dictionary_id, reason);
             return;
         }
+        None => return,
     };
 
     let overwrite_comment =
@@ -552,6 +574,31 @@ fn load_schema_table_dictionary(schema_config: &Value, name_space: &str) -> Dict
     let raw_dictionary_name = find_config_value(schema_config, &format!("{name_space}/dictionary"))
         .and_then(config_scalar_string)
         .unwrap_or_default();
+    load_schema_dictionary_by_name(schema_config, name_space, raw_dictionary_name, true)
+}
+
+fn load_schema_reverse_dictionary(
+    schema_config: &Value,
+    name_space: &str,
+) -> Option<DictionaryLoadOutcome> {
+    let reverse_name =
+        find_config_value(schema_config, &format!("{name_space}/reverse_dictionary"))
+            .or_else(|| find_config_value(schema_config, &format!("{name_space}/dictionary")))
+            .and_then(config_scalar_string)?;
+    Some(load_schema_dictionary_by_name(
+        schema_config,
+        name_space,
+        reverse_name,
+        false,
+    ))
+}
+
+fn load_schema_dictionary_by_name(
+    schema_config: &Value,
+    name_space: &str,
+    raw_dictionary_name: String,
+    require_prism: bool,
+) -> DictionaryLoadOutcome {
     let Some(dictionary_name) = validate_data_resource_id(&raw_dictionary_name) else {
         return DictionaryLoadOutcome::NoUsablePath {
             dictionary_id: raw_dictionary_name,
@@ -560,11 +607,17 @@ fn load_schema_table_dictionary(schema_config: &Value, name_space: &str) -> Dict
     };
 
     let source = load_schema_source_dictionary(schema_config, name_space, &dictionary_name);
-    let compiled = load_schema_compiled_dictionary(&dictionary_name, source.as_ref().map(|(yaml, _)| yaml));
+    let compiled = load_schema_compiled_dictionary(
+        &dictionary_name,
+        source.as_ref().map(|(yaml, _)| yaml),
+        require_prism,
+    );
     match compiled {
         Ok(dictionary) => DictionaryLoadOutcome::Compiled(dictionary),
         Err(reason) => match source {
-            Some((_, Ok(dictionary))) => DictionaryLoadOutcome::SourceFallback { dictionary, reason },
+            Some((_, Ok(dictionary))) => {
+                DictionaryLoadOutcome::SourceFallback { dictionary, reason }
+            }
             Some((_, Err(_))) => DictionaryLoadOutcome::NoUsablePath {
                 dictionary_id: dictionary_name,
                 reason: DictionaryLoadFailure::SourceInvalid,
@@ -587,6 +640,7 @@ fn load_schema_table_dictionary(schema_config: &Value, name_space: &str) -> Dict
 fn load_schema_compiled_dictionary(
     dictionary_name: &str,
     source_yaml: Option<&String>,
+    require_prism: bool,
 ) -> Result<TableDictionary, CompiledRejectReason> {
     let table_name = validate_data_resource_id(&format!("{dictionary_name}.table.bin"))
         .ok_or_else(|| CompiledRejectReason::Invalid("invalid table resource id".to_owned()))?;
@@ -597,15 +651,18 @@ fn load_schema_compiled_dictionary(
     let Some(table_path) = selected_runtime_data_path(&table_name) else {
         return Err(CompiledRejectReason::Missing);
     };
-    let Some(prism_path) = selected_runtime_data_path(&prism_name) else {
+    let prism_path = selected_runtime_data_path(&prism_name);
+    if require_prism && prism_path.is_none() {
         return Err(CompiledRejectReason::Missing);
-    };
+    }
     let Some(reverse_path) = selected_runtime_data_path(&reverse_name) else {
         return Err(CompiledRejectReason::Missing);
     };
     let table_bytes = fs::read(table_path)
         .map_err(|error| CompiledRejectReason::Invalid(format!("table read failed: {error}")))?;
-    let prism_bytes = fs::read(prism_path)
+    let prism_bytes = prism_path
+        .map(fs::read)
+        .transpose()
         .map_err(|error| CompiledRejectReason::Invalid(format!("prism read failed: {error}")))?;
     let reverse_bytes = fs::read(reverse_path)
         .map_err(|error| CompiledRejectReason::Invalid(format!("reverse read failed: {error}")))?;
@@ -617,31 +674,39 @@ fn load_schema_compiled_dictionary(
         }
     }
 
-    parse_rime_prism_bin_payload(&prism_bytes).map_err(|error| match error {
-        yune_core::RimePrismBinParseError::UnsupportedSection { role } => {
-            CompiledRejectReason::Unsupported(role)
-        }
-        other => CompiledRejectReason::Invalid(format!("prism parse failed: {other:?}")),
-    })?;
-    parse_rime_reverse_bin_dictionary(&reverse_bytes).map_err(|error| match error {
-        yune_core::RimeReverseBinParseError::UnsupportedSection { role } => {
-            CompiledRejectReason::Unsupported(role)
-        }
-        other => CompiledRejectReason::Invalid(format!("reverse parse failed: {other:?}")),
-    })?;
-    parse_rime_table_bin_dictionary(&table_bytes).map_err(|error| match error {
-        yune_core::RimeTableBinParseError::UnsupportedSection { role } => {
-            CompiledRejectReason::Unsupported(role)
-        }
-        other => CompiledRejectReason::Invalid(format!("table parse failed: {other:?}")),
-    })
+    if let Some(prism_bytes) = prism_bytes.as_ref() {
+        parse_rime_prism_bin_payload(prism_bytes).map_err(|error| match error {
+            yune_core::RimePrismBinParseError::UnsupportedSection { role } => {
+                CompiledRejectReason::Unsupported(role)
+            }
+            other => CompiledRejectReason::Invalid(format!("prism parse failed: {other:?}")),
+        })?;
+    }
+    let reverse_dictionary =
+        parse_rime_reverse_bin_dictionary(&reverse_bytes).map_err(|error| match error {
+            yune_core::RimeReverseBinParseError::UnsupportedSection { role } => {
+                CompiledRejectReason::Unsupported(role)
+            }
+            other => CompiledRejectReason::Invalid(format!("reverse parse failed: {other:?}")),
+        })?;
+    parse_rime_table_bin_dictionary(&table_bytes)
+        .map(|dictionary| dictionary.with_merged_advanced_data_from(&reverse_dictionary))
+        .map_err(|error| match error {
+            yune_core::RimeTableBinParseError::UnsupportedSection { role } => {
+                CompiledRejectReason::Unsupported(role)
+            }
+            other => CompiledRejectReason::Invalid(format!("table parse failed: {other:?}")),
+        })
 }
 
 fn load_schema_source_dictionary(
     schema_config: &Value,
     name_space: &str,
     dictionary_name: &str,
-) -> Option<(String, Result<TableDictionary, yune_core::TableDictionaryParseError>)> {
+) -> Option<(
+    String,
+    Result<TableDictionary, yune_core::TableDictionaryParseError>,
+)> {
     let dictionary_path = selected_runtime_data_path(&format!("{dictionary_name}.dict.yaml"))?;
     let dictionary_yaml = fs::read_to_string(dictionary_path).ok()?;
     let packs = schema_dictionary_packs(schema_config, name_space);
@@ -674,12 +739,15 @@ fn record_dictionary_source_fallback(session: &mut SessionState, reason: Compile
     {
         return;
     }
-    session.remaining_gear_deferrals.push(RemainingGearDeferral {
+    session
+        .remaining_gear_deferrals
+        .push(RemainingGearDeferral {
         gear: "dictionary_source_fallback".to_owned(),
         observed_librime_role: "compiled dictionary reject with source fallback".to_owned(),
         current_yune_behavior,
-        scope_decision: "prefer source dictionary when compiled data is missing, stale, unsupported, or invalid"
-            .to_owned(),
+        scope_decision:
+            "prefer source dictionary when compiled data is missing, stale, unsupported, or invalid"
+                .to_owned(),
         target_phase: "04-compiled-dictionary-data".to_owned(),
     });
 }
@@ -689,7 +757,8 @@ fn record_dictionary_load_failure(
     dictionary_id: String,
     reason: DictionaryLoadFailure,
 ) {
-    let current_yune_behavior = format!("NoUsablePath for dictionary '{dictionary_id}': {reason:?}");
+    let current_yune_behavior =
+        format!("NoUsablePath for dictionary '{dictionary_id}': {reason:?}");
     if session
         .remaining_gear_deferrals
         .iter()
@@ -697,14 +766,17 @@ fn record_dictionary_load_failure(
     {
         return;
     }
-    session.remaining_gear_deferrals.push(RemainingGearDeferral {
-        gear: "dictionary_load".to_owned(),
-        observed_librime_role: "schema dictionary installation failure".to_owned(),
-        current_yune_behavior,
-        scope_decision: "record explicit dictionary load failure instead of installing an empty translator"
-            .to_owned(),
-        target_phase: "04-compiled-dictionary-data".to_owned(),
-    });
+    session
+        .remaining_gear_deferrals
+        .push(RemainingGearDeferral {
+            gear: "dictionary_load".to_owned(),
+            observed_librime_role: "schema dictionary installation failure".to_owned(),
+            current_yune_behavior,
+            scope_decision:
+                "record explicit dictionary load failure instead of installing an empty translator"
+                    .to_owned(),
+            target_phase: "04-compiled-dictionary-data".to_owned(),
+        });
 }
 
 fn schema_dictionary_packs(schema_config: &Value, name_space: &str) -> Vec<String> {
