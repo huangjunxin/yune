@@ -6,8 +6,14 @@ license.workspace = true
 repository.workspace = true
 rust-version.workspace = true
 
+[lib]
+crate-type = ["rlib", "cdylib"]
+
 [dependencies]
 libc = "0.2"
 regex = "1"
 serde_yaml = "0.9"
 yune-core = { path = "../yune-core" }
+
+[dev-dependencies]
+libloading = "0.8"
