@@ -48,8 +48,8 @@ pub fn parse_rime_prism_bin_payload(
         return Err(RimePrismBinParseError::UnsupportedVersion);
     }
     let double_array_offset = read_offset_ptr(bytes, 52)?;
-    let spelling_map_offset = read_offset_ptr(bytes, 56)?
-        .ok_or(RimePrismBinParseError::MissingRequiredSection)?;
+    let spelling_map_offset =
+        read_offset_ptr(bytes, 56)?.ok_or(RimePrismBinParseError::MissingRequiredSection)?;
     let correction_offset = read_offset_ptr(bytes, 60)?;
     let tolerance_offset = read_offset_ptr(bytes, 64)?;
     let double_array_size = read_u32_le(bytes, 48).map_err(map_metadata_error)?;
@@ -159,7 +159,11 @@ fn read_spelling_map(
     let mut map = Vec::with_capacity(count);
     for index in 0..count {
         let item_offset = start
-            .checked_add(index.checked_mul(item_size).ok_or(RimePrismBinParseError::InvalidCount)?)
+            .checked_add(
+                index
+                    .checked_mul(item_size)
+                    .ok_or(RimePrismBinParseError::InvalidCount)?,
+            )
             .ok_or(RimePrismBinParseError::OutOfBounds)?;
         let descriptor_count = read_count(bytes, item_offset)?;
         let descriptor_offset = read_offset_ptr(bytes, item_offset + 4)?
@@ -209,7 +213,8 @@ fn read_spelling_descriptors(
 }
 
 fn read_string(bytes: &[u8], offset: usize) -> Result<String, RimePrismBinParseError> {
-    let string_offset = read_offset_ptr(bytes, offset)?.ok_or(RimePrismBinParseError::OutOfBounds)?;
+    let string_offset =
+        read_offset_ptr(bytes, offset)?.ok_or(RimePrismBinParseError::OutOfBounds)?;
     if string_offset >= bytes.len() {
         return Err(RimePrismBinParseError::OutOfBounds);
     }
@@ -223,10 +228,7 @@ fn read_string(bytes: &[u8], offset: usize) -> Result<String, RimePrismBinParseE
         .map_err(|_| RimePrismBinParseError::InvalidUtf8)
 }
 
-fn read_len_string(
-    bytes: &[u8],
-    offset: usize,
-) -> Result<(String, usize), RimePrismBinParseError> {
+fn read_len_string(bytes: &[u8], offset: usize) -> Result<(String, usize), RimePrismBinParseError> {
     let len = read_count(bytes, offset)?;
     let start = offset
         .checked_add(4)
@@ -243,7 +245,10 @@ fn read_len_string(
     Ok((value, end))
 }
 
-fn read_offset_ptr(bytes: &[u8], field_offset: usize) -> Result<Option<usize>, RimePrismBinParseError> {
+fn read_offset_ptr(
+    bytes: &[u8],
+    field_offset: usize,
+) -> Result<Option<usize>, RimePrismBinParseError> {
     let raw = read_i32_le(bytes, field_offset).map_err(map_metadata_error)?;
     if raw == 0 {
         return Ok(None);

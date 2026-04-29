@@ -1103,7 +1103,10 @@ fn parse_lookup_pairs(input: &str) -> Vec<(String, String)> {
                 .split_once("=>")
                 .or_else(|| item.split_once(':'))
                 .or_else(|| item.split_once('='))?;
-            Some((parse_yaml_scalar(left.trim()), parse_yaml_scalar(right.trim())))
+            Some((
+                parse_yaml_scalar(left.trim()),
+                parse_yaml_scalar(right.trim()),
+            ))
         })
         .collect()
 }
