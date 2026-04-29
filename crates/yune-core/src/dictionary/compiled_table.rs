@@ -7,6 +7,10 @@ use crate::dictionary::compiled::{
 };
 use std::collections::HashMap;
 
+const MAX_CORRECTION_COUNT: usize = 4096;
+const MAX_TOLERANCE_RULE_COUNT: usize = 4096;
+const MAX_TOLERANCE_CANDIDATE_COUNT: usize = 64;
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum RimeTableBinParseError {
     TooShort,
@@ -91,7 +95,7 @@ fn read_head_index_entries(
     let start = offset
         .checked_add(4)
         .ok_or(RimeTableBinParseError::OutOfBounds)?;
-    let node_size = 8usize;
+    let node_size = 12usize;
     let total = count
         .checked_mul(node_size)
         .and_then(|len| start.checked_add(len))
@@ -252,6 +256,9 @@ fn read_correction_tolerance_payload(
         .checked_add(b"YUNE-CORR-TOL\0".len())
         .ok_or(RimeTableBinParseError::OutOfBounds)?;
     let correction_count = read_count(bytes, cursor)?;
+    if correction_count > MAX_CORRECTION_COUNT {
+        return Err(RimeTableBinParseError::InvalidCount);
+    }
     cursor = cursor
         .checked_add(4)
         .ok_or(RimeTableBinParseError::OutOfBounds)?;
@@ -265,6 +272,9 @@ fn read_correction_tolerance_payload(
     }
 
     let tolerance_count = read_count(bytes, cursor)?;
+    if tolerance_count > MAX_TOLERANCE_RULE_COUNT {
+        return Err(RimeTableBinParseError::InvalidCount);
+    }
     cursor = cursor
         .checked_add(4)
         .ok_or(RimeTableBinParseError::OutOfBounds)?;
@@ -273,6 +283,9 @@ fn read_correction_tolerance_payload(
         let (near_code, next) = read_len_string(bytes, cursor)?;
         cursor = next;
         let candidate_count = read_count(bytes, cursor)?;
+        if candidate_count > MAX_TOLERANCE_CANDIDATE_COUNT {
+            return Err(RimeTableBinParseError::InvalidCount);
+        }
         cursor = cursor
             .checked_add(4)
             .ok_or(RimeTableBinParseError::OutOfBounds)?;

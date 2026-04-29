@@ -3,6 +3,10 @@ use crate::dictionary::compiled::{
     parse_rime_format_version_for_payload, read_f32_le, read_i32_le, read_u32_le,
 };
 
+const MAX_CORRECTION_COUNT: usize = 4096;
+const MAX_TOLERANCE_RULE_COUNT: usize = 4096;
+const MAX_TOLERANCE_CANDIDATE_COUNT: usize = 64;
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct RimePrismBinPayload {
     pub dict_file_checksum: u32,
@@ -81,7 +85,10 @@ fn read_corrections(
     bytes: &[u8],
     offset: usize,
 ) -> Result<Vec<RimeCorrectionEntry>, RimePrismBinParseError> {
-    if !bytes[offset..].starts_with(b"YUNE-CORR\0") {
+    let payload = bytes
+        .get(offset..)
+        .ok_or(RimePrismBinParseError::OutOfBounds)?;
+    if !payload.starts_with(b"YUNE-CORR\0") {
         return Err(RimePrismBinParseError::UnsupportedSection {
             role: "correction payload".to_owned(),
         });
@@ -90,6 +97,9 @@ fn read_corrections(
         .checked_add(b"YUNE-CORR\0".len())
         .ok_or(RimePrismBinParseError::OutOfBounds)?;
     let count = read_count(bytes, cursor)?;
+    if count > MAX_CORRECTION_COUNT {
+        return Err(RimePrismBinParseError::InvalidCount);
+    }
     cursor = cursor
         .checked_add(4)
         .ok_or(RimePrismBinParseError::OutOfBounds)?;
@@ -108,7 +118,10 @@ fn read_tolerance_rules(
     bytes: &[u8],
     offset: usize,
 ) -> Result<Vec<RimeToleranceRule>, RimePrismBinParseError> {
-    if !bytes[offset..].starts_with(b"YUNE-TOL\0") {
+    let payload = bytes
+        .get(offset..)
+        .ok_or(RimePrismBinParseError::OutOfBounds)?;
+    if !payload.starts_with(b"YUNE-TOL\0") {
         return Err(RimePrismBinParseError::UnsupportedSection {
             role: "tolerance payload".to_owned(),
         });
@@ -117,6 +130,9 @@ fn read_tolerance_rules(
         .checked_add(b"YUNE-TOL\0".len())
         .ok_or(RimePrismBinParseError::OutOfBounds)?;
     let count = read_count(bytes, cursor)?;
+    if count > MAX_TOLERANCE_RULE_COUNT {
+        return Err(RimePrismBinParseError::InvalidCount);
+    }
     cursor = cursor
         .checked_add(4)
         .ok_or(RimePrismBinParseError::OutOfBounds)?;
@@ -125,6 +141,9 @@ fn read_tolerance_rules(
         let (near_code, next) = read_len_string(bytes, cursor)?;
         cursor = next;
         let candidate_count = read_count(bytes, cursor)?;
+        if candidate_count > MAX_TOLERANCE_CANDIDATE_COUNT {
+            return Err(RimePrismBinParseError::InvalidCount);
+        }
         cursor = cursor
             .checked_add(4)
             .ok_or(RimePrismBinParseError::OutOfBounds)?;
