@@ -41,9 +41,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 3 plans
 
 Plans:
-- [ ] 01-01: Implement RIME API service setup, schema deployment/selection, and session lifecycle in `crates/yune-cli/src/rime_frontend.rs`.
-- [ ] 01-02: Add interactive rendering and transcript replay output through `crates/yune-cli/src/render.rs` and `crates/yune-cli/src/transcript.rs`.
-- [ ] 01-03: Add focused CLI/ABI tests and document the module/test ownership rule for future compatibility slices.
+- [x] 01-01: Implement RIME API service setup, schema deployment/selection, and session lifecycle in `crates/yune-cli/src/rime_frontend.rs`.
+- [x] 01-02: Add interactive rendering and transcript replay output through `crates/yune-cli/src/render.rs` and `crates/yune-cli/src/transcript.rs`.
+- [x] 01-03: Add focused CLI/ABI tests and document the module/test ownership rule for future compatibility slices.
 
 ### Phase 2: Native ABI Validation And Runtime Safety
 **Goal**: The ABI surface is validated against at least one real frontend or native frontend-like loader, and runtime safety gaps discovered there are converted into tests and fixes.

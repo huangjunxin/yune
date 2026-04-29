@@ -7,8 +7,8 @@ mod rime_frontend;
 mod sample_core;
 mod transcript;
 
-use args::Command;
-use fixture::check_fixture;
+use args::{Command, FrontendOutputMode};
+use fixture::{check_fixture, check_frontend_fixture};
 use sample_core::{run_sequence, DEFAULT_SEQUENCE};
 
 fn main() -> ExitCode {
@@ -29,6 +29,30 @@ fn run(args: Vec<String>) -> Result<(), String> {
             Ok(())
         }
         Command::Check { fixture } => check_fixture(&fixture),
+        Command::FrontendCheck {
+            fixture,
+            shared_data_dir,
+            user_data_dir,
+        } => check_frontend_fixture(&fixture, &shared_data_dir, &user_data_dir),
+        Command::Frontend {
+            shared_data_dir,
+            user_data_dir,
+            schema_id,
+            sequence,
+            output_mode,
+        } => {
+            let output = rime_frontend::run_frontend(rime_frontend::FrontendOptions {
+                shared_data_dir,
+                user_data_dir,
+                schema_id,
+                sequence,
+            })?;
+            match output_mode {
+                FrontendOutputMode::Json => println!("{}", output.to_json()),
+                FrontendOutputMode::Human => print!("{}", render::render_frontend_human(&output)),
+            }
+            Ok(())
+        }
         Command::Help => {
             render::print_help();
             Ok(())
