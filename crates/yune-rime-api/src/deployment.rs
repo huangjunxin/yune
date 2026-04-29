@@ -1,5 +1,5 @@
 use std::{
-    collections::{BTreeSet, HashSet},
+    collections::{BTreeMap, BTreeSet, HashSet},
     fs,
     os::raw::{c_char, c_int},
     path::{Path, PathBuf},
@@ -10,11 +10,10 @@ use std::{
 
 use serde_yaml::{Mapping, Number, Value};
 use yune_core::{
-    parse_rime_prism_bin_metadata, parse_rime_reverse_bin_metadata,
-    parse_rime_table_bin_metadata, rime_checksum_bytes,
-    rime_dict_rebuild_plan, rime_dict_source_checksum, RimeDictArtifactStatus,
-    RimeDictRebuildExecutionReport, RimeDictRebuildInput, RimePrismChecksumMetadata,
-    TableDictionary,
+    parse_rime_prism_bin_metadata, parse_rime_prism_bin_payload, parse_rime_reverse_bin_metadata,
+    parse_rime_table_bin_metadata, rime_checksum_bytes, rime_dict_rebuild_plan,
+    rime_dict_source_checksum, RimeDictArtifactStatus, RimeDictRebuildExecutionReport,
+    RimeDictRebuildInput, RimePrismChecksumMetadata, TableDictionary,
 };
 
 use crate::{
@@ -668,7 +667,7 @@ fn dictionary_rebuild_reports() -> &'static Mutex<Vec<WorkspaceDictionaryRebuild
 fn workspace_update_dictionary_artifacts(schema_id: &str, schema_config: &Value) -> bool {
     let mut success = true;
     for request in schema_dictionary_artifact_requests(schema_config) {
-        match workspace_update_dictionary_artifact(&request) {
+        match workspace_update_dictionary_artifact(&request, schema_config) {
             Some(report) => dictionary_rebuild_reports()
                 .lock()
                 .expect("dictionary rebuild reports should not be poisoned")
@@ -693,7 +692,9 @@ struct DictionaryArtifactRequest {
 
 fn schema_dictionary_artifact_requests(schema_config: &Value) -> Vec<DictionaryArtifactRequest> {
     let mut namespaces = BTreeSet::new();
-    if let Some(Value::Sequence(translators)) = find_config_value(schema_config, "engine/translators") {
+    if let Some(Value::Sequence(translators)) =
+        find_config_value(schema_config, "engine/translators")
+    {
         for translator in translators.iter().filter_map(Value::as_str) {
             let Some((component, namespace)) = schema_component_prescription(translator) else {
                 continue;
@@ -723,8 +724,9 @@ fn schema_dictionary_artifact_requests(schema_config: &Value) -> Vec<DictionaryA
     let mut requests = Vec::new();
     let mut seen = BTreeSet::new();
     for namespace in namespaces {
-        let Some(raw_dictionary_id) = find_config_value(schema_config, &format!("{namespace}/dictionary"))
-            .and_then(Value::as_str)
+        let Some(raw_dictionary_id) =
+            find_config_value(schema_config, &format!("{namespace}/dictionary"))
+                .and_then(Value::as_str)
         else {
             continue;
         };
@@ -743,8 +745,14 @@ fn schema_dictionary_artifact_requests(schema_config: &Value) -> Vec<DictionaryA
         requests.push(DictionaryArtifactRequest {
             dictionary_id,
             packs: schema_dictionary_packs(schema_config, &namespace),
-            force_rebuild_table: config_bool_value(schema_config, &format!("{namespace}/force_rebuild_table")),
-            force_rebuild_prism: config_bool_value(schema_config, &format!("{namespace}/force_rebuild_prism")),
+            force_rebuild_table: config_bool_value(
+                schema_config,
+                &format!("{namespace}/force_rebuild_table"),
+            ),
+            force_rebuild_prism: config_bool_value(
+                schema_config,
+                &format!("{namespace}/force_rebuild_prism"),
+            ),
         });
     }
     requests
@@ -752,6 +760,7 @@ fn schema_dictionary_artifact_requests(schema_config: &Value) -> Vec<DictionaryA
 
 fn workspace_update_dictionary_artifact(
     request: &DictionaryArtifactRequest,
+    schema_config: &Value,
 ) -> Option<RimeDictRebuildExecutionReport> {
     let dictionary_id = validate_data_resource_id(&request.dictionary_id)?;
     let (shared_data_dir, staging_dir, prebuilt_data_dir) = runtime_data_roots();
@@ -789,31 +798,27 @@ fn workspace_update_dictionary_artifact(
     let table_metadata = fs::read(&table_path)
         .ok()
         .and_then(|bytes| parse_rime_table_bin_metadata(bytes).ok());
-    let prism_metadata = fs::read(&prism_path)
-        .ok()
-        .and_then(|bytes| parse_rime_prism_bin_metadata(bytes).ok())
-        .map(|metadata| RimePrismChecksumMetadata {
-            dict_file_checksum: metadata.dict_file_checksum,
-            schema_file_checksum: metadata.schema_file_checksum,
-        });
+    let table_exists = table_metadata.is_some();
+    let prism_metadata = fs::read(&prism_path).ok().and_then(prism_checksum_metadata);
     let reverse_metadata = fs::read(&reverse_path)
         .ok()
         .and_then(|bytes| parse_rime_reverse_bin_metadata(bytes).ok());
-    let prebuilt_table_metadata = fs::read(&prebuilt_table_path)
-        .ok()
+    let reverse_exists = reverse_metadata.is_some();
+    let prebuilt_table_metadata = (!table_exists)
+        .then(|| fs::read(&prebuilt_table_path).ok())
+        .flatten()
         .and_then(|bytes| parse_rime_table_bin_metadata(bytes).ok());
-    let prebuilt_prism_metadata = fs::read(&prebuilt_prism_path)
-        .ok()
-        .and_then(|bytes| parse_rime_prism_bin_metadata(bytes).ok())
-        .map(|metadata| RimePrismChecksumMetadata {
-            dict_file_checksum: metadata.dict_file_checksum,
-            schema_file_checksum: metadata.schema_file_checksum,
-        });
-    let prebuilt_reverse_metadata = fs::read(&prebuilt_reverse_path)
-        .ok()
+    let prebuilt_prism_metadata = (!prism_path.is_file())
+        .then(|| fs::read(&prebuilt_prism_path).ok())
+        .flatten()
+        .and_then(prism_checksum_metadata);
+    let prebuilt_reverse_metadata = (!reverse_exists)
+        .then(|| fs::read(&prebuilt_reverse_path).ok())
+        .flatten()
         .and_then(|bytes| parse_rime_reverse_bin_metadata(bytes).ok());
 
-    let schema_checksum = schema_dictionary_checksum(schema_config_signature(&dictionary_id));
+    let schema_checksum =
+        schema_dictionary_checksum(schema_config_signature(schema_config, &dictionary_id));
     let input = RimeDictRebuildInput {
         source_available,
         source_dict_file_checksum: source_checksum,
@@ -840,7 +845,11 @@ fn workspace_update_dictionary_artifact(
     if plan.report.table == RimeDictArtifactStatus::ReusedPrebuilt {
         copy_if_present(&prebuilt_table_path, &table_path)?;
     } else if plan.rebuild_table {
-        let dictionary = TableDictionary::parse_rime_dict_yaml(source_yaml.as_ref()?).ok()?;
+        let dictionary = load_workspace_table_dictionary(
+            source_yaml.as_ref()?,
+            &request.packs,
+            &shared_data_dir,
+        )?;
         write_table_artifact(&table_path, plan.dict_file_checksum, &dictionary)?;
     }
     if plan.report.prism == RimeDictArtifactStatus::ReusedPrebuilt {
@@ -851,14 +860,58 @@ fn workspace_update_dictionary_artifact(
     if plan.report.reverse == RimeDictArtifactStatus::ReusedPrebuilt {
         copy_if_present(&prebuilt_reverse_path, &reverse_path)?;
     } else if plan.rebuild_reverse {
-        let dictionary = TableDictionary::parse_rime_dict_yaml(source_yaml.as_ref()?).ok()?;
+        let dictionary = load_workspace_table_dictionary(
+            source_yaml.as_ref()?,
+            &request.packs,
+            &shared_data_dir,
+        )?;
         write_reverse_artifact(&reverse_path, plan.dict_file_checksum, &dictionary)?;
     }
     Some(plan.report)
 }
 
-fn schema_config_signature(dictionary_id: &str) -> Vec<u8> {
-    dictionary_id.as_bytes().to_vec()
+fn load_workspace_table_dictionary(
+    source_yaml: &str,
+    packs: &[String],
+    shared_data_dir: &Path,
+) -> Option<TableDictionary> {
+    TableDictionary::parse_rime_dict_yaml_with_imports_packs_and_vocabulary(
+        source_yaml,
+        packs,
+        |resource_id| load_workspace_dictionary_yaml(shared_data_dir, resource_id),
+        |resource_id| load_workspace_dictionary_yaml(shared_data_dir, resource_id),
+    )
+    .ok()
+}
+
+fn load_workspace_dictionary_yaml(shared_data_dir: &Path, resource_id: &str) -> Option<String> {
+    let resource_id = validate_data_resource_id(resource_id)?;
+    fs::read_to_string(shared_data_dir.join(format!("{resource_id}.dict.yaml"))).ok()
+}
+
+fn prism_checksum_metadata(bytes: Vec<u8>) -> Option<RimePrismChecksumMetadata> {
+    if let Ok(metadata) = parse_rime_prism_bin_metadata(&bytes) {
+        return Some(RimePrismChecksumMetadata {
+            dict_file_checksum: metadata.dict_file_checksum,
+            schema_file_checksum: metadata.schema_file_checksum,
+        });
+    }
+    parse_rime_prism_bin_payload(&bytes)
+        .ok()
+        .map(|payload| RimePrismChecksumMetadata {
+            dict_file_checksum: payload.dict_file_checksum,
+            schema_file_checksum: payload.schema_file_checksum,
+        })
+}
+
+fn schema_config_signature(schema_config: &Value, dictionary_id: &str) -> Vec<u8> {
+    let mut normalized = schema_config.clone();
+    if let Value::Mapping(mapping) = &mut normalized {
+        mapping.remove(Value::String("__build_info".to_owned()));
+    }
+    serde_yaml::to_string(&normalized)
+        .unwrap_or_else(|_| dictionary_id.to_owned())
+        .into_bytes()
 }
 
 fn schema_dictionary_checksum(bytes: impl AsRef<[u8]>) -> u32 {
@@ -885,33 +938,39 @@ fn copy_if_present(source: &Path, destination: &Path) -> Option<()> {
 }
 
 fn write_table_artifact(path: &Path, checksum: u32, dictionary: &TableDictionary) -> Option<()> {
+    let mut entries_by_code: BTreeMap<&str, Vec<&yune_core::TableEntry>> = BTreeMap::new();
+    for entry in dictionary.entries() {
+        entries_by_code.entry(&entry.code).or_default().push(entry);
+    }
     let mut bytes = vec![0; 68];
     put_c_string(&mut bytes, 0, b"Rime::Table/4.0");
     put_u32_le(&mut bytes, 32, checksum);
-    put_u32_le(&mut bytes, 36, dictionary.entries().len() as u32);
+    put_u32_le(&mut bytes, 36, entries_by_code.len() as u32);
     put_u32_le(&mut bytes, 40, dictionary.entries().len() as u32);
     let syllabary_offset = bytes.len();
-    bytes.resize(syllabary_offset + 4 + dictionary.entries().len() * 4, 0);
-    put_u32_le(&mut bytes, syllabary_offset, dictionary.entries().len() as u32);
-    let code_offsets = dictionary
-        .entries()
-        .iter()
-        .map(|entry| append_c_string(&mut bytes, &entry.code))
+    bytes.resize(syllabary_offset + 4 + entries_by_code.len() * 4, 0);
+    put_u32_le(&mut bytes, syllabary_offset, entries_by_code.len() as u32);
+    let code_offsets = entries_by_code
+        .keys()
+        .map(|code| append_c_string(&mut bytes, code))
         .collect::<Vec<_>>();
     for (index, offset) in code_offsets.into_iter().enumerate() {
         put_offset(&mut bytes, syllabary_offset + 4 + index * 4, offset);
     }
     let index_offset = bytes.len();
-    bytes.resize(index_offset + 4 + dictionary.entries().len() * 16, 0);
-    put_u32_le(&mut bytes, index_offset, dictionary.entries().len() as u32);
-    for (index, entry) in dictionary.entries().iter().enumerate() {
+    bytes.resize(index_offset + 4 + entries_by_code.len() * 16, 0);
+    put_u32_le(&mut bytes, index_offset, entries_by_code.len() as u32);
+    for (index, entries) in entries_by_code.values().enumerate() {
         let node_offset = index_offset + 4 + index * 16;
-        put_u32_le(&mut bytes, node_offset, 1);
+        put_u32_le(&mut bytes, node_offset, entries.len() as u32);
         let entry_offset = bytes.len();
-        bytes.resize(entry_offset + 8, 0);
-        let text_offset = append_c_string(&mut bytes, &entry.text);
-        put_offset(&mut bytes, entry_offset, text_offset);
-        put_f32_le(&mut bytes, entry_offset + 4, entry.weight);
+        bytes.resize(entry_offset + entries.len() * 8, 0);
+        for (entry_index, entry) in entries.iter().enumerate() {
+            let current_entry_offset = entry_offset + entry_index * 8;
+            let text_offset = append_c_string(&mut bytes, &entry.text);
+            put_offset(&mut bytes, current_entry_offset, text_offset);
+            put_f32_le(&mut bytes, current_entry_offset + 4, entry.weight);
+        }
         put_offset(&mut bytes, node_offset + 4, entry_offset);
     }
     put_offset(&mut bytes, 44, syllabary_offset);
@@ -994,7 +1053,9 @@ fn config_bool_value(schema_config: &Value, key: &str) -> bool {
 }
 
 fn schema_dictionary_packs(schema_config: &Value, namespace: &str) -> Vec<String> {
-    let Some(Value::Sequence(packs)) = find_config_value(schema_config, &format!("{namespace}/packs")) else {
+    let Some(Value::Sequence(packs)) =
+        find_config_value(schema_config, &format!("{namespace}/packs"))
+    else {
         return Vec::new();
     };
     packs
