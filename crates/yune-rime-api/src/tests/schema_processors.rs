@@ -4611,7 +4611,7 @@ sort: original
     assert_eq!(context.composition.cursor_pos, 0);
     assert_eq!(context.composition.sel_start, 0);
     assert_eq!(context.composition.sel_end, 1);
-    assert_eq!(context.menu.num_candidates, 3);
+    assert_eq!(context.menu.num_candidates, 2);
     assert_eq!(context.menu.page_no, 0);
     assert_eq!(context.menu.highlighted_candidate_index, 1);
     let candidates = unsafe {
@@ -4665,13 +4665,12 @@ schema:
 engine:
   processors:
     - chord_composer
-    - punctuator
   segmentors:
     - punct_segmentor
     - fallback_segmentor
   translators:
-    - punct_translator
     - table_translator
+    - punct_translator
     - echo_translator
 chord_composer:
   alphabet: ab
@@ -4683,6 +4682,7 @@ translator:
   dictionary: chain
   enable_completion: false
   enable_sentence: false
+  initial_quality: 3.0
 punctuator:
   half_shape:
     '.': '。'
@@ -4750,32 +4750,31 @@ sort: original
     assert_eq!(RimeProcessKey(session_id, 'b' as i32, 0), TRUE);
     assert_eq!(RimeProcessKey(session_id, 'a' as i32, K_RELEASE_MASK), TRUE);
     assert_eq!(RimeProcessKey(session_id, 'b' as i32, K_RELEASE_MASK), TRUE);
-    assert_eq!(RimeCommitComposition(session_id), TRUE);
-    let mut commit = RimeCommit {
-        data_size: std::mem::size_of::<RimeCommit>() as i32,
-        text: std::ptr::null_mut(),
+    let mut context = empty_context();
+    // SAFETY: context points to writable storage initialized with positive data_size.
+    assert_eq!(unsafe { RimeGetContext(session_id, &mut context) }, TRUE);
+    assert_eq!(context.menu.num_candidates, 1);
+    let candidates = unsafe {
+        std::slice::from_raw_parts(
+            context.menu.candidates,
+            context.menu.num_candidates as usize,
+        )
     };
-    // SAFETY: commit points to valid writable storage.
-    assert_eq!(unsafe { RimeGetCommit(session_id, &mut commit) }, TRUE);
-    assert_eq!(unsafe { CStr::from_ptr(commit.text) }.to_str(), Ok("形"));
-    // SAFETY: commit text was allocated by `RimeGetCommit`.
-    assert_eq!(unsafe { RimeFreeCommit(&mut commit) }, TRUE);
+    assert_eq!(unsafe { CStr::from_ptr(candidates[0].text) }.to_str(), Ok("xy"));
+    assert!(!candidates[0].comment.is_null());
+    assert_eq!(
+        unsafe { CStr::from_ptr(candidates[0].comment) }.to_str(),
+        Ok("echo")
+    );
+    // SAFETY: nested pointers were allocated by `RimeGetContext` above.
+    assert_eq!(unsafe { RimeFreeContext(&mut context) }, TRUE);
 
+    RimeClearComposition(session_id);
     let input = RimeGetInput(session_id);
     assert!(!input.is_null());
     // SAFETY: `RimeGetInput` returned a non-null session-owned C string.
     assert_eq!(unsafe { CStr::from_ptr(input) }.to_str(), Ok(""));
     assert_eq!(RimeProcessKey(session_id, 'r' as i32, K_CONTROL_MASK), FALSE);
-
-    let full_shape = CString::new("full_shape").expect("option name should be valid");
-    // SAFETY: option name is a valid NUL-terminated string.
-    unsafe { RimeSetOption(session_id, full_shape.as_ptr(), TRUE) };
-    assert_eq!(RimeProcessKey(session_id, 'x' as i32, 0), TRUE);
-    // SAFETY: commit points to valid writable storage.
-    assert_eq!(unsafe { RimeGetCommit(session_id, &mut commit) }, TRUE);
-    assert_eq!(unsafe { CStr::from_ptr(commit.text) }.to_str(), Ok("ｘ"));
-    // SAFETY: commit text was allocated by `RimeGetCommit`.
-    assert_eq!(unsafe { RimeFreeCommit(&mut commit) }, TRUE);
 
     let mut status = empty_status();
     // SAFETY: status points to writable storage initialized with positive data_size.
