@@ -156,7 +156,9 @@ fn target_dir() -> Result<PathBuf, String> {
                 .and_then(|manifest_dir| manifest_dir.parent()?.parent().map(Path::to_path_buf))
                 .map(|workspace| workspace.join("target"))
         })
-        .ok_or_else(|| "missing CARGO_MANIFEST_DIR; cannot locate Cargo target directory".to_owned())
+        .ok_or_else(|| {
+            "missing CARGO_MANIFEST_DIR; cannot locate Cargo target directory".to_owned()
+        })
 }
 
 fn discover_dynamic_artifact() -> Result<PathBuf, String> {
@@ -202,18 +204,27 @@ fn write_minimal_schema(shared: &Path) {
 }
 
 fn bool_name(value: Bool) -> &'static str {
-    if value == TRUE { "TRUE" } else { "FALSE" }
+    if value == TRUE {
+        "TRUE"
+    } else {
+        "FALSE"
+    }
 }
 
 #[test]
 fn dynamic_loader_harness_loads_cargo_cdylib_and_api_table() {
     let _guard = test_guard();
-    let artifact = discover_dynamic_artifact().unwrap_or_else(|message| panic!("missing artifact: {message}"));
+    let artifact =
+        discover_dynamic_artifact().unwrap_or_else(|message| panic!("missing artifact: {message}"));
 
     // SAFETY: loading is restricted to the Cargo-built yune-rime-api artifact
     // discovered under the active target directory.
-    let library = unsafe { Library::new(&artifact) }
-        .unwrap_or_else(|error| panic!("failed to load dynamic artifact {}: {error}", artifact.display()));
+    let library = unsafe { Library::new(&artifact) }.unwrap_or_else(|error| {
+        panic!(
+            "failed to load dynamic artifact {}: {error}",
+            artifact.display()
+        )
+    });
 
     // SAFETY: the harness resolves only the exported null-terminated rime_get_api symbol.
     let get_api: libloading::Symbol<RimeGetApi> = unsafe { library.get(b"rime_get_api\0") }
@@ -233,7 +244,8 @@ fn dynamic_loader_harness_loads_cargo_cdylib_and_api_table() {
     let setup = require("setup", api.setup);
     let initialize = require("initialize", api.initialize);
     let finalize = require("finalize", api.finalize);
-    let set_notification_handler = require("set_notification_handler", api.set_notification_handler);
+    let set_notification_handler =
+        require("set_notification_handler", api.set_notification_handler);
     let deploy = require("deploy", api.deploy);
     let create_session = require("create_session", api.create_session);
     let find_session = require("find_session", api.find_session);
@@ -265,10 +277,13 @@ fn dynamic_loader_harness_loads_cargo_cdylib_and_api_table() {
     fs::create_dir_all(&staging).expect("staging dir should be created");
     write_minimal_schema(&shared);
 
-    let shared_c = CString::new(shared.to_string_lossy().as_ref()).expect("shared path should be valid");
+    let shared_c =
+        CString::new(shared.to_string_lossy().as_ref()).expect("shared path should be valid");
     let user_c = CString::new(user.to_string_lossy().as_ref()).expect("user path should be valid");
-    let prebuilt_c = CString::new(prebuilt.to_string_lossy().as_ref()).expect("prebuilt path should be valid");
-    let staging_c = CString::new(staging.to_string_lossy().as_ref()).expect("staging path should be valid");
+    let prebuilt_c =
+        CString::new(prebuilt.to_string_lossy().as_ref()).expect("prebuilt path should be valid");
+    let staging_c =
+        CString::new(staging.to_string_lossy().as_ref()).expect("staging path should be valid");
     let mut traits = empty_traits();
     traits.shared_data_dir = shared_c.as_ptr();
     traits.user_data_dir = user_c.as_ptr();
@@ -293,7 +308,10 @@ fn dynamic_loader_harness_loads_cargo_cdylib_and_api_table() {
     );
 
     let session_id = create_session();
-    assert_ne!(session_id, 0, "runtime behavior failure: create_session returned 0");
+    assert_ne!(
+        session_id, 0,
+        "runtime behavior failure: create_session returned 0"
+    );
     assert_eq!(
         find_session(session_id),
         TRUE,
