@@ -12,9 +12,9 @@ use crate::{
     config_set, config_state_mut, config_string_value, copy_c_string_with_strncpy_semantics,
     find_config_value, free_schema_list_fields, librime_signature_modified_time,
     open_runtime_config, reset_config_iterator_for_begin,
-    resource_id::validate_schema_config_resource_id, runtime_paths, set_config_value, Bool,
-    ConfigIteratorState, ConfigOpenKind, ConfigState, RimeConfig, RimeConfigIterator,
-    RimeSchemaList, FALSE, RIME_VERSION_BYTES, TRUE,
+    resource_id::{validate_config_api_resource_id, validate_schema_config_resource_id},
+    runtime_paths, set_config_value, Bool, ConfigIteratorState, ConfigOpenKind, ConfigState,
+    RimeConfig, RimeConfigIterator, RimeSchemaList, FALSE, RIME_VERSION_BYTES, TRUE,
 };
 
 /// Opens a deployed schema config from `<schema_id>.schema.yaml`.
@@ -44,6 +44,9 @@ pub unsafe extern "C" fn RimeSchemaOpen(schema_id: *const c_char, config: *mut R
 #[no_mangle]
 pub unsafe extern "C" fn RimeConfigOpen(config_id: *const c_char, config: *mut RimeConfig) -> Bool {
     let Some(config_id) = (unsafe { c_string_key(config_id) }) else {
+        return FALSE;
+    };
+    let Some(config_id) = validate_config_api_resource_id(&config_id) else {
         return FALSE;
     };
     open_runtime_config(&config_id, ConfigOpenKind::Deployed, config)

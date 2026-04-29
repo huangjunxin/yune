@@ -25,11 +25,11 @@ fn config_resource_ids_accept_logical_names_and_expected_suffixes() {
     );
     assert_eq!(
         validate_config_resource_id("sample.schema"),
-        Some("sample".to_owned())
+        Some("sample.schema".to_owned())
     );
     assert_eq!(
         validate_config_resource_id("sample.schema.yaml"),
-        Some("sample".to_owned())
+        Some("sample.schema".to_owned())
     );
     assert_eq!(
         validate_config_resource_id("default.custom"),
