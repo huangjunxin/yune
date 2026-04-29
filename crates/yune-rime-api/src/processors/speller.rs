@@ -130,7 +130,7 @@ pub(crate) fn process_speller_processor(
     }
     let previous_match = speller_previous_match_backup(
         session,
-        auto_select,
+        auto_select || !session.engine.get_option("_auto_commit"),
         max_code_length,
         auto_select_pattern.as_ref(),
     );
@@ -245,9 +245,7 @@ fn speller_auto_select_previous_match(
     appended_input: &str,
     delimiters: &str,
 ) -> Option<String> {
-    if !session.engine.get_option("_auto_commit")
-        || speller_context_has_menu(session.engine.context())
-    {
+    if speller_context_has_menu(session.engine.context()) {
         return None;
     }
     let (previous_input, previous_highlighted, previous_candidate) = previous_match?;
@@ -273,13 +271,18 @@ fn speller_auto_select_previous_match(
         session.engine.set_input(appended_input.to_owned());
         return None;
     }
-    let commit = session.engine.commit_composition();
-    if commit.is_some() {
-        session.engine.set_input(rest);
-    } else {
-        session.engine.set_input(appended_input.to_owned());
+    if session.engine.get_option("_auto_commit") {
+        let commit = session.engine.commit_composition();
+        if commit.is_some() {
+            session.engine.set_input(rest);
+        } else {
+            session.engine.set_input(appended_input.to_owned());
+        }
+        return commit;
     }
-    commit
+
+    session.engine.set_input(rest);
+    None
 }
 
 fn speller_auto_select_unique_candidate(

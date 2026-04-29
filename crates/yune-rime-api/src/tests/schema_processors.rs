@@ -4494,10 +4494,13 @@ sort: original
     assert_eq!(context.composition.length, 1);
     assert_eq!(context.composition.sel_start, 0);
     assert_eq!(context.composition.sel_end, 1);
-    assert_eq!(context.menu.num_candidates, 1);
+    assert_eq!(context.menu.num_candidates, 2);
     assert_eq!(context.menu.highlighted_candidate_index, 0);
     // SAFETY: context composition and candidate pointers are populated by `RimeGetContext`.
-    assert_eq!(unsafe { CStr::from_ptr(context.composition.preedit) }.to_str(), Ok("b"));
+    assert_eq!(
+        unsafe { CStr::from_ptr(context.composition.preedit) }.to_str(),
+        Ok("b")
+    );
     let candidate = unsafe { *context.menu.candidates };
     assert_eq!(unsafe { CStr::from_ptr(candidate.text) }.to_str(), Ok("乙"));
     // SAFETY: nested pointers were allocated by `RimeGetContext` above.
@@ -4620,7 +4623,10 @@ sort: original
             context.menu.num_candidates as usize,
         )
     };
-    assert_eq!(unsafe { CStr::from_ptr(candidates[1].text) }.to_str(), Ok("乙"));
+    assert_eq!(
+        unsafe { CStr::from_ptr(candidates[1].text) }.to_str(),
+        Ok("乙")
+    );
     // SAFETY: nested pointers were allocated by `RimeGetContext` above.
     assert_eq!(unsafe { RimeFreeContext(&mut context) }, TRUE);
 
@@ -4760,7 +4766,10 @@ sort: original
             context.menu.num_candidates as usize,
         )
     };
-    assert_eq!(unsafe { CStr::from_ptr(candidates[0].text) }.to_str(), Ok("xy"));
+    assert_eq!(
+        unsafe { CStr::from_ptr(candidates[0].text) }.to_str(),
+        Ok("xy")
+    );
     assert!(!candidates[0].comment.is_null());
     assert_eq!(
         unsafe { CStr::from_ptr(candidates[0].comment) }.to_str(),
@@ -4774,7 +4783,10 @@ sort: original
     assert!(!input.is_null());
     // SAFETY: `RimeGetInput` returned a non-null session-owned C string.
     assert_eq!(unsafe { CStr::from_ptr(input) }.to_str(), Ok(""));
-    assert_eq!(RimeProcessKey(session_id, 'r' as i32, K_CONTROL_MASK), FALSE);
+    assert_eq!(
+        RimeProcessKey(session_id, 'r' as i32, K_CONTROL_MASK),
+        FALSE
+    );
 
     let mut status = empty_status();
     // SAFETY: status points to writable storage initialized with positive data_size.
