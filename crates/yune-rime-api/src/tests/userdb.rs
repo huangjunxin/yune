@@ -390,3 +390,232 @@ fn userdb_sync_merges_plain_snapshots_and_backs_up_current_state() {
     drop(current_dir_guard);
     fs::remove_dir_all(root).expect("temp dirs should be removed");
 }
+
+#[test]
+fn levers_user_dict_iterator_lists_userdb_entries() {
+    let _guard = test_guard();
+    let root = unique_temp_dir("levers-user-dicts");
+    let user = root.join("user");
+    fs::create_dir_all(user.join("luna_pinyin.userdb"))
+        .expect("leveldb-style user dict dir should be created");
+    fs::write(user.join("essay.userdb"), "").expect("user dict file should be written");
+    fs::write(user.join("legacy.userdb.txt"), "")
+        .expect("plain legacy user dict should not match current userdb extension");
+    fs::write(user.join("default.yaml"), "").expect("unrelated file should be ignored");
+
+    let user_c = CString::new(user.to_string_lossy().as_ref()).expect("path is valid");
+    let mut traits = empty_traits();
+    traits.user_data_dir = user_c.as_ptr();
+    // SAFETY: traits points to valid storage and strings live for the call.
+    unsafe { RimeSetup(&traits) };
+
+    let levers_name = CString::new("levers").expect("module name should be valid");
+    // SAFETY: lookup name is a valid NUL-terminated string.
+    let module = unsafe { RimeFindModule(levers_name.as_ptr()) };
+    assert!(!module.is_null());
+    // SAFETY: built-in module storage is process-lifetime.
+    let module = unsafe { &*module };
+    let api = module.get_api.expect("levers get_api should be set")().cast::<RimeLeversApi>();
+    assert!(!api.is_null());
+    // SAFETY: levers get_api returns a process-lifetime RimeLeversApi object.
+    let api = unsafe { &*api };
+    let iterator_init = api
+        .user_dict_iterator_init
+        .expect("user dict iterator init should be available");
+    let iterator_destroy = api
+        .user_dict_iterator_destroy
+        .expect("user dict iterator destroy should be available");
+    let next_user_dict = api
+        .next_user_dict
+        .expect("next user dict should be available");
+
+    let mut iterator = crate::RimeUserDictIterator {
+        ptr: std::ptr::null_mut(),
+        i: 0,
+    };
+    // SAFETY: iterator points to writable storage.
+    assert_eq!(unsafe { iterator_init(&mut iterator) }, TRUE);
+    assert!(!iterator.ptr.is_null());
+    assert_eq!(iterator.i, 0);
+
+    // SAFETY: iterator was initialized by the levers API.
+    let first = unsafe { next_user_dict(&mut iterator) };
+    assert!(!first.is_null());
+    // SAFETY: returned pointer is owned by the iterator and valid until destroy.
+    assert_eq!(unsafe { CStr::from_ptr(first) }.to_str(), Ok("essay"));
+    // SAFETY: iterator remains initialized.
+    let second = unsafe { next_user_dict(&mut iterator) };
+    assert!(!second.is_null());
+    // SAFETY: returned pointer is owned by the iterator and valid until destroy.
+    assert_eq!(
+        unsafe { CStr::from_ptr(second) }.to_str(),
+        Ok("luna_pinyin")
+    );
+    // SAFETY: iterator is exhausted but valid.
+    assert!(unsafe { next_user_dict(&mut iterator) }.is_null());
+
+    // SAFETY: iterator was initialized by this shim.
+    unsafe { iterator_destroy(&mut iterator) };
+    assert!(iterator.ptr.is_null());
+    assert_eq!(iterator.i, 0);
+
+    // SAFETY: null inputs are explicitly rejected/no-oped.
+    assert_eq!(unsafe { iterator_init(std::ptr::null_mut()) }, FALSE);
+    assert!(unsafe { next_user_dict(std::ptr::null_mut()) }.is_null());
+    unsafe { iterator_destroy(std::ptr::null_mut()) };
+
+    fs::remove_file(user.join("essay.userdb")).expect("user dict file should be removed");
+    fs::remove_dir_all(user.join("luna_pinyin.userdb")).expect("user dict dir should be removed");
+    let mut empty_iterator = crate::RimeUserDictIterator {
+        ptr: std::ptr::null_mut(),
+        i: 7,
+    };
+    // SAFETY: iterator points to writable storage; no .userdb entries remain.
+    assert_eq!(unsafe { iterator_init(&mut empty_iterator) }, FALSE);
+    assert!(empty_iterator.ptr.is_null());
+    assert_eq!(empty_iterator.i, 7);
+
+    fs::write(user.join("cached.userdb"), "").expect("cached user dict should be written");
+    let mut cached_iterator = crate::RimeUserDictIterator {
+        ptr: std::ptr::null_mut(),
+        i: 0,
+    };
+    // SAFETY: iterator points to writable storage.
+    assert_eq!(unsafe { iterator_init(&mut cached_iterator) }, TRUE);
+    assert!(!cached_iterator.ptr.is_null());
+    assert_eq!(cached_iterator.i, 0);
+    fs::remove_file(user.join("cached.userdb")).expect("cached user dict should be removed");
+    // SAFETY: librime leaves an existing iterator untouched when a re-scan
+    // finds no user dictionaries.
+    assert_eq!(unsafe { iterator_init(&mut cached_iterator) }, FALSE);
+    assert!(!cached_iterator.ptr.is_null());
+    assert_eq!(cached_iterator.i, 0);
+    // SAFETY: cached_iterator still owns the previous snapshot.
+    let cached = unsafe { next_user_dict(&mut cached_iterator) };
+    assert!(!cached.is_null());
+    // SAFETY: returned pointer is owned by the iterator and valid until destroy.
+    assert_eq!(unsafe { CStr::from_ptr(cached) }.to_str(), Ok("cached"));
+    // SAFETY: cached_iterator was initialized by this shim.
+    unsafe { iterator_destroy(&mut cached_iterator) };
+
+    let reset_traits = empty_traits();
+    // SAFETY: reset traits points to valid storage.
+    unsafe { RimeSetup(&reset_traits) };
+    fs::remove_dir_all(root).expect("temp dirs should be removed");
+}
+
+#[test]
+fn levers_user_dict_file_operations_handle_plain_userdb_files() {
+    let _guard = test_guard();
+    let root = unique_temp_dir("levers-user-dict-files");
+    let user = root.join("user");
+    fs::create_dir_all(&user).expect("user dir should be created");
+    struct CurrentDirGuard(PathBuf);
+    impl Drop for CurrentDirGuard {
+        fn drop(&mut self) {
+            let _ = env::set_current_dir(&self.0);
+        }
+    }
+    let current_dir_guard =
+        CurrentDirGuard(env::current_dir().expect("current dir should be available"));
+    env::set_current_dir(&root).expect("test cwd should move under temp root");
+    fs::write(
+        user.join("luna_pinyin.userdb"),
+        "# comment\nni hao\t你好\t1\n\nzhong guo\t中国\t2\n",
+    )
+    .expect("plain user dict should be written");
+
+    let user_c = CString::new(user.to_string_lossy().as_ref()).expect("path is valid");
+    let mut traits = empty_traits();
+    traits.user_data_dir = user_c.as_ptr();
+    // SAFETY: traits points to valid storage and strings live for the call.
+    unsafe { RimeSetup(&traits) };
+
+    let levers_name = CString::new("levers").expect("module name should be valid");
+    // SAFETY: lookup name is a valid NUL-terminated string.
+    let module = unsafe { RimeFindModule(levers_name.as_ptr()) };
+    assert!(!module.is_null());
+    // SAFETY: built-in module storage is process-lifetime.
+    let module = unsafe { &*module };
+    let api = module.get_api.expect("levers get_api should be set")().cast::<RimeLeversApi>();
+    assert!(!api.is_null());
+    // SAFETY: levers get_api returns a process-lifetime RimeLeversApi object.
+    let api = unsafe { &*api };
+    let backup_user_dict = api
+        .backup_user_dict
+        .expect("backup user dict should be available");
+    let restore_user_dict = api
+        .restore_user_dict
+        .expect("restore user dict should be available");
+    let export_user_dict = api
+        .export_user_dict
+        .expect("export user dict should be available");
+    let import_user_dict = api
+        .import_user_dict
+        .expect("import user dict should be available");
+
+    let dict_name = CString::new("luna_pinyin").expect("dict name is valid");
+    // SAFETY: dict name is a valid NUL-terminated string.
+    assert_eq!(unsafe { backup_user_dict(dict_name.as_ptr()) }, TRUE);
+    let snapshot = root
+        .join("sync")
+        .join("unknown")
+        .join("luna_pinyin.userdb.txt");
+    let snapshot_text = fs::read_to_string(&snapshot).expect("snapshot should be readable");
+    assert!(snapshot_text.contains("/db_name\tluna_pinyin\n"));
+    assert!(snapshot_text.contains("/db_type\tuserdb\n"));
+    assert!(snapshot_text.contains("ni hao \t你好\tc=1 d=1 t=1\n"));
+    assert!(snapshot_text.contains("zhong guo \t中国\tc=2 d=2 t=1\n"));
+
+    let export_path = root.join("luna_export.tsv");
+    let export_path_c =
+        CString::new(export_path.to_string_lossy().as_ref()).expect("path is valid");
+    // SAFETY: pointers are valid NUL-terminated strings.
+    assert_eq!(
+        unsafe { export_user_dict(dict_name.as_ptr(), export_path_c.as_ptr()) },
+        2
+    );
+    assert_eq!(
+        fs::read_to_string(&export_path).expect("export should be readable"),
+        "你好\tni hao\t1\n中国\tzhong guo\t2\n"
+    );
+
+    fs::write(&export_path, "新\txin\t3\n词\tci\t4\n").expect("import file should be updated");
+    let imported_name = CString::new("imported").expect("dict name is valid");
+    // SAFETY: pointers are valid NUL-terminated strings.
+    assert_eq!(
+        unsafe { import_user_dict(imported_name.as_ptr(), export_path_c.as_ptr()) },
+        2
+    );
+    let imported =
+        fs::read_to_string(user.join("imported.userdb")).expect("import should be readable");
+    assert!(imported.contains("xin \t新\tc=3 d=3 t=1\n"));
+    assert!(imported.contains("ci \t词\tc=4 d=4 t=1\n"));
+
+    let snapshot_c = CString::new(snapshot.to_string_lossy().as_ref()).expect("path is valid");
+    fs::remove_file(user.join("luna_pinyin.userdb"))
+        .expect("user dict should be removable before restore");
+    // SAFETY: snapshot path is a valid NUL-terminated string.
+    assert_eq!(unsafe { restore_user_dict(snapshot_c.as_ptr()) }, TRUE);
+    assert!(user.join("luna_pinyin.userdb").is_file());
+
+    let missing = CString::new("missing").expect("dict name is valid");
+    // SAFETY: null and missing inputs are explicitly rejected.
+    assert_eq!(unsafe { backup_user_dict(std::ptr::null()) }, FALSE);
+    assert_eq!(unsafe { backup_user_dict(missing.as_ptr()) }, FALSE);
+    assert_eq!(unsafe { restore_user_dict(std::ptr::null()) }, FALSE);
+    assert_eq!(
+        unsafe { export_user_dict(std::ptr::null(), export_path_c.as_ptr()) },
+        -1
+    );
+    assert_eq!(
+        unsafe { import_user_dict(imported_name.as_ptr(), std::ptr::null()) },
+        -1
+    );
+
+    let reset_traits = empty_traits();
+    // SAFETY: reset traits points to valid storage.
+    unsafe { RimeSetup(&reset_traits) };
+    drop(current_dir_guard);
+    fs::remove_dir_all(root).expect("temp dirs should be removed");
+}
