@@ -1,4 +1,7 @@
-use crate::{CandidateSource, Engine, HistoryTranslator, PunctuationTranslator, ReverseLookupTranslator, StaticTableTranslator, TableDictionary, Translator};
+use crate::{
+    CandidateSource, Engine, HistoryTranslator, PunctuationTranslator, ReverseLookupTranslator,
+    StaticTableTranslator, TableDictionary, Translator,
+};
 
 #[test]
 fn reverse_lookup_translator_uses_target_dictionary_comments() {
@@ -64,8 +67,7 @@ sort: original
     )
     .expect("lookup dictionary should parse");
 
-    let exact_translator =
-        ReverseLookupTranslator::new(lookup_dictionary.clone(), None, "`", "");
+    let exact_translator = ReverseLookupTranslator::new(lookup_dictionary.clone(), None, "`", "");
     assert!(exact_translator.translate("`hu").is_empty());
 
     let completion_translator =

@@ -1,4 +1,8 @@
-use crate::{Candidate, CandidateFilter, CandidateSource, CharsetFilter, Engine, ReverseLookupFilter, ReverseLookupTranslator, SimplifierFilter, SingleCharFilter, StaticTableTranslator, TableDictionary, TaggedFilter, Translator, UniquifierFilter};
+use crate::{
+    Candidate, CandidateFilter, CandidateSource, CharsetFilter, Engine, ReverseLookupFilter,
+    ReverseLookupTranslator, SimplifierFilter, SingleCharFilter, StaticTableTranslator,
+    TableDictionary, TaggedFilter, Translator, UniquifierFilter,
+};
 
 #[test]
 fn reverse_lookup_filter_updates_comments_like_librime() {
@@ -386,8 +390,7 @@ fn static_table_translator_sentence_over_completion_prioritizes_sentence() {
 fn static_table_translator_initial_quality_participates_in_candidate_order() {
     let mut engine = Engine::new();
     engine.add_translator(StaticTableTranslator::new([("ba", "低")]));
-    engine
-        .add_translator(StaticTableTranslator::new([("ba", "高")]).with_initial_quality(10.0));
+    engine.add_translator(StaticTableTranslator::new([("ba", "高")]).with_initial_quality(10.0));
 
     engine
         .process_key_sequence("ba")

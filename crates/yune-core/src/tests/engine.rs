@@ -1,4 +1,7 @@
-use crate::{Candidate, CandidateRanker, CandidateSource, Context, Engine, MockAiRanker, RerankResult, StaticTableTranslator, Translator};
+use crate::{
+    Candidate, CandidateRanker, CandidateSource, Context, Engine, MockAiRanker, RerankResult,
+    StaticTableTranslator, Translator,
+};
 
 struct CommentTranslator;
 
@@ -983,11 +986,7 @@ fn pending_ranker_keeps_classic_candidate_order() {
             "pending_ranker"
         }
 
-        fn try_rerank(
-            &self,
-            _context: &Context,
-            _candidates: &[Candidate],
-        ) -> RerankResult {
+        fn try_rerank(&self, _context: &Context, _candidates: &[Candidate]) -> RerankResult {
             RerankResult::Pending
         }
     }

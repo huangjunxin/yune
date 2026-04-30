@@ -8,9 +8,9 @@ mod key;
 mod punctuation;
 mod spelling_algebra;
 mod state;
-mod translator;
 #[cfg(test)]
 mod tests;
+mod translator;
 mod userdb;
 use comment_format::CommentFormat;
 pub use dictionary::{
@@ -3354,6 +3354,4 @@ sort: by_weight
             "RIME dictionary header is missing required name or version"
         );
     }
-
-
 }
