@@ -9,6 +9,7 @@ mod punctuation;
 mod spelling_algebra;
 mod state;
 mod translator;
+mod userdb;
 use comment_format::CommentFormat;
 pub use dictionary::{
     parse_rime_prism_bin_metadata, parse_rime_prism_bin_payload, parse_rime_reverse_bin_dictionary,
