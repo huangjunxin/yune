@@ -1,6 +1,104 @@
 use super::*;
 
 #[test]
+fn userdb_import_export_round_trips_typed_commits_dee_and_tick_values() {
+    let _guard = test_guard();
+    let root = unique_temp_dir("userdb-typed-roundtrip");
+    let user = root.join("user");
+    fs::create_dir_all(&user).expect("user dir should be created");
+    let import = root.join("import.txt");
+    let export = root.join("export.txt");
+    fs::write(&import, "你好\tni hao\t3\n").expect("table import should be written");
+
+    let user_c = CString::new(user.to_string_lossy().as_ref()).expect("path is valid");
+    let mut traits = empty_traits();
+    traits.user_data_dir = user_c.as_ptr();
+    // SAFETY: traits points to valid storage and strings live for the call.
+    unsafe { RimeSetup(&traits) };
+
+    let dict = CString::new("luna_pinyin").expect("dict name should be valid");
+    let import_c = CString::new(import.to_string_lossy().as_ref()).expect("path is valid");
+    let export_c = CString::new(export.to_string_lossy().as_ref()).expect("path is valid");
+    // SAFETY: pointers reference valid NUL-terminated strings for the calls.
+    assert_eq!(unsafe { RimeLeversImportUserDict(dict.as_ptr(), import_c.as_ptr()) }, 1);
+    // SAFETY: pointers reference valid NUL-terminated strings for the calls.
+    assert_eq!(unsafe { RimeLeversExportUserDict(dict.as_ptr(), export_c.as_ptr()) }, 1);
+
+    let stored = fs::read_to_string(user.join("luna_pinyin.userdb")).expect("store should be readable");
+    assert!(stored.contains("c=3"), "stored value should preserve commits: {stored}");
+    assert!(stored.contains("d=3"), "stored value should preserve dee: {stored}");
+    assert!(stored.contains("t=1"), "stored value should preserve tick: {stored}");
+
+    let exported = fs::read_to_string(export).expect("export should be readable");
+    assert_eq!(exported, "你好\tni hao\t3\n");
+
+    let reset_traits = empty_traits();
+    // SAFETY: reset traits points to valid storage.
+    unsafe { RimeSetup(&reset_traits) };
+    let _ = fs::remove_dir_all(root);
+}
+
+#[test]
+fn userdb_rejects_malformed_logical_names_before_store_creation() {
+    let _guard = test_guard();
+    let root = unique_temp_dir("userdb-invalid-names");
+    let user = root.join("user");
+    fs::create_dir_all(&user).expect("user dir should be created");
+    let import = root.join("import.txt");
+    fs::write(&import, "你好\tni hao\t3\n").expect("table import should be written");
+
+    let user_c = CString::new(user.to_string_lossy().as_ref()).expect("path is valid");
+    let mut traits = empty_traits();
+    traits.user_data_dir = user_c.as_ptr();
+    // SAFETY: traits points to valid storage and strings live for the call.
+    unsafe { RimeSetup(&traits) };
+
+    let import_c = CString::new(import.to_string_lossy().as_ref()).expect("path is valid");
+    for name in ["../x", "/tmp/x", "x.userdb", "x.userdb.txt", "C:\\x", "~x", "", ".", ".."] {
+        let name_c = CString::new(name).expect("dict name should be representable");
+        // SAFETY: pointers reference valid NUL-terminated strings for the call.
+        assert_eq!(unsafe { RimeLeversImportUserDict(name_c.as_ptr(), import_c.as_ptr()) }, -1, "{name:?}");
+    }
+
+    assert!(fs::read_dir(&user).expect("user dir should exist").next().is_none());
+
+    let reset_traits = empty_traits();
+    // SAFETY: reset traits points to valid storage.
+    unsafe { RimeSetup(&reset_traits) };
+    let _ = fs::remove_dir_all(root);
+}
+
+#[test]
+fn interrupted_userdb_temp_write_keeps_last_committed_store_readable() {
+    let _guard = test_guard();
+    let root = unique_temp_dir("userdb-interrupted-write");
+    let user = root.join("user");
+    fs::create_dir_all(&user).expect("user dir should be created");
+    let store = user.join("luna_pinyin.userdb");
+    fs::write(&store, "# yune userdb\n/db_name\tluna_pinyin\n/db_type\tuserdb\n/tick\t1\nni hao \t你好\tc=2 d=2 t=1\n")
+        .expect("committed store should be written");
+    fs::write(user.join("luna_pinyin.userdb.tmp"), "partial\n").expect("temp store should be written");
+
+    let user_c = CString::new(user.to_string_lossy().as_ref()).expect("path is valid");
+    let mut traits = empty_traits();
+    traits.user_data_dir = user_c.as_ptr();
+    // SAFETY: traits points to valid storage and strings live for the call.
+    unsafe { RimeSetup(&traits) };
+
+    let dict = CString::new("luna_pinyin").expect("dict name should be valid");
+    let export = root.join("export.txt");
+    let export_c = CString::new(export.to_string_lossy().as_ref()).expect("path is valid");
+    // SAFETY: pointers reference valid NUL-terminated strings for the call.
+    assert_eq!(unsafe { RimeLeversExportUserDict(dict.as_ptr(), export_c.as_ptr()) }, 1);
+    assert_eq!(fs::read_to_string(export).expect("export should be readable"), "你好\tni hao\t2\n");
+
+    let reset_traits = empty_traits();
+    // SAFETY: reset traits points to valid storage.
+    unsafe { RimeSetup(&reset_traits) };
+    let _ = fs::remove_dir_all(root);
+}
+
+#[test]
 fn sync_user_data_merges_plain_userdb_snapshots_and_backs_up_current_state() {
     let _guard = test_guard();
     let root = unique_temp_dir("rime-sync-user-data");
