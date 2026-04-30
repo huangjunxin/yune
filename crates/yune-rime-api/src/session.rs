@@ -12,7 +12,7 @@ use std::{
 use yune_core::{Engine, KeyEvent};
 
 use crate::{
-    bool_from, AffixSegmentor, AsciiModeSwitchStyle, Bool, ChordComposerProcessor,
+    bool_from, userdb, AffixSegmentor, AsciiModeSwitchStyle, Bool, ChordComposerProcessor,
     EditorBindingAction, EditorCharHandler, EditorProcessor, KeyBinderProcessor, MatcherSegmentor,
     NavigatorBindings, NavigatorSyllableJumpPosition, PunctSegmentor, PunctuationProcessor,
     RecognizerProcessor, RimeSessionId, SelectorBindings, SpellerProcessor, FALSE,
@@ -34,7 +34,11 @@ impl SessionRegistry {
 
         self.next_id = self.next_id.saturating_add(1).max(1);
         let session_id = self.next_id;
-        self.sessions.insert(session_id, SessionState::new());
+        let mut session = SessionState::new();
+        let schema_id = session.engine.status().schema_id;
+        session.set_user_dict_name(schema_id);
+        session.reload_userdb_from_store();
+        self.sessions.insert(session_id, session);
         session_id
     }
 
@@ -100,6 +104,7 @@ pub(crate) struct SessionState {
     pub(crate) fallback_segmentor_enabled: bool,
     pub(crate) remaining_gear_deferrals: Vec<RemainingGearDeferral>,
     pub(crate) paging: bool,
+    pub(crate) user_dict_name: Option<String>,
     pub(crate) last_active_time: u64,
 }
 
@@ -133,7 +138,33 @@ impl SessionState {
             fallback_segmentor_enabled: false,
             remaining_gear_deferrals: Vec::new(),
             paging: false,
+            user_dict_name: None,
             last_active_time: session_activity_now(),
+        }
+    }
+
+    pub(crate) fn set_user_dict_name(&mut self, dict_name: impl Into<String>) {
+        self.user_dict_name = Some(dict_name.into());
+    }
+
+    pub(crate) fn reload_userdb_from_store(&mut self) {
+        let Some(dict_name) = self.user_dict_name.as_deref() else {
+            return;
+        };
+        if let Ok(userdb) = userdb::load_runtime_userdb(dict_name) {
+            self.engine.set_userdb(userdb);
+        }
+    }
+
+    pub(crate) fn persist_pending_userdb_learning(&mut self) {
+        let Some(event) = self.engine.take_pending_userdb_learning() else {
+            return;
+        };
+        let Some(dict_name) = self.user_dict_name.as_deref() else {
+            return;
+        };
+        if let Ok(userdb) = userdb::record_runtime_commit(dict_name, &event) {
+            self.engine.set_userdb(userdb);
         }
     }
 

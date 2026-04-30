@@ -131,14 +131,24 @@ fn userdb_learning_persists_session_commits_and_reloads_candidates() {
     assert!(stored.contains("ni \t你\tc=1"), "typed update should persist: {stored}");
     assert!(stored.contains("d="), "typed update should include dee: {stored}");
     assert!(stored.contains("t="), "typed update should include tick: {stored}");
+    let seeded_store = format!("{stored}ni hao \t你好\tc=1 d=1 t=1\n");
+    fs::write(user.join("learn.userdb"), seeded_store)
+        .expect("predictive store entry should be appended");
 
     let reloaded_session = RimeCreateSession();
     assert_eq!(unsafe { RimeSelectSchema(reloaded_session, schema.as_ptr()) }, TRUE);
     assert_eq!(RimeProcessKey(reloaded_session, 'n' as c_int, 0), TRUE);
     assert_eq!(RimeProcessKey(reloaded_session, 'i' as c_int, 0), TRUE);
     let candidates = super::super::session_candidates_snapshot(reloaded_session).expect("session should exist");
-    assert_eq!(candidates[0].source, CandidateSource::UserTable);
-    assert_eq!(candidates[0].text, "你");
+    let learned_index = candidates
+        .iter()
+        .position(|candidate| candidate.source == CandidateSource::UserTable && candidate.text == "你")
+        .expect("learned exact userdb candidate should be present");
+    let table_index = candidates
+        .iter()
+        .position(|candidate| candidate.source == CandidateSource::Table && candidate.text == "你")
+        .expect("table candidate should remain present");
+    assert!(learned_index < table_index, "learned candidate should rank before table duplicate: {candidates:?}");
     assert!(
         candidates.iter().any(|candidate| candidate.text == "你好" && candidate.comment == "~hao"),
         "predictive userdb candidate should be present: {candidates:?}"

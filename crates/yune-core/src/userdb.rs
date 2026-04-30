@@ -1,7 +1,7 @@
 use crate::{Candidate, CandidateSource};
 
 const DECAY_WINDOW: f64 = 200.0;
-const USER_PHRASE_BONUS: f32 = 0.5;
+const USER_PHRASE_BONUS: f32 = 30_000.0;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct UserDbCommitMetadata {
@@ -172,6 +172,16 @@ impl UserDb {
             text: text.into(),
             value: UserDbValue { commits, dee, tick },
         });
+    }
+
+    #[must_use]
+    pub fn entries(&self) -> &[UserDbLearnedEntry] {
+        &self.entries
+    }
+
+    #[must_use]
+    pub fn into_entries(self) -> Vec<UserDbLearnedEntry> {
+        self.entries
     }
 
     #[must_use]

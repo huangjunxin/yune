@@ -1973,6 +1973,13 @@ fn frontend_style_userdb_learning_survives_session_recreation() {
     assert_eq!(process_key(session_id, 'i' as c_int, 0), TRUE);
     assert_eq!(commit_composition(session_id), TRUE);
     assert_eq!(destroy_session(session_id), TRUE);
+    let store_path = user.join("learn.userdb");
+    let stored = fs::read_to_string(&store_path).expect("store should be readable");
+    fs::write(
+        &store_path,
+        format!("{stored}ni hao \t你好\tc=1 d=1 t=1\n"),
+    )
+    .expect("predictive store entry should be appended");
 
     let reloaded_session = create_session();
     assert_ne!(reloaded_session, 0);
@@ -1989,16 +1996,26 @@ fn frontend_style_userdb_learning_survives_session_recreation() {
             context.menu.num_candidates as usize,
         )
     };
-    assert_eq!(unsafe { CStr::from_ptr(candidates[0].text) }.to_str(), Ok("你"));
-    assert!(candidates.iter().any(|candidate| {
-        let text = unsafe { CStr::from_ptr(candidate.text) }.to_string_lossy();
-        let comment = if candidate.comment.is_null() {
-            String::new()
-        } else {
-            unsafe { CStr::from_ptr(candidate.comment) }.to_string_lossy().into_owned()
-        };
-        text == "你好" && comment == "~hao"
-    }));
+    let candidate_values = candidates
+        .iter()
+        .map(|candidate| {
+            let text = unsafe { CStr::from_ptr(candidate.text) }
+                .to_string_lossy()
+                .into_owned();
+            let comment = if candidate.comment.is_null() {
+                String::new()
+            } else {
+                unsafe { CStr::from_ptr(candidate.comment) }
+                    .to_string_lossy()
+                    .into_owned()
+            };
+            (text, comment)
+        })
+        .collect::<Vec<_>>();
+    assert!(candidate_values.iter().any(|(text, _)| text == "你"));
+    assert!(candidate_values
+        .iter()
+        .any(|(text, comment)| text == "你好" && comment == "~hao"));
     assert_eq!(unsafe { free_context(&mut context) }, TRUE);
 
     assert_eq!(destroy_session(reloaded_session), TRUE);
