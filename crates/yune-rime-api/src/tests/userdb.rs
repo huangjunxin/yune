@@ -1,11 +1,20 @@
 use super::*;
 
 #[test]
-fn userdb_import_export_round_trips_typed_commits_dee_and_tick_values() {
+fn userdb_backup_restore_exports_typed_metadata_and_records() {
     let _guard = test_guard();
     let root = unique_temp_dir("userdb-typed-roundtrip");
     let user = root.join("user");
     fs::create_dir_all(&user).expect("user dir should be created");
+    struct CurrentDirGuard(PathBuf);
+    impl Drop for CurrentDirGuard {
+        fn drop(&mut self) {
+            let _ = env::set_current_dir(&self.0);
+        }
+    }
+    let current_dir_guard =
+        CurrentDirGuard(env::current_dir().expect("current dir should be available"));
+    env::set_current_dir(&root).expect("test cwd should move under temp root");
     let import = root.join("import.txt");
     let export = root.join("export.txt");
     fs::write(&import, "你好\tni hao\t3\n").expect("table import should be written");
@@ -48,9 +57,36 @@ fn userdb_import_export_round_trips_typed_commits_dee_and_tick_values() {
     let exported = fs::read_to_string(export).expect("export should be readable");
     assert_eq!(exported, "你好\tni hao\t3\n");
 
+    let snapshot = root
+        .join("sync")
+        .join("unknown")
+        .join("luna_pinyin.userdb.txt");
+    let dict_for_backup = CString::new("luna_pinyin").expect("dict name should be valid");
+    // SAFETY: pointer references a valid NUL-terminated string for the call.
+    assert_eq!(
+        unsafe { RimeLeversBackupUserDict(dict_for_backup.as_ptr()) },
+        TRUE
+    );
+    let snapshot_text = fs::read_to_string(&snapshot).expect("snapshot should be readable");
+    assert!(snapshot_text.contains("/db_name\tluna_pinyin\n"));
+    assert!(snapshot_text.contains("/db_type\tuserdb\n"));
+    assert!(snapshot_text.contains("ni hao \t你好\tc=3 d=3 t=1\n"));
+
+    fs::remove_file(user.join("luna_pinyin.userdb")).expect("store should be removable");
+    let snapshot_c = CString::new(snapshot.to_string_lossy().as_ref()).expect("path is valid");
+    // SAFETY: pointer references a valid NUL-terminated string for the call.
+    assert_eq!(
+        unsafe { RimeLeversRestoreUserDict(snapshot_c.as_ptr()) },
+        TRUE
+    );
+    let restored =
+        fs::read_to_string(user.join("luna_pinyin.userdb")).expect("store should be restored");
+    assert!(restored.contains("ni hao \t你好\tc=3 d=3 t=1\n"));
+
     let reset_traits = empty_traits();
     // SAFETY: reset traits points to valid storage.
     unsafe { RimeSetup(&reset_traits) };
+    drop(current_dir_guard);
     let _ = fs::remove_dir_all(root);
 }
 
@@ -95,6 +131,26 @@ fn userdb_rejects_malformed_logical_names_before_store_creation() {
         .next()
         .is_none());
 
+    let malformed = root.join("malformed.userdb.txt");
+    fs::write(
+        &malformed,
+        "/db_name\t../bad\n/db_type\tuserdb\nni hao\t你好\tc=9 d=9 t=9\n",
+    )
+    .expect("malformed snapshot should be written");
+    let before = fs::read_dir(&user).expect("user dir should exist").count();
+    let malformed_c = CString::new(malformed.to_string_lossy().as_ref()).expect("path is valid");
+    // SAFETY: pointer references a valid NUL-terminated string for the call.
+    assert_eq!(
+        unsafe { RimeLeversRestoreUserDict(malformed_c.as_ptr()) },
+        FALSE
+    );
+    assert_eq!(
+        fs::read_dir(&user)
+            .expect("user dir should still exist")
+            .count(),
+        before
+    );
+
     let reset_traits = empty_traits();
     // SAFETY: reset traits points to valid storage.
     unsafe { RimeSetup(&reset_traits) };
@@ -102,7 +158,7 @@ fn userdb_rejects_malformed_logical_names_before_store_creation() {
 }
 
 #[test]
-fn interrupted_userdb_temp_write_keeps_last_committed_store_readable() {
+fn userdb_recovery_interrupted_temp_write_keeps_last_committed_store_readable() {
     let _guard = test_guard();
     let root = unique_temp_dir("userdb-interrupted-write");
     let user = root.join("user");
@@ -139,7 +195,7 @@ fn interrupted_userdb_temp_write_keeps_last_committed_store_readable() {
 }
 
 #[test]
-fn sync_user_data_merges_plain_userdb_snapshots_and_backs_up_current_state() {
+fn userdb_sync_merges_plain_snapshots_and_backs_up_current_state() {
     let _guard = test_guard();
     let root = unique_temp_dir("rime-sync-user-data");
     let user = root.join("user");
@@ -156,8 +212,11 @@ fn sync_user_data_merges_plain_userdb_snapshots_and_backs_up_current_state() {
         CurrentDirGuard(env::current_dir().expect("current dir should be available"));
     env::set_current_dir(&root).expect("test cwd should move under temp root");
 
-    fs::write(user.join("luna_pinyin.userdb"), "ni hao\t你好\t1\n")
-        .expect("local user dict should be written");
+    fs::write(
+        user.join("luna_pinyin.userdb"),
+        "ni hao\t你好\t1\nshuo\t说\t1\n",
+    )
+    .expect("local user dict should be written");
     fs::write(user.join("default.yaml"), "config_version: '1.0'\n")
         .expect("user config should be written");
     fs::write(user.join("notes.txt"), "local notes\n").expect("text file should be written");
@@ -168,7 +227,7 @@ fn sync_user_data_merges_plain_userdb_snapshots_and_backs_up_current_state() {
     .expect("generated customized copy should be written");
     fs::write(
         peer_sync.join("luna_pinyin.userdb.txt"),
-        "ni hao\t你好\t1\nzhong guo\t中国\t2\n",
+        "# Rime user dictionary\n/db_name\tluna_pinyin\n/db_type\tuserdb\n/tick\t5\n/user_id\tpeer\nni hao\t你好\tc=4 d=4 t=2\nshuo\t说\tc=-7 d=7 t=3\nzhong guo\t中国\tc=2 d=2 t=5\n",
     )
     .expect("peer snapshot should be written");
 
@@ -187,8 +246,9 @@ fn sync_user_data_merges_plain_userdb_snapshots_and_backs_up_current_state() {
         fs::read_to_string(user.join("luna_pinyin.userdb")).expect("dict should be readable");
     assert!(merged.contains("/db_name\tluna_pinyin\n"));
     assert!(merged.contains("/db_type\tuserdb\n"));
-    assert!(merged.contains("ni hao \t你好\tc=1 d=1 t=1\n"));
-    assert!(merged.contains("zhong guo \t中国\tc=2 d=2 t=1\n"));
+    assert!(merged.contains("ni hao \t你好\tc=4 d=4 t=5\n"));
+    assert!(merged.contains("shuo \t说\tc=-7 d=7 t=5\n"));
+    assert!(merged.contains("zhong guo \t中国\tc=2 d=2 t=5\n"));
 
     let installation_metadata = fs::read_to_string(user.join("installation.yaml"))
         .expect("installation metadata should be written during sync");
@@ -202,8 +262,9 @@ fn sync_user_data_merges_plain_userdb_snapshots_and_backs_up_current_state() {
         .expect("current user snapshot should be written");
     assert!(backup.contains("/db_name\tluna_pinyin\n"));
     assert!(backup.contains("/db_type\tuserdb\n"));
-    assert!(backup.contains("ni hao \t你好\tc=1 d=1 t=1\n"));
-    assert!(backup.contains("zhong guo \t中国\tc=2 d=2 t=1\n"));
+    assert!(backup.contains("ni hao \t你好\tc=4 d=4 t=5\n"));
+    assert!(backup.contains("shuo \t说\tc=-7 d=7 t=5\n"));
+    assert!(backup.contains("zhong guo \t中国\tc=2 d=2 t=5\n"));
 
     assert_eq!(
         fs::read_to_string(sync_user_dir.join("default.yaml"))

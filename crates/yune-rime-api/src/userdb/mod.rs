@@ -53,8 +53,8 @@ pub(crate) fn restore_user_dict_snapshot(snapshot: &std::path::Path) -> bool {
     sync::restore_snapshot(&snapshot.to_path_buf()).is_ok()
 }
 
-pub(crate) fn export_user_dict(dict_name: &str, destination: PathBuf) -> c_int {
-    if destination.as_os_str().is_empty() {
+pub(crate) fn export_user_dict(dict_name: &str, export_destination: PathBuf) -> c_int {
+    if export_destination.as_os_str().is_empty() {
         return -1;
     }
     let Ok(store) = open_store(dict_name) else {
@@ -71,12 +71,12 @@ pub(crate) fn export_user_dict(dict_name: &str, destination: PathBuf) -> c_int {
             count = count.saturating_add(1);
         }
     }
-    if let Some(parent) = destination.parent() {
+    if let Some(parent) = export_destination.parent() {
         if fs::create_dir_all(parent).is_err() {
             return -1;
         }
     }
-    if fs::write(destination, output).is_err() {
+    if fs::write(export_destination, output).is_err() {
         return -1;
     }
     count

@@ -61,17 +61,9 @@ fn merge_record(
     store: &impl UserDbStore,
     mut remote: UserDbRecord,
     our_tick: u64,
-    their_tick: u64,
+    _their_tick: u64,
     max_tick: u64,
 ) -> UserDbRecord {
-    if remote.value.tick < their_tick {
-        remote.value.dee = formula_d(
-            0.0,
-            their_tick as f64,
-            remote.value.dee,
-            remote.value.tick as f64,
-        );
-    }
     let mut merged = store.get(&remote.key).unwrap_or_default();
     if merged.tick < our_tick {
         merged.dee = formula_d(0.0, our_tick as f64, merged.dee, merged.tick as f64);
