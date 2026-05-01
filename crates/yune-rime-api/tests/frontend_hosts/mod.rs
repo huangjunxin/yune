@@ -1,18 +1,13 @@
-use std::{
-    fmt::Write as _,
-    mem,
-    os::raw::c_int,
-    ptr,
-};
+use std::{fmt::Write as _, mem, os::raw::c_int, ptr};
 
 use yune_rime_api::{
-    Bool, RimeCommit, RimeComposition, RimeContext, RimeMenu, RimeSessionId, RimeStatus,
-    RimeTraits, FALSE,
+    Bool, RimeCommit, RimeComposition, RimeContext, RimeMenu, RimeStatus, RimeTraits, FALSE,
 };
 
 pub(crate) mod native;
 
-pub(crate) const BASELINE_TRACE_FIXTURE: &str = include_str!("../../../../fixtures/frontend-traces/native-host-lifecycle.json");
+pub(crate) const BASELINE_TRACE_FIXTURE: &str =
+    include_str!("../../../../fixtures/frontend-traces/native-host-lifecycle.json");
 pub(crate) const NATIVE_TARGET: &str = "cargo_cdylib_dynamic_loader";
 pub(crate) const NATIVE_SCENARIO: &str = "native_host_lifecycle";
 pub(crate) const LOGICAL_SCHEMA_ID: &str = "dynamic_schema";
@@ -79,6 +74,7 @@ pub(crate) struct MismatchRecord {
     pub(crate) reproduction_status: ReproductionStatus,
 }
 
+#[allow(dead_code)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum MismatchClassification {
     Match,
@@ -86,6 +82,7 @@ pub(crate) enum MismatchClassification {
     Blocker,
 }
 
+#[allow(dead_code)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum ReproductionStatus {
     Reproduced,
@@ -122,7 +119,9 @@ impl FrontendHostTrace {
         if !available {
             self.mismatch = MismatchRecord {
                 expected_behavior: format!("RimeApi exposes required function pointer {name}"),
-                observed_behavior: format!("RimeApi returned null required function pointer {name}"),
+                observed_behavior: format!(
+                    "RimeApi returned null required function pointer {name}"
+                ),
                 classification: MismatchClassification::Blocker,
                 reproduction_status: ReproductionStatus::DocumentedBlocker,
             };
@@ -200,7 +199,13 @@ impl FrontendHostTrace {
             &required_functions_json(&self.required_functions, 1),
             true,
         );
-        push_field(&mut json, 1, "ordered_calls", &calls_json(&self.calls, 1), true);
+        push_field(
+            &mut json,
+            1,
+            "ordered_calls",
+            &calls_json(&self.calls, 1),
+            true,
+        );
         push_field(
             &mut json,
             1,
@@ -260,7 +265,9 @@ impl HostValidationBlocker {
         Self {
             mismatch: MismatchRecord {
                 expected_behavior: format!("RimeApi exposes required function pointer {name}"),
-                observed_behavior: format!("RimeApi returned null required function pointer {name}"),
+                observed_behavior: format!(
+                    "RimeApi returned null required function pointer {name}"
+                ),
                 classification: MismatchClassification::Blocker,
                 reproduction_status: ReproductionStatus::DocumentedBlocker,
             },
@@ -331,6 +338,7 @@ pub(crate) fn empty_commit() -> RimeCommit {
     }
 }
 
+#[allow(dead_code)]
 pub(crate) fn assert_baseline_fixture_is_sanitized() {
     assert_json_is_sanitized(BASELINE_TRACE_FIXTURE);
     assert!(BASELINE_TRACE_FIXTURE.contains("\"target\": \"cargo_cdylib_dynamic_loader\""));
@@ -414,7 +422,13 @@ fn calls_json(calls: &[TraceCall], depth: usize) -> String {
         push_indent(&mut json, depth + 1);
         json.push_str("{\n");
         push_field(&mut json, depth + 2, "name", &json_string(&call.name), true);
-        push_field(&mut json, depth + 2, "result", &trace_value_json(&call.result), false);
+        push_field(
+            &mut json,
+            depth + 2,
+            "result",
+            &trace_value_json(&call.result),
+            false,
+        );
         push_indent(&mut json, depth + 1);
         json.push('}');
         if index + 1 != calls.len() {
@@ -436,8 +450,20 @@ fn notifications_json(notifications: &[TraceNotification], depth: usize) -> Stri
     for (index, event) in notifications.iter().enumerate() {
         push_indent(&mut json, depth + 1);
         json.push_str("{\n");
-        push_field(&mut json, depth + 2, "handler", &json_string(&event.handler), true);
-        push_field(&mut json, depth + 2, "session", &json_string(&event.session), true);
+        push_field(
+            &mut json,
+            depth + 2,
+            "handler",
+            &json_string(&event.handler),
+            true,
+        );
+        push_field(
+            &mut json,
+            depth + 2,
+            "session",
+            &json_string(&event.session),
+            true,
+        );
         push_field(
             &mut json,
             depth + 2,
@@ -473,8 +499,20 @@ fn free_pairs_json(pairs: &[FreePairObservation], depth: usize) -> String {
     for (index, pair) in pairs.iter().enumerate() {
         push_indent(&mut json, depth + 1);
         json.push_str("{\n");
-        push_field(&mut json, depth + 2, "get_call", &json_string(&pair.get_call), true);
-        push_field(&mut json, depth + 2, "free_call", &json_string(&pair.free_call), true);
+        push_field(
+            &mut json,
+            depth + 2,
+            "get_call",
+            &json_string(&pair.get_call),
+            true,
+        );
+        push_field(
+            &mut json,
+            depth + 2,
+            "free_call",
+            &json_string(&pair.free_call),
+            true,
+        );
         push_field(
             &mut json,
             depth + 2,
@@ -503,7 +541,13 @@ fn stale_sessions_json(stale_sessions: &[StaleSessionObservation], depth: usize)
     for (index, stale) in stale_sessions.iter().enumerate() {
         push_indent(&mut json, depth + 1);
         json.push_str("{\n");
-        push_field(&mut json, depth + 2, "after", &json_string(&stale.after), true);
+        push_field(
+            &mut json,
+            depth + 2,
+            "after",
+            &json_string(&stale.after),
+            true,
+        );
         push_field(
             &mut json,
             depth + 2,

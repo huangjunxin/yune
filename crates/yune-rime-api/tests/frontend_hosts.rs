@@ -1,3 +1,4 @@
+#[path = "frontend_hosts/mod.rs"]
 mod frontend_hosts;
 
 #[test]

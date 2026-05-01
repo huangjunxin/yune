@@ -43,7 +43,12 @@ extern "C" fn record_notification_replacement(
     message_type: *const c_char,
     message_value: *const c_char,
 ) {
-    record_notification("handler_replacement", session_id, message_type, message_value);
+    record_notification(
+        "handler_replacement",
+        session_id,
+        message_type,
+        message_value,
+    );
 }
 
 fn record_notification(
@@ -87,11 +92,17 @@ pub(crate) fn run_native_host_lifecycle(
     )?;
     let initialize = required_function(&mut trace, "initialize", api.initialize)?;
     let finalize = required_function(&mut trace, "finalize", api.finalize)?;
-    let deployer_initialize = required_function(&mut trace, "deployer_initialize", api.deployer_initialize)?;
-    let start_maintenance = required_function(&mut trace, "start_maintenance", api.start_maintenance)?;
-    let is_maintenance_mode = required_function(&mut trace, "is_maintenance_mode", api.is_maintenance_mode)?;
-    let join_maintenance_thread =
-        required_function(&mut trace, "join_maintenance_thread", api.join_maintenance_thread)?;
+    let deployer_initialize =
+        required_function(&mut trace, "deployer_initialize", api.deployer_initialize)?;
+    let start_maintenance =
+        required_function(&mut trace, "start_maintenance", api.start_maintenance)?;
+    let is_maintenance_mode =
+        required_function(&mut trace, "is_maintenance_mode", api.is_maintenance_mode)?;
+    let join_maintenance_thread = required_function(
+        &mut trace,
+        "join_maintenance_thread",
+        api.join_maintenance_thread,
+    )?;
     let deploy = required_function(&mut trace, "deploy", api.deploy)?;
     let deploy_schema = required_function(&mut trace, "deploy_schema", api.deploy_schema)?;
     let create_session = required_function(&mut trace, "create_session", api.create_session)?;
@@ -110,8 +121,11 @@ pub(crate) fn run_native_host_lifecycle(
     let get_commit = required_function(&mut trace, "get_commit", api.get_commit)?;
     let free_commit = required_function(&mut trace, "free_commit", api.free_commit)?;
     let destroy_session = required_function(&mut trace, "destroy_session", api.destroy_session)?;
-    let cleanup_stale_sessions =
-        required_function(&mut trace, "cleanup_stale_sessions", api.cleanup_stale_sessions)?;
+    let cleanup_stale_sessions = required_function(
+        &mut trace,
+        "cleanup_stale_sessions",
+        api.cleanup_stale_sessions,
+    )?;
     let cleanup_all_sessions =
         required_function(&mut trace, "cleanup_all_sessions", api.cleanup_all_sessions)?;
     let set_option = required_function(&mut trace, "set_option", api.set_option)?;
@@ -190,7 +204,11 @@ pub(crate) fn run_native_host_lifecycle(
     let free_status_result = unsafe { free_status(&mut status) };
     assert_eq!(free_status_result, TRUE, "native host frees status");
     trace.call_bool("free_status", free_status_result);
-    trace.record_free_pair("get_status", "free_status", status_ptr == &mut status as *mut _ as usize);
+    trace.record_free_pair(
+        "get_status",
+        "free_status",
+        status_ptr == &mut status as *mut _ as usize,
+    );
 
     let mut context = empty_context();
     // SAFETY: `context` points to caller-owned writable storage and is freed by
@@ -213,7 +231,10 @@ pub(crate) fn run_native_host_lifecycle(
     );
 
     let selected_candidate = select_candidate_on_current_page(session_id, 0);
-    assert_eq!(selected_candidate, TRUE, "native host selects current candidate");
+    assert_eq!(
+        selected_candidate, TRUE,
+        "native host selects current candidate"
+    );
     trace.call_bool("select_candidate_on_current_page", selected_candidate);
     let mut commit = empty_commit();
     // SAFETY: `commit` points to caller-owned writable storage and is freed by
@@ -232,7 +253,11 @@ pub(crate) fn run_native_host_lifecycle(
     let free_commit_result = unsafe { free_commit(&mut commit) };
     assert_eq!(free_commit_result, TRUE, "native host frees commit");
     trace.call_bool("free_commit", free_commit_result);
-    trace.record_free_pair("get_commit", "free_commit", commit_ptr == &mut commit as *mut _ as usize);
+    trace.record_free_pair(
+        "get_commit",
+        "free_commit",
+        commit_ptr == &mut commit as *mut _ as usize,
+    );
 
     let ascii_mode = CString::new("ascii_mode").expect("option name should be valid");
     // SAFETY: `ascii_mode` is a valid NUL-terminated option ID and lives for the
@@ -254,8 +279,12 @@ pub(crate) fn run_native_host_lifecycle(
         .lock()
         .expect("notification events should not be poisoned")
         .clone();
-    assert!(events.iter().any(|event| event.handler == "handler_primary"));
-    assert!(events.iter().any(|event| event.handler == "handler_replacement"));
+    assert!(events
+        .iter()
+        .any(|event| event.handler == "handler_primary"));
+    assert!(events
+        .iter()
+        .any(|event| event.handler == "handler_replacement"));
     let event_count_after_clear = events.len();
     for event in &events {
         let session = if event.session_id == session_id {
@@ -283,7 +312,11 @@ pub(crate) fn run_native_host_lifecycle(
     assert_eq!(destroyed, TRUE, "native host destroys primary session");
     trace.call_bool("destroy_session", destroyed);
     let stale_find_after_destroy = find_session(session_id);
-    trace.record_stale_session("destroy_session", "find_session", stale_find_after_destroy == TRUE);
+    trace.record_stale_session(
+        "destroy_session",
+        "find_session",
+        stale_find_after_destroy == TRUE,
+    );
     assert_eq!(stale_find_after_destroy, FALSE);
     let stale_destroy_after_destroy = destroy_session(session_id);
     trace.record_stale_session(
@@ -341,7 +374,7 @@ pub(crate) fn run_native_host_lifecycle(
 
 struct NativeRuntime {
     shared: PathBuf,
-    user: PathBuf,
+    _user: PathBuf,
     _prebuilt: PathBuf,
     _staging: PathBuf,
     shared_c: CString,
@@ -360,14 +393,16 @@ impl NativeRuntime {
         fs::create_dir_all(&user).expect("user dir should be created");
         fs::create_dir_all(&prebuilt).expect("prebuilt dir should be created");
         fs::create_dir_all(&staging).expect("staging dir should be created");
-        let shared_c = CString::new(shared.to_string_lossy().as_ref()).expect("shared path is valid");
+        let shared_c =
+            CString::new(shared.to_string_lossy().as_ref()).expect("shared path is valid");
         let user_c = CString::new(user.to_string_lossy().as_ref()).expect("user path is valid");
         let prebuilt_c =
             CString::new(prebuilt.to_string_lossy().as_ref()).expect("prebuilt path is valid");
-        let staging_c = CString::new(staging.to_string_lossy().as_ref()).expect("staging path is valid");
+        let staging_c =
+            CString::new(staging.to_string_lossy().as_ref()).expect("staging path is valid");
         Self {
             shared,
-            user,
+            _user: user,
             _prebuilt: prebuilt,
             _staging: staging,
             shared_c,
