@@ -1,10 +1,12 @@
 use std::{fmt::Write as _, mem, os::raw::c_int, ptr};
 
 use yune_rime_api::{
-    Bool, RimeCommit, RimeComposition, RimeContext, RimeMenu, RimeStatus, RimeTraits, FALSE,
+    Bool, RimeCandidate, RimeCandidateListIterator, RimeCommit, RimeComposition, RimeContext,
+    RimeMenu, RimeStatus, RimeTraits, FALSE,
 };
 
 pub(crate) mod native;
+pub(crate) mod typeduck_web;
 
 pub(crate) const BASELINE_TRACE_FIXTURE: &str =
     include_str!("../../../../fixtures/frontend-traces/native-host-lifecycle.json");
@@ -335,6 +337,18 @@ pub(crate) fn empty_commit() -> RimeCommit {
     RimeCommit {
         data_size: (mem::size_of::<RimeCommit>() - mem::size_of::<c_int>()) as c_int,
         text: ptr::null_mut(),
+    }
+}
+
+pub(crate) fn empty_candidate_list_iterator() -> RimeCandidateListIterator {
+    RimeCandidateListIterator {
+        ptr: ptr::null_mut(),
+        index: 0,
+        candidate: RimeCandidate {
+            text: ptr::null_mut(),
+            comment: ptr::null_mut(),
+            reserved: ptr::null_mut(),
+        },
     }
 }
 
