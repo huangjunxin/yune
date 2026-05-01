@@ -17,3 +17,7 @@ yune-core = { path = "../yune-core" }
 
 [dev-dependencies]
 libloading = "0.8"
+
+[[bench]]
+name = "frontend_baselines"
+harness = false
