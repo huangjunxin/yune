@@ -5,6 +5,7 @@ use yune_rime_api::{
 };
 
 pub(crate) mod native;
+pub(crate) mod typeduck_web;
 
 pub(crate) const BASELINE_TRACE_FIXTURE: &str =
     include_str!("../../../../fixtures/frontend-traces/native-host-lifecycle.json");
