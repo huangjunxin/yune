@@ -129,6 +129,29 @@ pub(crate) fn typeduck_web_wrapper_lifecycle_is_validated_through_yune_abi() {
     trace.assert_sanitized();
 }
 
+pub(crate) fn typeduck_web_basic_fixture_json() -> String {
+    let _guard = test_guard();
+    let api = unsafe {
+        let api = rime_get_api();
+        assert!(!api.is_null(), "TypeDuck-Web wrapper requires rime_get_api");
+        &*api
+    };
+    run_typeduck_web_lifecycle(api).to_json()
+}
+
+pub(crate) fn assert_typeduck_web_fixture_contract(fixture: &str) {
+    super::assert_json_is_sanitized(fixture);
+    assert!(fixture.contains("\"target\": \"typeduck_web_browser_wasm_wrapper\""));
+    assert!(fixture.contains("\"scenario\": \"typeduck_web_basic_lifecycle\""));
+    assert!(fixture.contains("\"resource_ids\": [\"typeduck_luna\"]"));
+    assert!(fixture.contains("\"simulate_key_sequence\""));
+    assert!(fixture.contains("\"browser_wasm_limit.emscripten_worker_lifecycle\""));
+    assert!(fixture.contains("\"browser_wasm_limit.idbfs_persistence\""));
+    assert!(fixture.contains("\"browser_wasm_limit.native_dynamic_loading\""));
+    assert!(fixture.contains("\"classification\": \"match\""));
+    assert!(fixture.contains("\"reproduction_status\": \"minimized_fixture\""));
+}
+
 fn run_typeduck_web_lifecycle(api: &RimeApi) -> FrontendHostTrace {
     let mut trace = FrontendHostTrace::new(TYPEDUCK_TARGET, TYPEDUCK_SCENARIO);
     trace.resource_ids = vec![TYPEDUCK_SCHEMA.to_owned()];
