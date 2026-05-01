@@ -25,6 +25,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: Schema Pipeline Depth** - Expand focused schema behavior toward deeper librime gear semantics.
 - [x] **Phase 4: Compiled Dictionary Data** - Move from source dictionary parsing and metadata checks toward compiled payload consumption and rebuild execution.
 - [x] **Phase 5: UserDB And Scaling Hardening** - Extend user dictionary compatibility and finish quality/test ownership cleanup for the milestone.
+- [ ] **Phase 6: Real Frontend Validation And Benchmark** - Exercise the compatibility foundation through real frontend lifecycle hosts and establish frontend-sensitive performance baselines before AI-native work.
 
 ## Phase Details
 
@@ -114,10 +115,29 @@ Plans:
 - [x] 05-03: Split remaining core oversized tests where useful by behavior ownership.
 - [x] 05-04: Split remaining API/frontend tests where useful and codify final Phase 05 quality gates.
 
+### Phase 6: Real Frontend Validation And Benchmark
+**Goal**: Yune's RIME ABI is exercised by real frontend lifecycle hosts, TypeDuck-Web-style browser/WebAssembly integration, or host-shaped validation harnesses, and frontend-sensitive performance baselines are recorded before AI-native work begins.
+**Depends on**: Phase 5
+**Requirements**: FRONTEND-VALIDATION-01, FRONTEND-VALIDATION-02, FRONTEND-VALIDATION-03, FRONTEND-VALIDATION-04, FRONTEND-VALIDATION-05, BENCH-01, BENCH-02
+**Success Criteria** (what must be TRUE):
+  1. A host-shaped native loader or real frontend integration validates `rime_get_api`, setup, initialize, deploy, schema selection, session lifecycle, key processing, context/status reads, commits, and teardown.
+  2. TypeDuck-Web-style browser/WebAssembly validation is attempted as the first real application frontend path and its browser-specific limits are documented.
+  3. At least one macOS Squirrel-shaped validation path is attempted or documented with reproducible blockers before Linux frontend validation is expanded.
+  4. Any frontend-observed ABI/runtime mismatch is captured as notes, fixtures, or focused regression tests.
+  5. Benchmarks record baseline latency for session lifecycle, per-key processing, schema deployment/dictionary loading, and userdb learning/sync paths.
+  6. The phase ends with a go/no-go recommendation for starting AI-native candidate/ranking design.
+**Plans**: 4 plans
+
+Plans:
+- [ ] 06-01: Build the host-shaped native frontend validation harness and capture lifecycle call traces.
+- [ ] 06-02: Validate the TypeDuck-Web browser/WebAssembly integration path and capture frontend wrapper gaps.
+- [ ] 06-03: Attempt Squirrel/macOS native frontend validation and convert observed gaps into reproducible fixtures.
+- [ ] 06-04: Add frontend-sensitive benchmark baselines and write the AI-native readiness recommendation.
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -126,6 +146,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | 3. Schema Pipeline Depth | 4/4 | Complete | 2026-04-29 |
 | 4. Compiled Dictionary Data | 4/4 | Complete | 2026-04-29 |
 | 5. UserDB And Scaling Hardening | 4/4 | Complete | 2026-04-30 |
+| 6. Real Frontend Validation And Benchmark | 0/4 | Planned | - |
 
 ## Future Milestone: AI-Native Input Layer
 

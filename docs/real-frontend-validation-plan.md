@@ -7,9 +7,16 @@ Exercise Yune's RIME ABI through real frontend lifecycle hosts before starting A
 ## Priority order
 
 1. Native loader smoke test against the built `yune-rime-api` cdylib in a host-shaped process.
-2. Squirrel or macOS frontend validation, because the current development environment is macOS.
-3. ibus-rime or fcitx-rime validation in a Linux environment after the macOS path is understood.
-4. Benchmark harnesses for hot paths discovered during frontend validation.
+2. TypeDuck-Web browser/WebAssembly validation, because it is a real RIME-powered application frontend with a compact API wrapper and worker lifecycle.
+3. Squirrel or macOS frontend validation, because the current development environment is macOS and native IME lifecycle behavior is still distinct from browser/WebAssembly behavior.
+4. ibus-rime or fcitx-rime validation in a Linux environment after the macOS path is understood.
+5. Benchmark harnesses for hot paths discovered during frontend validation.
+
+## TypeDuck-Web validation target
+
+TypeDuck-Web is a useful first real-application target because its wrapper exercises `rime_get_api`, setup, initialize, notification handling, maintenance/deploy, session creation, simulated key sequences, context/commit reads, candidate selection/deletion, page changes, levers customization, and persistent user data through an Emscripten worker and IDBFS.
+
+It should not replace native IME host validation: browser/WebAssembly integration will not cover all Squirrel, ibus, or fcitx lifecycle, dynamic-library loading, threading, packaging, and OS input-context behavior. Treat it as the first real frontend-shaped integration before native host validation.
 
 ## Validation scenarios
 

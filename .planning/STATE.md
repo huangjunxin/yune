@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: complete
-stopped_at: Phase 5 complete
-last_updated: "2026-04-30T00:00:00Z"
-last_activity: 2026-04-30 -- Phase 05 verified and completed
+milestone: v2.0
+milestone_name: real-frontend-validation
+status: planned
+stopped_at: Phase 6 planned
+last_updated: "2026-05-01T00:00:00Z"
+last_activity: 2026-05-01 -- Phase 06 real frontend validation milestone planned
 progress:
-  total_phases: 5
+  total_phases: 6
   completed_phases: 5
-  total_plans: 18
+  total_plans: 22
   completed_plans: 18
-  percent: 100
+  percent: 82
 ---
 
 # Project State
@@ -21,23 +21,24 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-28)
 
 **Core value:** Existing RIME schemas and frontends should behave predictably through Yune's Rust implementation, with every compatibility difference measurable against librime before it is accepted.
-**Current focus:** Milestone complete after Phase 05 — userdb-and-scaling-hardening
+**Current focus:** Phase 06 — real-frontend-validation-and-benchmark
 
 ## Current Position
 
-Phase: 5 (05) — COMPLETE
-Plan: 4 of 4
-Next phase: None — milestone complete
-Status: Phase 05 complete; no transition requested
-Last activity: 2026-04-30 -- Phase 05 verified and completed
+Phase: 6 (06) — PLANNED
+Plan: 0 of 4
+Next phase: 6 (Real Frontend Validation And Benchmark)
+Status: Ready to discuss and plan Phase 06
+Last activity: 2026-05-01 -- Phase 06 real frontend validation milestone planned
 
-Progress: [██████████] 100%
+Progress: [████████░░] 82%
 
 ## Performance Metrics
 
 **Velocity:**
 
 - Total plans completed: 18
+- Planned Phase 06 plans: 4
 - Average duration: -
 - Total execution time: -
 
@@ -48,7 +49,9 @@ Progress: [██████████] 100%
 | 01 | 3/3 | - | - |
 | 02 | 3/3 | - | - |
 | 03 | 4 | - | - |
-| 04 | 4 | - | - |
+| 04 | 4/4 | - | - |
+| 05 | 4/4 | - | - |
+| 06 | 0/4 | - | - |
 
 **Recent Trend:**
 
@@ -97,12 +100,12 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-- None. Phase 05 completed on 2026-04-30.
+- Discuss and plan Phase 06 — real-frontend-validation-and-benchmark — 4 plans.
 
 ### Blockers/Concerns
 
-- Current compatibility milestone is complete.
-- Future AI-native input layer remains deferred to a separate milestone.
+- Real frontend validation may require host-specific setup outside the Rust workspace.
+- AI-native input layer remains deferred until Phase 06 produces a go/no-go recommendation.
 
 ## Deferred Items
 
@@ -119,9 +122,9 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: Phase 05 completion
-Stopped at: Phase 5 complete
-Resume file: -
+Last session: Phase 06 milestone planning
+Stopped at: Phase 6 planned
+Resume file: docs/real-frontend-validation-plan.md
 
 **Completed Phase:** 05 (UserDB And Scaling Hardening) — 4 plans — 2026-04-30
-**Next Phase:** None — milestone complete
+**Next Phase:** 06 (Real Frontend Validation And Benchmark) — 4 plans
