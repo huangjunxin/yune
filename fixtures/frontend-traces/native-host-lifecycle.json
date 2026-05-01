@@ -1,0 +1,16 @@
+{
+  "target": "cargo_cdylib_dynamic_loader",
+  "scenario": "native_host_lifecycle",
+  "resource_ids": ["dynamic_schema"],
+  "required_functions": [],
+  "ordered_calls": [],
+  "notifications": [],
+  "free_pairs": [],
+  "stale_sessions": [],
+  "mismatch": {
+    "expected_behavior": "host-shaped native lifecycle matches required RIME ABI surface",
+    "observed_behavior": "shared trace and mismatch contracts are defined; native lifecycle events are locked by the dynamic-loader task",
+    "classification": "match",
+    "reproduction_status": "minimized_fixture"
+  }
+}
