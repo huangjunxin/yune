@@ -179,8 +179,8 @@ Completed seed work:
 
 Plans:
 - [x] 07-01: Define the Emscripten/WASM build target, export list, and local-toolchain detection path.
-- [ ] 07-02: Add build-script or documented command coverage that verifies adapter symbol availability.
-- [ ] 07-03: Extend adapter contract tests/docs for browser target constraints and fallback blockers.
+- [x] 07-02: Add build-script or documented command coverage that verifies adapter symbol availability.
+- [x] 07-03: Extend adapter contract tests/docs for browser target constraints and fallback blockers.
 
 ### Phase 8: TypeScript Bridge And Runtime Package
 

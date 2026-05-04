@@ -78,7 +78,8 @@ path before AI-native product work begins.
 
 - [x] **TYPEDUCK-WASM-01**: Developer can build the TypeDuck adapter for the intended Emscripten/WASM target or reproduce a documented local-toolchain blocker.
 - [x] **TYPEDUCK-WASM-02**: The browser build preserves all required `yune_typeduck_*` exports for JS callers.
-- [ ] **TYPEDUCK-WASM-03**: Native adapter contract tests remain the deterministic fallback when local browser/WASM tooling is unavailable.
+- [x] **TYPEDUCK-WASM-03
+**: Native adapter contract tests remain the deterministic fallback when local browser/WASM tooling is unavailable.
 
 ### TypeScript Bridge And Runtime Package
 
