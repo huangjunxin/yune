@@ -148,10 +148,98 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 5. UserDB And Scaling Hardening | 4/4 | Complete | 2026-04-30 |
 | 6. Real Frontend Validation And Benchmark | 4/4 | Complete | 2026-05-01 |
 
+## Next Milestone: TypeDuck-Web Browser Integration
+
+Phase 6 proved that TypeDuck-Web-style lifecycle expectations can be modeled at
+the RIME ABI boundary. The next milestone turns that validation into a practical
+browser integration path: keep the Rust adapter stable, make the WASM/export
+contract reproducible, add the TypeScript bridge, and prove the flow inside a
+browser-like host before AI-native work depends on frontend plumbing.
+
+### Seed Work: Yune TypeDuck Adapter
+
+**Status**: Implemented before milestone planning.
+
+Completed seed work:
+- `crates/yune-rime-api/src/typeduck_web.rs` exports the `yune_typeduck_*` C/WASM bridge.
+- `crates/yune-rime-api/tests/typeduck_web.rs` covers native adapter lifecycle, JSON responses, candidate actions, deploy/customize, null handling, and response freeing.
+- `docs/typeduck-web-adapter.md` documents the browser filesystem contract and JS call shape.
+
+### Phase 7: WASM Build And Export Contract
+
+**Goal**: The TypeDuck adapter can be built for the browser target with a stable, documented symbol/export contract.
+**Depends on**: Phase 6 + TypeDuck adapter seed work
+**Requirements**: TYPEDUCK-WASM-01, TYPEDUCK-WASM-02, TYPEDUCK-WASM-03
+**Success Criteria** (what must be TRUE):
+  1. Developer can run a documented build command for the intended Emscripten/WASM target or get a reproducible local-toolchain blocker.
+  2. The build contract preserves all `yune_typeduck_*` symbols needed by JS callers.
+  3. The adapter's native contract tests remain the fallback validation path when Emscripten is unavailable locally.
+  4. Documentation states required linker/export flags, runtime file layout, and known host assumptions.
+**Plans**: 3 plans
+
+Plans:
+- [ ] 07-01: Define the Emscripten/WASM build target, export list, and local-toolchain detection path.
+- [ ] 07-02: Add build-script or documented command coverage that verifies adapter symbol availability.
+- [ ] 07-03: Extend adapter contract tests/docs for browser target constraints and fallback blockers.
+
+### Phase 8: TypeScript Bridge And Runtime Package
+
+**Goal**: Browser code can call the Yune TypeDuck adapter through a typed JS/TypeScript wrapper with correct memory ownership.
+**Depends on**: Phase 7
+**Requirements**: TYPEDUCK-JS-01, TYPEDUCK-JS-02, TYPEDUCK-JS-03, TYPEDUCK-JS-04
+**Success Criteria** (what must be TRUE):
+  1. A TypeScript wrapper exposes init, process-key, candidate action, deploy, customize, and cleanup operations.
+  2. JSON response parsing and `yune_typeduck_free_response` pairing are enforced in one wrapper path.
+  3. Keycode/mask mapping is explicit and covered by deterministic tests.
+  4. The wrapper makes process-global runtime limitations visible to callers.
+**Plans**: 3 plans
+
+Plans:
+- [ ] 08-01: Add TypeScript types and wrapper functions around the `yune_typeduck_*` symbols.
+- [ ] 08-02: Add wrapper-level tests for response parsing/freeing, error/null handling, and key mapping.
+- [ ] 08-03: Document runtime lifecycle and one-active-service constraints for TypeDuck-Web callers.
+
+### Phase 9: Browser Filesystem And Persistence
+
+**Goal**: TypeDuck-Web-style browser storage can provide Yune with shared data, user data, deployed configs, customization patches, and userdb persistence.
+**Depends on**: Phase 8
+**Requirements**: TYPEDUCK-FS-01, TYPEDUCK-FS-02, TYPEDUCK-FS-03, TYPEDUCK-FS-04
+**Success Criteria** (what must be TRUE):
+  1. Browser host setup creates the expected `shared_data_dir`, `user_data_dir`, and `user_data_dir/build` layout.
+  2. Schema and dictionary assets can be preloaded before adapter init.
+  3. IDBFS or equivalent persistence sync happens before init and after deploy/customize/userdb mutations.
+  4. Failure and recovery paths are documented for missing assets, failed sync, and stale deployed configs.
+**Plans**: 3 plans
+
+Plans:
+- [ ] 09-01: Define and test the browser virtual filesystem layout and asset preload flow.
+- [ ] 09-02: Add persistence sync orchestration around init, deploy, customize, and userdb updates.
+- [ ] 09-03: Add failure-mode tests/docs for missing assets, failed sync, and stale runtime data.
+
+### Phase 10: TypeDuck-Web App Integration And E2E
+
+**Goal**: The upstream TypeDuck-Web application can be cloned, pointed at Yune instead of its librime/WASM core, and exercised through real browser flows.
+**Depends on**: Phase 9
+**Requirements**: TYPEDUCK-E2E-01, TYPEDUCK-E2E-02, TYPEDUCK-E2E-03, TYPEDUCK-E2E-04
+**Success Criteria** (what must be TRUE):
+  1. The TypeDuck-Web repository is cloned or vendored in a reproducible test location, and its current librime/WASM bridge is identified.
+  2. The TypeDuck-Web input-engine binding is patched or configured to call the Yune TypeScript bridge instead of the original librime bridge.
+  3. Real TypeDuck-Web browser validation covers composition, candidate paging, selection, deletion, commit output, deploy, customize, and persistence smoke flows.
+  4. Any blocker from TypeDuck-Web source structure, build system, worker isolation, browser APIs, or Yune adapter mismatch is recorded reproducibly.
+  5. The milestone ends with a go/no-go recommendation for starting AI-native frontend exposure.
+**Plans**: 4 plans
+
+Plans:
+- [ ] 10-01: Clone TypeDuck-Web, inspect its librime/WASM bridge, and document the replacement seam for Yune.
+- [ ] 10-02: Patch or configure TypeDuck-Web so its input-engine binding calls the Yune TypeScript bridge.
+- [ ] 10-03: Add real TypeDuck-Web browser E2E coverage for composition, candidate actions, deploy/customize, and persistence smoke flows.
+- [ ] 10-04: Write TypeDuck-Web integration findings and the AI-native frontend exposure recommendation.
+
 ## Future Milestone: AI-Native Input Layer
 
-This milestone is intentionally not folded into Phases 1-5. The compatibility
-milestone keeps classic input measurable and stable; the AI-native milestone
+This milestone is intentionally not folded into the compatibility or TypeDuck-Web
+integration milestones. Compatibility keeps classic input measurable and stable;
+TypeDuck-Web integration proves frontend plumbing; the AI-native milestone
 defines behavior that librime cannot serve as an oracle for.
 
 ### Candidate Provider Architecture
