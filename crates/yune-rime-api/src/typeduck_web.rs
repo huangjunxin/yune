@@ -1,0 +1,645 @@
+use std::{
+    ffi::{CStr, CString},
+    mem,
+    os::raw::{c_char, c_int},
+    ptr,
+};
+
+use serde_json::json;
+
+use crate::{
+    rime_get_api, rime_levers_get_api, Bool, RimeCandidate, RimeCommit, RimeComposition,
+    RimeContext, RimeLeversApi, RimeMenu, RimeSessionId, RimeStatus, RimeTraits, FALSE, TRUE,
+};
+
+#[repr(C)]
+pub struct YuneTypeDuckState {
+    session_id: RimeSessionId,
+    shared_data_dir: CString,
+    user_data_dir: CString,
+    schema_id: CString,
+    initialized: bool,
+}
+
+#[repr(C)]
+pub struct YuneTypeDuckResponse {
+    handled: Bool,
+    json: CString,
+}
+
+/// # Safety
+/// Pointers must be valid NUL-terminated strings for the duration of the call.
+#[no_mangle]
+pub unsafe extern "C" fn yune_typeduck_init(
+    shared_data_dir: *const c_char,
+    user_data_dir: *const c_char,
+    schema_id: *const c_char,
+) -> *mut YuneTypeDuckState {
+    let Some(shared_data_dir) = cstring_from_ptr(shared_data_dir) else {
+        return ptr::null_mut();
+    };
+    let Some(user_data_dir) = cstring_from_ptr(user_data_dir) else {
+        return ptr::null_mut();
+    };
+    let Some(schema_id) = cstring_from_ptr(schema_id) else {
+        return ptr::null_mut();
+    };
+    let Some(api) = api_table() else {
+        return ptr::null_mut();
+    };
+    let Some(setup) = api.setup else {
+        return ptr::null_mut();
+    };
+    let Some(initialize) = api.initialize else {
+        return ptr::null_mut();
+    };
+    let Some(create_session) = api.create_session else {
+        return ptr::null_mut();
+    };
+    let Some(select_schema) = api.select_schema else {
+        return ptr::null_mut();
+    };
+    if !has_preloaded_runtime_assets(&shared_data_dir, &user_data_dir, &schema_id) {
+        return ptr::null_mut();
+    }
+
+    let mut traits = empty_traits();
+    traits.shared_data_dir = shared_data_dir.as_ptr();
+    traits.user_data_dir = user_data_dir.as_ptr();
+
+    unsafe { setup(&traits) };
+    unsafe { initialize(&traits) };
+
+    let session_id = create_session();
+    if session_id == 0 {
+        finalize_api(api);
+        return ptr::null_mut();
+    }
+
+    if unsafe { select_schema(session_id, schema_id.as_ptr()) } != TRUE {
+        destroy_session(api, session_id);
+        finalize_api(api);
+        return ptr::null_mut();
+    }
+
+    Box::into_raw(Box::new(YuneTypeDuckState {
+        session_id,
+        shared_data_dir,
+        user_data_dir,
+        schema_id,
+        initialized: true,
+    }))
+}
+
+/// # Safety
+/// `state` must be a live pointer returned by `yune_typeduck_init`.
+#[no_mangle]
+pub unsafe extern "C" fn yune_typeduck_process_key(
+    state: *mut YuneTypeDuckState,
+    keycode: c_int,
+    mask: c_int,
+) -> *mut YuneTypeDuckResponse {
+    operate(state, |api, session_id| {
+        let Some(process_key) = api.process_key else {
+            return response(
+                FALSE,
+                vec![],
+                None,
+                None,
+                Some("process_key API unavailable"),
+            );
+        };
+        let handled = process_key(session_id, keycode, mask);
+        response_from_session(api, session_id, handled, None)
+    })
+}
+
+/// # Safety
+/// `state` must be a live pointer returned by `yune_typeduck_init`.
+#[no_mangle]
+pub unsafe extern "C" fn yune_typeduck_select_candidate(
+    state: *mut YuneTypeDuckState,
+    index: usize,
+) -> *mut YuneTypeDuckResponse {
+    operate(state, |api, session_id| {
+        let Some(select_candidate) = api.select_candidate_on_current_page else {
+            return response(
+                FALSE,
+                vec![],
+                None,
+                None,
+                Some("select_candidate_on_current_page API unavailable"),
+            );
+        };
+        let handled = select_candidate(session_id, index);
+        response_from_session(api, session_id, handled, None)
+    })
+}
+
+/// # Safety
+/// `state` must be a live pointer returned by `yune_typeduck_init`.
+#[no_mangle]
+pub unsafe extern "C" fn yune_typeduck_delete_candidate(
+    state: *mut YuneTypeDuckState,
+    index: usize,
+) -> *mut YuneTypeDuckResponse {
+    operate(state, |api, session_id| {
+        let Some(delete_candidate) = api.delete_candidate_on_current_page else {
+            return response(
+                FALSE,
+                vec![],
+                None,
+                None,
+                Some("delete_candidate_on_current_page API unavailable"),
+            );
+        };
+        let handled = delete_candidate(session_id, index);
+        response_from_session(api, session_id, handled, None)
+    })
+}
+
+/// # Safety
+/// `state` must be a live pointer returned by `yune_typeduck_init`.
+#[no_mangle]
+pub unsafe extern "C" fn yune_typeduck_flip_page(
+    state: *mut YuneTypeDuckState,
+    backward: Bool,
+) -> *mut YuneTypeDuckResponse {
+    operate(state, |api, session_id| {
+        let Some(change_page) = api.change_page else {
+            return response(
+                FALSE,
+                vec![],
+                None,
+                None,
+                Some("change_page API unavailable"),
+            );
+        };
+        let handled = change_page(session_id, backward);
+        response_from_session(api, session_id, handled, None)
+    })
+}
+
+/// # Safety
+/// `state` must be null or a live pointer returned by `yune_typeduck_init`.
+#[no_mangle]
+pub unsafe extern "C" fn yune_typeduck_deploy(state: *mut YuneTypeDuckState) -> Bool {
+    if state.is_null() {
+        return FALSE;
+    }
+    let Some(api) = api_table() else {
+        return FALSE;
+    };
+    let Some(deployer_initialize) = api.deployer_initialize else {
+        return FALSE;
+    };
+    let Some(start_maintenance) = api.start_maintenance else {
+        return FALSE;
+    };
+    let Some(join_maintenance_thread) = api.join_maintenance_thread else {
+        return FALSE;
+    };
+    let Some(deploy) = api.deploy else {
+        return FALSE;
+    };
+    let state = unsafe { &*state };
+    let mut traits = empty_traits();
+    traits.shared_data_dir = state.shared_data_dir.as_ptr();
+    traits.user_data_dir = state.user_data_dir.as_ptr();
+    unsafe { deployer_initialize(&traits) };
+    if start_maintenance(TRUE) != TRUE {
+        return FALSE;
+    }
+    join_maintenance_thread();
+    deploy()
+}
+
+/// # Safety
+/// `state` must be live, and string pointers must be valid NUL-terminated strings.
+#[no_mangle]
+pub unsafe extern "C" fn yune_typeduck_customize(
+    state: *mut YuneTypeDuckState,
+    config_id: *const c_char,
+    key: *const c_char,
+    value: *const c_char,
+) -> Bool {
+    if state.is_null() {
+        return FALSE;
+    }
+    let Some(config_id) = cstring_from_ptr(config_id) else {
+        return FALSE;
+    };
+    let Some(key) = cstring_from_ptr(key) else {
+        return FALSE;
+    };
+    let Some(value) = cstring_from_ptr(value) else {
+        return FALSE;
+    };
+    let levers = rime_levers_get_api().cast::<RimeLeversApi>();
+    if levers.is_null() {
+        return FALSE;
+    }
+    let levers = unsafe { &*levers };
+    let Some(init) = levers.custom_settings_init else {
+        return FALSE;
+    };
+    let Some(destroy) = levers.custom_settings_destroy else {
+        return FALSE;
+    };
+    let Some(load) = levers.load_settings else {
+        return FALSE;
+    };
+    let Some(save) = levers.save_settings else {
+        return FALSE;
+    };
+    let Some(customize_string) = levers.customize_string else {
+        return FALSE;
+    };
+    let generator = CString::new("typeduck-web").expect("static generator is valid CString");
+    let settings = unsafe { init(config_id.as_ptr(), generator.as_ptr()) };
+    if settings.is_null() {
+        return FALSE;
+    }
+    unsafe { load(settings) };
+    let customized = unsafe { customize_string(settings, key.as_ptr(), value.as_ptr()) } == TRUE;
+    let saved = customized && unsafe { save(settings) } == TRUE;
+    unsafe { destroy(settings) };
+    bool_to_rime(saved)
+}
+
+/// # Safety
+/// `state` must be null or an unfreed pointer returned by `yune_typeduck_init`.
+#[no_mangle]
+pub unsafe extern "C" fn yune_typeduck_cleanup(state: *mut YuneTypeDuckState) {
+    if state.is_null() {
+        return;
+    }
+    let mut state = unsafe { Box::from_raw(state) };
+    if let Some(api) = api_table() {
+        if state.initialized {
+            destroy_session(api, state.session_id);
+            finalize_api(api);
+            state.initialized = false;
+        }
+    }
+}
+
+/// # Safety
+/// `response` must be null or a live pointer returned by a TypeDuck operation.
+#[no_mangle]
+pub unsafe extern "C" fn yune_typeduck_response_json(
+    response: *const YuneTypeDuckResponse,
+) -> *const c_char {
+    if response.is_null() {
+        return ptr::null();
+    }
+    unsafe { (*response).json.as_ptr() }
+}
+
+/// # Safety
+/// `response` must be null or a live pointer returned by a TypeDuck operation.
+#[no_mangle]
+pub unsafe extern "C" fn yune_typeduck_response_handled(
+    response: *const YuneTypeDuckResponse,
+) -> Bool {
+    if response.is_null() {
+        return FALSE;
+    }
+    unsafe { (*response).handled }
+}
+
+/// # Safety
+/// `response` must be null or an unfreed pointer returned by a TypeDuck operation.
+#[no_mangle]
+pub unsafe extern "C" fn yune_typeduck_free_response(response: *mut YuneTypeDuckResponse) {
+    if !response.is_null() {
+        drop(unsafe { Box::from_raw(response) });
+    }
+}
+
+fn operate(
+    state: *mut YuneTypeDuckState,
+    operation: impl FnOnce(&crate::RimeApi, RimeSessionId) -> *mut YuneTypeDuckResponse,
+) -> *mut YuneTypeDuckResponse {
+    if state.is_null() {
+        return ptr::null_mut();
+    }
+    let Some(api) = api_table() else {
+        return response(FALSE, vec![], None, None, Some("RimeApi unavailable"));
+    };
+    let state = unsafe { &*state };
+    if !state.initialized || state.session_id == 0 {
+        return response(
+            FALSE,
+            vec![],
+            None,
+            None,
+            Some("TypeDuck state is not initialized"),
+        );
+    }
+    operation(api, state.session_id)
+}
+
+fn response_from_session(
+    api: &crate::RimeApi,
+    session_id: RimeSessionId,
+    handled: Bool,
+    error: Option<&str>,
+) -> *mut YuneTypeDuckResponse {
+    let commits = capture_commits(api, session_id).unwrap_or_default();
+    let context = capture_context(api, session_id).ok();
+    let status = capture_status(api, session_id).ok();
+    response(handled, commits, context, status, error)
+}
+
+fn response(
+    handled: Bool,
+    commits: Vec<String>,
+    context: Option<serde_json::Value>,
+    status: Option<serde_json::Value>,
+    error: Option<&str>,
+) -> *mut YuneTypeDuckResponse {
+    let mut payload = json!({
+        "handled": handled == TRUE,
+        "commits": commits,
+        "context": context,
+        "status": status,
+    });
+    if let Some(error) = error {
+        payload["error"] = json!(error);
+    }
+    let json = CString::new(payload.to_string()).unwrap_or_else(|_| {
+        CString::new("{\"handled\":false,\"commits\":[],\"context\":null,\"status\":null,\"error\":\"response serialization failed\"}")
+            .expect("fallback JSON is valid CString")
+    });
+    Box::into_raw(Box::new(YuneTypeDuckResponse { handled, json }))
+}
+
+fn capture_commits(api: &crate::RimeApi, session_id: RimeSessionId) -> Result<Vec<String>, ()> {
+    let get_commit = api.get_commit.ok_or(())?;
+    let free_commit = api.free_commit.ok_or(())?;
+    let mut commits = Vec::new();
+    loop {
+        let mut commit = empty_commit();
+        if unsafe { get_commit(session_id, &mut commit) } != TRUE {
+            break;
+        }
+        commits.push(c_string_from_mut(commit.text));
+        if unsafe { free_commit(&mut commit) } != TRUE {
+            return Err(());
+        }
+    }
+    Ok(commits)
+}
+
+fn capture_context(
+    api: &crate::RimeApi,
+    session_id: RimeSessionId,
+) -> Result<serde_json::Value, ()> {
+    let get_input = api.get_input.ok_or(())?;
+    let get_context = api.get_context.ok_or(())?;
+    let free_context = api.free_context.ok_or(())?;
+    let input = c_string_from_const(get_input(session_id));
+    let mut context = empty_context();
+    if unsafe { get_context(session_id, &mut context) } != TRUE {
+        return Err(());
+    }
+    let captured = copy_context(&context, input);
+    if unsafe { free_context(&mut context) } != TRUE {
+        return Err(());
+    }
+    Ok(captured)
+}
+
+fn copy_context(context: &RimeContext, input: String) -> serde_json::Value {
+    let candidates = copy_candidates(context);
+    json!({
+        "input": input,
+        "preedit": c_string_from_mut(context.composition.preedit),
+        "caret": context.composition.cursor_pos,
+        "highlighted": context.menu.highlighted_candidate_index,
+        "page_size": context.menu.page_size,
+        "page_no": context.menu.page_no,
+        "is_last_page": context.menu.is_last_page == TRUE,
+        "select_keys": if context.menu.select_keys.is_null() {
+            serde_json::Value::Null
+        } else {
+            json!(c_string_from_mut(context.menu.select_keys))
+        },
+        "select_labels": copy_select_labels(context),
+        "candidates": candidates,
+    })
+}
+
+fn copy_candidates(context: &RimeContext) -> Vec<serde_json::Value> {
+    if context.menu.candidates.is_null() || context.menu.num_candidates <= 0 {
+        return Vec::new();
+    }
+    let candidate_count = usize::try_from(context.menu.num_candidates).unwrap_or(0);
+    let candidates =
+        unsafe { std::slice::from_raw_parts(context.menu.candidates, candidate_count) };
+    candidates.iter().map(copy_candidate).collect()
+}
+
+fn copy_candidate(candidate: &RimeCandidate) -> serde_json::Value {
+    json!({
+        "text": c_string_from_mut(candidate.text),
+        "comment": c_string_from_mut(candidate.comment),
+    })
+}
+
+fn copy_select_labels(context: &RimeContext) -> Vec<String> {
+    if context.select_labels.is_null() || context.menu.page_size <= 0 {
+        return Vec::new();
+    }
+    let label_count = usize::try_from(context.menu.page_size).unwrap_or(0);
+    let labels = unsafe { std::slice::from_raw_parts(context.select_labels, label_count) };
+    labels
+        .iter()
+        .map(|label| c_string_from_mut(*label))
+        .collect()
+}
+
+fn capture_status(
+    api: &crate::RimeApi,
+    session_id: RimeSessionId,
+) -> Result<serde_json::Value, ()> {
+    let get_status = api.get_status.ok_or(())?;
+    let free_status = api.free_status.ok_or(())?;
+    let mut status = empty_status();
+    if unsafe { get_status(session_id, &mut status) } != TRUE {
+        return Err(());
+    }
+    let captured = json!({
+        "schema_id": c_string_from_mut(status.schema_id),
+        "schema_name": c_string_from_mut(status.schema_name),
+        "is_disabled": status.is_disabled == TRUE,
+        "is_composing": status.is_composing == TRUE,
+        "is_ascii_mode": status.is_ascii_mode == TRUE,
+        "is_full_shape": status.is_full_shape == TRUE,
+        "is_simplified": status.is_simplified == TRUE,
+        "is_traditional": status.is_traditional == TRUE,
+        "is_ascii_punct": status.is_ascii_punct == TRUE,
+    });
+    if unsafe { free_status(&mut status) } != TRUE {
+        return Err(());
+    }
+    Ok(captured)
+}
+
+fn api_table() -> Option<&'static crate::RimeApi> {
+    let api = rime_get_api();
+    if api.is_null() {
+        return None;
+    }
+    Some(unsafe { &*api })
+}
+
+fn has_preloaded_runtime_assets(
+    shared_data_dir: &CString,
+    user_data_dir: &CString,
+    schema_id: &CString,
+) -> bool {
+    let Ok(shared_data_dir) = shared_data_dir.to_str() else {
+        return false;
+    };
+    let Ok(user_data_dir) = user_data_dir.to_str() else {
+        return false;
+    };
+    let Ok(schema_id) = schema_id.to_str() else {
+        return false;
+    };
+    let shared_data_dir = std::path::Path::new(shared_data_dir);
+    let user_data_dir = std::path::Path::new(user_data_dir);
+    let build_dir = user_data_dir.join("build");
+    let schema_file = format!("{schema_id}.schema.yaml");
+
+    shared_data_dir.join("default.yaml").is_file()
+        && shared_data_dir.join(&schema_file).is_file()
+        && build_dir.join("default.yaml").is_file()
+        && build_dir.join(schema_file).is_file()
+        && has_preloaded_dictionary(shared_data_dir)
+}
+
+fn has_preloaded_dictionary(shared_data_dir: &std::path::Path) -> bool {
+    let Ok(entries) = std::fs::read_dir(shared_data_dir) else {
+        return false;
+    };
+    entries.filter_map(Result::ok).any(|entry| {
+        entry
+            .path()
+            .extension()
+            .is_some_and(|extension| extension == "yaml")
+            && entry
+                .path()
+                .file_name()
+                .is_some_and(|name| name.to_string_lossy().ends_with(".dict.yaml"))
+    })
+}
+
+fn destroy_session(api: &crate::RimeApi, session_id: RimeSessionId) {
+    if let Some(destroy_session) = api.destroy_session {
+        destroy_session(session_id);
+    }
+}
+
+fn finalize_api(api: &crate::RimeApi) {
+    if let Some(cleanup_all_sessions) = api.cleanup_all_sessions {
+        cleanup_all_sessions();
+    }
+    if let Some(finalize) = api.finalize {
+        finalize();
+    }
+}
+
+fn cstring_from_ptr(ptr: *const c_char) -> Option<CString> {
+    if ptr.is_null() {
+        return None;
+    }
+    let text = unsafe { CStr::from_ptr(ptr) };
+    CString::new(text.to_bytes()).ok()
+}
+
+fn c_string_from_const(ptr: *const c_char) -> String {
+    if ptr.is_null() {
+        return String::new();
+    }
+    unsafe { CStr::from_ptr(ptr) }
+        .to_string_lossy()
+        .into_owned()
+}
+
+fn c_string_from_mut(ptr: *mut c_char) -> String {
+    c_string_from_const(ptr.cast_const())
+}
+
+fn bool_to_rime(value: bool) -> Bool {
+    if value {
+        TRUE
+    } else {
+        FALSE
+    }
+}
+
+fn empty_traits() -> RimeTraits {
+    RimeTraits {
+        data_size: mem::size_of::<RimeTraits>() as c_int,
+        shared_data_dir: ptr::null(),
+        user_data_dir: ptr::null(),
+        distribution_name: ptr::null(),
+        distribution_code_name: ptr::null(),
+        distribution_version: ptr::null(),
+        app_name: ptr::null(),
+        modules: ptr::null(),
+        min_log_level: 0,
+        log_dir: ptr::null(),
+        prebuilt_data_dir: ptr::null(),
+        staging_dir: ptr::null(),
+    }
+}
+
+fn empty_commit() -> RimeCommit {
+    RimeCommit {
+        data_size: (mem::size_of::<RimeCommit>() - mem::size_of::<c_int>()) as c_int,
+        text: ptr::null_mut(),
+    }
+}
+
+fn empty_context() -> RimeContext {
+    RimeContext {
+        data_size: (mem::size_of::<RimeContext>() - mem::size_of::<c_int>()) as c_int,
+        composition: RimeComposition {
+            length: 0,
+            cursor_pos: 0,
+            sel_start: 0,
+            sel_end: 0,
+            preedit: ptr::null_mut(),
+        },
+        menu: RimeMenu {
+            page_size: 0,
+            page_no: 0,
+            is_last_page: FALSE,
+            highlighted_candidate_index: 0,
+            num_candidates: 0,
+            candidates: ptr::null_mut(),
+            select_keys: ptr::null_mut(),
+        },
+        commit_text_preview: ptr::null_mut(),
+        select_labels: ptr::null_mut(),
+    }
+}
+
+fn empty_status() -> RimeStatus {
+    RimeStatus {
+        data_size: (mem::size_of::<RimeStatus>() - mem::size_of::<c_int>()) as c_int,
+        schema_id: ptr::null_mut(),
+        schema_name: ptr::null_mut(),
+        is_disabled: FALSE,
+        is_composing: FALSE,
+        is_ascii_mode: FALSE,
+        is_full_shape: FALSE,
+        is_simplified: FALSE,
+        is_traditional: FALSE,
+        is_ascii_punct: FALSE,
+    }
+}

@@ -37,6 +37,7 @@ mod schema_api;
 mod schema_install;
 mod schema_selection;
 mod session;
+mod typeduck_web;
 #[path = "userdb.rs"]
 mod userdb;
 pub use abi::*;
@@ -66,6 +67,7 @@ pub(crate) use schema_install::{
 pub(crate) use schema_selection::apply_schema_to_session;
 pub use schema_selection::{RimeGetCurrentSchema, RimeSelectSchema};
 pub use session::*;
+pub use typeduck_web::*;
 pub use userdb::*;
 
 const XK_BACKSPACE: c_int = 0xff08;
