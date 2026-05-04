@@ -152,7 +152,34 @@ fn typeduck_adapter_documents_browser_host_layout_constraints() {
         "init without preloaded schema/dictionary assets must fail deterministically"
     );
 
-    runtime.write_schema();
+    runtime.write_schema_with_dictionary("typeduck");
+    runtime.write_dictionary("stray");
+    let state_with_wrong_dictionary = unsafe {
+        yune_typeduck_init(
+            runtime.shared_c.as_ptr(),
+            runtime.user_c.as_ptr(),
+            runtime.schema_id_c.as_ptr(),
+        )
+    };
+    assert!(
+        state_with_wrong_dictionary.is_null(),
+        "init must reject preloads that omit the selected schema dictionary"
+    );
+
+    let path_like_schema_id = CString::new("../typeduck_luna").expect("schema id should be valid");
+    let state_with_path_like_schema_id = unsafe {
+        yune_typeduck_init(
+            runtime.shared_c.as_ptr(),
+            runtime.user_c.as_ptr(),
+            path_like_schema_id.as_ptr(),
+        )
+    };
+    assert!(
+        state_with_path_like_schema_id.is_null(),
+        "init must reject path-like schema ids before probing assets"
+    );
+
+    runtime.write_dictionary("typeduck");
     let state = unsafe {
         yune_typeduck_init(
             runtime.shared_c.as_ptr(),
@@ -272,23 +299,35 @@ impl TypeDuckRuntime {
     }
 
     fn write_schema(&self) {
+        self.write_schema_with_dictionary("typeduck");
+        self.write_dictionary("typeduck");
+    }
+
+    fn write_schema_with_dictionary(&self, dictionary: &str) {
         let default_config =
             "config_version: typeduck-web\nschema_list:\n  - schema: typeduck_luna\n";
-        let schema_config = "\
-schema:\n  schema_id: typeduck_luna\n  name: TypeDuck Luna\nmenu:\n  page_size: 2\n  alternative_select_keys: AB\n  alternative_select_labels: [Alpha, Beta]\nswitches:\n  - name: ascii_mode\n    reset: 0\nengine:\n  translators:\n    - table_translator\ntranslator:\n  dictionary: typeduck\n";
+        let schema_config = format!(
+            "\
+schema:\n  schema_id: typeduck_luna\n  name: TypeDuck Luna\nmenu:\n  page_size: 2\n  alternative_select_keys: AB\n  alternative_select_labels: [Alpha, Beta]\nswitches:\n  - name: ascii_mode\n    reset: 0\nengine:\n  translators:\n    - table_translator\ntranslator:\n  dictionary: {dictionary}\n"
+        );
         let staging = self.user.join("build");
         fs::write(staging.join("default.yaml"), default_config)
             .expect("staging default config should be written");
-        fs::write(staging.join("typeduck_luna.schema.yaml"), schema_config)
+        fs::write(staging.join("typeduck_luna.schema.yaml"), &schema_config)
             .expect("staging schema config should be written");
         fs::write(self.shared.join("default.yaml"), default_config)
             .expect("shared default config should be written");
         fs::write(self.shared.join("typeduck_luna.schema.yaml"), schema_config)
             .expect("shared schema config should be written");
+    }
+
+    fn write_dictionary(&self, dictionary: &str) {
         fs::write(
-            self.shared.join("typeduck.dict.yaml"),
-            "\
----\nname: typeduck\nversion: '1'\nsort: original\ncolumns: [code, text, weight]\n...\nba\t八\t10\nba\t吧\t9\nba\t爸\t8\nba\t巴\t7\nba\t把\t6\nba\t拔\t5\n",
+            self.shared.join(format!("{dictionary}.dict.yaml")),
+            format!(
+                "\
+---\nname: {dictionary}\nversion: '1'\nsort: original\ncolumns: [code, text, weight]\n...\nba\t八\t10\nba\t吧\t9\nba\t爸\t8\nba\t巴\t7\nba\t把\t6\nba\t拔\t5\n"
+            ),
         )
         .expect("dictionary should be written");
     }

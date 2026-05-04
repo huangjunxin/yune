@@ -151,7 +151,7 @@
     },
     {
       "name": "deploy_schema",
-      "result": false
+      "result": true
     },
     {
       "name": "create_session",

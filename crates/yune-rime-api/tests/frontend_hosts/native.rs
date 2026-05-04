@@ -166,9 +166,15 @@ pub(crate) fn run_native_host_lifecycle(
     trace.call_bool("join_maintenance_thread", TRUE);
     let deploy_result = deploy();
     trace.call_bool("deploy", deploy_result);
-    let schema_id = CString::new(LOGICAL_SCHEMA_ID).expect("schema id should be valid");
-    let deploy_schema_result = deploy_schema(schema_id.as_ptr());
+    let schema_file = CString::new(format!("{LOGICAL_SCHEMA_ID}.schema.yaml"))
+        .expect("schema file should be valid");
+    let deploy_schema_result = deploy_schema(schema_file.as_ptr());
+    assert_eq!(
+        deploy_schema_result, TRUE,
+        "native host deploys dynamic_schema by schema file name"
+    );
     trace.call_bool("deploy_schema", deploy_schema_result);
+    let schema_id = CString::new(LOGICAL_SCHEMA_ID).expect("schema id should be valid");
 
     let session_id = create_session();
     assert_ne!(session_id, 0, "native host creates a non-zero session");

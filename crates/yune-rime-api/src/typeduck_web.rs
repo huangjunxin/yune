@@ -6,6 +6,7 @@ use std::{
 };
 
 use serde_json::json;
+use serde_yaml::Value;
 
 use crate::{
     rime_get_api, rime_levers_get_api, Bool, RimeCandidate, RimeCommit, RimeComposition,
@@ -509,32 +510,54 @@ fn has_preloaded_runtime_assets(
     let Ok(schema_id) = schema_id.to_str() else {
         return false;
     };
+    if !is_valid_schema_id(schema_id) {
+        return false;
+    }
+
     let shared_data_dir = std::path::Path::new(shared_data_dir);
     let user_data_dir = std::path::Path::new(user_data_dir);
     let build_dir = user_data_dir.join("build");
     let schema_file = format!("{schema_id}.schema.yaml");
+    let shared_schema = shared_data_dir.join(&schema_file);
 
     shared_data_dir.join("default.yaml").is_file()
-        && shared_data_dir.join(&schema_file).is_file()
+        && shared_schema.is_file()
         && build_dir.join("default.yaml").is_file()
         && build_dir.join(schema_file).is_file()
-        && has_preloaded_dictionary(shared_data_dir)
+        && has_preloaded_dictionary(shared_data_dir, &shared_schema)
 }
 
-fn has_preloaded_dictionary(shared_data_dir: &std::path::Path) -> bool {
-    let Ok(entries) = std::fs::read_dir(shared_data_dir) else {
+fn is_valid_schema_id(schema_id: &str) -> bool {
+    !schema_id.is_empty()
+        && schema_id
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_' || byte == b'-')
+}
+
+fn has_preloaded_dictionary(
+    shared_data_dir: &std::path::Path,
+    schema_file: &std::path::Path,
+) -> bool {
+    let Some(dictionary) = required_dictionary(schema_file) else {
         return false;
     };
-    entries.filter_map(Result::ok).any(|entry| {
-        entry
-            .path()
-            .extension()
-            .is_some_and(|extension| extension == "yaml")
-            && entry
-                .path()
-                .file_name()
-                .is_some_and(|name| name.to_string_lossy().ends_with(".dict.yaml"))
-    })
+    shared_data_dir
+        .join(format!("{dictionary}.dict.yaml"))
+        .is_file()
+}
+
+fn required_dictionary(schema_file: &std::path::Path) -> Option<String> {
+    let text = std::fs::read_to_string(schema_file).ok()?;
+    let yaml: Value = serde_yaml::from_str(&text).ok()?;
+    let schema = yaml.as_mapping()?;
+    let translator = schema
+        .get(Value::String("translator".to_owned()))?
+        .as_mapping()?;
+    translator
+        .get(Value::String("dictionary".to_owned()))?
+        .as_str()
+        .filter(|dictionary| is_valid_schema_id(dictionary))
+        .map(str::to_owned)
 }
 
 fn destroy_session(api: &crate::RimeApi, session_id: RimeSessionId) {
