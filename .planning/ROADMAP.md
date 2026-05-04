@@ -178,7 +178,7 @@ Completed seed work:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 07-01: Define the Emscripten/WASM build target, export list, and local-toolchain detection path.
+- [x] 07-01: Define the Emscripten/WASM build target, export list, and local-toolchain detection path.
 - [ ] 07-02: Add build-script or documented command coverage that verifies adapter symbol availability.
 - [ ] 07-03: Extend adapter contract tests/docs for browser target constraints and fallback blockers.
 

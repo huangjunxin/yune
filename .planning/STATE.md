@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: TypeDuck-Web browser integration milestone added after adapter seed work
-stopped_at: Phase 7 context gathered
-last_updated: "2026-05-04T06:56:44.452Z"
-last_activity: 2026-05-04 -- TypeDuck-Web browser integration milestone added
+status: executing
+stopped_at: Completed 07-01-PLAN.md
+last_updated: "2026-05-04T07:08:42.670Z"
+last_activity: 2026-05-04
 progress:
   total_phases: 10
   completed_phases: 6
   total_plans: 25
-  completed_plans: 22
-  percent: 88
+  completed_plans: 23
+  percent: 92
 ---
 
 # Project State
@@ -21,17 +21,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-28)
 
 **Core value:** Existing RIME schemas and frontends should behave predictably through Yune's Rust implementation, with every compatibility difference measurable against librime before it is accepted.
-**Current focus:** TypeDuck-Web Browser Integration — Phase 07 planning
+**Current focus:** Phase 07 — wasm-build-and-export-contract
 
 ## Current Position
 
-Phase: 7 (07) — READY TO PLAN
-Plan: 0 of 3
+Phase: 07 (wasm-build-and-export-contract) — EXECUTING
+Plan: 2 of 3
 Next phase: 07 — WASM Build And Export Contract
-Status: TypeDuck-Web browser integration milestone added after adapter seed work
-Last activity: 2026-05-04 -- TypeDuck-Web browser integration milestone added
+Status: Ready to execute
+Last activity: 2026-05-04
 
-Progress: [██████░░░░] 63%
+Progress: [█████████░] 92%
 
 ## Performance Metrics
 
@@ -64,6 +64,7 @@ Progress: [██████░░░░] 63%
 | Phase 04-compiled-dictionary-data P04 | 16min | 3 tasks | 8 files |
 | Phase 06 P03 | 27min | 3 tasks | 6 files |
 | Phase 06-real-frontend-validation-and-benchmark P04 | 12min | 3 tasks | 7 files |
+| Phase 07-wasm-build-and-export-contract P01 | 3min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -107,6 +108,8 @@ Recent decisions affecting current work:
 - AI-native readiness is GO WITH CONDITIONS, based on Phase 6 validation and benchmarks while keeping providers, rankers, context policy, memory policy, and privacy controls out of scope.
 - TypeDuck-Web adapter seed work added a Yune-owned `yune_typeduck_*` Rust C/WASM bridge, native adapter contract tests, and browser filesystem documentation before formal Phase 7 planning.
 - TypeDuck-Web browser integration should proceed through WASM export contract, TypeScript bridge, browser filesystem persistence, and app-shaped E2E before AI-native frontend exposure.
+- 07-01: Use scripts/typeduck-exports.txt as the canonical non-prefixed TypeDuck adapter export list.
+- 07-01: Document wasm32-unknown-emscripten plus Emscripten EXPORTED_FUNCTIONS/EXPORTED_RUNTIME_METHODS as the browser build contract without changing lib.rs facade wiring.
 
 ### Pending Todos
 
@@ -133,9 +136,9 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: --stopped-at
-Stopped at: Phase 7 context gathered
-Resume file: --resume-file
+Last session: 2026-05-04T07:08:42.665Z
+Stopped at: Completed 07-01-PLAN.md
+Resume file: None
 
 **Completed Phase:** 06 (Real Frontend Validation And Benchmark) — 4 plans — 2026-05-01
 **Next Phase:** 07 (WASM Build And Export Contract) — 3 plans — ready for discuss/plan
