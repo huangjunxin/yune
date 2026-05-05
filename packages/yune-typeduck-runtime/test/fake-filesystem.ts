@@ -9,9 +9,14 @@ export class FakeTypeDuckFilesystem implements TypeDuckFilesystem {
     analyzePath: [],
     mkdir: [],
     mkdirTree: [],
+    mount: [],
     readFile: [],
+    syncfs: [],
     writeFile: [],
   };
+
+  mountError?: unknown;
+  syncError?: unknown;
 
   calls(name: string): unknown[][] {
     return this.#calls[name] ?? [];
@@ -84,6 +89,22 @@ export class FakeTypeDuckFilesystem implements TypeDuckFilesystem {
     this.record("analyzePath", [path]);
     const normalized = normalizeFakePath(path);
     return { exists: this.exists(normalized) };
+  }
+
+  mount(type: unknown, opts: Record<string, unknown>, mountpoint: string): void {
+    this.record("mount", [type, opts, mountpoint]);
+    if (this.mountError !== undefined) {
+      throw this.mountError;
+    }
+    const normalized = normalizeFakePath(mountpoint);
+    if (!this.#directories.has(normalized)) {
+      throw new Error(`Missing fake mountpoint: ${normalized}`);
+    }
+  }
+
+  syncfs(populate: boolean, callback: (error?: unknown) => void): void {
+    this.record("syncfs", [populate]);
+    callback(this.syncError);
   }
 
   private record(name: string, args: unknown[]): void {
