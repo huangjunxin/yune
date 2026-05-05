@@ -61,7 +61,7 @@ describe("TypeDuck browser filesystem preparation", () => {
     ]);
   });
 
-  it("reports missing required assets without creating placeholder files", () => {
+  it("reports missing required assets without creating fallback files", () => {
     const fs = new FakeTypeDuckFilesystem();
     fs.mkdirTree("/yune/shared");
     fs.mkdirTree("/yune/user/build");
