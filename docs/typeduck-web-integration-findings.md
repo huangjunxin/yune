@@ -563,3 +563,206 @@ No deferred items implemented in build gates. AI-native behavior, new frontend, 
 ---
 
 *Updated: 2026-05-05T16:45:00Z*
+---
+
+## Plan 10-03: Real browser E2E/smoke validation
+
+**Date**: 2026-05-05
+**Status**: Browser E2E spec created, pending browser runner execution
+
+### Browser E2E Scaffolding (Task 1)
+
+Created `third_party/typeduck-web/e2e/` with explicit asset/result instructions:
+
+#### Assets README (D-06 enforcement)
+
+**File**: `e2e/assets/README.md`
+
+**Requirements**:
+- TypeDuck-Web-owned YAML assets mandatory (default.yaml, schema.yaml, dictionary.yaml)
+- NO fallback/dummy/placeholder schema or dictionary data
+- Assets must come from TypeDuck-Web source, CDN, or documented upstream
+- Validation rejects synthetic/test-only content
+- Grep-gate verifies no forbidden substitute patterns
+
+**Evidence**:
+- `asset-sources.log` — Documented asset paths/URLs
+- `asset-validation.log` — Runtime validation output
+- Forbidden pattern check PASSED (no fallback schema/dictionary wording in scaffolding)
+
+#### Results README (D-08/D-09/D-10/D-11 evidence)
+
+**File**: `e2e/results/README.md`
+
+**Required artifacts**:
+- `browser-run.log` — Browser runner output with flow evidence
+- `screenshot-*.png` — Screenshots for composition, candidates, paging, selection, persistence
+- `persistence-sync.log` — D-11 timing markers (before init, after mutation, reload)
+- `blocker.md` — Reproducible blockers with command/dependency/fallback
+
+**Blocker format** (per D-09):
+- Category: TypeDuck-Web app/source | Yune adapter/runtime | environment/tooling
+- Exact command attempted
+- Missing dependency/executable
+- Install hint from upstream docs
+- Fallback evidence (manual smoke or package-local tests)
+- Impact: which D-08/D-10/D-11 flows blocked
+
+#### Browser Smoke Procedure (D-08/D-09 fallback)
+
+**File**: `e2e/yune-browser-smoke.md`
+
+**Manual browser smoke steps**:
+1. Apply patch (git apply patches/yune-typeduck-runtime.patch)
+2. Install/build upstream (bun install, bun run worker)
+3. Start dev server (bun run start)
+4. Load explicit assets (per e2e/assets/README.md)
+5. Test composition flow (type keys → verify preedit)
+6. Test candidate paging (PageDown → page change)
+7. Test candidate selection (selection key → commit text)
+8. Test deletion flow (Delete/Backspace → composition mutation)
+9. Test deploy flow (deploy action → success/error visible)
+10. Test customize flow (customize action → success/error visible)
+11. Test persistence sync (D-11 timing: before init, after mutation, reload/reinitialize)
+12. Record evidence (screenshots, console logs, persistence markers)
+
+**Evidence requirements**:
+- Manual smoke MUST use real browser (not package-local fake tests)
+- Persistence timing MUST verify sync-before-init, sync-after-mutation, reload-reinitialize
+
+### Upstream Test Framework Discovery (Task 2)
+
+**Discovery**: Upstream TypeDuck-Web has NO browser E2E test framework.
+
+**Evidence**:
+- package.json has NO test scripts
+- NO test framework dependencies (Vitest, Jest, Playwright, Cypress)
+- NO spec/test files found in upstream source
+- Scripts are build-only (start, build, worker, wasm)
+
+**Impact per Task 2 action**: Create standalone Playwright-compatible spec under `third_party/typeduck-web/e2e/` (not upstream source)
+
+### Browser E2E Spec Created (Task 2)
+
+**File**: `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`
+
+**Spec coverage (per D-08/TYPEDUCK-E2E-03)**:
+
+1. **Composition after typing schema-valid keys** (D-08/D-10)
+   - Focus input field
+   - Type schema-valid keys
+   - Verify composition/preedit visible
+   - Screenshot: screenshot-composition.png
+
+2. **Candidate list visible** (D-08/D-10)
+   - Type to trigger candidates
+   - Verify candidate panel visible
+   - Verify candidate count > 0
+   - Screenshot: screenshot-candidates.png
+
+3. **Candidate paging** (D-08/D-10)
+   - Type to generate multiple candidates
+   - Press PageDown
+   - Verify page change (indicator or candidate set changed)
+   - Screenshot: screenshot-candidate-paging.png
+
+4. **Candidate selection → commit output** (D-08/D-10)
+   - Type composition
+   - Press selection key (1 or Space/Enter)
+   - Verify committed text in output field
+   - Screenshot: screenshot-candidate-selection.png
+
+5. **Deletion removes candidate or triggers delete path** (D-08/D-10)
+   - Type composition
+   - Press Delete key
+   - Verify deletion effect
+   - Screenshot: screenshot-deletion.png
+
+6. **Backspace mutates composition** (D-08/D-10)
+   - Type composition
+   - Press Backspace
+   - Verify composition mutated (shorter or changed)
+
+7. **Deploy returns visible success/error evidence** (D-08/D-10)
+   - Trigger deploy action (button or Ctrl+D)
+   - Verify deploy notification/status visible
+   - Screenshot: screenshot-deploy.png
+
+8. **Customize returns visible success/error evidence** (D-08/D-10)
+   - Open settings panel
+   - Change setting (pageSize)
+   - Verify customize notification/status visible
+   - Screenshot: screenshot-customize.png
+
+9. **Persistence sync after deploy/customize mutations** (D-11)
+   - Perform mutation (deploy)
+   - Verify syncToPersistenceAfterMutation marker in console/timeline
+   - Evidence: persistence-sync.log
+
+10. **Reload/reinitialize preserves persisted state** (D-11)
+    - Perform customization
+    - Deploy to persist state
+    - Reload page
+    - Verify syncFromPersistenceBeforeInit marker
+    - Verify app reinitialized with persisted state
+    - Screenshot: screenshot-persistence-after-reload.png
+
+**Evidence capture**:
+- `browser-run.log` — Test results appended per flow
+- `browser-console.log` — Console errors captured
+- `persistence-sync.log` — Persistence timing markers
+- `screenshot-*.png` — Visual evidence per flow
+- `blocker.md` — Flows blocked by missing selectors/implementation
+
+**Selector assumptions** (require E2E execution verification):
+- Input field: `input[type='text'], textarea`
+- Candidate panel: `[data-candidates], .candidate-panel, .candidate-list`
+- Candidate items: `.candidate, [data-candidate]`
+- Page indicator: `[data-page], .page-indicator`
+- Deploy button: `[data-deploy], .deploy-button, button:has-text('deploy')` or Ctrl+D shortcut
+- Settings panel: `[data-settings], .settings-panel, .customize-panel`
+- Notifications: `.toast, [data-deploy-status], .notification`
+
+**Testability gaps documented in blocker.md** (per D-09):
+- Missing selectors → TypeDuck-Web app/source blocker
+- Missing persistence markers → Yune adapter/runtime blocker
+- Missing browser runner → Environment/tooling blocker
+
+### Browser Runner Execution Status (Task 3 pending)
+
+**Status**: Spec created, pending Playwright execution
+
+**Prerequisites for Task 3 execution**:
+1. Apply patch to upstream source
+2. Build Yune WASM artifact (Phase 7 blocker if not built)
+3. Build @yune-ime/typeduck-runtime package
+4. Provide explicit TypeDuck-Web-owned YAML assets
+5. Install Playwright in worktree or use manual browser smoke
+
+**Expected blockers per D-09**:
+- Yune WASM artifact not built (Phase 7 blocker)
+- Asset configuration TODO in patched worker (placeholder YAML)
+- Missing testability selectors (TypeDuck-Web UI)
+- Persistence sync markers not logged (Yune adapter)
+
+### Flow Pass/Fail/Blocked Tracking (Task 3 will populate)
+
+| Flow | D-08/D-10/D-11 Requirement | Status | Evidence |
+|------|----------------------------|--------|----------|
+| Composition | Schema-valid keys → preedit visible | PENDING | browser-run.log, screenshot-composition.png |
+| Candidate list | Visible after composition | PENDING | screenshot-candidates.png |
+| Candidate paging | PageDown → page change | PENDING | screenshot-candidate-paging.png |
+| Candidate selection | Selection key → commit text | PENDING | screenshot-candidate-selection.png |
+| Deletion | Delete key → candidate/composition change | PENDING | screenshot-deletion.png |
+| Backspace mutation | Backspace → composition shorter/changed | PENDING | browser-run.log |
+| Deploy | Deploy action → visible success/error | PENDING | screenshot-deploy.png, browser-run.log |
+| Customize | Customize action → visible success/error | PENDING | screenshot-customize.png, browser-run.log |
+| Persistence sync | sync-after-mutation marker | PENDING | persistence-sync.log |
+| Persistence reload | sync-before-init + reload/reinitialize | PENDING | screenshot-persistence-after-reload.png, persistence-sync.log |
+
+**Note**: Task 3 execution will populate PASS/FAIL/BLOCKED status for each flow.
+
+---
+
+*Updated: 2026-05-05T00:26:00Z*
+*Plan: 10-03 (Real browser E2E/smoke validation)*
