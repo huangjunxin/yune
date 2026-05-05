@@ -82,9 +82,60 @@ Expected layout before calling `yune_typeduck_init`:
 - `user_data_dir`: user state, custom patches, userdb data, and the deployed `build/` directory.
 - `user_data_dir/build`: deployed or preloaded runtime configs used by schema selection and key processing.
 
-For Emscripten, TypeDuck-Web glue should mount MEMFS/IDBFS before calling `yune_typeduck_init`. The schema/dictionary assets must be preloaded into the virtual filesystem before init; Phase 7 native fallback tests require init to fail deterministically when those assets are missing rather than fabricating placeholder browser data.
+For Emscripten, browser glue should mount MEMFS plus IDBFS or an equivalent host persistence backend before calling `yune_typeduck_init`. The repository-owned TypeScript package now exposes DOM-free helpers for this contract:
 
-The persistence sync remains a JS host responsibility until Phase 9. Browser code should sync persistent storage before init and after deploy/customize or userdb-changing flows, but this Rust adapter does not mount IDBFS, choose storage policy, or hide sync failures.
+```typescript
+import {
+  assertTypeDuckAssetsReady,
+  customizeAndSync,
+  deployAndSync,
+  mountTypeDuckPersistence,
+  prepareTypeDuckFilesystem,
+  syncAfterUserDataChange,
+  syncFromPersistenceBeforeInit,
+  syncToPersistenceAfterMutation,
+  TypeDuckFilesystemError,
+  TypeDuckRuntime,
+} from "@yune-ime/typeduck-runtime";
+```
+
+Browser callers provide logical `schemaId` and `dictionaryId` values plus explicit asset contents. Both IDs must be nonempty ASCII letters, digits, `_`, or `-`; path-like IDs are rejected before write paths are joined. The helper writes exactly the required shared/build files and does not fabricate fallback schema or dictionary data:
+
+```typescript
+const fsOptions = {
+  sharedDataDir: "/yune/shared",
+  userDataDir: "/yune/user",
+  schemaId: "typeduck_luna",
+  dictionaryId: "typeduck",
+  assets: {
+    defaultYaml,
+    schemaYaml,
+    dictionaryYaml,
+  },
+};
+
+mountTypeDuckPersistence(Module.FS, Module.IDBFS, {}, "/yune");
+await syncFromPersistenceBeforeInit(Module.FS); // FS.syncfs(true)
+prepareTypeDuckFilesystem(Module.FS, fsOptions);
+assertTypeDuckAssetsReady(Module.FS, fsOptions);
+
+const runtime = TypeDuckRuntime.init(Module, {
+  sharedDataDir: fsOptions.sharedDataDir,
+  userDataDir: fsOptions.userDataDir,
+  schemaId: fsOptions.schemaId,
+});
+```
+
+`TypeDuckFilesystemError` is the deterministic setup/sync error surface. Missing assets include the missing virtual paths, such as `/yune/shared/default.yaml`, `/yune/shared/<schema>.schema.yaml`, `/yune/shared/<dict>.dict.yaml`, `/yune/user/build/default.yaml`, or `/yune/user/build/<schema>.schema.yaml`. Sync failures include a `direction` of `fromPersistence` for before-init populate failures or `toPersistence` for post-mutation flush failures, so callers can distinguish stale persisted state from possible unpersisted in-memory changes.
+
+Persistence timing remains explicit and host-owned:
+
+- Call `syncFromPersistenceBeforeInit(fs)` before runtime initialization to load persisted state with `FS.syncfs(true)`. If this fails, do not initialize; show the failure and retry persistence recovery first.
+- Call `syncToPersistenceAfterMutation(fs)` after host-visible filesystem mutations that must survive reload.
+- Use `deployAndSync(runtime, fs)` and `customizeAndSync(runtime, fs, configId, key, value)` to call the live runtime mutation first and then flush with `FS.syncfs(false)`. If the flush fails, the runtime mutation may have changed in-memory state that is not durable yet.
+- Call `syncAfterUserDataChange(fs)` at explicit host boundaries where userdb data may have changed. Current native exports do not notify the host of every userdb mutation, so this remains a caller-chosen boundary rather than automatic coverage.
+
+Stale deployed config recovery is local-first and deterministic. Recover by syncing from persistence, recreating the shared/user/build layout, preloading the caller-owned default/schema/dictionary assets, verifying all required files, running `deployAndSync` or `customizeAndSync` only with a live runtime when the stale case requires regeneration, and initializing or reinitializing only after required files are complete and the final `FS.syncfs(false)` succeeds.
 
 ## WASM build/export contract
 
@@ -143,7 +194,7 @@ The export contract is adapter-specific. It must not add `Rime*`, `rime_get_api`
 
 ## TypeScript runtime package
 
-Phase 8 adds repository-owned bridge code at `packages/yune-typeduck-runtime` with package name `@yune-ime/typeduck-runtime`. The package is a typed wrapper around the canonical `yune_typeduck_*` adapter symbols for downstream integration; it is not a TypeDuck-Web app scaffold, bundler setup, generated binding pipeline, or browser filesystem orchestration layer.
+Phase 8 added repository-owned bridge code at `packages/yune-typeduck-runtime` with package name `@yune-ime/typeduck-runtime`, and Phase 9 added DOM-free browser filesystem/persistence helpers in the same package. The package is a typed wrapper around the canonical `yune_typeduck_*` adapter symbols plus fake-testable filesystem orchestration helpers for downstream integration; it is not a TypeDuck-Web app scaffold, bundler setup, generated binding pipeline, or browser application policy layer.
 
 Build and test it with package-local npm tooling only:
 
@@ -152,10 +203,16 @@ npm --prefix packages/yune-typeduck-runtime run build
 npm --prefix packages/yune-typeduck-runtime test
 ```
 
-Import the wrapper and deterministic key mapper from the package:
+Import the wrapper, deterministic key mapper, and filesystem helpers from the package:
 
 ```typescript
-import { TypeDuckRuntime, keyEventToRimeKey } from "@yune-ime/typeduck-runtime";
+import {
+  keyEventToRimeKey,
+  prepareTypeDuckFilesystem,
+  syncFromPersistenceBeforeInit,
+  syncToPersistenceAfterMutation,
+  TypeDuckRuntime,
+} from "@yune-ime/typeduck-runtime";
 ```
 
 ### Wrapper initialization and Module injection
@@ -165,12 +222,21 @@ Construct the wrapper only after the Emscripten Module is initialized and expose
 The browser host still owns virtual filesystem readiness before init. A typical wrapper flow is:
 
 ```typescript
-await syncIdbfsFromDisk();
-
-const runtime = TypeDuckRuntime.init(Module, {
+const fsOptions = {
   sharedDataDir: "/yune/shared",
   userDataDir: "/yune/user",
   schemaId: "luna_pinyin",
+  dictionaryId: "luna_pinyin",
+  assets: { defaultYaml, schemaYaml, dictionaryYaml },
+};
+
+await syncFromPersistenceBeforeInit(Module.FS);
+prepareTypeDuckFilesystem(Module.FS, fsOptions);
+
+const runtime = TypeDuckRuntime.init(Module, {
+  sharedDataDir: fsOptions.sharedDataDir,
+  userDataDir: fsOptions.userDataDir,
+  schemaId: fsOptions.schemaId,
 });
 
 const response = runtime.processKeyboardEvent({
@@ -185,7 +251,7 @@ renderCandidates(response.context?.candidates ?? []);
 appendCommits(response.commits);
 
 runtime.cleanup();
-await syncIdbfsToDisk();
+await syncToPersistenceAfterMutation(Module.FS);
 ```
 
 ### Wrapper operations and adapter mapping
@@ -204,13 +270,13 @@ The public wrapper operations map directly to the adapter contract:
 | `runtime.customize(configId, key, value)` | `yune_typeduck_customize` |
 | `runtime.cleanup()` | `yune_typeduck_cleanup` |
 
-Candidate indices are page-relative, matching the native adapter contract. `deploy` and `customize` are explicit operations; after either operation, the browser host should sync IDBFS or equivalent persistent storage back to disk.
+Candidate indices are page-relative, matching the native adapter contract. `deploy` and `customize` are explicit operations; after either operation, the browser host should sync IDBFS or equivalent persistent storage back to disk. Wrapper callers can use `deployAndSync(runtime, fs)` or `customizeAndSync(runtime, fs, configId, key, value)` to preserve the required order without changing `TypeDuckRuntime` lifecycle ownership.
 
 ### Wrapper response ownership
 
 Low-level C/WASM adapter operations that return `YuneTypeDuckResponse` allocate owned response pointers that must be freed exactly once. Wrapper callers receive parsed `TypeDuckResponse` objects, not raw response pointers, and should not call `yune_typeduck_free_response` directly.
 
-The wrapper copies the JSON string with `Module.UTF8ToString`, parses and validates the response envelope, reads handled state through `yune_typeduck_response_handled`, and calls `yune_typeduck_free_response` in a centralized `finally` path. Null response pointers, null JSON pointers, malformed JSON, and malformed response envelopes surface as deterministic wrapper errors. The wrapper does not hide missing assets or runtime failures; those remain visible until Phase 9 adds recovery paths.
+The wrapper copies the JSON string with `Module.UTF8ToString`, parses and validates the response envelope, reads handled state through `yune_typeduck_response_handled`, and calls `yune_typeduck_free_response` in a centralized `finally` path. Null response pointers, null JSON pointers, malformed JSON, and malformed response envelopes surface as deterministic wrapper errors. Filesystem setup and sync helpers likewise surface missing assets and persistence failures as visible caller errors instead of hiding them behind app policy.
 
 Callers that bypass the wrapper must still follow the low-level rule: copy JSON before `yune_typeduck_free_response`, and free each non-null owned response pointer exactly once.
 
@@ -243,7 +309,8 @@ const responseJson = Module.cwrap('yune_typeduck_response_json', 'number', ['num
 const freeResponse = Module.cwrap('yune_typeduck_free_response', null, ['number']);
 const cleanup = Module.cwrap('yune_typeduck_cleanup', null, ['number']);
 
-await syncIdbfsFromDisk();
+// Low-level hosts must perform the same FS.syncfs(true), layout creation,
+// explicit asset preload, and readiness verification described above.
 const state = init('/rime/shared', '/rime/user', 'typeduck_luna');
 if (!state) throw new Error('failed to initialize Yune TypeDuck adapter');
 
@@ -258,16 +325,17 @@ try {
 }
 
 cleanup(state);
-await syncIdbfsToDisk();
+// Flush durable filesystem changes with FS.syncfs(false) at the host boundary.
 ```
 
 ## Current scope
 
-This adapter is native-tested through Rust integration tests, and Phase 8 adds the package-local TypeScript wrapper documented above. It does not yet include:
+This adapter is native-tested through Rust integration tests. Phase 8 adds the package-local TypeScript wrapper, and Phase 9 adds the package-local browser filesystem/persistence helper contract documented above. It does not yet include:
 
-- Upstream TypeDuck-Web checkout, source patches, or bridge replacement; Phase 10 owns that integration.
-- Real browser E2E coverage; Phase 10 owns browser app validation after the upstream seam is known.
+- TypeDuck-Web source cloning, source patches, or bridge replacement; Phase 10 owns that integration.
+- Real browser end-to-end coverage; Phase 10 owns browser app validation after the upstream seam is known.
 - Generated bindings, broad frontend bundler scaffolding, or root JavaScript workspace setup.
-- Browser filesystem persistence orchestration beyond documenting host responsibilities; Phase 9 owns MEMFS/IDBFS setup, schema and dictionary asset preload, persistence sync, and recovery paths.
+- Browser application policy for choosing storage quota behavior, remote asset discovery, CDN/cache strategy, or service-worker lifecycle; Phase 09 helpers stay local-first and caller-driven.
+- Native export expansion for persistence or userdb notification symbols; userdb persistence remains an explicit host sync boundary.
 - Multi-instance isolation beyond one active process-global Yune/RIME service.
-- AI-native provider, ranking, context, memory, or privacy behavior; those remain deferred to a future milestone.
+- AI provider, ranking, context, memory, or privacy behavior; those remain deferred to a future milestone.
