@@ -766,3 +766,135 @@ Created `third_party/typeduck-web/e2e/` with explicit asset/result instructions:
 
 *Updated: 2026-05-05T00:26:00Z*
 *Plan: 10-03 (Real browser E2E/smoke validation)*
+
+### Browser Execution Attempt (Task 3)
+
+**Status**: BLOCKED
+
+**Date**: 2026-05-05T00:30:00Z
+
+#### Environment/Tooling Blockers
+
+**Critical missing executables**:
+
+1. **cargo** — Rust build tool
+   - Command: `./scripts/typeduck-wasm-build.sh`
+   - Error: `cargo: command not found`
+   - Impact: Cannot build WASM, cannot run native tests
+
+2. **rustup** — Rust toolchain manager
+   - Command: `rustup target list --installed`
+   - Error: `command not found: rustup`
+   - Impact: Cannot install wasm32-unknown-emscripten target
+   - Install: https://rustup.rs
+
+3. **emcc** — Emscripten compiler
+   - Command: `emcc --version`
+   - Error: `emcc not found`
+   - Impact: Cannot compile WASM/JS glue
+   - Install: https://emscripten.org/docs/getting_started/downloads.html
+
+#### WASM Artifact Blocker
+
+**Required**: `yune-typeduck.js` + `yune-typeduck.wasm` (Phase 7 artifact)
+
+**Patch dependency**: `src/worker.ts` calls `importScripts("yune-typeduck.js")`
+
+**Build attempt**:
+```bash
+$ ./scripts/typeduck-wasm-build.sh
+./scripts/typeduck-wasm-build.sh: line 130: cargo: command not found
+```
+
+**Impact**: Browser runtime cannot initialize without WASM artifact
+
+#### Asset Configuration Blocker
+
+**Patch placeholder** (`src/worker.ts` lines 246-251):
+```typescript
+const assetsConfig: ExplicitTypeDuckAssets = {
+  defaultYaml: { type: "content", content: "" }, // Placeholder for E2E
+  schemaYaml: { type: "content", content: "" },   // Placeholder for E2E
+  dictionaryYaml: { type: "content", content: "" }, // Placeholder for E2E
+};
+```
+
+**Impact**: Runtime init will fail with missing assets
+
+**Resolution**: Provide explicit YAML assets per `e2e/assets/README.md`
+
+#### Flow Execution Status (All BLOCKED)
+
+| Flow | D-08/D-10/D-11 | Status | Blocker |
+|------|----------------|--------|---------|
+| Composition | Keys → preedit | BLOCKED | WASM missing |
+| Candidate list | Visible | BLOCKED | WASM missing |
+| Candidate paging | PageDown | BLOCKED | WASM missing |
+| Candidate selection | Commit | BLOCKED | WASM missing |
+| Deletion | Delete key | BLOCKED | WASM missing |
+| Backspace mutation | Composition change | BLOCKED | WASM missing |
+| Deploy | Success/error visible | BLOCKED | WASM missing |
+| Customize | Success/error visible | BLOCKED | WASM missing |
+| Persistence sync | sync-after-mutation | BLOCKED | WASM missing |
+| Persistence reload | sync-before-init + reload | BLOCKED | WASM missing |
+
+**Reason**: WASM artifact is prerequisite for all browser flows
+
+#### Fallback Evidence
+
+**Native fallback attempt** (per scripts/typeduck-wasm-build.sh):
+```bash
+Native fallback: cargo test -p yune-rime-api --test typeduck_web
+Error: cargo: command not found
+```
+
+**Fallback BLOCKED**: Native tests also require cargo
+
+**Evidence captured**:
+- blocker.md — Documents missing cargo/rustup/emcc
+- No browser-run.log (browser never ran)
+- No screenshots (browser never ran)
+- No persistence-sync.log (browser never ran)
+
+#### Category Assignment (Per D-12)
+
+**Environment/tooling** (primary blockers):
+- cargo/rustup/emcc missing
+- WASM artifact not built
+- Native fallback blocked
+
+**TypeDuck-Web app/source**:
+- Asset configuration placeholder (needs explicit assets)
+
+**Yune adapter/runtime**:
+- Runtime JS built successfully (packages/yune-typeduck-runtime/dist/*.js)
+- WASM artifact is Phase 7 build blocker (not adapter implementation)
+
+#### Upstream Build Status
+
+**Commands executed**:
+- `bun install` — PASSED (Bun 1.3.11 available)
+- `cp yune-integration/* source/src/yune-integration/` — PASSED (integration files copied)
+- `git apply patches/yune-typeduck-runtime.patch` — PASSED (patch applied)
+- `npm --prefix packages/yune-typeduck-runtime install typescript` — PASSED
+- `npm --prefix packages/yune-typeduck-runtime run build` — PASSED (JS artifacts built)
+
+**Commands blocked**:
+- `./scripts/typeduck-wasm-build.sh` — BLOCKED (cargo missing)
+- Playwright browser tests — BLOCKED (WASM artifact missing)
+- Manual browser smoke — BLOCKED (WASM artifact missing)
+
+#### Recommendation
+
+**For Plan 10-04**:
+1. Build WASM artifact in environment with cargo/rustup/emcc
+2. Provide explicit TypeDuck-Web YAML assets
+3. Run browser E2E spec or manual smoke
+4. Update selectors based on actual TypeDuck-Web UI
+5. Add persistence markers in Yune adapter for D-11 verification
+
+**Per D-09**: Blocker documented with exact commands, missing dependencies, install hints, and fallback evidence. Browser E2E BLOCKED, not silently skipped.
+
+---
+
+*Updated: 2026-05-05T00:30:00Z*
