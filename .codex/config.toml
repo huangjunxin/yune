@@ -1,0 +1,10 @@
+# Project defaults for Yune Codex sessions.
+model = "gpt-5.5"
+model_reasoning_effort = "xhigh"
+
+[features]
+multi_agent = true
+
+[agents]
+max_threads = 6
+max_depth = 1

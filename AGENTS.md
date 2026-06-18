@@ -21,6 +21,16 @@
 - **Tests are oracle-driven and non-circular:** capture expected bytes from the oracle, run the real path, never derive the expected value from Yune itself. Uncaptured cases use `#[ignore = "blocked: …"]` with a `panic!()` body — no silent gaps.
 - **Security:** runtime resource identifiers are logical IDs, not arbitrary filesystem paths.
 
+## Codex workflow preference
+
+- For non-trivial development work, use a sub-agent-driven workflow. Split work into bounded slices, dispatch repo-local custom agents when available, and keep the main thread focused on coordination, integration, and final verification.
+- Keep the main/default model on the strongest available Codex model with highest reasoning (`gpt-5.5` with `model_reasoning_effort = "xhigh"` in this repo). Do not downgrade the main session just to use Spark quota.
+- Use Spark (`gpt-5.3-codex-spark`) only for trivial or simple sub-agent slices, such as bounded file lookups, simple mechanical edits, straightforward test-name gathering, or low-risk narrow reviews. Spark agents must always use the highest reasoning setting (`model_reasoning_effort = "xhigh"`). Prefer the repo-local `spark-*` agents for those slices when available.
+- Use the default strongest model for complex implementation, architecture, debugging, compatibility/oracle decisions, C ABI work, security-sensitive resource handling, broad reviews, and any task whose risk is unclear.
+- Use parallel subagents for independent read-heavy work: codebase exploration, failing-test triage, compatibility/oracle investigation, and review passes. For write-heavy work, avoid parallel agents editing overlapping files; use one worker per slice and review before moving on.
+- For substantial implementation, run two review passes before completion: first spec/requirement compliance, then code quality, ABI safety, and test coverage.
+- Do not claim Spark quota was consumed unless the active model or subagent configuration is visible or confirmed in the current session.
+
 ## Quality gate
 
 `cargo fmt` · `cargo clippy --workspace --all-targets -- -D warnings` · focused tests · `cargo test --workspace` when shared behavior changes. For the TypeScript package: `npm --prefix packages/yune-typeduck-runtime test` and `… run build`.
