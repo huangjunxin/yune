@@ -204,6 +204,7 @@ pub(crate) struct AffixSegmentor {
     pub(crate) tag: String,
     pub(crate) prefix: String,
     pub(crate) suffix: String,
+    pub(crate) tips: String,
     pub(crate) extra_tags: Vec<String>,
 }
 

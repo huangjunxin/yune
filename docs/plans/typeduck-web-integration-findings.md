@@ -13,7 +13,8 @@ real TypeDuck `jyut6ping3_mobile` matrix end to end: real candidates render,
 paging changes pages, Space commits the highlighted candidate, `ngohaigo` commits
 as a phrase, candidate deletion works, deploy/customize/persistence/reload pass,
 and dictionary-panel comments render from the v1.1.2 oracle-shaped payload.
-HR-6 shared-engine parity and HR-7 decision updates remain open.
+HR-6 also locks the shared reverse-lookup comment joiner and schema-prompt bytes;
+the final HR-7 decision update remains open.
 
 > **Historical scope.** The Phase 10 blocker tables below describe the
 > 2026-05-05 validation attempt, before WI-1b produced a loadable
@@ -162,7 +163,8 @@ matrix still open.
 ## HR-5 Real-Assets E2E Matrix
 
 **Date**: 2026-06-18
-**Status**: PASS for the real-assets browser matrix; HR-6/HR-7 still open.
+**Status**: PASS for the real-assets browser matrix; HR-7 final recommendation
+still open.
 
 **What changed**:
 - The dictionary lookup filter install path now parses TypeDuck lookup
@@ -191,6 +193,47 @@ matrix still open.
 - The matrix artifact's reload row proves a real reload restored
   `/rime/jyut6ping3_mobile.custom.yaml` with `pageSize: "'6'"` before runtime
   init.
+
+---
+
+## HR-6 Shared Reverse-Lookup Parity
+
+**Date**: 2026-06-18
+**Status**: PASS for the reverse-lookup `"; "` joiner and schema-name prompt
+oracle cases; the five broader Cantonese parity goldens remain explicitly
+BLOCKED pending dedicated v1.1.2 captures.
+
+**What changed**:
+- Added `crates/yune-core/tests/fixtures/typeduck-v1.1.2/reverse-lookup-prompt.json`,
+  captured from the local TypeDuck-HK/librime v1.1.2 binary with a scratch
+  schema. The fixture records the prompt/preedit bytes for input `` `huo `` and
+  the selected candidate comment `ho; huo`.
+- Added core parity tests that lock the fixture metadata and assert
+  `ReverseLookupTranslator` joins multiple target pronunciations with `"; "`
+  against the v1.1.2 oracle expectation.
+- Loaded affix-segmentor `tips` into the Rime API schema path and exposed the
+  prompt-shaped preedit through `RimeGetContext`, with an ABI test asserting
+  preedit, cursor, commit preview, candidate text, and candidate comment against
+  the same v1.1.2 fixture.
+
+**Proof**:
+- `cargo test -p yune-core --test cantonese_parity` passes the four active
+  oracle-backed tests and reports the five uncaptured Cantonese cases as
+  ignored blockers.
+- `cargo test -p yune-rime-api
+  select_schema_affix_prompt_matches_typeduck_v112_reverse_lookup_fixture_commit_preview`
+  passes, proving the C ABI context path emits the oracle prompt/comment bytes.
+
+**Still blocked**:
+- `options_combine_candidates_show_full_code_enable_sentence_parity`
+- `completion_prediction_and_enable_completion_parity`
+- `correction_minimal_distance_and_m_abbreviation_parity`
+- `schema_menu_hiding_parity`
+- `per_entry_userdb_pronunciation_parity`
+
+Those tests remain `#[ignore = "blocked: ..."]` with `panic!()` bodies. They are
+not silent skips and should only be activated after dedicated TypeDuck v1.1.2
+oracle fixtures are captured.
 
 ---
 
@@ -1181,8 +1224,10 @@ as an additional proof row.
 render real Chinese candidates, `setOption` no longer errors, deploy returns
 true with the real workspace assets, live persistence sync plus reload survival
 are proven, and HR-5 captures PASS evidence for the formerly open
-paging/deletion/dictionary-comment rows. HR-6 parity and HR-7 recommendation
-updates remain open before M9 is closed.
+paging/deletion/dictionary-comment rows. HR-6 now covers the reverse-lookup
+joiner and prompt oracle cases, with five broader Cantonese goldens documented
+as explicit capture blockers. HR-7 recommendation updates remain open before M9
+is closed.
 
 **Evidence captured**:
 - `third_party/typeduck-web/e2e/results/hr5-real-assets-matrix.log`
@@ -1235,7 +1280,7 @@ persistence.
 
 | Blocker | Status | Evidence | Affected Requirement | Blocks AI-native frontend? |
 |---------|--------|----------|----------------------|---------------------------|
-| Dictionary comment oracle gap | resolved | HR-5 browser evidence renders dictionary-panel fields; native real-assets test byte-asserts the first `nei` comment against the v1.1.2 fixture | TYPEDUCK-E2E-03, WI-6 | NO for browser E2E; HR-6 shared parity still tracked separately |
+| Dictionary comment oracle gap | resolved | HR-5 browser evidence renders dictionary-panel fields; native real-assets test byte-asserts the first `nei` comment against the v1.1.2 fixture; HR-6 locks reverse-lookup `"; "` joining and schema-prompt bytes against a v1.1.2 fixture | TYPEDUCK-E2E-03, WI-6 | NO |
 | Candidate paging/deletion real-assets evidence | resolved | HR-5 `hr5-real-assets-matrix.log` and screenshots prove paging and `{Control+Delete}` deletion with real assets | TYPEDUCK-E2E-03 | NO |
 | persistence sync/reload evidence | resolved | HR-4 `persistence-sync.log`, adapter diagnostic test | TYPEDUCK-E2E-03 | NO — live worker and real reload path are proven |
 | setOption startup evidence | resolved | `set-option-browser.log`, native/runtime/adapter tests | D-07, TYPEDUCK-E2E-03 | NO — startup option toggles no longer throw |
@@ -1257,14 +1302,14 @@ captured in the repo.
 
 ---
 
-**Total current blockers**: 1 nonblocking TypeDuck-Web app/source warning
-(`Candidate.tsx` invalid DOM nesting). HR-6 shared-engine parity remains open
-outside the HR-5 browser E2E matrix.
+**Total current blockers**: 5 non-browser Cantonese parity capture blockers
+left as explicit ignored tests. The HR-5 real-browser matrix captured zero
+console warning/error entries after the TypeDuck-Web DOM nesting fixes.
 
 **Blocking AI-native frontend exposure**: HR-5 leaves no browser-matrix blocker
 for composition/candidates/paging/selection/deletion/phrase commit/deploy/
 persistence/reload/dictionary comments. The final exposure recommendation is
-pending HR-6 parity and HR-7 documentation/decision updates.
+pending HR-7 documentation/decision updates.
 
 ---
 

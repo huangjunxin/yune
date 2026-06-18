@@ -16,7 +16,10 @@
 > initialize, but a post-review audit found it used the placeholder echo path for
 > the candidate matrix. HR-5 has now rerun the browser matrix against the real
 > TypeDuck `jyut6ping3_mobile` assets and captured PASS evidence for the E2E
-> rows; HR-6 parity and HR-7 documentation/recommendation are still open.
+> rows. HR-6 has locked the reverse-lookup `"; "` joiner and schema-prompt
+> bytes against a v1.1.2 oracle fixture; the five broader Cantonese goldens
+> remain explicit ignored blockers pending dedicated oracle capture. HR-7
+> documentation/recommendation is still open.
 >
 > **Line anchors** are accurate as of 2026-06-17 but *will drift* — re-`grep` the
 > named symbol/file before editing. Trust names over line numbers.
@@ -86,8 +89,9 @@ commit per item:
   in the live worker path, including reload survival.
 - [x] **HR-5 real-assets E2E matrix** — re-run paging, deletion, deploy,
   persistence, reload, and dictionary-panel comments against real assets.
-- [ ] **HR-6 shared parity** — `"; "` reverse-lookup joiner, schema-name-in-prompt
-  oracle cases, and remaining Cantonese goldens.
+- [x] **HR-6 shared parity** — `"; "` reverse-lookup joiner and
+  schema-name-in-prompt oracle cases covered; remaining Cantonese goldens remain
+  explicit blocked `#[ignore]` cases pending capture.
 - [ ] **HR-7 reassess GO/NO-GO** — update findings, roadmap, requirements, and
   decisions from the real-assets matrix.
 
@@ -232,4 +236,4 @@ frontends share. Drive from the v1.1.2 oracle:
 - [x] **WI-3** — browser FS layout, asset preload, and IDBFS sync wired into the patched app seam
 - [x] **WI-4** — 10 E2E flows run in a real browser with captured PASS/FAIL evidence against real TypeDuck assets
 - [ ] **WI-5** — evidence-based GO/NO-GO recorded from the real-assets matrix; tracking docs updated
-- [ ] **WI-6** — optional shared engine parity follow-up (`"; "` joiner + schema-prompt; Cantonese goldens)
+- [x] **WI-6** — optional shared engine parity follow-up covered for `"; "` joiner + schema-prompt; Cantonese goldens remain documented blockers

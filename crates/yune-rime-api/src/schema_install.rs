@@ -1071,11 +1071,15 @@ fn load_schema_affix_segmentors(
             let suffix = find_config_value(schema_config, &format!("{name_space}/suffix"))
                 .and_then(config_scalar_string)
                 .unwrap_or_default();
+            let tips = find_config_value(schema_config, &format!("{name_space}/tips"))
+                .and_then(config_scalar_string)
+                .unwrap_or_default();
             let extra_tags = schema_string_list(schema_config, &format!("{name_space}/extra_tags"));
             Some(AffixSegmentor {
                 tag,
                 prefix,
                 suffix,
+                tips,
                 extra_tags,
             })
         })
@@ -1192,20 +1196,33 @@ pub(crate) fn update_session_segment_tags(session: &mut SessionState) {
 }
 
 impl AffixSegmentor {
-    fn matches(&self, input: &str) -> bool {
-        let Some(mut code) = input.strip_prefix(&self.prefix) else {
-            return false;
-        };
+    pub(crate) fn prompt_preedit(&self, input: &str) -> Option<(String, usize)> {
+        if self.tips.is_empty() {
+            return None;
+        }
+        let code = self.stripped_code(input)?;
+        let caret = code.len();
+        Some((format!("{code}{}", self.tips), caret))
+    }
+
+    fn stripped_code<'a>(&self, input: &'a str) -> Option<&'a str> {
+        let mut code = input.strip_prefix(&self.prefix)?;
         if code.is_empty() {
-            return false;
+            return None;
         }
         if !self.suffix.is_empty() {
             code = code.strip_suffix(&self.suffix).unwrap_or(code);
         }
-        !code.is_empty()
+        if code.is_empty() {
+            return None;
+        }
+        Some(code)
+    }
+
+    fn matches(&self, input: &str) -> bool {
+        self.stripped_code(input).is_some()
     }
 }
-
 impl PunctSegmentor {
     fn tag_for_input(
         &self,

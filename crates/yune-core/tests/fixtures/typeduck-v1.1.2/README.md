@@ -39,3 +39,9 @@ state, menu metadata, and selected candidate records from the returned
 The `comment` fields intentionally preserve the raw fork bytes as JSON escapes,
 including leading `\f`, record separators `\r`, and multilingual dictionary
 columns. Do not normalize these strings when using them as goldens.
+
+`reverse-lookup-prompt.json` was captured from the same local v1.1.2 binary with
+a scratch schema that has an affix reverse-lookup prompt named `HR6 粵語`, one
+lookup row (`火	huo`) and two target rows (`火	ho`, `火	huo`). It locks the
+fork's `"; "` multi-pronunciation joiner and prompt/preedit bytes for the HR-6
+parity slice.

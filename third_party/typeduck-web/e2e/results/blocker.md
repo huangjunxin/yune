@@ -28,7 +28,11 @@ selection, Space commit, long-press deletion, deploy, customize, persistence
 sync, reload, and dictionary-panel comment evidence. The final HR-5 browser
 capture has zero warning/error console entries.
 
+**HR-6 update**: shared reverse-lookup parity is oracle-covered for the `"; "`
+joiner and schema-prompt preedit bytes. The five broader Cantonese/Jyutping
+goldens remain explicit ignored tests until dedicated v1.1.2 fixtures are
+captured.
+
 **Still open**:
 
-- HR-6: shared parity goldens and prompt/joiner oracle coverage.
 - HR-7: final evidence-based GO/NO-GO reassessment.
