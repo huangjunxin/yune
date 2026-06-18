@@ -205,6 +205,75 @@ fn typeduck_adapter_documents_browser_host_layout_constraints() {
 }
 
 #[test]
+fn typeduck_adapter_accepts_deployed_schema_dictionary_for_inherited_source_schema() {
+    let _guard = test_guard();
+    let runtime = TypeDuckRuntime::create("deployed-dictionary");
+    runtime.write_source_schema_with_deployed_dictionary("typeduck");
+    runtime.write_dictionary("typeduck");
+
+    let state = unsafe {
+        yune_typeduck_init(
+            runtime.shared_c.as_ptr(),
+            runtime.user_c.as_ptr(),
+            runtime.schema_id_c.as_ptr(),
+        )
+    };
+    assert!(
+        !state.is_null(),
+        "init should accept browser preloads where the source schema inherits the dictionary and the deployed schema resolves it"
+    );
+
+    drop(response_json(unsafe {
+        yune_typeduck_process_key(state, 'b' as i32, 0)
+    }));
+    let composing = response_json(unsafe { yune_typeduck_process_key(state, 'a' as i32, 0) });
+    assert_eq!(
+        composing["context"]["candidates"][0]["text"],
+        Value::String("\u{516b}".to_owned())
+    );
+
+    unsafe { yune_typeduck_cleanup(state) };
+    runtime.remove();
+}
+
+#[test]
+fn typeduck_adapter_composes_source_dictionary_with_mobile_schema_algebra() {
+    let _guard = test_guard();
+    let runtime = TypeDuckRuntime::create("source-dictionary-mobile-algebra");
+    runtime.write_mobile_schema_with_dictionary("jyut6ping3");
+    runtime.write_cantonese_dictionary();
+
+    let state = unsafe {
+        yune_typeduck_init(
+            runtime.shared_c.as_ptr(),
+            runtime.user_c.as_ptr(),
+            runtime.schema_id_c.as_ptr(),
+        )
+    };
+    assert!(!state.is_null());
+
+    drop(response_json(unsafe {
+        yune_typeduck_process_key(state, 'n' as i32, 0)
+    }));
+    drop(response_json(unsafe {
+        yune_typeduck_process_key(state, 'e' as i32, 0)
+    }));
+    let composing = response_json(unsafe { yune_typeduck_process_key(state, 'i' as i32, 0) });
+    assert_eq!(
+        composing["context"]["input"],
+        Value::String("nei".to_owned())
+    );
+    assert_eq!(composing["context"]["select_keys"], Value::Null);
+    assert_eq!(
+        composing["context"]["candidates"][0]["text"],
+        Value::String("\u{4f60}".to_owned())
+    );
+
+    unsafe { yune_typeduck_cleanup(state) };
+    runtime.remove();
+}
+
+#[test]
 fn typeduck_adapter_deploy_and_customize_are_explicit() {
     let _guard = test_guard();
     let runtime = TypeDuckRuntime::create("deploy-customize");
@@ -321,6 +390,44 @@ schema:\n  schema_id: typeduck_luna\n  name: TypeDuck Luna\nmenu:\n  page_size: 
             .expect("shared schema config should be written");
     }
 
+    fn write_source_schema_with_deployed_dictionary(&self, dictionary: &str) {
+        let default_config =
+            "config_version: typeduck-web\nschema_list:\n  - schema: typeduck_luna\n";
+        let source_schema = "\
+schema:\n  schema_id: typeduck_luna\n  name: TypeDuck Luna\n__include: template:/\n";
+        let deployed_schema = format!(
+            "\
+schema:\n  schema_id: typeduck_luna\n  name: TypeDuck Luna\nmenu:\n  page_size: 2\nengine:\n  translators:\n    - table_translator\ntranslator:\n  dictionary: {dictionary}\n"
+        );
+        let staging = self.user.join("build");
+        fs::write(staging.join("default.yaml"), default_config)
+            .expect("staging default config should be written");
+        fs::write(staging.join("typeduck_luna.schema.yaml"), deployed_schema)
+            .expect("staging schema config should be written");
+        fs::write(self.shared.join("default.yaml"), default_config)
+            .expect("shared default config should be written");
+        fs::write(self.shared.join("typeduck_luna.schema.yaml"), source_schema)
+            .expect("shared schema config should be written");
+    }
+
+    fn write_mobile_schema_with_dictionary(&self, dictionary: &str) {
+        let default_config =
+            "config_version: typeduck-web\nschema_list:\n  - schema: typeduck_luna\n";
+        let schema_config = format!(
+            "\
+schema:\n  schema_id: typeduck_luna\n  name: TypeDuck Luna\nmenu:\n  page_size: 50\n  alternative_select_keys: \"\\x00\"\nswitches:\n  - name: ascii_mode\n    reset: 0\nengine:\n  processors:\n    - speller\n    - express_editor\n  translators:\n    - script_translator\nspeller:\n  alphabet: zyxwvutsrqponmlkjihgfedcba\n  delimiter: \" '\"\n  algebra:\n    - \"derive/\\\\d//\"\ntranslator:\n  dictionary: {dictionary}\n  enable_completion: true\n"
+        );
+        let staging = self.user.join("build");
+        fs::write(staging.join("default.yaml"), default_config)
+            .expect("staging default config should be written");
+        fs::write(staging.join("typeduck_luna.schema.yaml"), &schema_config)
+            .expect("staging schema config should be written");
+        fs::write(self.shared.join("default.yaml"), default_config)
+            .expect("shared default config should be written");
+        fs::write(self.shared.join("typeduck_luna.schema.yaml"), schema_config)
+            .expect("shared schema config should be written");
+    }
+
     fn write_dictionary(&self, dictionary: &str) {
         fs::write(
             self.shared.join(format!("{dictionary}.dict.yaml")),
@@ -328,6 +435,14 @@ schema:\n  schema_id: typeduck_luna\n  name: TypeDuck Luna\nmenu:\n  page_size: 
                 "\
 ---\nname: {dictionary}\nversion: '1'\nsort: original\ncolumns: [code, text, weight]\n...\nba\t八\t10\nba\t吧\t9\nba\t爸\t8\nba\t巴\t7\nba\t把\t6\nba\t拔\t5\n"
             ),
+        )
+        .expect("dictionary should be written");
+    }
+
+    fn write_cantonese_dictionary(&self) {
+        fs::write(
+            self.shared.join("jyut6ping3.dict.yaml"),
+            "---\nname: jyut6ping3\nversion: '1'\nsort: original\n...\n\n\u{4f60}\tnei5\t10\n\u{5462}\tnei1\t9\n",
         )
         .expect("dictionary should be written");
     }

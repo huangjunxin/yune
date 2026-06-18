@@ -84,11 +84,14 @@ pub unsafe extern "C" fn RimeGetContext(
     };
     let menu_settings = context_menu_settings(&snapshot.status.schema_id);
     let select_keys = match menu_settings.select_keys.as_deref() {
-        Some(select_keys) => match CString::new(select_keys) {
-            Ok(select_keys) => Some(select_keys),
-            Err(_) => return FALSE,
-        },
+        Some(select_keys) if !select_keys.as_bytes().contains(&0) => {
+            match CString::new(select_keys) {
+                Ok(select_keys) => Some(select_keys),
+                Err(_) => return FALSE,
+            }
+        }
         None => None,
+        Some(_) => None,
     };
     let composition = snapshot.context.composition;
     if !composition.input.is_empty() || chord_prompt.is_some() {

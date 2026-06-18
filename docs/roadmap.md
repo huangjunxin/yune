@@ -62,12 +62,13 @@ Detail: [`plans/archive/real-frontend-validation-plan.md`](./plans/archive/real-
   `context.highlighted` into the upstream candidate panel shape.
 - Patched TypeDuck-Web worker calls the modular Emscripten factory, mounts IDBFS,
   fetches real `public/schema` assets before init, and runs in a real browser.
-- **Browser result:** composition, candidate rendering, selection, commit output,
-  backspace mutation, and customize pass; candidate paging, candidate deletion,
-  deploy, persistence sync/reload, and v1.1.2 dictionary-comment evidence fail.
+- **Browser result:** the post-review real-assets smoke now renders
+  `jyut6ping3_mobile` candidates for `nei` (`你`, `呢`, `尼`). The full matrix
+  still needs a real-assets rerun for paging, deletion, deploy, persistence
+  sync/reload, setOption, and v1.1.2 dictionary-comment evidence.
 - **Outcome:** **NO-GO** for AI-native frontend exposure. This supersedes the old
   tooling-blocked Phase 10 NO-GO with a behavioral result: Yune loads and types
-  in-browser, but the full frontend contract is not ready.
+  real candidates in-browser, but the full frontend contract is not ready.
 
 Detail: [`plans/typeduck-web-validation-plan.md`](./plans/typeduck-web-validation-plan.md), [`plans/typeduck-web-adapter.md`](./plans/typeduck-web-adapter.md), [`plans/typeduck-web-integration-findings.md`](./plans/typeduck-web-integration-findings.md), [`plans/archive/ai-native-frontend-readiness.md`](./plans/archive/ai-native-frontend-readiness.md) (superseded tooling NO-GO).
 
@@ -77,12 +78,12 @@ Detail: [`plans/typeduck-web-validation-plan.md`](./plans/typeduck-web-validatio
 
 > **Sequencing — web first.** The original plan stands: prove Yune in a real
 > **web browser before** expanding to Windows and other native platforms. The
-> M9 *NO-GO* was a *tooling* block, not a behavioral one. WI-4 has now produced
-> the first real browser evidence: the core TypeDuck-Web typing path works, while
-> paging/deletion/deploy/persistence/dictionary-comment parity still fail. WI-5
-> records the evidence-based result as **NO-GO** for AI-native frontend exposure
-> until those browser-observed failures are fixed. M9 is complete as a validation
-> milestone; current work is Post-M9 hardening. Much of
+> M9 *NO-GO* was a *tooling* block, not a behavioral one. The post-review
+> hardening round found that the first WI-4 matrix used the placeholder echo path
+> for candidate evidence. HR-1 now proves the real TypeDuck `jyut6ping3_mobile`
+> assets render Chinese candidates in-browser. The remaining real-assets flows
+> are still open, so M9 is **not merge-ready**; current work is TypeDuck-Web
+> hardening and revalidation. Much of
 > the Windows work already done is **shared engine work** (comment shaping,
 > Cantonese goldens, the cross-platform baseline fix) and stays; only the
 > Windows-*platform*-specific pieces wait their turn.
@@ -99,14 +100,14 @@ Emscripten `FS` write/read. The TypeDuck-Web adapter now maps runtime
 upstream candidate panel shape with a focused mapper smoke. The patched
 TypeDuck-Web worker now calls the modular Emscripten factory, mounts IDBFS,
 fetches real `public/schema` assets before init, and participates in the real
-browser run. **Browser result:** composition, candidate rendering, selection,
-commit output, backspace mutation, and customize pass; candidate paging,
-candidate deletion, deploy, persistence sync/reload, and v1.1.2
-dictionary-comment evidence fail. The WI-5 GO/NO-GO update supersedes the old
-tooling-blocked Phase 10 recommendation with a behavioral **NO-GO**:
-Yune loads and types in-browser, but the full frontend contract is not ready.
+browser run. **HR-1 browser result:** typing `nei` renders real
+`jyut6ping3_mobile` candidates (`你`, `呢`, `尼`). The original echo-backed WI-4
+matrix is now partial evidence; paging, deletion, deploy, persistence
+sync/reload, setOption, and v1.1.2 dictionary-comment bytes remain to be re-run
+or fixed. The current recommendation remains **NO-GO** for AI-native frontend
+exposure.
 
-**Closed validation plan:** [`plans/typeduck-web-validation-plan.md`](./plans/typeduck-web-validation-plan.md) — the M9 execution plan.
+**Active validation plan:** [`plans/typeduck-web-validation-plan.md`](./plans/typeduck-web-validation-plan.md) — reopened for real-assets hardening.
 Detail: [`plans/typeduck-web-adapter.md`](./plans/typeduck-web-adapter.md), [`plans/typeduck-web-integration-findings.md`](./plans/typeduck-web-integration-findings.md), [`plans/archive/ai-native-frontend-readiness.md`](./plans/archive/ai-native-frontend-readiness.md) (superseded NO-GO).
 
 ### M10: TypeDuck-Windows native backend *(started early; platform work deferred)*

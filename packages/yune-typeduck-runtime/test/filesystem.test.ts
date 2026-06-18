@@ -20,6 +20,10 @@ import { FakeTypeDuckModule } from "./fake-module.js";
 const defaultYaml = "config_version: typeduck-web\nschema_list:\n  - schema: typeduck_luna\n";
 const schemaYaml = "schema:\n  schema_id: typeduck_luna\ntranslator:\n  dictionary: typeduck\n";
 const dictionaryYaml = "---\nname: typeduck\nversion: '1'\n...\nba\t吧\t9\n";
+const deployedDefaultYaml =
+  "config_version: typeduck-web\nschema_list:\n  - schema: typeduck_luna\nmenu:\n  page_size: 50\n";
+const deployedSchemaYaml =
+  "schema:\n  schema_id: typeduck_luna\nmenu:\n  page_size: 50\ntranslator:\n  dictionary: typeduck\n";
 const defaultInitPtr = 1;
 
 function filesystemOptions(overrides: Partial<Parameters<typeof prepareTypeDuckFilesystem>[1]> = {}) {
@@ -118,6 +122,28 @@ describe("TypeDuck browser filesystem preparation", () => {
       "/yune/user/build/default.yaml",
       "/yune/user/build/typeduck_luna.schema.yaml",
     ]);
+  });
+
+  it("keeps source assets shared while allowing deployed browser build assets", () => {
+    const fs = new FakeTypeDuckFilesystem();
+
+    prepareTypeDuckFilesystem(
+      fs,
+      filesystemOptions({
+        assets: {
+          defaultYaml,
+          schemaYaml,
+          dictionaryYaml,
+          deployedDefaultYaml,
+          deployedSchemaYaml,
+        },
+      }),
+    );
+
+    expect(fs.readText("/yune/shared/default.yaml")).toBe(defaultYaml);
+    expect(fs.readText("/yune/shared/typeduck_luna.schema.yaml")).toBe(schemaYaml);
+    expect(fs.readText("/yune/user/build/default.yaml")).toBe(deployedDefaultYaml);
+    expect(fs.readText("/yune/user/build/typeduck_luna.schema.yaml")).toBe(deployedSchemaYaml);
   });
 
   it("creates absolute directories correctly when only mkdir is available", () => {

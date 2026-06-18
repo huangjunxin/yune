@@ -4,18 +4,55 @@
 
 This document records findings from integrating Yune with the upstream TypeDuck-Web browser application.
 
-## WI-5 Recommendation
+## Current Recommendation
 
 **Recommendation: NO-GO** — do not expose AI-native behavior through TypeDuck-Web
-or real frontends yet. WI-4 proves the browser can load Yune and run the core
-composition -> candidate -> commit path, but paging, deletion, deploy,
+or real frontends yet. A post-review audit found the original WI-4 candidate
+matrix used the placeholder echo path, so the full E2E recommendation is
+reopened. HR-1 now proves the browser can load real TypeDuck `jyut6ping3_mobile`
+assets and render real Chinese candidates, but paging, deletion, deploy,
 persistence sync/reload, settings-option parity, and v1.1.2 dictionary-comment
-evidence still fail.
+evidence still need real-assets evidence.
 
 > **Historical scope.** The Phase 10 blocker tables below describe the
 > 2026-05-05 validation attempt, before WI-1b produced a loadable
 > Emscripten JS/WASM module. The current WI-4 browser evidence is the
-> Phase 17 matrix in this file's final summary.
+> Phase 17 matrix in this file's final summary; the HR-1 note below supersedes
+> its echo-backed composition/candidate rows.
+
+## HR-1 Real-Assets Browser Smoke
+
+**Date**: 2026-06-18
+**Status**: PASS for the real-assets candidate gate; full E2E matrix still open.
+
+**What changed**:
+- TypeDuck-Web worker now selects `jyut6ping3_mobile` and dictionary
+  `jyut6ping3`, with deployed `schema/build/default.yaml` and
+  `schema/build/jyut6ping3_mobile.schema.yaml` preloaded before init.
+- `RimeGetContext` no longer rejects the mobile schema's
+  `menu/alternative_select_keys: "\x00"` sentinel when exporting context; the
+  sentinel remains available internally for selector behavior, but browser JSON
+  receives `select_keys: null`.
+- The Emscripten build uses a larger/growing memory configuration for the real
+  asset load.
+
+**Proof**:
+- Direct Node/Emscripten artifact instantiation with real assets returns
+  `schema: "jyut6ping3_mobile"`, `input: "nei"`, `preedit: "nei"`,
+  `select_keys: null`, and candidates beginning `你`, `呢`, `尼`.
+- Live browser at `http://127.0.0.1:5173/web/?debug&realAssets=1` renders the
+  candidate panel for `nei` with `1.你`, `2.呢`, `3.尼`, followed by real
+  TypeDuck dictionary candidates.
+- Browser logs record `initialized: true` and a `{i}` `processKey` success with
+  `isComposing: true`, `inputBuffer.before: "nei"`, and candidates beginning
+  `你`, `呢`, `尼`.
+
+**Still open after HR-1**:
+- `setOption` still throws from the adapter stub and is HR-2.
+- Browser `deploy()` still returns `false` and is HR-3.
+- Persistence sync/reload still needs live-worker evidence and is HR-4.
+- Paging, deletion, deploy, persistence, reload, and dictionary-panel comment
+  bytes must be re-run against real assets in HR-5.
 
 ---
 
@@ -983,12 +1020,13 @@ RIME session → JSON result → Worker parse → Main thread render
 9. Persistence sync after mutation (D-11)
 10. Persistence reload/reinitialize (D-11)
 
-**Flow status** (from WI-4 browser execution, 2026-06-18):
+**Flow status** (from WI-4 browser execution, 2026-06-18; composition/candidate
+rows superseded by HR-1 real-assets smoke above):
 
 | Flow | D-08/D-10/D-11 Requirement | Status | Evidence/Blocker |
 |------|----------------------------|--------|------------------|
-| Composition | Schema-valid keys -> preedit visible | PASS | `browser-console.json` records `{b}`/`{a}` composing responses; DOM shows preedit `ba` |
-| Candidate list | Visible after composition | PASS | `dom-snapshot-candidates.txt` shows `1. ba echo` |
+| Composition | Schema-valid keys -> preedit visible | PASS | HR-1 browser log records `{n}`/`{e}`/`{i}` composing responses; DOM shows preedit `nei` |
+| Candidate list | Visible after composition | PASS | HR-1 DOM shows real candidates `1.你`, `2.呢`, `3.尼` |
 | Candidate paging | PageDown -> page change | FAIL | `{Page_Down}` returns success but remains `page: 0`, `isLastPage: true` |
 | Candidate selection | Selection key -> commit text | PASS | Pressing `1` commits `ba` into the textarea |
 | Deletion | Delete key -> candidate/composition change | FAIL | `{Delete}` leaves the same composing response and candidate |
@@ -999,10 +1037,11 @@ RIME session → JSON result → Worker parse → Main thread render
 | Persistence reload | sync-before-init + reload/reinitialize | FAIL | Reload/reinitialize persistence survival not proven from browser evidence |
 | Dictionary-panel comment rendering | v1.1.2 candidate comment bytes render | FAIL | UI renders `echo` from `candidate.comment`, not oracle dictionary bytes |
 
-**Reason**: The WASM/browser initialization blocker is cleared. Failures are now
-behavioral: paging/deletion are echo-path limited, deploy returns false,
-persistence markers/reload survival are not proven, and dictionary-comment
-oracle bytes do not appear in the browser flow.
+**Reason**: The WASM/browser initialization blocker is cleared and real assets
+now render real Chinese candidates. The remaining matrix rows need a real-assets
+rerun: deploy returns false, `setOption` still errors, persistence
+markers/reload survival are not proven, and dictionary-comment oracle bytes do
+not appear in the browser flow yet.
 
 **Evidence captured**:
 - `third_party/typeduck-web/e2e/results/browser-run.log`
@@ -1035,7 +1074,7 @@ UI/testability and invalid candidate DOM shape, not missing WASM.
 | setOption API gap | open | Browser logs repeated `setOption` errors | D-07, TYPEDUCK-E2E-03 | YES for settings parity — startup/settings path reports errors |
 | deploy returns false | open | `browser-console.json`, `persistence-sync.log` | TYPEDUCK-E2E-03 | YES for persistence/deploy confidence |
 | Dictionary comment oracle gap | open | Browser shows `echo`, not v1.1.2 dictionary comment bytes | TYPEDUCK-E2E-03, WI-6 | YES for dictionary-panel parity |
-| Candidate paging/deletion echo limitations | open | `browser-run.log` | TYPEDUCK-E2E-03 | YES for complete E2E parity |
+| Candidate paging/deletion real-assets evidence | open | HR-1 unblocks rerun; original WI-4 was echo-backed | TYPEDUCK-E2E-03 | YES for complete E2E parity |
 
 **Explanation**: Adapter shape bugs are fixed, and the core composition ->
 candidate -> commit seam works. The remaining runtime gaps are now browser-

@@ -519,12 +519,13 @@ fn has_preloaded_runtime_assets(
     let build_dir = user_data_dir.join("build");
     let schema_file = format!("{schema_id}.schema.yaml");
     let shared_schema = shared_data_dir.join(&schema_file);
+    let deployed_schema = build_dir.join(&schema_file);
 
     shared_data_dir.join("default.yaml").is_file()
         && shared_schema.is_file()
         && build_dir.join("default.yaml").is_file()
-        && build_dir.join(schema_file).is_file()
-        && has_preloaded_dictionary(shared_data_dir, &shared_schema)
+        && deployed_schema.is_file()
+        && has_preloaded_dictionary(shared_data_dir, &shared_schema, &deployed_schema)
 }
 
 fn is_valid_schema_id(schema_id: &str) -> bool {
@@ -537,8 +538,11 @@ fn is_valid_schema_id(schema_id: &str) -> bool {
 fn has_preloaded_dictionary(
     shared_data_dir: &std::path::Path,
     schema_file: &std::path::Path,
+    deployed_schema_file: &std::path::Path,
 ) -> bool {
-    let Some(dictionary) = required_dictionary(schema_file) else {
+    let Some(dictionary) =
+        required_dictionary(schema_file).or_else(|| required_dictionary(deployed_schema_file))
+    else {
         return false;
     };
     shared_data_dir

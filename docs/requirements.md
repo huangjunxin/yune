@@ -79,17 +79,16 @@ Requirements for the next integration milestone. These requirements turn the
 Phase 6 TypeDuck-Web validation and the seed Rust adapter into a browser-usable
 path before AI-native product work begins.
 
-**M9 completed (web-first).** This milestone was reopened as Phase 17. The
-build-out (WASM export contract, TS bridge, browser filesystem) landed, and the
-WASM artifact now builds as loadable Emscripten `yune-typeduck.js`/`.wasm` with
-a Node smoke for one `yune_typeduck_*` call plus one `FS` operation. The patched
-TypeDuck-Web worker loads that modular artifact, mounts IDBFS, fetches real
-schema assets from `public/schema`, and the WI-4 browser run executed. Core
-composition, candidate rendering, selection, commit output, backspace mutation,
-and customize pass; candidate paging, deletion, deploy, persistence sync/reload,
-and v1.1.2 dictionary-comment evidence fail. **TYPEDUCK-E2E-03** is complete as
-a validation run, and **TYPEDUCK-E2E-04** records an evidence-based **NO-GO**
-for AI-native frontend exposure until those failures are fixed.
+**M9 reopened for real-assets validation.** The build-out (WASM export contract,
+TS bridge, browser filesystem) landed, and the WASM artifact now builds as
+loadable Emscripten `yune-typeduck.js`/`.wasm` with a Node smoke for one
+`yune_typeduck_*` call plus one `FS` operation. A post-review audit found the
+first WI-4 browser matrix used the placeholder echo path for candidate evidence.
+HR-1 now proves the patched TypeDuck-Web worker can load real
+`jyut6ping3_mobile` assets and render `nei` candidates (`你`, `呢`, `尼`) in a
+real browser. **TYPEDUCK-E2E-03** and the final **TYPEDUCK-E2E-04** reassessment
+remain open until paging, deletion, deploy, persistence sync/reload, setOption,
+and v1.1.2 dictionary-comment evidence are re-run or fixed against real assets.
 
 ### WASM Build And Export Contract
 
@@ -115,8 +114,8 @@ for AI-native frontend exposure until those failures are fixed.
 
 - [x] **TYPEDUCK-E2E-01**: The upstream TypeDuck-Web repository is cloned or vendored in a reproducible test location, and its current librime/WASM bridge seam is identified.
 - [x] **TYPEDUCK-E2E-02**: TypeDuck-Web is patched or configured so its input-engine binding calls the Yune TypeScript bridge instead of the original librime bridge, with candidate text/comment/highlight mapped from the runtime response shape.
-- [x] **TYPEDUCK-E2E-03**: Real TypeDuck-Web browser validation covers composition, candidate paging, selection, deletion, commit output, deploy, customize, and persistence smoke flows, with PASS/FAIL evidence recorded.
-- [x] **TYPEDUCK-E2E-04**: Integration findings end with a go/no-go recommendation for exposing AI-native behavior through real frontends; current result is NO-GO from WI-4 browser evidence.
+- [ ] **TYPEDUCK-E2E-03**: Real TypeDuck-Web browser validation covers composition, candidate paging, selection, deletion, commit output, deploy, customize, and persistence smoke flows, with PASS/FAIL evidence recorded. HR-1 proves real candidate rendering; the full real-assets matrix is still open.
+- [ ] **TYPEDUCK-E2E-04**: Integration findings end with a go/no-go recommendation for exposing AI-native behavior through real frontends; current result remains NO-GO pending the real-assets matrix.
 
 ## TypeDuck-Windows Native IME Contract Requirements
 
@@ -220,8 +219,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TYPEDUCK-FS-04 | Phase 9 | Complete |
 | TYPEDUCK-E2E-01 | Phase 10 | Complete |
 | TYPEDUCK-E2E-02 | Phase 10 | Complete |
-| TYPEDUCK-E2E-03 | Phase 10 / 17 | Complete — browser E2E executed; failures remain for paging/deletion/deploy/persistence/dictionary comments |
-| TYPEDUCK-E2E-04 | Phase 10 / 17 | Complete — WI-5 records NO-GO from browser evidence |
+| TYPEDUCK-E2E-03 | Phase 10 / 17 | Reopened — HR-1 real candidate rendering passes; full real-assets matrix pending |
+| TYPEDUCK-E2E-04 | Phase 10 / 17 | Reopened — current NO-GO pending real-assets matrix |
 | WIN-TEST-01 | Phase 11 | Complete |
 | WIN-ABI-01 | Phase 12 | Complete |
 | WIN-ORACLE-01 | Phase 13 | Complete |
@@ -239,4 +238,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-04-28*
-*Last updated: 2026-06-17 — web-first re-sequencing: TypeDuck-Web browser validation (Phase 17) is the active milestone; TypeDuck-Windows parked*
+*Last updated: 2026-06-18 — TypeDuck-Web validation reopened for real-assets matrix; TypeDuck-Windows parked*

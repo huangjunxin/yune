@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { loadAssetContent, validateExplicitAssets } from "./assets.js";
+import { loadAssetContent, loadExplicitAssets, validateExplicitAssets } from "./assets.js";
 
 describe("TypeDuck-Web explicit asset loading", () => {
   afterEach(() => {
@@ -16,6 +16,29 @@ describe("TypeDuck-Web explicit asset loading", () => {
     await expect(loadAssetContent({ type: "url", url: "schema/luna_pinyin.schema.yaml" })).resolves.toBe(
       "schema:\n  schema_id: luna_pinyin\n",
     );
+  });
+
+  it("loads optional deployed build YAML when the app provides it", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => new Response(`content:${url}`, { status: 200 })),
+    );
+
+    await expect(
+      loadExplicitAssets({
+        defaultYaml: { type: "url", url: "schema/default.yaml" },
+        schemaYaml: { type: "url", url: "schema/jyut6ping3_mobile.schema.yaml" },
+        dictionaryYaml: { type: "url", url: "schema/jyut6ping3.dict.yaml" },
+        deployedDefaultYaml: { type: "url", url: "schema/build/default.yaml" },
+        deployedSchemaYaml: { type: "url", url: "schema/build/jyut6ping3_mobile.schema.yaml" },
+      }),
+    ).resolves.toMatchObject({
+      defaultYaml: "content:schema/default.yaml",
+      schemaYaml: "content:schema/jyut6ping3_mobile.schema.yaml",
+      dictionaryYaml: "content:schema/jyut6ping3.dict.yaml",
+      deployedDefaultYaml: "content:schema/build/default.yaml",
+      deployedSchemaYaml: "content:schema/build/jyut6ping3_mobile.schema.yaml",
+    });
   });
 
   it("surfaces missing URL assets as clear init blockers", async () => {

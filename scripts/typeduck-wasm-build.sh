@@ -289,7 +289,7 @@ configure_emscripten_linker
 
 EXPORTED_FUNCTIONS=$(join_exported_functions)
 RUNTIME_METHODS="ccall,cwrap,UTF8ToString,FS,IDBFS"
-EXTRA_RUSTFLAGS="-C link-arg=-sEXPORTED_FUNCTIONS=$EXPORTED_FUNCTIONS -C link-arg=-sEXPORTED_RUNTIME_METHODS=$RUNTIME_METHODS -C link-arg=-sMODULARIZE=1 -C link-arg=-sEXPORT_NAME=createYuneTypeduckModule -C link-arg=-sENVIRONMENT=web,worker,node -C link-arg=-sFORCE_FILESYSTEM=1 -C link-arg=-lidbfs.js"
+EXTRA_RUSTFLAGS="-C link-arg=-sEXPORTED_FUNCTIONS=$EXPORTED_FUNCTIONS -C link-arg=-sEXPORTED_RUNTIME_METHODS=$RUNTIME_METHODS -C link-arg=-sMODULARIZE=1 -C link-arg=-sEXPORT_NAME=createYuneTypeduckModule -C link-arg=-sENVIRONMENT=web,worker,node -C link-arg=-sFORCE_FILESYSTEM=1 -C link-arg=-sALLOW_MEMORY_GROWTH=1 -C link-arg=-sINITIAL_MEMORY=134217728 -C link-arg=-sSTACK_SIZE=8388608 -C link-arg=-lidbfs.js"
 if [ "${RUSTFLAGS+x}" = x ] && [ -n "$RUSTFLAGS" ]; then
   export RUSTFLAGS="$RUSTFLAGS $EXTRA_RUSTFLAGS"
 else

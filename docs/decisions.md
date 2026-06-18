@@ -415,6 +415,17 @@ because the browser E2E ran and produced a durable GO/NO-GO recommendation. The
 follow-up milestone is Post-M9 TypeDuck-Web hardening; it starts from the WI-4
 failure matrix rather than reopening the validation gate itself.
 
+**D-P10-9 — Reopen the TypeDuck-Web E2E gate when evidence used the placeholder
+schema.** Post-review inspection found the WI-4 browser matrix exercised Yune's
+echo placeholder rather than TypeDuck's real `jyut6ping3_mobile` dictionary, so
+candidate paging, deletion, and dictionary-panel comments were not actually
+validated. HR-1 fixes the real-asset gate: TypeDuck-Web now loads
+`jyut6ping3_mobile`, exports context despite the schema's NUL
+`alternative_select_keys` sentinel, and renders real `nei` candidates (`你`,
+`呢`, `尼`) in-browser. The recommendation remains NO-GO, and
+TYPEDUCK-E2E-03/E2E-04 stay open until the full matrix is re-run against real
+assets.
+
 **D-12 / TYPEDUCK-E2E-04 — Final findings separate three blocker classes.**
 TypeDuck-Web app/source blockers, Yune adapter/runtime mismatches, and
 environment/tooling blockers are reported separately.

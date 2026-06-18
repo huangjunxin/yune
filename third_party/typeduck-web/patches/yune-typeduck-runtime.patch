@@ -38,10 +38,10 @@ index 4393a9e..0553d2f 100644
  	worker.postMessage({ name, args });
  }
 diff --git a/src/worker.ts b/src/worker.ts
-index 92b9a90..f0581a3 100644
+index 92b9a90..e4fea6a 100644
 --- a/src/worker.ts
 +++ b/src/worker.ts
-@@ -1,137 +1,235 @@
+@@ -1,137 +1,242 @@
 -import type { Actions, ListenerArgsMap, Message, RimeResult, RimeAPI, RimeNotification, RimeDeployStatus } from "./types";
 -
 -type TypeToString<T> = T extends number ? "number"
@@ -264,8 +264,8 @@ index 92b9a90..f0581a3 100644
 -	};
 -	importScripts("rime.js");
 -});
-+const SCHEMA_ID = "luna_pinyin";
-+const DICTIONARY_ID = "luna_pinyin";
++const SCHEMA_ID = "jyut6ping3_mobile";
++const DICTIONARY_ID = "jyut6ping3";
 +
 +// Yune runtime initialization
 +const loadRime = (async () => {
@@ -292,6 +292,8 @@ index 92b9a90..f0581a3 100644
 +      defaultYaml: { type: "url", url: "schema/default.yaml" },
 +      schemaYaml: { type: "url", url: `schema/${SCHEMA_ID}.schema.yaml` },
 +      dictionaryYaml: { type: "url", url: `schema/${DICTIONARY_ID}.dict.yaml` },
++      deployedDefaultYaml: { type: "url", url: "schema/build/default.yaml" },
++      deployedSchemaYaml: { type: "url", url: `schema/build/${SCHEMA_ID}.schema.yaml` },
 +    };
 +
 +    const assets = await loadExplicitAssets(assetsConfig);
@@ -302,10 +304,15 @@ index 92b9a90..f0581a3 100644
 +      "common.custom.yaml",
 +      "include.yaml",
 +      "template.yaml",
++      "jyut6ping3_mobile_longpress.schema.yaml",
++      "jyut6ping3_mobile_10keys.schema.yaml",
 +      "jyut6ping3_scolar.schema.yaml",
 +      "jyut6ping3_scolar.dict.yaml",
++      "luna_pinyin.schema.yaml",
++      "luna_pinyin.dict.yaml",
 +      "loengfan.schema.yaml",
 +      "loengfan.dict.yaml",
++      "loengfan_longpress.schema.yaml",
 +      "cangjie3.schema.yaml",
 +      "cangjie3.dict.yaml",
 +      "cangjie5.schema.yaml",
@@ -1031,10 +1038,10 @@ index 0000000..04f692e
 +}
 diff --git a/src/yune-integration/assets.ts b/src/yune-integration/assets.ts
 new file mode 100644
-index 0000000..1fc89c3
+index 0000000..aa76646
 --- /dev/null
 +++ b/src/yune-integration/assets.ts
-@@ -0,0 +1,179 @@
+@@ -0,0 +1,193 @@
 +/**
 + * Explicit asset loader contract for TypeDuck-Web
 + *
@@ -1065,6 +1072,8 @@ index 0000000..1fc89c3
 +  defaultYaml: AssetSource;
 +  schemaYaml: AssetSource;
 +  dictionaryYaml: AssetSource;
++  deployedDefaultYaml?: AssetSource;
++  deployedSchemaYaml?: AssetSource;
 +}
 +
 +/**
@@ -1112,11 +1121,17 @@ index 0000000..1fc89c3
 +  const defaultYaml = await loadAssetContent(assets.defaultYaml);
 +  const schemaYaml = await loadAssetContent(assets.schemaYaml);
 +  const dictionaryYaml = await loadAssetContent(assets.dictionaryYaml);
++  const deployedDefaultYaml =
++    assets.deployedDefaultYaml === undefined ? undefined : await loadAssetContent(assets.deployedDefaultYaml);
++  const deployedSchemaYaml =
++    assets.deployedSchemaYaml === undefined ? undefined : await loadAssetContent(assets.deployedSchemaYaml);
 +
 +  return {
 +    defaultYaml,
 +    schemaYaml,
 +    dictionaryYaml,
++    deployedDefaultYaml,
++    deployedSchemaYaml,
 +  };
 +}
 +
@@ -1169,6 +1184,12 @@ index 0000000..1fc89c3
 +  validateNoFallbackAssets(assets.defaultYaml, "default.yaml");
 +  validateNoFallbackAssets(assets.schemaYaml, "schema YAML");
 +  validateNoFallbackAssets(assets.dictionaryYaml, "dictionary YAML");
++  if (assets.deployedDefaultYaml !== undefined) {
++    validateNoFallbackAssets(assets.deployedDefaultYaml, "deployed default.yaml");
++  }
++  if (assets.deployedSchemaYaml !== undefined) {
++    validateNoFallbackAssets(assets.deployedSchemaYaml, "deployed schema YAML");
++  }
 +}
 +
 +/**
@@ -1390,3 +1411,449 @@ index 0000000..cced079
 +    committed,
 +  };
 +}
+diff --git a/public/schema/build/default.yaml b/public/schema/build/default.yaml
+new file mode 100644
+index 0000000..b194a4e
+--- /dev/null
++++ b/public/schema/build/default.yaml
+@@ -0,0 +1,178 @@
++__build_info:
++  rime_version: 1.1.2
++  timestamps:
++    default: 1731663570
++    default.custom: 1731663569
++ascii_composer:
++  good_old_caps_lock: true
++  switch_key:
++    Caps_Lock: clear
++    Control_L: noop
++    Control_R: noop
++    Eisu_toggle: clear
++    Shift_L: noop
++    Shift_R: noop
++config_version: 2024.05.10
++key_binder:
++  bindings:
++    - {accept: "Control+p", send: Up, when: composing}
++    - {accept: "Control+n", send: Down, when: composing}
++    - {accept: "Control+b", send: Left, when: composing}
++    - {accept: "Control+f", send: Right, when: composing}
++    - {accept: "Control+a", send: Home, when: composing}
++    - {accept: "Control+e", send: End, when: composing}
++    - {accept: "Control+d", send: Delete, when: composing}
++    - {accept: "Control+k", send: "Shift+Delete", when: composing}
++    - {accept: "Control+h", send: BackSpace, when: composing}
++    - {accept: "Control+g", send: Escape, when: composing}
++    - {accept: "Control+bracketleft", send: Escape, when: composing}
++    - {accept: "Control+y", send: Page_Up, when: composing}
++    - {accept: "Alt+v", send: Page_Up, when: composing}
++    - {accept: "Control+v", send: Page_Down, when: composing}
++    - {accept: ISO_Left_Tab, send: "Shift+Left", when: composing}
++    - {accept: "Shift+Tab", send: "Shift+Left", when: composing}
++    - {accept: Tab, send: "Shift+Right", when: composing}
++    - {accept: minus, send: Page_Up, when: paging}
++    - {accept: equal, send: Page_Down, when: has_menu}
++    - {accept: comma, send: Page_Up, when: paging}
++    - {accept: period, send: Page_Down, when: has_menu}
++    - {accept: bracketleft, send: Page_Up, when: paging}
++    - {accept: bracketright, send: Page_Down, when: has_menu}
++    - {accept: "Control+Shift+1", select: .next, when: always}
++    - {accept: "Control+Shift+2", toggle: ascii_mode, when: always}
++    - {accept: "Control+Shift+3", toggle: full_shape, when: always}
++    - {accept: "Control+Shift+exclam", select: .next, when: always}
++    - {accept: "Control+Shift+at", toggle: ascii_mode, when: always}
++    - {accept: "Control+Shift+numbersign", toggle: full_shape, when: always}
++    - {accept: "Control+Shift+space", select: .next, when: always}
++    - {accept: "Control+comma", toggle: full_shape, when: always}
++    - {accept: "Control+period", toggle: ascii_punct, when: always}
++menu:
++  page_size: 50
++punctuator:
++  ascii_style:
++    "!": {commit: "!"}
++    "\"": "\""
++    "#": "#"
++    "$": "$"
++    "%": "%"
++    "&": "&"
++    "'": "'"
++    "(": "("
++    ")": ")"
++    "*": "*"
++    "+": "+"
++    ",": {commit: ","}
++    "-": "-"
++    .: {commit: .}
++    "/": "/"
++    ":": {commit: ":"}
++    ";": {commit: ";"}
++    "<": "<"
++    "=": "="
++    ">": ">"
++    "?": {commit: "?"}
++    "@": "@"
++    "[": "["
++    "\\": "\\"
++    "]": "]"
++    "^": "^"
++    _: _
++    "`": "`"
++    "{": "{"
++    "|": "|"
++    "}": "}"
++    "~": "~"
++  full_shape:
++    " ": {commit: "　"}
++    "!": {commit: "！"}
++    "\"": ["＂", "\"", "“", "”", "„", "‟", "″", "〃", "〝", "〞", "〟"]
++    "#": ["＃", "#", "№", "⌘", "⌥", "⌃"]
++    "$": ["＄", "$", "￥", "¥", "￦", "₩", "￡", "£", "￠", "¢", "€", "₽", "¤"]
++    "%": ["％", "%", "‰", "‱", "℃", "℉"]
++    "&": ["＆", "&", "¶", "§"]
++    "'": ["＇", "'", "‘", "’", "‛", "′", "↑", "↓"]
++    "(": {commit: "（"}
++    ")": {commit: "）"}
++    "*": ["＊", "*", "×", "※", "✓", "✗"]
++    "+": ["＋", "+", "±", "∓"]
++    ",": {commit: "，"}
++    "-": ["－", "-", "‒", "―", "–", "—", "＿", _, "￣", "‾"]
++    .: {commit: "。"}
++    "/": ["／", "/", "＼", "\\", "､", "÷", "∕", "√"]
++    ":": {commit: "："}
++    ";": {commit: "；"}
++    "<": ["《", "〈", "＜", "<", "«", "‹", "⟨", "←", "⇐", "↔", "⇔", "≤", "⩽", "≦", "⫹"]
++    "=": ["＝", "=", "≡", "≈", "≠", "≒", "≅"]
++    ">": ["》", "〉", "＞", ">", "»", "›", "⟩", "→", "⇒", "↔", "⇔", "≥", "⩾", "≧", "⫺"]
++    "?": {commit: "？"}
++    "@": ["＠", "@", "©", "®", "℗", "™", "℠", "∅"]
++    "[": ["「", "｢", "【", "〔", "［", "[", "〚", "〘"]
++    "\\": {commit: "、"}
++    "]": ["」", "｣", "】", "〕", "］", "]", "〛", "〙"]
++    "^": {commit: "……"}
++    _: {commit: "——"}
++    "`": ["｀", "`", "·", "•", "‣", "°", "○", "◌", "◦"]
++    "{": ["『", "〖", "｛", "{", "⦅", "⸨", "｟"]
++    "|": ["｜", "|", "＼", "\\", "¦"]
++    "}": ["』", "〗", "｝", "}", "⦆", "⸩", "｠"]
++    "~": ["～", "~", "﹏", "﹋"]
++  half_shape:
++    "!": {commit: "！"}
++    "\"": ["\"", "＂", "“", "”", "„", "‟", "″", "〃", "〝", "〞", "〟"]
++    "#": ["#", "＃", "№", "⌘", "⌥", "⌃"]
++    "$": ["$", "＄", "¥", "￥", "₩", "￦", "£", "￡", "¢", "￠", "€", "₽", "¤"]
++    "%": ["％", "%", "‰", "‱", "℃", "℉"]
++    "&": ["＆", "&", "¶", "§"]
++    "'": ["'", "＇", "‘", "’", "‛", "′", "↑", "↓"]
++    "(": {commit: "（"}
++    ")": {commit: "）"}
++    "*": ["＊", "*", "×", "※", "✓", "✗"]
++    "+": ["+", "＋", "±", "∓"]
++    ",": {commit: "，"}
++    "-": ["-", "－", "‒", "―", "–", "—", _, "＿", "‾", "￣"]
++    .: {commit: "。"}
++    "/": ["/", "／", "\\", "＼", "､", "÷", "∕", "√"]
++    ":": {commit: "："}
++    ";": {commit: "；"}
++    "<": ["《", "〈", "<", "＜", "«", "‹", "⟨", "←", "⇐", "↔", "⇔", "≤", "⩽", "≦", "⫹"]
++    "=": ["=", "＝", "≡", "≈", "≠", "≒", "≅"]
++    ">": ["》", "〉", ">", "＞", "»", "›", "⟩", "→", "⇒", "↔", "⇔", "≥", "⩾", "≧", "⫺"]
++    "?": {commit: "？"}
++    "@": ["@", "＠", "©", "®", "℗", "™", "℠", "∅"]
++    "[": ["「", "｢", "【", "〔", "［", "[", "〚", "〘"]
++    "\\": {commit: "、"}
++    "]": ["」", "｣", "】", "〕", "］", "]", "〛", "〙"]
++    "^": {commit: "……"}
++    _: {commit: "——"}
++    "`": ["`", "｀", "·", "•", "‣", "°", "○", "◌", "◦"]
++    "{": ["『", "〖", "｛", "{", "⦅", "⸨", "｟"]
++    "|": ["|", "｜", "＼", "\\", "¦"]
++    "}": ["』", "〗", "｝", "}", "⦆", "⸩", "｠"]
++    "~": ["~", "～", "﹏", "﹋"]
++recognizer:
++  patterns:
++    email: "^[A-Za-z][-_.0-9A-Za-z]*@.*$"
++    uppercase: "[A-Z][-_+.'0-9A-Za-z]*$"
++    url: "^(www[.]|https?:|ftp[.:]|mailto:|file:).*$|^[a-z]+[.].+$"
++schema_list:
++  - schema: jyut6ping3_mobile
++  - schema: jyut6ping3_mobile_longpress
++  - schema: jyut6ping3_mobile_10keys
++  - schema: jyut6ping3_scolar
++  - schema: luna_pinyin
++  - schema: loengfan
++  - schema: loengfan_longpress
++  - schema: cangjie3
++  - schema: cangjie5
++switcher:
++  caption: "快捷選項 Options Menu"
++  hide_lone_schema: true
++  hotkeys:
++    - "Control+grave"
++    - "Control+Shift+grave"
++    - F4
++  option_list_separator: " / "
++  save_options:
++    - full_shape
++    - ascii_punct
+\ No newline at end of file
+diff --git a/public/schema/build/jyut6ping3_mobile.schema.yaml b/public/schema/build/jyut6ping3_mobile.schema.yaml
+new file mode 100644
+index 0000000..7d09c96
+--- /dev/null
++++ b/public/schema/build/jyut6ping3_mobile.schema.yaml
+@@ -0,0 +1,254 @@
++__build_info:
++  rime_version: 1.1.2
++  timestamps:
++    common: 1731663570
++    common.custom: 1731663570
++    default: 1731663570
++    default.custom: 1731663570
++    include: 1731663570
++    include.custom: 0
++    jyut6ping3_mobile.schema: 1731663569
++    template: 1731663570
++    template.custom: 0
++dictionary_lookup_filter:
++  dictionary: jyut6ping3_scolar
++engine:
++  filters:
++    - dictionary_lookup_filter
++    - simplifier
++  processors:
++    - ascii_composer
++    - recognizer
++    - key_binder
++    - speller
++    - punctuator
++    - selector
++    - navigator
++    - express_editor
++  segmentors:
++    - ascii_segmentor
++    - matcher
++    - abc_segmentor
++    - punct_segmentor
++    - fallback_segmentor
++  translators:
++    - punct_translator
++    - script_translator
++key_binder:
++  bindings:
++    - {accept: "Control+p", send: Up, when: composing}
++    - {accept: "Control+n", send: Down, when: composing}
++    - {accept: "Control+b", send: Left, when: composing}
++    - {accept: "Control+f", send: Right, when: composing}
++    - {accept: "Control+a", send: Home, when: composing}
++    - {accept: "Control+e", send: End, when: composing}
++    - {accept: "Control+d", send: Delete, when: composing}
++    - {accept: "Control+k", send: "Shift+Delete", when: composing}
++    - {accept: "Control+h", send: BackSpace, when: composing}
++    - {accept: "Control+g", send: Escape, when: composing}
++    - {accept: "Control+bracketleft", send: Escape, when: composing}
++    - {accept: "Control+y", send: Page_Up, when: composing}
++    - {accept: "Alt+v", send: Page_Up, when: composing}
++    - {accept: "Control+v", send: Page_Down, when: composing}
++    - {accept: ISO_Left_Tab, send: "Shift+Left", when: composing}
++    - {accept: "Shift+Tab", send: "Shift+Left", when: composing}
++    - {accept: Tab, send: "Shift+Right", when: composing}
++    - {accept: minus, send: Page_Up, when: paging}
++    - {accept: equal, send: Page_Down, when: has_menu}
++    - {accept: comma, send: Page_Up, when: paging}
++    - {accept: period, send: Page_Down, when: has_menu}
++    - {accept: bracketleft, send: Page_Up, when: paging}
++    - {accept: bracketright, send: Page_Down, when: has_menu}
++    - {accept: "Control+Shift+1", select: .next, when: always}
++    - {accept: "Control+Shift+2", toggle: ascii_mode, when: always}
++    - {accept: "Control+Shift+3", toggle: full_shape, when: always}
++    - {accept: "Control+Shift+exclam", select: .next, when: always}
++    - {accept: "Control+Shift+at", toggle: ascii_mode, when: always}
++    - {accept: "Control+Shift+numbersign", toggle: full_shape, when: always}
++    - {accept: "Control+Shift+space", select: .next, when: always}
++    - {accept: "Control+comma", toggle: full_shape, when: always}
++    - {accept: "Control+period", toggle: ascii_punct, when: always}
++  import_preset: default
++menu:
++  alternative_select_keys: "\x00"
++  page_size: 50
++punctuator:
++  ascii_style:
++    "!": {commit: "!"}
++    "\"": "\""
++    "#": "#"
++    "$": "$"
++    "%": "%"
++    "&": "&"
++    "'": "'"
++    "(": "("
++    ")": ")"
++    "*": "*"
++    "+": "+"
++    ",": {commit: ","}
++    "-": "-"
++    .: {commit: .}
++    "/": "/"
++    ":": {commit: ":"}
++    ";": {commit: ";"}
++    "<": "<"
++    "=": "="
++    ">": ">"
++    "?": {commit: "?"}
++    "@": "@"
++    "[": "["
++    "\\": "\\"
++    "]": "]"
++    "^": "^"
++    _: _
++    "`": "`"
++    "{": "{"
++    "|": "|"
++    "}": "}"
++    "~": "~"
++  full_shape:
++    " ": {commit: "　"}
++    "!": {commit: "！"}
++    "\"": ["＂", "\"", "“", "”", "„", "‟", "″", "〃", "〝", "〞", "〟"]
++    "#": ["＃", "#", "№", "⌘", "⌥", "⌃"]
++    "$": ["＄", "$", "￥", "¥", "￦", "₩", "￡", "£", "￠", "¢", "€", "₽", "¤"]
++    "%": ["％", "%", "‰", "‱", "℃", "℉"]
++    "&": ["＆", "&", "¶", "§"]
++    "'": ["＇", "'", "‘", "’", "‛", "′", "↑", "↓"]
++    "(": {commit: "（"}
++    ")": {commit: "）"}
++    "*": ["＊", "*", "×", "※", "✓", "✗"]
++    "+": ["＋", "+", "±", "∓"]
++    ",": {commit: "，"}
++    "-": ["－", "-", "‒", "―", "–", "—", "＿", _, "￣", "‾"]
++    .: {commit: "。"}
++    "/": ["／", "/", "＼", "\\", "､", "÷", "∕", "√"]
++    ":": {commit: "："}
++    ";": {commit: "；"}
++    "<": ["《", "〈", "＜", "<", "«", "‹", "⟨", "←", "⇐", "↔", "⇔", "≤", "⩽", "≦", "⫹"]
++    "=": ["＝", "=", "≡", "≈", "≠", "≒", "≅"]
++    ">": ["》", "〉", "＞", ">", "»", "›", "⟩", "→", "⇒", "↔", "⇔", "≥", "⩾", "≧", "⫺"]
++    "?": {commit: "？"}
++    "@": ["＠", "@", "©", "®", "℗", "™", "℠", "∅"]
++    "[": ["「", "｢", "【", "〔", "［", "[", "〚", "〘"]
++    "\\": {commit: "、"}
++    "]": ["」", "｣", "】", "〕", "］", "]", "〛", "〙"]
++    "^": {commit: "……"}
++    _: {commit: "——"}
++    "`": ["｀", "`", "·", "•", "‣", "°", "○", "◌", "◦"]
++    "{": ["『", "〖", "｛", "{", "⦅", "⸨", "｟"]
++    "|": ["｜", "|", "＼", "\\", "¦"]
++    "}": ["』", "〗", "｝", "}", "⦆", "⸩", "｠"]
++    "~": ["～", "~", "﹏", "﹋"]
++  half_shape:
++    "!": {commit: "！"}
++    "\"": ["\"", "＂", "“", "”", "„", "‟", "″", "〃", "〝", "〞", "〟"]
++    "#": ["#", "＃", "№", "⌘", "⌥", "⌃"]
++    "$": ["$", "＄", "¥", "￥", "₩", "￦", "£", "￡", "¢", "￠", "€", "₽", "¤"]
++    "%": ["％", "%", "‰", "‱", "℃", "℉"]
++    "&": ["＆", "&", "¶", "§"]
++    "'": ["'", "＇", "‘", "’", "‛", "′", "↑", "↓"]
++    "(": {commit: "（"}
++    ")": {commit: "）"}
++    "*": ["＊", "*", "×", "※", "✓", "✗"]
++    "+": ["+", "＋", "±", "∓"]
++    ",": {commit: "，"}
++    "-": ["-", "－", "‒", "―", "–", "—", _, "＿", "‾", "￣"]
++    .: {commit: "。"}
++    "/": ["/", "／", "\\", "＼", "､", "÷", "∕", "√"]
++    ":": {commit: "："}
++    ";": {commit: "；"}
++    "<": ["《", "〈", "<", "＜", "«", "‹", "⟨", "←", "⇐", "↔", "⇔", "≤", "⩽", "≦", "⫹"]
++    "=": ["=", "＝", "≡", "≈", "≠", "≒", "≅"]
++    ">": ["》", "〉", ">", "＞", "»", "›", "⟩", "→", "⇒", "↔", "⇔", "≥", "⩾", "≧", "⫺"]
++    "?": {commit: "？"}
++    "@": ["@", "＠", "©", "®", "℗", "™", "℠", "∅"]
++    "[": ["「", "｢", "【", "〔", "［", "[", "〚", "〘"]
++    "\\": {commit: "、"}
++    "]": ["」", "｣", "】", "〕", "］", "]", "〛", "〙"]
++    "^": {commit: "……"}
++    _: {commit: "——"}
++    "`": ["`", "｀", "·", "•", "‣", "°", "○", "◌", "◦"]
++    "{": ["『", "〖", "｛", "{", "⦅", "⸨", "｟"]
++    "|": ["|", "｜", "＼", "\\", "¦"]
++    "}": ["』", "〗", "｝", "}", "⦆", "⸩", "｠"]
++    "~": ["~", "～", "﹏", "﹋"]
++  import_preset: default
++recognizer:
++  import_preset: default
++  patterns:
++    email: "^[A-Za-z][-_.0-9A-Za-z]*@.*$"
++    uppercase: "[A-Z][-_+.'0-9A-Za-z]*$"
++    url: "^(www[.]|https?:|ftp[.:]|mailto:|file:).*$|^[a-z]+[.].+$"
++schema:
++  author:
++    - "Ayaka Mikazuki <ayaka@mail.shn.hk>"
++    - "LeiMaau <leimaau@qq.com>"
++    - "chaaklau <chaakming@gmail.com>"
++    - "laubonghaudoi <laubonghaudoi@icloud.com>"
++    - "tanxpyox <tanxpyox@gmail.com>"
++    - "William915 <William915@gmail.com>"
++    - "szc126 (@szc126)"
++    - "Bing Jeung <bing@ososo.io>"
++    - "graphemecluster <graphemecluster@gmail.com>"
++  description: |
++    採用香港語言學學會粵語拼音方案
++    https://www.lshk.org/jyutping
++    支援聲調顯示同輸入
++    Telegram 用户交流組 https://t.me/rime_cantonese
++  name: "粵語拼音"
++  schema_id: jyut6ping3_mobile
++  version: 2023.11.03
++simplifier:
++  opencc_config: hk2s.json
++speller:
++  algebra:
++    - "derive/^ng(?=[aeiou])//"
++    - "derive/^(?=[aeiou])/ng/"
++    - "derive/^n(?!g)/l/"
++    - "derive/^ng(?=\\d)/m/"
++    - "derive/^(g|k)w(?=o)/$1/"
++    - "derive/^jy?(?=[aeiou])/y/"
++    - "derive/^jyu/ju/"
++    - "derive/yu(?!ng|k)/y/"
++    - "derive/(g|k)u(?!ng|k)/$1wu/"
++    - "derive/^([zcs])/$1h/"
++    - "derive/eoi(?=\\d)/eoy/"
++    - "derive/eo/oe/"
++    - "derive/oe/eo/"
++    - "derive/aa(?=\\d)/a/"
++    - "derive/\\d//"
++    - "abbrev/^([a-z]).+$/$1/"
++    - "xform/1/v/"
++    - "xform/4/vv/"
++    - "xform/2/x/"
++    - "xform/5/xx/"
++    - "xform/3/q/"
++    - "xform/6/qq/"
++  alphabet: zyxwvutsrqponmlkjihgfedcba
++  delimiter: " '"
++switches:
++  - name: ascii_mode
++    reset: 0
++    states: ["中文", "英文"]
++  - name: full_shape
++    states: ["半形", "全形"]
++  - name: simplification
++    reset: 0
++    states: ["繁體", "简体"]
++  - name: ascii_punct
++    states: ["。，", "．，"]
++translator:
++  always_show_comments: true
++  combine_candidates: false
++  comment_format:
++    - "xform/^/\\f/"
++  dictionary: jyut6ping3
++  preedit_format:
++    - "xform/([aeiouymngptk])vv/${1}4/"
++    - "xform/([aeiouymngptk])xx/${1}5/"
++    - "xform/([aeiouymngptk])qq/${1}6/"
++    - "xform/([aeiouymngptk])v/${1}1/"
++    - "xform/([aeiouymngptk])x/${1}2/"
++    - "xform/([aeiouymngptk])q/${1}3/"
++  prism: jyut6ping3_mobile
+\ No newline at end of file

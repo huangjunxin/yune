@@ -28,6 +28,8 @@ export interface ExplicitTypeDuckAssets {
   defaultYaml: AssetSource;
   schemaYaml: AssetSource;
   dictionaryYaml: AssetSource;
+  deployedDefaultYaml?: AssetSource;
+  deployedSchemaYaml?: AssetSource;
 }
 
 /**
@@ -75,11 +77,17 @@ export async function loadExplicitAssets(
   const defaultYaml = await loadAssetContent(assets.defaultYaml);
   const schemaYaml = await loadAssetContent(assets.schemaYaml);
   const dictionaryYaml = await loadAssetContent(assets.dictionaryYaml);
+  const deployedDefaultYaml =
+    assets.deployedDefaultYaml === undefined ? undefined : await loadAssetContent(assets.deployedDefaultYaml);
+  const deployedSchemaYaml =
+    assets.deployedSchemaYaml === undefined ? undefined : await loadAssetContent(assets.deployedSchemaYaml);
 
   return {
     defaultYaml,
     schemaYaml,
     dictionaryYaml,
+    deployedDefaultYaml,
+    deployedSchemaYaml,
   };
 }
 
@@ -132,6 +140,12 @@ export function validateExplicitAssets(assets: TypeDuckFilesystemAssets): void {
   validateNoFallbackAssets(assets.defaultYaml, "default.yaml");
   validateNoFallbackAssets(assets.schemaYaml, "schema YAML");
   validateNoFallbackAssets(assets.dictionaryYaml, "dictionary YAML");
+  if (assets.deployedDefaultYaml !== undefined) {
+    validateNoFallbackAssets(assets.deployedDefaultYaml, "deployed default.yaml");
+  }
+  if (assets.deployedSchemaYaml !== undefined) {
+    validateNoFallbackAssets(assets.deployedSchemaYaml, "deployed schema YAML");
+  }
 }
 
 /**

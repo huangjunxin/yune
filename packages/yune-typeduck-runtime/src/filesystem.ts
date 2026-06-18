@@ -16,6 +16,8 @@ export interface TypeDuckFilesystemAssets {
   defaultYaml: string | Uint8Array;
   schemaYaml: string | Uint8Array;
   dictionaryYaml: string | Uint8Array;
+  deployedDefaultYaml?: string | Uint8Array;
+  deployedSchemaYaml?: string | Uint8Array;
 }
 
 export interface PrepareTypeDuckFilesystemOptions {
@@ -90,12 +92,16 @@ export function prepareTypeDuckFilesystem(
     options.assets.dictionaryYaml,
     { flags: "w" },
   );
-  fs.writeFile(joinTypeDuckVirtualPath(buildDir, "default.yaml"), options.assets.defaultYaml, {
+  fs.writeFile(joinTypeDuckVirtualPath(buildDir, "default.yaml"), options.assets.deployedDefaultYaml ?? options.assets.defaultYaml, {
     flags: "w",
   });
-  fs.writeFile(joinTypeDuckVirtualPath(buildDir, `${options.schemaId}.schema.yaml`), options.assets.schemaYaml, {
-    flags: "w",
-  });
+  fs.writeFile(
+    joinTypeDuckVirtualPath(buildDir, `${options.schemaId}.schema.yaml`),
+    options.assets.deployedSchemaYaml ?? options.assets.schemaYaml,
+    {
+      flags: "w",
+    },
+  );
 
   assertTypeDuckAssetsReady(fs, options);
 }
