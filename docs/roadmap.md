@@ -161,7 +161,7 @@ Concrete, in priority order (**web first, then Windows, then other platforms**):
 ## Deferred / future
 
 - **librime C++ plugin ABI** (Lua, octagram, predict, proto): deferred until a concrete frontend or distribution requires it; prefer Yune-native extension points first.
-- **AI-native input layer** — a separate product milestone above the compatibility foundation. AI may provide candidates, rerank, use context, and keep memory **only** through source-labeled, local-first, non-blocking interfaces with strict timeout/fallback and privacy policy. AI must never replace or block classic RIME input paths, and must not auto-commit by default. Baseline behavior must work with local/mock providers; remote LLM calls are optional enhancements.
+- **AI-native input layer (M11)** — a separate product layer above the compatibility foundation. AI may provide candidates, rerank, use context, and keep memory **only** through source-labeled, local-first, non-blocking interfaces with strict timeout/fallback and privacy policy. AI must never replace or block classic RIME input paths, and must not auto-commit by default; baseline works with local/mock providers, remote LLM calls are optional. **Now in design** — see [`plans/ai-native-design.md`](./plans/ai-native-design.md) (architecture) and [`plans/ai-native-cli-slice-plan.md`](./plans/ai-native-cli-slice-plan.md) (first slice, S1). It builds on the M4 `CandidateRanker` hook and the CLI surrogate — not the browser/Windows frontends — so it can proceed **in parallel** with M9/M10; native frontends keep AI off by default until it's proven in the CLI.
 
 ## Principles (carried forward)
 
