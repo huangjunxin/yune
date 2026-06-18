@@ -2,154 +2,87 @@
 
 > **Status:** Active · **Milestone:** M11 (AI-native input layer) · **Updated:** 2026-06-18 · **Type:** design
 
-> **Audience.** Yune maintainers + an executing agent. This is the north-star
-> architecture for the AI-native layer; the first executable slice is in
-> [`ai-native-cli-slice-plan.md`](./ai-native-cli-slice-plan.md). It is a **draft**
-> meant to evolve — the contracts here are the load-bearing part.
+> **Audience.** Yune maintainers + an executing agent. North-star architecture for
+> the AI-native layer; the first executable slice is in
+> [`ai-native-cli-slice-plan.md`](./ai-native-cli-slice-plan.md). **Revised after a
+> judge-panel design review** (3 alternative architectures + an adversarial
+> invariant critic): the review confirmed the scope but tightened several
+> invariants from "by convention" to "structural" and surfaced a real userdb-leak
+> hazard — folded in below. Contracts are the durable part; specifics will evolve.
 >
 > **Why now.** AI-native is a *separate layer above the compatibility foundation*
-> (decisions.md standing principles). It rides on the **CLI surrogate** and the
-> finished engine (M0–M8), not on the browser/Windows frontends, so it can be
-> designed and built **in parallel** with the M9/M10 frontend work without touching it.
+> (`decisions.md`). It rides the **CLI surrogate** + the finished engine (M0–M8),
+> not the browser/Windows frontends, so it can be designed and built **in parallel**
+> with M9/M10 without touching them.
 
 ## 1. Goal & scope
-
 Make AI/LLM assistance a first-class **source of candidates, ranking, context, and
 memory** — *without* making classic RIME input slower, less predictable, or
-dependent on a network. Covers requirements **AI-01…AI-07** (`requirements.md`).
+network-dependent. Covers **AI-01…AI-07** (`requirements.md`). Out of scope for now:
+production remote-LLM, a GUI, and exposing AI through native frontends (AI stays off
+by default there until proven in the CLI — AI-07).
 
-In scope: the provider/ranking/context/memory/privacy contracts and a CLI
-playground. Out of scope (for now): a production remote-LLM integration, a new
-GUI, and exposing AI through native frontends (those stay AI-off by default until
-the CLI proves the behavior — AI-07).
-
-## 2. Non-negotiable invariants
-
-These come straight from the standing decisions; every component below is designed
-to preserve them, and the test suite must enforce them:
-
-1. **Never block or slow classic input.** AI work is non-blocking; if a result
-   isn't ready within budget, the engine uses the classic ordering. (Builds on the
-   existing `RerankResult::Pending` contract.)
+## 2. Non-negotiable invariants (enforced structurally, not by convention)
+1. **Never block or slow classic input.** The synchronous per-key path (`Engine::refresh_candidates`, engine.rs) must **never invoke provider/model code**. It only reads an already-staged, **input-keyed** result cache via a non-blocking `try_lock`/`try_recv`; if no result for the *current* input is staged, it uses classic order. (Generalizes the existing `RerankResult::Pending` no-op.)
 2. **Classic candidates always available** when AI is disabled, pending, or failed.
-3. **AI candidates are source-labeled** and **never auto-commit by default**.
-4. **Local-first.** Baseline behavior works with mock/local providers; remote LLM
-   calls are an opt-in enhancement, never required.
-5. **Deterministic fallback.** Timeout/fallback behavior is deterministic so tests
-   are reproducible; tests use mock providers.
-6. **Privacy is opt-in, inspectable, clearable.** Sensitive contexts disable
-   learning *and* remote calls. The user can inspect, clear, and disable memory.
-7. **AI memory is separate from librime userdb.** Personalization must not corrupt
-   classic dictionary/userdb compatibility (which is measured against librime).
+3. **AI candidates are source-labeled and never auto-commit by default — enforced at the *commit boundary*.** `commit_candidate`/`commit_highlighted` must branch on `candidate.source`: an `Ai` candidate is never the default/space-committed selection, and committing one is only possible by explicit user navigation+selection (and even then, see #7).
+4. **Local-first.** Baseline works with mock/local providers; remote LLM is opt-in, never required.
+5. **Deterministic fallback & observability.** The fallback decision recorded per key event is a **discrete, input-derived enum** (`ready | pending | off`) — computed from whether a result for the current input was staged *before* this event — never from elapsed wall-clock time. Tests use pure mock providers.
+6. **Privacy is opt-in, inspectable, clearable.** Sensitive contexts disable learning *and* remote calls; default to **sensitive** when unknown.
+7. **AI memory is separate from the librime userdb.** A committed `Ai` candidate must **not** stage librime userdb learning; classic dictionary/userdb compatibility (measured vs librime) must be untouched by AI.
 
 ## 3. What already exists (build on, don't replace)
-
-The engine pipeline (`crates/yune-core/src/engine.rs`) is: translate → sort by
-`quality` → `CandidateFilter`s → `CandidateRanker`s → set `context.candidates`
-(engine.rs:817–826). Relevant seams:
-
-- `trait Translator` — produces `Candidate`s from input.
-- `trait CandidateRanker { fn try_rerank(&self, &Context, &[Candidate]) -> RerankResult }` (`lib.rs:75`). `RerankResult::Pending` keeps classic order; `Ready(..)` replaces it (`lib.rs:105`). `MockAiRanker` is the existing example (`lib.rs:110`). Installed via `Engine::add_ranker` (`engine.rs:95`).
-- `struct Candidate { text, comment, source: CandidateSource, quality }`; `enum CandidateSource` (Table/Completion/Sentence/…).
-
-The AI layer **extends** these, it does not fork them.
+Pipeline (`crates/yune-core/src/engine.rs`): translate → userdb extend → sort by `quality` → `CandidateFilter`s → `CandidateRanker`s → set `context.candidates` (engine.rs:805–826). Seams: `trait Translator`; `trait CandidateRanker { try_rerank(&Context,&[Candidate]) -> RerankResult }` with `RerankResult::{Pending,Ready}` (lib.rs:75/105, `Pending` = classic order preserved); `Engine::add_ranker` (engine.rs:95); `Candidate { text, comment, source: CandidateSource, quality }`, `enum CandidateSource` (state.rs — `Ai` already exists as a **unit** variant). Commit path: `commit_candidate` (engine.rs:740–762) stages `pending_userdb_learning`; the host drains it to a `*.userdb` file (`session.rs`). `UserDbCommitMetadata` already carries `candidate_source` (userdb.rs:11); `BackdatedScanPolicy { scans_ai_ranker_memory: false }` (userdb.rs) already anticipates AI memory being excluded from userdb scans.
 
 ## 4. Architecture
 
-```
-                 bounded, privacy-classified context
-                              │
-        ┌─────────────────────┼───────────────────────────┐
-        ▼                     ▼                            ▼
-  AiCandidateProvider    AiRanker (budgeted)        ContextProvider + PrivacyClassifier
-  (source-labeled,        (extends CandidateRanker;        (what may be shared;
-   non-blocking)           Pending on timeout)              sensitive ⇒ no learn/remote)
-        │                     │                            │
-        └────────► Engine pipeline (classic first) ◄───────┘
-                              │
-                       MemoryStore (separate from librime userdb)
-                              │
-                Provider backends: mock | local-model | (opt-in) remote
-```
-
 ### 4.1 Candidate provision — `AiCandidateProvider` (AI-01, AI-03)
-A provider that returns **source-labeled** AI candidates for the current bounded
-input context. Modeled as a `Translator`-shaped contributor *or* a dedicated
-`AiCandidateProvider` trait installed alongside translators. Key rules:
-- Output candidates carry `CandidateSource::Ai { provider, confidence }` (extend the
-  enum) so the UI and merge policy can distinguish them.
-- **Non-blocking**: the provider returns immediately with whatever is ready for the
-  *current* input; results computed for a stale input are discarded.
-- AI candidates are **never auto-committed** and never displace classic candidates
-  from being selectable.
+New owned module `crates/yune-core/src/ai/`. `trait AiCandidateProvider { fn name(&self) -> &'static str; fn provide(&self, ctx: &Context, budget: Duration) -> AiResult }` with `enum AiResult { Pending, Ready(Vec<Candidate>) }` (mirrors `RerankResult`). Installed via `Engine::add_ai_provider` (mirrors `add_ranker`), stored as `ai_providers: Vec<Box<dyn AiCandidateProvider>>`. **Off unless installed** → AI-off path byte-identical to today.
+- **Source label stays a UNIT variant.** Keep `CandidateSource::Ai` as the existing unit variant — a `{ provider, confidence: f32 }` struct **breaks `#[derive(Eq)]`** on `CandidateSource` (f32 isn't `Eq`) and ripples into `UserDbCommitMetadata`/`assert_eq!` sites. Carry `provider`/`confidence` in `Candidate.comment` for now (already surfaced by CLI render/transcript). Promote to a struct variant only in S2, when a merge policy actually consumes confidence.
+- AI candidates are appended **after** classic candidates and are never auto-committed.
 
-### 4.2 Non-blocking ranking & merge (AI-02)
-- An `AiRanker` extends the existing `CandidateRanker`: it runs background
-  computation and, on each key event, returns `Ready(reordered)` only if a result
-  for the current input is available within a **strict time budget**; otherwise
-  `Pending` (classic order preserved). Late results are applied only at stable
-  boundaries (next key event) or discarded — never mid-render.
-- A **merge policy** defines deterministic ordering across `table`, `completion`,
-  `sentence`, `userdb`, and `ai` sources. AI never preempts the top classic
-  candidate unless explicitly configured, and never auto-commits.
+### 4.2 Non-blocking ranking, merge, and the async model (AI-02)
+- **Async model (S2):** a single background worker owns all model/I/O, keyed by a **snapshot of the full current input** (`composition.input`, plus ideally caret/segment). It writes its answer into a shared cache; the key thread does only a non-blocking read. A result must **carry the input it was computed for** (e.g. `Ready { for_input, candidates }`) and the engine applies it **only if it matches the current input** — so a stale result can never apply mid-render.
+- **One deterministic merge function is the SOLE writer of `context.candidates` ordering.** It takes classic + AI inputs and **pins the top classic candidate at index 0** unless an explicit config opts in to AI preemption. This replaces letting a `CandidateRanker` return a full-replacement vector with total control of ordering (today's `Ready(..)` does exactly that — a hazard for "don't starve the top classic candidate").
+- Budget/timeout is deterministic: the worker is the only slow thing and the engine never awaits it → slow/failed ⇒ classic order, zero added key-event latency.
 
 ### 4.3 Context & privacy (AI-04, AI-06)
-- A `ContextProvider` assembles a **bounded** context (preceding text, cursor,
-  field/app hints, schema id, current candidate list) and a `PrivacyClassifier`
-  tags it by sensitivity.
-- **Sensitive ⇒ disable learning and remote calls** for that context; classic input
-  stays fully functional. Nothing leaves the device unless the user opted into a
-  remote provider *and* the context is non-sensitive.
+Today `Context` (state.rs) has **no** field/app/sensitivity data and no verdict type, so AI-04/06 **cannot be enforced until S3 adds a `privacy_class` to `Context`** (or the `ContextProvider` output). Both the memory-write path and any remote call must read it; default to **sensitive** on absence. S3 sequences privacy *before* any remote backend.
 
 ### 4.4 Memory & personalization (AI-05)
-- A `MemoryStore` records user vocabulary, phrase/domain preferences, and style —
-  **separate from the librime-compatible userdb** so classic compatibility is never
-  corrupted. It influences ranking/completion *through* the provider/ranker, not by
-  writing librime userdb.
-- Inspectable, clearable, and disable-able by the user; updates respect the privacy
-  classifier.
+`MemoryStore` in `crates/yune-core/src/ai/` — vocab/phrase/style, inspectable/clearable/disable-able, **separate type** from `UserDb`. **Enforcement point (required in S1):** gate `pending_userdb_learning` on source in `commit_candidate` — when `candidate.source == CandidateSource::Ai`, do **not** stage librime userdb learning (route it to `MemoryStore` instead). `MemoryStore` persistence (when added) uses its **own file namespace**, never the `*.userdb`/`*.userdb.txt` paths compatibility tests measure.
 
 ### 4.5 Provider backends
-`mock` (deterministic, for tests + CLI demos) → `local-model` (on-device) →
-optional `remote`. The trait surface is backend-agnostic; baseline ships mock+local.
+`mock` (deterministic; tests + CLI demos) → `local-model` (on-device) → optional `remote`. Backend-agnostic trait; baseline ships mock+local.
 
 ## 5. Observability & CLI playground (AI-07)
-- CLI flags enable a mock/local provider per run (`--ai-provider mock|local|none`,
-  off by default).
-- The transcript records, per key event: AI source labels, the timeout/fallback
-  decision (Ready vs Pending), and the merge result — so AI behavior is *observable
-  and diffable* in the CLI before any native frontend depends on it.
+CLI flags enable a mock/local provider per run (`--ai-provider mock|local|none`, default `none`). The transcript records, per key event: AI source labels, the **discrete `ai_decision` (`ready|pending|off`)** (§2.5), and the merge result — observable and diffable in the CLI before any native frontend depends on it.
 
 ## 6. Phasing (slices → requirements)
-- **S1 — Provider interface + mock in CLI** (AI-01/03/07): `CandidateSource::Ai`, the
-  provider/ranker trait, a mock provider, engine + CLI wiring (off by default),
-  non-blocking + source-labeled + no auto-commit, deterministic tests, transcript
-  fields. *(First slice — see the slice plan.)*
-- **S2 — Budgeted ranking + merge policy** (AI-02).
-- **S3 — Context provider + privacy classifier** (AI-04/06).
-- **S4 — Memory store** (AI-05), kept separate from librime userdb.
-- **S5 — Local-model backend**; remote stays optional/later.
+- **S1 — provider interface + mock in CLI** (AI-01/03/07) **plus the three cheap, safety-critical enforcement fixes promoted from later slices:** (a) source-gate userdb learning on `Ai` at the commit boundary; (b) the commit-boundary no-auto-commit branch; (c) the single deterministic merge function pinning the top classic candidate. Mock is pure/synchronous (no thread, no clock). *(See the slice plan.)*
+- **S2 — async budget worker + input-keyed results + merge policy that consumes confidence** (AI-02); promote `CandidateSource::Ai` to a struct variant here.
+- **S3 — `ContextProvider` + privacy classifier** (AI-04/06), before any remote backend.
+- **S4 — `MemoryStore`** (AI-05), provably outside the userdb namespace.
+- **S5 — local-model backend**; remote stays optional/later.
 
 ## 7. Risks / open questions
-- **Async without blocking the synchronous pipeline.** Leading approach: background
-  worker keyed by current input; the engine only ever reads the latest *ready*
-  result (else `Pending`). Needs care so stale results never apply.
-- **Merge determinism vs. usefulness.** A fixed merge order is testable but may feel
-  static; revisit once S2 has real signals.
-- **Memory ↔ userdb boundary.** Must prove AI memory never leaks into librime userdb
-  state that compatibility tests measure.
-- **Privacy classification correctness.** Misclassifying a sensitive field is the
-  highest-severity failure mode; default to "sensitive" when unsure.
+- **A non-conforming provider can still block** — the engine cannot enforce non-blocking the way `Pending` does for a synchronous call; the contract (provide/poll is a pure cache read) must be documented and lint/test-guarded.
+- **Worker lifecycle on a single-shot CLI run** can make transcripts vary; S1's pure-synchronous mock avoids this (no worker yet).
+- **Stale-result correctness depends on keying by the FULL input** (+ ideally caret/segment); a coarse session key would let a stale result apply.
+- **Tail-appended AI rows interact with filters that run after the append and with paging** (`DEFAULT_PAGE_SIZE`); a filter could drop/reorder them — validate.
+- **Privacy false-negatives are the highest-severity S3+ risk** — default sensitive; fail closed.
+- **The commit-boundary source gate touches the hot path shared with classic input** — guard it so classic learning is unaffected (test both paths).
+- **`MemoryStore` persistence format/location is unspecified** — must provably never use the `*.userdb` namespace.
 
 ## 8. Safety invariants the test suite must enforce
-- Disabling AI (or a `Pending`/failed provider) yields **byte-identical** classic
-  output to AI-off.
-- No AI candidate auto-commits.
-- A provider exceeding its time budget never delays a key event.
-- Sensitive context ⇒ no remote call and no memory write (assert with a recording
-  mock).
-- AI memory writes never touch librime userdb files.
+- AI-off (or `pending`/failed) yields **byte-identical** classic output to today.
+- Committing an `Ai` candidate leaves `userdb().entries()` unchanged **and** `take_pending_userdb_learning()` returns `None` (the §2.7 / §4.4 gate).
+- No `Ai` candidate auto-commits; the default/space-committed candidate is always classic.
+- The merge function pins the top classic candidate at index 0 (no AI preemption unless explicitly configured).
+- The recorded `ai_decision` is derived from current input, not wall-clock.
+- A provider exceeding its budget never delays a key event; sensitive context (S3+) ⇒ no remote call, no memory write (assert with a recording mock).
+- `MemoryStore` writes never touch `*.userdb` files.
 
 ---
 
-*Draft created 2026-06-18. The architecture/contracts are the durable part; specifics will evolve as slices land. Builds on the M4 `CandidateRanker` hook; gated by the standing AI-native principles in [`../decisions.md`](../decisions.md) and requirements AI-01…AI-07 in [`../requirements.md`](../requirements.md).*
+*Draft created 2026-06-18; revised the same day after a judge-panel design review (verdict: sound, needs targeted edits — folded in). Builds on the M4 `CandidateRanker` hook; gated by the AI-native standing principles in [`../decisions.md`](../decisions.md) and AI-01…AI-07 in [`../requirements.md`](../requirements.md).*
