@@ -72,10 +72,12 @@ describe("bindTypeDuckModule", () => {
     const fake = new FakeTypeDuckModule();
     fake.deployResult = 0;
     fake.customizeResult = 2;
+    fake.setOptionResult = 1;
     const bindings = bindTypeDuckModule(fake);
 
     expect(bindings.deploy(1)).toBe(0);
     expect(bindings.customize(1, "typeduck_luna.schema", "schema/name", "TypeDuck")).toBe(2);
+    expect(bindings.setOption(1, "ascii_mode", 1)).toBe(1);
   });
 });
 
@@ -205,15 +207,18 @@ describe("TypeDuckRuntime operations", () => {
     const fake = new FakeTypeDuckModule();
     fake.deployResult = 1;
     fake.customizeResult = 0;
+    fake.setOptionResult = 1;
     const runtime = initializedRuntime(fake);
 
     expect(runtime.deploy()).toBe(true);
     expect(runtime.customize("typeduck_luna.schema", "schema/name", "TypeDuck Luna Web")).toBe(false);
+    expect(runtime.setOption("ascii_mode", true)).toBe(true);
 
     expect(fake.calls("yune_typeduck_deploy")).toEqual([[defaultInitPtr]]);
     expect(fake.calls("yune_typeduck_customize")).toEqual([
       [defaultInitPtr, "typeduck_luna.schema", "schema/name", "TypeDuck Luna Web"],
     ]);
+    expect(fake.calls("yune_typeduck_set_option")).toEqual([[defaultInitPtr, "ascii_mode", 1]]);
   });
 });
 
@@ -241,6 +246,7 @@ describe("TypeDuckRuntime lifecycle", () => {
     expect(() => runtime.flipPage()).toThrow(cleanedUpMessage);
     expect(() => runtime.deploy()).toThrow(cleanedUpMessage);
     expect(() => runtime.customize("config", "key", "value")).toThrow(cleanedUpMessage);
+    expect(() => runtime.setOption("ascii_mode", true)).toThrow(cleanedUpMessage);
 
     expect(fake.calls("yune_typeduck_process_key")).toEqual([]);
     expect(fake.calls("yune_typeduck_select_candidate")).toEqual([]);
@@ -248,6 +254,7 @@ describe("TypeDuckRuntime lifecycle", () => {
     expect(fake.calls("yune_typeduck_flip_page")).toEqual([]);
     expect(fake.calls("yune_typeduck_deploy")).toEqual([]);
     expect(fake.calls("yune_typeduck_customize")).toEqual([]);
+    expect(fake.calls("yune_typeduck_set_option")).toEqual([]);
   });
 
   it("failed init cannot be cleaned up because no runtime object is returned", () => {

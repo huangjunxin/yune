@@ -30,6 +30,8 @@ fn keep_typeduck_exports_linked() {
             *const c_char,
             *const c_char,
         ) -> Bool;
+    let _ = yune_rime_api::yune_typeduck_set_option
+        as unsafe extern "C" fn(*mut YuneTypeDuckState, *const c_char, Bool) -> Bool;
     let _ = yune_rime_api::yune_typeduck_cleanup as unsafe extern "C" fn(*mut YuneTypeDuckState);
     let _ = yune_rime_api::yune_typeduck_response_json
         as unsafe extern "C" fn(*const YuneTypeDuckResponse) -> *const c_char;

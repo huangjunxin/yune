@@ -87,13 +87,13 @@ All assets must be explicit TypeDuck-Web-owned YAML files. Missing assets fail v
 
 **Adapter**: Translates Yune response fields to upstream RimeResult shape
 
-### Missing setOption
+### setOption
 
 **Upstream**: `Actions.setOption(option: string, value: boolean)` sets session options
 
-**Yune**: Current TypeDuck wrapper lacks `setOption` method
+**Yune**: `TypeDuckRuntime.setOption` delegates to the `yune_typeduck_set_option` export
 
-**Adapter**: Throws error documenting gap; requires Yune widening per D-07 if E2E flows need it
+**Adapter**: Forwards upstream option toggles directly to the active Yune runtime
 
 ## Patch Application Instructions
 
@@ -189,15 +189,13 @@ cleanupYuneRuntime();
 
 ## Known Gaps
 
-### Yune Adapter Widening Needed
+### Remaining Adapter Widening Needed
 
-If E2E flows require `setOption`, Yune adapter must add native/wrapper support per D-07.
+Keep future widening evidence-driven per D-07:
 
-Document smallest proven blocker before widening:
-
-- What upstream flow calls `setOption`
+- What upstream flow calls the missing behavior
 - What Yune API surface lacks
-- What native change needed (smallest possible)
+- What native change is the smallest possible
 
 ### Upstream Build Tooling
 

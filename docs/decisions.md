@@ -426,6 +426,14 @@ validated. HR-1 fixes the real-asset gate: TypeDuck-Web now loads
 TYPEDUCK-E2E-03/E2E-04 stay open until the full matrix is re-run against real
 assets.
 
+**D-P10-10 — Treat startup setOption as a real TypeDuck-Web contract, not an
+optional convenience.** The upstream app calls `Actions.setOption` during startup
+and settings application. HR-2 adds `yune_typeduck_set_option`, exposes it through
+the TypeScript runtime, wires the TypeDuck-Web adapter to it, and records a
+browser startup smoke where option toggles succeed without adapter/runtime
+errors. Deploy, persistence, paging/deletion, and dictionary-comment evidence
+remain outside this decision.
+
 **D-12 / TYPEDUCK-E2E-04 — Final findings separate three blocker classes.**
 TypeDuck-Web app/source blockers, Yune adapter/runtime mismatches, and
 environment/tooling blockers are reported separately.

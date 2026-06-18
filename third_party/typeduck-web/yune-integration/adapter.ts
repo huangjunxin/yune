@@ -316,22 +316,13 @@ export async function customize(preferences: RimePreferences): Promise<boolean> 
   return success;
 }
 
-/**
- * Set option on current runtime
- *
- * Note: Upstream Actions.setOption is not present in current Yune TypeDuck wrapper.
- * This adapter documents the gap and raises an error documenting the missing feature.
- *
- * @throws Error if setOption is called (Yune adapter gap)
- */
 export async function setOption(option: string, value: boolean): Promise<void> {
-  // Yune adapter gap: setOption not in current TypeDuckRuntime interface
-  // Requires Yune adapter widening per D-07 if E2E flows require this action
-
-  throw new Error(
-    `Yune adapter gap: setOption("${option}", ${value}) not implemented. ` +
-      `Requires Yune adapter widening or mapping to customize/status API.`,
-  );
+  if (currentRuntime === null) {
+    throw new Error("Yune runtime not initialized");
+  }
+  if (!currentRuntime.setOption(option, value)) {
+    throw new Error(`Yune setOption failed: ${option}`);
+  }
 }
 
 function writeExtraSharedAsset(

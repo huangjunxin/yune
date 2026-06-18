@@ -65,7 +65,8 @@ Detail: [`plans/archive/real-frontend-validation-plan.md`](./plans/archive/real-
 - **Browser result:** the post-review real-assets smoke now renders
   `jyut6ping3_mobile` candidates for `nei` (`你`, `呢`, `尼`). The full matrix
   still needs a real-assets rerun for paging, deletion, deploy, persistence
-  sync/reload, setOption, and v1.1.2 dictionary-comment evidence.
+  sync/reload, and v1.1.2 dictionary-comment evidence. HR-2 resolves the startup
+  `setOption` adapter/export gap.
 - **Outcome:** **NO-GO** for AI-native frontend exposure. This supersedes the old
   tooling-blocked Phase 10 NO-GO with a behavioral result: Yune loads and types
   real candidates in-browser, but the full frontend contract is not ready.
@@ -103,8 +104,9 @@ fetches real `public/schema` assets before init, and participates in the real
 browser run. **HR-1 browser result:** typing `nei` renders real
 `jyut6ping3_mobile` candidates (`你`, `呢`, `尼`). The original echo-backed WI-4
 matrix is now partial evidence; paging, deletion, deploy, persistence
-sync/reload, setOption, and v1.1.2 dictionary-comment bytes remain to be re-run
-or fixed. The current recommendation remains **NO-GO** for AI-native frontend
+sync/reload, and v1.1.2 dictionary-comment bytes remain to be re-run or fixed.
+HR-2 adds and browser-smokes `setOption`, so startup option toggles no longer
+throw. The current recommendation remains **NO-GO** for AI-native frontend
 exposure.
 
 **Active validation plan:** [`plans/typeduck-web-validation-plan.md`](./plans/typeduck-web-validation-plan.md) — reopened for real-assets hardening.

@@ -77,7 +77,7 @@ commit per item:
 - [x] **HR-1b committed browser evidence** — refresh
   `third_party/typeduck-web/e2e/results/` with real-assets console, DOM, log, and
   screenshot evidence so the saved artifacts match the HR-1 claim.
-- [ ] **HR-2 setOption** — add the `yune_typeduck_*` set-option export, TypeScript
+- [x] **HR-2 setOption** — add the `yune_typeduck_*` set-option export, TypeScript
   wrapper method, adapter wiring, and native/runtime tests.
 - [ ] **HR-3 deploy=true** — root-cause and fix browser `deploy()` returning false
   with real assets.

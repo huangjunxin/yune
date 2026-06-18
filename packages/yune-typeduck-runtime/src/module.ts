@@ -19,6 +19,7 @@ export const TYPEDUCK_EXPORTS = [
   "yune_typeduck_flip_page",
   "yune_typeduck_deploy",
   "yune_typeduck_customize",
+  "yune_typeduck_set_option",
   "yune_typeduck_cleanup",
   "yune_typeduck_response_json",
   "yune_typeduck_response_handled",
@@ -41,6 +42,7 @@ export interface TypeDuckBindings {
   deleteCandidate(statePtr: number, index: number): number;
   flipPage(statePtr: number, backward: number): number;
   customize(statePtr: number, configId: string, key: string, value: string): number;
+  setOption(statePtr: number, option: string, value: number): number;
   deploy(statePtr: number): number;
   cleanup(statePtr: number): void;
   responseJson(responsePtr: number): number;
@@ -59,6 +61,7 @@ const SIGNATURES: Record<TypeDuckExport, Signature> = {
   yune_typeduck_flip_page: ["number", ["number", "number"]],
   yune_typeduck_deploy: ["number", ["number"]],
   yune_typeduck_customize: ["number", ["number", "string", "string", "string"]],
+  yune_typeduck_set_option: ["number", ["number", "string", "number"]],
   yune_typeduck_cleanup: [null, ["number"]],
   yune_typeduck_response_json: ["number", ["number"]],
   yune_typeduck_response_handled: ["number", ["number"]],
@@ -82,6 +85,8 @@ export function bindTypeDuckModule(module: EmscriptenTypeDuckModule): TypeDuckBi
     flipPage: (statePtr, backward) => asNumber(wrapped.yune_typeduck_flip_page(statePtr, backward)),
     customize: (statePtr, configId, key, value) =>
       asNumber(wrapped.yune_typeduck_customize(statePtr, configId, key, value)),
+    setOption: (statePtr, option, value) =>
+      asNumber(wrapped.yune_typeduck_set_option(statePtr, option, value)),
     deploy: (statePtr) => asNumber(wrapped.yune_typeduck_deploy(statePtr)),
     cleanup: (statePtr) => {
       wrapped.yune_typeduck_cleanup(statePtr);

@@ -12,6 +12,7 @@ vi.mock("@yune-ime/typeduck-runtime", async () => {
 let cleanupYuneRuntime: typeof import("./adapter.js").cleanupYuneRuntime;
 let initYuneRuntime: typeof import("./adapter.js").initYuneRuntime;
 let processKey: typeof import("./adapter.js").processKey;
+let setOption: typeof import("./adapter.js").setOption;
 
 const assets = {
   defaultYaml: "config_version: typeduck-web\nschema_list:\n  - schema: luna_pinyin\n",
@@ -52,6 +53,7 @@ describe("initYuneRuntime browser filesystem ordering", () => {
     cleanupYuneRuntime = adapter.cleanupYuneRuntime;
     initYuneRuntime = adapter.initYuneRuntime;
     processKey = adapter.processKey;
+    setOption = adapter.setOption;
   });
 
   afterEach(() => {
@@ -153,5 +155,20 @@ describe("initYuneRuntime browser filesystem ordering", () => {
     await expect(processKey("{Page_Up}")).resolves.toMatchObject({ isComposing: true });
 
     expect(module.calls("yune_typeduck_process_key")).toHaveLength(2);
+  });
+
+  it("forwards upstream setOption calls into the Yune runtime", async () => {
+    const fs = new FakeTypeDuckFilesystem();
+    const module = new FakeTypeDuckModule();
+
+    await initYuneRuntime(module, fs, initOptions, assets, "luna_pinyin");
+
+    await expect(setOption("ascii_mode", false)).resolves.toBeUndefined();
+    await expect(setOption("soft_cursor", true)).resolves.toBeUndefined();
+
+    expect(module.calls("yune_typeduck_set_option")).toEqual([
+      [1, "ascii_mode", 0],
+      [1, "soft_cursor", 1],
+    ]);
   });
 });

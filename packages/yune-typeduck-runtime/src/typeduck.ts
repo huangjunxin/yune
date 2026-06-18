@@ -67,6 +67,10 @@ export class TypeDuckRuntime {
     return this.#bindings.customize(this.requireLiveState(), configId, key, value) !== 0;
   }
 
+  setOption(option: string, value: boolean): boolean {
+    return this.#bindings.setOption(this.requireLiveState(), option, value ? 1 : 0) !== 0;
+  }
+
   cleanup(): void {
     if (this.#cleanedUp) {
       return;

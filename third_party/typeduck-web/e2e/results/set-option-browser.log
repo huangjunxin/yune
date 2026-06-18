@@ -1,0 +1,48 @@
+TypeDuck-Web setOption browser smoke (HR-2)
+Date: 2026-06-18
+URL: http://127.0.0.1:5173/web/?debug&realAssets=1
+Started: 2026-06-18T15:20:12.406Z
+
+Result: PASS startup setOption calls no longer throw adapter/runtime errors.
+
+DOM checks:
+- option error toast visible: false
+- settings error toast visible: true (still open for HR-3/deploy/settings path)
+- loading text present: false
+
+Console summary after reload:
+- initialized listener count: 1
+- setOption post count: 10
+- generic success receive count after setOption/deploy startup window: 12
+- error log count: 0
+
+Relevant console chronology:
+[2026-06-18T15:20:12.474Z] log post {"name":"setOption","args":["soft_cursor",true]}
+[2026-06-18T15:20:13.791Z] log receive {"type":"listener","name":"initialized","args":[true]}
+[2026-06-18T15:20:13.794Z] log receive {"type":"success"}
+[2026-06-18T15:20:13.794Z] log post {"name":"setOption","args":["ascii_mode",false]}
+[2026-06-18T15:20:13.797Z] log receive {"type":"success"}
+[2026-06-18T15:20:13.797Z] log post {"name":"setOption","args":["simplification",false]}
+[2026-06-18T15:20:13.801Z] log receive {"type":"success"}
+[2026-06-18T15:20:13.801Z] log post {"name":"setOption","args":["full_shape",false]}
+[2026-06-18T15:20:13.804Z] log receive {"type":"success"}
+[2026-06-18T15:20:13.804Z] log post {"name":"setOption","args":["ascii_punct",false]}
+[2026-06-18T15:20:13.807Z] log receive {"type":"success"}
+[2026-06-18T15:20:13.813Z] log receive {"type":"success","result":true}
+[2026-06-18T15:20:13.813Z] log post {"name":"deploy","args":[]}
+[2026-06-18T15:20:13.828Z] log receive {"type":"success","result":false}
+[2026-06-18T15:20:13.830Z] log post {"name":"setOption","args":["soft_cursor",true]}
+[2026-06-18T15:20:13.833Z] log receive {"type":"success"}
+[2026-06-18T15:20:13.833Z] log post {"name":"setOption","args":["ascii_mode",false]}
+[2026-06-18T15:20:13.836Z] log receive {"type":"success"}
+[2026-06-18T15:20:13.837Z] log post {"name":"setOption","args":["simplification",false]}
+[2026-06-18T15:20:13.839Z] log receive {"type":"success"}
+[2026-06-18T15:20:13.839Z] log post {"name":"setOption","args":["full_shape",false]}
+[2026-06-18T15:20:13.842Z] log receive {"type":"success"}
+[2026-06-18T15:20:13.842Z] log post {"name":"setOption","args":["ascii_punct",false]}
+[2026-06-18T15:20:13.845Z] log receive {"type":"success"}
+
+Notes:
+- Absence of the option-error toast is the browser-visible HR-2 check.
+- deploy() is still observed separately under HR-3 and is not claimed fixed here.
+- Full real-assets matrix remains HR-5.

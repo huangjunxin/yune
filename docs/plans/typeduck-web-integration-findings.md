@@ -10,9 +10,10 @@ This document records findings from integrating Yune with the upstream TypeDuck-
 or real frontends yet. A post-review audit found the original WI-4 candidate
 matrix used the placeholder echo path, so the full E2E recommendation is
 reopened. HR-1 now proves the browser can load real TypeDuck `jyut6ping3_mobile`
-assets and render real Chinese candidates, but paging, deletion, deploy,
-persistence sync/reload, settings-option parity, and v1.1.2 dictionary-comment
-evidence still need real-assets evidence.
+assets and render real Chinese candidates. HR-2 adds the missing `setOption`
+export/wrapper/adapter path and proves startup option toggles no longer throw in
+the live browser. Paging, deletion, deploy, persistence sync/reload, and v1.1.2
+dictionary-comment evidence still need real-assets evidence.
 
 > **Historical scope.** The Phase 10 blocker tables below describe the
 > 2026-05-05 validation attempt, before WI-1b produced a loadable
@@ -53,11 +54,37 @@ evidence still need real-assets evidence.
   echo-backed WI-4 results for the real-assets candidate gate.
 
 **Still open after HR-1**:
-- `setOption` still throws from the adapter stub and is HR-2.
+- `setOption` was still throwing from the adapter stub; HR-2 resolves that gap.
 - Browser `deploy()` still returns `false` and is HR-3.
 - Persistence sync/reload still needs live-worker evidence and is HR-4.
 - Paging, deletion, deploy, persistence, reload, and dictionary-panel comment
   bytes must be re-run against real assets in HR-5.
+
+---
+
+## HR-2 setOption Export And Adapter Path
+
+**Date**: 2026-06-18
+**Status**: PASS for the `setOption` gap; full E2E matrix still open.
+
+**What changed**:
+- Added the `yune_typeduck_set_option` C export, retained it in the Emscripten
+  linker anchor, and added it to `scripts/typeduck-exports.txt`.
+- Added `TypeDuckRuntime.setOption` and the TypeScript binding signature.
+- Replaced the TypeDuck-Web adapter's throwing `setOption` stub with a call into
+  the active runtime.
+
+**Proof**:
+- `cargo test -p yune-rime-api --test typeduck_web` includes
+  `typeduck_adapter_set_option_updates_session_status`.
+- `npm --prefix packages/yune-typeduck-runtime test` covers binding/runtime
+  forwarding.
+- `vitest run third_party/typeduck-web/yune-integration` covers adapter
+  forwarding.
+- `third_party/typeduck-web/e2e/results/set-option-browser.log` records a live
+  browser reload where startup `setOption` posts receive success responses, no
+  option-error toast is visible, and no browser error logs are emitted. The
+  settings/deploy toast remains open for HR-3.
 
 ---
 
@@ -403,10 +430,10 @@ Created `third_party/typeduck-web/yune-integration/` directory with:
    - Yune: `syncFromPersistenceBeforeInit`, `syncToPersistenceAfterMutation` match pattern
    - Adapter: Uses Yune helpers in init and action flows
 
-4. **Missing setOption**
+4. **Resolved setOption**
    - Upstream: `Actions.setOption(option, value)`
-   - Yune: Current TypeDuck wrapper lacks method
-   - Adapter: Throws error documenting gap per D-07; requires Yune widening if E2E needs it
+   - Yune: `TypeDuckRuntime.setOption` delegates to `yune_typeduck_set_option`
+   - Adapter: Forwards option toggles to the active runtime
 
 ### Patch Generation
 
@@ -437,17 +464,17 @@ Patch contents:
    - Requires build task generating Yune Emscripten artifact with correct filename
    - locateFile path assumes artifact in `packages/yune-typeduck-runtime/dist/`
 
-3. **setOption API Gap**
-   - Adapter throws error when setOption called
-   - Requires Yune adapter widening if TypeDuck-Web E2E flows need setOption
-   - Document smallest blocker before widening per D-07
+3. **setOption API Gap** (resolved by HR-2)
+   - Adapter now forwards `setOption` through the TypeDuck runtime
+   - Native/runtime/adapter tests cover the path
+   - Browser startup smoke shows no option-error toast
 
 #### Yune adapter/runtime mismatches
 
-1. **No native/wrapper setOption**
-   - Current TypeDuckRuntime lacks setOption method
-   - Upstream worker calls setOption through adapter error
-   - Decision: defer widening until E2E proves requirement
+1. **Native/wrapper setOption** (resolved by HR-2)
+   - TypeDuckRuntime exposes `setOption`
+   - Upstream worker calls through the adapter without option-error toasts
+   - Native/runtime/adapter tests cover the path
 
 2. **customize Options Bitmap**
    - Upstream customize uses pageSize and options bitmap
@@ -599,11 +626,10 @@ Task 3 will:
    - Does not block build or patch compilation
    - May affect E2E candidate comment/highlight behavior
 
-2. **setOption API gap**
-   - Current TypeDuckRuntime lacks setOption method
-   - Adapter throws error documenting gap per D-07
-   - No build blocker; compiles successfully
-   - E2E flows calling setOption will fail until Yune widened
+2. **setOption API gap** (resolved by HR-2)
+   - TypeDuckRuntime now exposes `setOption`
+   - Adapter forwards upstream option toggles to the active runtime
+   - Native/runtime/adapter tests cover the path
 
 #### Environment/tooling blockers
 
@@ -1001,7 +1027,7 @@ RIME session → JSON result → Worker parse → Main thread render
 1. String input → keycode/mask: Adapter parses `{BackSpace}` sequences to keyboard event-like objects
 2. RimeResult vs TypeDuckResponse: Adapter translates Yune response to upstream shape
 3. Persistence timing: Yune helpers match upstream sync boundaries (before init, after mutation)
-4. Missing setOption: Adapter throws error documenting gap per D-07
+4. setOption: HR-2 forwards option toggles through the TypeDuck runtime
 
 **Build gates passed** (from 10-02):
 - Repository runtime: npm build PASSED
@@ -1077,10 +1103,10 @@ UI/testability and invalid candidate DOM shape, not missing WASM.
 
 | Blocker | Status | Evidence | Affected Requirement | Blocks AI-native frontend? |
 |---------|--------|----------|----------------------|---------------------------|
-| setOption API gap | open | Browser logs repeated `setOption` errors | D-07, TYPEDUCK-E2E-03 | YES for settings parity — startup/settings path reports errors |
 | deploy returns false | open | `browser-console.json`, `persistence-sync.log` | TYPEDUCK-E2E-03 | YES for persistence/deploy confidence |
 | Dictionary comment oracle gap | open | Browser shows `echo`, not v1.1.2 dictionary comment bytes | TYPEDUCK-E2E-03, WI-6 | YES for dictionary-panel parity |
 | Candidate paging/deletion real-assets evidence | open | HR-1 unblocks rerun; original WI-4 was echo-backed | TYPEDUCK-E2E-03 | YES for complete E2E parity |
+| setOption startup evidence | resolved | `set-option-browser.log`, native/runtime/adapter tests | D-07, TYPEDUCK-E2E-03 | NO — startup option toggles no longer throw |
 
 **Explanation**: Adapter shape bugs are fixed, and the core composition ->
 candidate -> commit seam works. The remaining runtime gaps are now browser-
@@ -1097,11 +1123,11 @@ available locally. The browser run executed; remaining blockers are behavioral.
 
 ---
 
-**Total current blockers**: 7 (2 TypeDuck-Web app/source, 4 Yune adapter/runtime, 1 evidence-completeness gap)
+**Total current blockers**: 6 (2 TypeDuck-Web app/source, 3 Yune adapter/runtime, 1 evidence-completeness gap)
 
 **Blocking AI-native frontend exposure**: core composition/candidate/commit is
-browser-proven, but deploy, persistence, settings-option parity, paging/deletion,
-and dictionary comment oracle parity are not production-ready.
+browser-proven, but deploy, persistence, paging/deletion, and dictionary comment
+oracle parity are not production-ready.
 
 ---
 

@@ -46,6 +46,8 @@ If automated browser runner unavailable, manual real-browser smoke produces:
 - `screenshot-*.png` — Manual screenshots for each flow
 - `persistence-manual-test.log` — Persistence before/after mutation/reload evidence
 - `blocker.md` — Tooling blocker with command, dependency, fallback
+- `set-option-browser.log` — Focused HR-2 browser smoke proving startup
+  `setOption` calls no longer throw adapter/runtime errors
 
 ## Result Format Requirements
 

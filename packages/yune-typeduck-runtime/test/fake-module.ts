@@ -28,6 +28,7 @@ export class FakeTypeDuckModule implements EmscriptenTypeDuckModule {
   flipPageResult = 0;
   deployResult = 1;
   customizeResult = 1;
+  setOptionResult = 1;
 
   constructor() {
     this.registerDefaultExports();
@@ -121,6 +122,10 @@ export class FakeTypeDuckModule implements EmscriptenTypeDuckModule {
     this.register("yune_typeduck_customize", (...args) => {
       this.record("yune_typeduck_customize", args);
       return this.customizeResult;
+    });
+    this.register("yune_typeduck_set_option", (...args) => {
+      this.record("yune_typeduck_set_option", args);
+      return this.setOptionResult;
     });
     this.register("yune_typeduck_cleanup", (...args) => {
       this.record("yune_typeduck_cleanup", args);

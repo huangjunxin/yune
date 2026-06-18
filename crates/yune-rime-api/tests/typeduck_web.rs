@@ -12,7 +12,7 @@ use yune_rime_api::{
     rime_get_api, yune_typeduck_cleanup, yune_typeduck_customize, yune_typeduck_delete_candidate,
     yune_typeduck_deploy, yune_typeduck_flip_page, yune_typeduck_free_response, yune_typeduck_init,
     yune_typeduck_process_key, yune_typeduck_response_handled, yune_typeduck_response_json,
-    yune_typeduck_select_candidate, Bool, FALSE, TRUE,
+    yune_typeduck_select_candidate, yune_typeduck_set_option, Bool, FALSE, TRUE,
 };
 
 const SCHEMA_ID: &str = "typeduck_luna";
@@ -305,12 +305,61 @@ fn typeduck_adapter_deploy_and_customize_are_explicit() {
 }
 
 #[test]
+fn typeduck_adapter_set_option_updates_session_status() {
+    let _guard = test_guard();
+    let runtime = TypeDuckRuntime::create("set-option");
+    runtime.write_schema();
+    let state = unsafe {
+        yune_typeduck_init(
+            runtime.shared_c.as_ptr(),
+            runtime.user_c.as_ptr(),
+            runtime.schema_id_c.as_ptr(),
+        )
+    };
+    assert!(!state.is_null());
+
+    let ascii_mode = CString::new("ascii_mode").expect("option should be valid");
+    assert_eq!(
+        unsafe { yune_typeduck_set_option(state, ascii_mode.as_ptr(), TRUE) },
+        TRUE
+    );
+    let ascii_enabled = response_json(unsafe { yune_typeduck_process_key(state, 'b' as i32, 0) });
+    assert_eq!(ascii_enabled["status"]["is_ascii_mode"], Value::Bool(true));
+
+    assert_eq!(
+        unsafe { yune_typeduck_set_option(state, ascii_mode.as_ptr(), FALSE) },
+        TRUE
+    );
+    let ascii_disabled = response_json(unsafe { yune_typeduck_process_key(state, 'a' as i32, 0) });
+    assert_eq!(
+        ascii_disabled["status"]["is_ascii_mode"],
+        Value::Bool(false)
+    );
+
+    assert_eq!(
+        unsafe { yune_typeduck_set_option(ptr::null_mut(), ascii_mode.as_ptr(), TRUE) },
+        FALSE
+    );
+    assert_eq!(
+        unsafe { yune_typeduck_set_option(state, ptr::null(), TRUE) },
+        FALSE
+    );
+
+    unsafe { yune_typeduck_cleanup(state) };
+    runtime.remove();
+}
+
+#[test]
 fn typeduck_adapter_handles_null_inputs_and_response_freeing() {
     let _guard = test_guard();
     assert!(unsafe { yune_typeduck_init(ptr::null(), ptr::null(), ptr::null()) }.is_null());
     assert_eq!(unsafe { yune_typeduck_deploy(ptr::null_mut()) }, FALSE);
     assert_eq!(
         unsafe { yune_typeduck_customize(ptr::null_mut(), ptr::null(), ptr::null(), ptr::null()) },
+        FALSE
+    );
+    assert_eq!(
+        unsafe { yune_typeduck_set_option(ptr::null_mut(), ptr::null(), TRUE) },
         FALSE
     );
     assert!(unsafe { yune_typeduck_process_key(ptr::null_mut(), 'a' as i32, 0) }.is_null());

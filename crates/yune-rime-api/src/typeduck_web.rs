@@ -269,6 +269,40 @@ pub unsafe extern "C" fn yune_typeduck_customize(
 }
 
 /// # Safety
+/// `state` must be live, and `option` must be a valid NUL-terminated string.
+#[no_mangle]
+pub unsafe extern "C" fn yune_typeduck_set_option(
+    state: *mut YuneTypeDuckState,
+    option: *const c_char,
+    value: Bool,
+) -> Bool {
+    if state.is_null() {
+        return FALSE;
+    }
+    let Some(option) = cstring_from_ptr(option) else {
+        return FALSE;
+    };
+    let Some(api) = api_table() else {
+        return FALSE;
+    };
+    let Some(set_option) = api.set_option else {
+        return FALSE;
+    };
+    let state = unsafe { &*state };
+    if !state.initialized || state.session_id == 0 {
+        return FALSE;
+    }
+    unsafe {
+        set_option(
+            state.session_id,
+            option.as_ptr(),
+            bool_to_rime(value != FALSE),
+        )
+    };
+    TRUE
+}
+
+/// # Safety
 /// `state` must be null or an unfreed pointer returned by `yune_typeduck_init`.
 #[no_mangle]
 pub unsafe extern "C" fn yune_typeduck_cleanup(state: *mut YuneTypeDuckState) {

@@ -86,9 +86,10 @@ loadable Emscripten `yune-typeduck.js`/`.wasm` with a Node smoke for one
 first WI-4 browser matrix used the placeholder echo path for candidate evidence.
 HR-1 now proves the patched TypeDuck-Web worker can load real
 `jyut6ping3_mobile` assets and render `nei` candidates (`你`, `呢`, `尼`) in a
-real browser. **TYPEDUCK-E2E-03** and the final **TYPEDUCK-E2E-04** reassessment
-remain open until paging, deletion, deploy, persistence sync/reload, setOption,
-and v1.1.2 dictionary-comment evidence are re-run or fixed against real assets.
+real browser. HR-2 resolves the startup `setOption` export/wrapper/adapter gap.
+**TYPEDUCK-E2E-03** and the final **TYPEDUCK-E2E-04** reassessment remain open
+until paging, deletion, deploy, persistence sync/reload, and v1.1.2
+dictionary-comment evidence are re-run or fixed against real assets.
 
 ### WASM Build And Export Contract
 
@@ -98,7 +99,7 @@ and v1.1.2 dictionary-comment evidence are re-run or fixed against real assets.
 
 ### TypeScript Bridge And Runtime Package
 
-- [x] **TYPEDUCK-JS-01**: A TypeScript wrapper exposes init, process-key, candidate action, deploy, customize, and cleanup operations.
+- [x] **TYPEDUCK-JS-01**: A TypeScript wrapper exposes init, process-key, candidate action, deploy, customize, set-option, and cleanup operations.
 - [x] **TYPEDUCK-JS-02**: The wrapper centralizes JSON parsing and pairs every owned adapter response with `yune_typeduck_free_response`.
 - [x] **TYPEDUCK-JS-03**: Browser keycode/mask mapping is explicit and covered by deterministic tests.
 - [x] **TYPEDUCK-JS-04**: Runtime lifecycle documentation makes the one-active-process-global-service constraint visible to TypeDuck-Web callers.
@@ -219,7 +220,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TYPEDUCK-FS-04 | Phase 9 | Complete |
 | TYPEDUCK-E2E-01 | Phase 10 | Complete |
 | TYPEDUCK-E2E-02 | Phase 10 | Complete |
-| TYPEDUCK-E2E-03 | Phase 10 / 17 | Reopened — HR-1 real candidate rendering passes; full real-assets matrix pending |
+| TYPEDUCK-E2E-03 | Phase 10 / 17 | Reopened — HR-1 real candidate rendering passes and HR-2 setOption is fixed; full real-assets matrix pending |
 | TYPEDUCK-E2E-04 | Phase 10 / 17 | Reopened — current NO-GO pending real-assets matrix |
 | WIN-TEST-01 | Phase 11 | Complete |
 | WIN-ABI-01 | Phase 12 | Complete |
