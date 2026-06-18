@@ -1,6 +1,6 @@
 # Temporary Refactor Plan
 
-> **Status:** Finished (refactor complete) · **Closed:** 2026-04-30 · **Type:** conventions reference (still cited by AGENTS.md)
+> **Status:** Finished · **Milestone:** M5–M7 (foundation refactor) · **Closed:** 2026-04-30 · **Type:** record (its module/test-ownership rules now live in CONVENTIONS.md §6)
 
 This document is a temporary engineering guide for reducing maintenance risk
 while preserving the current compatibility work. It should be treated as a

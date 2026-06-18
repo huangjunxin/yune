@@ -1,6 +1,6 @@
 # Yune Windows Native Build
 
-> **Status:** Parked (M10 — deferred behind M9) · **Updated:** 2026-06-17 · **Type:** reference
+> **Status:** Parked · **Milestone:** M10 (TypeDuck-Windows native backend; deferred behind M9) · **Updated:** 2026-06-17 · **Type:** reference
 
 This is the TypeDuck-Windows native package path for Yune's RIME-compatible ABI.
 It produces the weasel-shaped layout:

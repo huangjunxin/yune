@@ -20,6 +20,7 @@
 7. [Testing Conventions](#7-testing-conventions)
 8. [Integrations](#8-integrations)
 9. [Key Risks / Concerns](#9-key-risks--concerns-current)
+10. [Planning Docs](#10-planning-docs)
 
 ---
 
@@ -522,6 +523,22 @@ locks panic on poison (a scaling limit); dictionary lookup is linear and clones 
 approximation. No production `TODO`/`FIXME` markers exist — use `docs/analysis.md`,
 `docs/roadmap.md`, and this doc as the active issue inventory.
 
+## 10. Planning Docs
+
+Planning, decisions, and conventions live under `docs/` — there is no external planning tool (the GSD system was retired). Layout: `docs/roadmap.md` (the milestone map), `docs/decisions.md`, `docs/requirements.md`, this file, and `docs/plans/` (per-stage plans / findings / build notes, with finished ones under `docs/plans/archive/`).
+
+**Every doc under `docs/plans/` (and `archive/`) opens with a status banner as its second line, and the banner MUST name the milestone/stage it belongs to** so its scope is clear at a glance:
+
+```
+> **Status:** <Active|Reopened|Parked|Finished|Superseded> · **Milestone:** M<n> (short name) · **Updated|Closed:** YYYY-MM-DD · **Type:** <execution plan|findings|reference|record>
+```
+
+- **`Milestone` is a required field, kept separate from `Status`.** Write `**Status:** Parked · **Milestone:** M10 (…)`, never `**Status:** Parked (M10)`. Append the within-milestone stage where useful, e.g. `**Milestone:** M9 — stage HR-3`.
+- Use `Updated:` for `Active`/`Reopened`/`Parked` docs and `Closed:` for `Finished`/`Superseded` ones.
+- `grep -rn "Status:" docs/plans` is the at-a-glance dashboard of every plan — its milestone/stage and its state.
+- **Finished or superseded plans move to `docs/plans/archive/`** (banner flipped accordingly), never deleted — the trail stays.
+- The milestone → plans → status mapping lives in `docs/roadmap.md`; keep a plan's banner milestone consistent with the roadmap.
+
 ---
 
-*Last reviewed: 2026-06-17 — consolidated from the former .planning/codebase/ maps; current direction is web-first.*
+*Last reviewed: 2026-06-18 — consolidated from the former .planning/codebase/ maps; added the §10 planning-docs banner convention (milestone is a required field); current direction is web-first.*

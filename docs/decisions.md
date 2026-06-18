@@ -499,7 +499,7 @@ until browser validation succeeds.
 ### Initialization notes (process decisions)
 
 **D-INIT-1 — Existing `docs/analysis.md`, `docs/roadmap.md`,
-`docs/plans/refactor-plan.md`, and `.planning/codebase/` are the source context** for
+`docs/plans/archive/refactor-plan.md`, and `.planning/codebase/` are the source context** for
 the (now retired) GSD project; external research was skipped at setup because scope
 was driven by existing docs and direct librime comparison.
 
