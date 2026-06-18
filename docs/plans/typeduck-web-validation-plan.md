@@ -194,7 +194,7 @@ frontends share. Drive from the v1.1.2 oracle:
 ## Summary checklist
 - [x] **WI-1** — Emscripten + loadable WASM/JS artifact built; exports verified; native fallback green
 - [x] **WI-2** — `adapter.ts` text/comment/highlight shapes fixed + unit-tested
-- [ ] **WI-3** — browser FS layout, asset preload, and IDBFS sync working
+- [x] **WI-3** — browser FS layout, asset preload, and IDBFS sync wired into the patched app seam
 - [ ] **WI-4** — 10 E2E flows run in a real browser with captured PASS/FAIL evidence
 - [ ] **WI-5** — evidence-based GO/NO-GO recorded; tracking docs updated
 - [ ] **WI-6** — shared engine parity (`"; "` joiner + schema-prompt; Cantonese goldens)

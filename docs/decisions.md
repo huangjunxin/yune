@@ -376,21 +376,25 @@ per-candidate `text`/`comment` plus `context.highlighted`.
 **D-P10-3 — Use explicit TypeDuck-Web-owned assets; never fabricate fallback
 schema/dictionary data.** Missing or mismatched `default.yaml`/schema/dictionary YAML
 remain visible integration failures (grep-gated against fallback/dummy/placeholder
-wording).
+wording). The app seam loads TypeDuck-Web `public/schema` assets by URL, rejects
+empty or missing content before init, and may preload extra shared support files
+such as OpenCC data without synthesizing substitutes.
 
-**D-P10-4 — Record adapter mismatches before widening Yune.** Map missing
-`TypeDuckContext` properties to defaults (comments, `highlighted_candidate_index`);
-document the `setOption` gap as an error rather than implementing a workaround; widen
-the Yune adapter only for the smallest proven blocker, documented first.
+**D-P10-4 — Record adapter mismatches before widening Yune.** The web mapper now
+uses the runtime-owned response shape (`candidate.text`, `candidate.comment`,
+`context.highlighted`) instead of compatibility guesses. Keep documenting the
+`setOption` gap as an error rather than implementing a workaround; widen the Yune
+adapter only for the smallest proven blocker, documented first.
 
 **D-P10-5 — Real browser validation is required and never silently skipped.** Use a
 standalone Playwright spec (upstream has no browser test framework) covering
 composition, candidate paging, selection, deletion, commit output, deploy, customize,
 and persistence smoke; persistence follows the Phase 9 explicit sync contract
 (populate before init, flush after mutation, reload/reinitialize to prove survival).
-Missing browser/local tooling is recorded reproducibly (command, missing dependency,
-fallback evidence). Asset configuration was recorded as an E2E blocker, not a build
-blocker.
+The patched app seam mounts IDBFS before init and leaves explicit before/after
+sync markers for the E2E evidence. Missing browser/local tooling is recorded
+reproducibly (command, missing dependency, fallback evidence). Asset configuration
+was recorded as an E2E blocker, not a build blocker.
 
 **D-12 / TYPEDUCK-E2E-04 — Final findings separate three blocker classes.**
 TypeDuck-Web app/source blockers, Yune adapter/runtime mismatches, and

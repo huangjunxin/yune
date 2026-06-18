@@ -75,11 +75,13 @@ Emscripten build now emits loadable `yune-typeduck.js`/`.wasm` glue, and a Node
 smoke instantiates it, calls a `yune_typeduck_*` export, and performs an
 Emscripten `FS` write/read. The TypeDuck-Web adapter now maps runtime
 `candidate.text`, `candidate.comment`, and `context.highlighted` into the
-upstream candidate panel shape with a focused mapper smoke. **What's missing is
-the full official browser validation:** the real TypeDuck schema/E2E path has
-not been observed end to end in a browser. A limited local dev-server smoke has
-run through the adapter, but it does not replace the Phase 17 browser validation
-gate.
+upstream candidate panel shape with a focused mapper smoke. The patched
+TypeDuck-Web worker now calls the modular Emscripten factory, mounts IDBFS,
+fetches real `public/schema` assets before init, and keeps before/after sync
+markers visible for E2E evidence. **What's missing is the full official browser
+validation:** the real TypeDuck schema/E2E path has not been observed end to end
+in a browser. A limited local dev-server smoke has run through the adapter, but
+it does not replace the Phase 17 browser validation gate.
 
 **Plan:** [`plans/typeduck-web-validation-plan.md`](./plans/typeduck-web-validation-plan.md) — the M9 execution plan.
 Detail: [`plans/typeduck-web-adapter.md`](./plans/typeduck-web-adapter.md), [`plans/typeduck-web-integration-findings.md`](./plans/typeduck-web-integration-findings.md), [`plans/archive/ai-native-frontend-readiness.md`](./plans/archive/ai-native-frontend-readiness.md) (superseded NO-GO).
@@ -116,9 +118,9 @@ The v1.1.2 oracle fixture used for items 2–3 is **genuine captured fork output
 
 Concrete, in priority order (**web first, then Windows, then other platforms**):
 
-1. **Finish browser filesystem/app wiring** (WI-3): preload real schema/dictionary assets, mount/sync persistence before init, and flush after deploy/customize/userdb mutations.
-2. **Run the TypeDuck-Web E2E in a real browser** — composition, candidate paging/selection/deletion, commit, deploy, customize, persistence — and record a *real* GO/NO-GO based on observed behavior. This is the validation the original plan called for.
-3. **Keep the loadable WASM artifact and adapter mapper green.** The documented build now produces `yune-typeduck.js`/`.wasm` and smokes `cwrap`/`FS`; preserve that gate and the candidate/comment/highlight mapper smoke while browser filesystem and E2E work proceeds.
+1. **Run the TypeDuck-Web E2E in a real browser** — composition, candidate paging/selection/deletion, commit, deploy, customize, persistence — and record a *real* GO/NO-GO based on observed behavior. This is the validation the original plan called for.
+2. **Keep the loadable WASM artifact, adapter mapper, and app filesystem gates green.** The documented build now produces `yune-typeduck.js`/`.wasm` and smokes `cwrap`/`FS`; preserve that gate plus the candidate/comment/highlight and app init-order smokes while E2E work proceeds.
+3. **Use WI-4 evidence to close the persistence claim.** The patched app seam now mounts and syncs IDBFS, but reload survival is still a browser-observed flow until the E2E matrix records PASS/FAIL.
 4. **Land the remaining shared engine parity** (benefits web *and* Windows): the dictionary-panel comment byte-parity is now proven non-circularly from authored source rows — extend it with the `"; "` reverse-lookup joiner and schema-name-in-prompt oracle cases (and, ideally, real `.dict.yaml` rows), and capture the remaining Cantonese goldens to activate the 5 ignored tests.
 5. **Keep tracking honest.** (Done on main: the future-dated "verified" claim was removed and the circular parity test reworked; the roll-up is set to partial.) Keep statuses evidence-based as Phase 17 proceeds.
 6. **Then Windows, then other platforms.** Once the browser path is validated: verify the native `rime.dll`/`.lib`/headers build on an MSVC host (incl. the `rime_get_api`/`config_list_append_string` smoke check and header field-order parity), then run the real TypeDuck-Windows E2E per the fork's `INTEGRATION_PLAN.md`. Other native frontends (Squirrel/macOS, ibus/fcitx Linux) follow the same engine.

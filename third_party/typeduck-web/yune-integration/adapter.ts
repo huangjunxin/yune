@@ -19,6 +19,7 @@ import {
   type TypeDuckInitOptions,
   keyEventToRimeKey,
   type TypeDuckKeyboardEventLike,
+  joinTypeDuckVirtualPath,
   prepareTypeDuckFilesystem,
   syncFromPersistenceBeforeInit,
   syncToPersistenceAfterMutation,
@@ -71,6 +72,11 @@ let currentModule: EmscriptenTypeDuckModule | null = null;
 let currentFs: TypeDuckFilesystem | null = null;
 let currentSchemaId: string | null = null;
 
+export interface TypeDuckExtraSharedAsset {
+  path: string;
+  content: string | Uint8Array;
+}
+
 /**
  * Initialize Yune runtime with Emscripten Module and filesystem
  *
@@ -82,6 +88,7 @@ export async function initYuneRuntime(
   options: TypeDuckInitOptions,
   assets: TypeDuckFilesystemAssets,
   dictionaryId: string,
+  extraSharedAssets: TypeDuckExtraSharedAsset[] = [],
 ): Promise<void> {
   // Cleanup previous runtime if exists (one-active-runtime constraint)
   if (currentRuntime !== null) {
@@ -102,10 +109,13 @@ export async function initYuneRuntime(
     assets,
   };
 
-  prepareTypeDuckFilesystem(fs, prepareOptions);
-
-  // Sync from persistence before init per Phase 9 pattern
+  // Load persisted user/build state before writing fresh app-owned assets.
   await syncFromPersistenceBeforeInit(fs);
+
+  prepareTypeDuckFilesystem(fs, prepareOptions);
+  for (const asset of extraSharedAssets) {
+    writeExtraSharedAsset(fs, options.sharedDataDir, asset);
+  }
 
   // Initialize runtime
   currentRuntime = TypeDuckRuntime.init(module, options);
@@ -311,6 +321,46 @@ export async function setOption(option: string, value: boolean): Promise<void> {
     `Yune adapter gap: setOption("${option}", ${value}) not implemented. ` +
       `Requires Yune adapter widening or mapping to customize/status API.`,
   );
+}
+
+function writeExtraSharedAsset(
+  fs: TypeDuckFilesystem,
+  sharedDataDir: string,
+  asset: TypeDuckExtraSharedAsset,
+): void {
+  if (
+    asset.path.length === 0 ||
+    asset.path.startsWith("/") ||
+    asset.path.includes("\\") ||
+    asset.path.split("/").includes("..")
+  ) {
+    throw new Error(`Invalid TypeDuck shared asset path: ${asset.path}`);
+  }
+
+  const fullPath = joinTypeDuckVirtualPath(sharedDataDir, asset.path);
+  ensureVirtualDirectory(fs, fullPath.split("/").slice(0, -1).join("/"));
+  fs.writeFile(fullPath, asset.content, { flags: "w" });
+}
+
+function ensureVirtualDirectory(fs: TypeDuckFilesystem, path: string): void {
+  if (fs.analyzePath(path).exists) {
+    return;
+  }
+  if (fs.mkdirTree !== undefined) {
+    fs.mkdirTree(path);
+    return;
+  }
+  if (fs.mkdir === undefined) {
+    throw new Error(`TypeDuck filesystem cannot create directory: ${path}`);
+  }
+  const segments = path.split("/").filter((segment) => segment.length > 0);
+  let current = path.startsWith("/") ? "/" : "";
+  for (const segment of segments) {
+    current = current === "/" || current === "" ? `${current}${segment}` : `${current}/${segment}`;
+    if (!fs.analyzePath(current).exists) {
+      fs.mkdir(current);
+    }
+  }
 }
 
 /**

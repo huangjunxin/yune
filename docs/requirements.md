@@ -83,8 +83,10 @@ path before AI-native product work begins.
 The build-out (WASM export contract, TS bridge, browser filesystem) landed, and
 the WASM artifact now builds as loadable Emscripten `yune-typeduck.js`/`.wasm`
 with a Node smoke for one `yune_typeduck_*` call plus one `FS` operation. The
-engine has still **not actually run in the TypeDuck-Web browser E2E** — so
-**TYPEDUCK-E2E-03** (a real-browser run) remains the priority.
+patched TypeDuck-Web worker now loads that modular artifact, mounts IDBFS,
+fetches real schema assets from `public/schema`, and records before/after sync
+markers. The engine has still **not actually run in the TypeDuck-Web browser
+E2E** — so **TYPEDUCK-E2E-03** (a real-browser run) remains the priority.
 
 ### WASM Build And Export Contract
 
@@ -215,7 +217,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TYPEDUCK-FS-04 | Phase 9 | Complete |
 | TYPEDUCK-E2E-01 | Phase 10 | Complete |
 | TYPEDUCK-E2E-02 | Phase 10 | Complete |
-| TYPEDUCK-E2E-03 | Phase 10 / 17 | Active — artifact + adapter gates cleared; browser FS/E2E next |
+| TYPEDUCK-E2E-03 | Phase 10 / 17 | Active — artifact, adapter, and app FS gates cleared; real-browser E2E next |
 | TYPEDUCK-E2E-04 | Phase 10 | Complete |
 | WIN-TEST-01 | Phase 11 | Complete |
 | WIN-ABI-01 | Phase 12 | Complete |

@@ -482,12 +482,14 @@ calls are local library/CLI/FFI (native or in-browser WASM). User dictionaries a
 (highest-priority risk).** The Emscripten build now emits loadable
 `yune-typeduck.js`/`.wasm` glue and smokes one `yune_typeduck_*` call plus one
 `FS` write/read in Node, but the engine has **not yet run through the real
-TypeDuck-Web browser E2E**. The next known blocker is the adapter shape mismatch:
-the runtime expects `candidate.text` / `candidate.comment` / `context.highlighted`,
-not non-existent context-level keys (`third_party/typeduck-web/yune-integration/adapter.ts`).
-Resolution: fix/reapply the adapter patch, run the real-browser E2E, record an
-evidence-based GO/NO-GO. Files: `typeduck_web.rs`, `packages/yune-typeduck-runtime/`,
-`scripts/typeduck-wasm-build.sh`, `docs/plans/typeduck-web-validation-plan.md`.
+TypeDuck-Web browser E2E**. The adapter shape and app filesystem gates are now
+unit/build-smoked: the patch maps `candidate.text` / `candidate.comment` /
+`context.highlighted`, calls the modular Emscripten factory, mounts IDBFS, and
+preloads real TypeDuck-Web `public/schema` assets. Resolution: run the
+real-browser E2E, record PASS/FAIL evidence for every flow, then write the
+evidence-based GO/NO-GO. Files: `typeduck_web.rs`,
+`packages/yune-typeduck-runtime/`, `scripts/typeduck-wasm-build.sh`,
+`docs/plans/typeduck-web-validation-plan.md`.
 
 **Native Windows artifact is unverified on an MSVC host (parked).**
 `scripts/package-typeduck-windows.ps1` has **not** been run on a real MSVC host, so the
