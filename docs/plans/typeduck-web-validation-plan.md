@@ -1,6 +1,6 @@
 # Yune → TypeDuck-Web: Browser Validation Plan (M9)
 
-> **Status:** Active · **Milestone:** M9 (TypeDuck-Web browser validation) · **Created:** 2026-06-17 · **Type:** execution plan
+> **Status:** Complete · **Milestone:** M9 (TypeDuck-Web browser validation) · **Created:** 2026-06-17 · **Closed:** 2026-06-18 · **Type:** execution plan
 
 > **Audience.** An autonomous coding agent (e.g. GPT) executing in the `yune` repo.
 > Each work item is independently committable, names exact files, and ends with
@@ -10,6 +10,10 @@
 > seam and turn the Phase-10 *NO-GO* into an **evidence-based GO/NO-GO**. The web
 > build-out already exists; the engine has never been *observed* working in a
 > browser because the WASM artifact was never built locally.
+>
+> **Result.** Complete with **NO-GO** for AI-native frontend exposure: Yune loads
+> and types through TypeDuck-Web in a real browser, but paging/deletion, deploy,
+> persistence sync/reload, and v1.1.2 dictionary-comment evidence fail.
 >
 > **Line anchors** are accurate as of 2026-06-17 but *will drift* — re-`grep` the
 > named symbol/file before editing. Trust names over line numbers.
@@ -197,4 +201,4 @@ frontends share. Drive from the v1.1.2 oracle:
 - [x] **WI-3** — browser FS layout, asset preload, and IDBFS sync wired into the patched app seam
 - [x] **WI-4** — 10 E2E flows run in a real browser with captured PASS/FAIL evidence
 - [x] **WI-5** — evidence-based GO/NO-GO recorded; tracking docs updated
-- [ ] **WI-6** — shared engine parity (`"; "` joiner + schema-prompt; Cantonese goldens)
+- [ ] **WI-6** — optional shared engine parity follow-up (`"; "` joiner + schema-prompt; Cantonese goldens)

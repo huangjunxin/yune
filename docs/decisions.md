@@ -410,6 +410,11 @@ and type through TypeDuck-Web, but real frontends must not be treated as ready
 until paging/deletion, deploy, persistence/reload proof, `setOption`, and
 v1.1.2 dictionary-comment bytes pass in-browser.
 
+**D-P10-8 — Close M9 as a validation milestone, not a pass.** M9 is complete
+because the browser E2E ran and produced a durable GO/NO-GO recommendation. The
+follow-up milestone is Post-M9 TypeDuck-Web hardening; it starts from the WI-4
+failure matrix rather than reopening the validation gate itself.
+
 **D-12 / TYPEDUCK-E2E-04 — Final findings separate three blocker classes.**
 TypeDuck-Web app/source blockers, Yune adapter/runtime mismatches, and
 environment/tooling blockers are reported separately.

@@ -1,6 +1,6 @@
 # TypeDuck-Web Integration Findings
 
-> **Status:** Active · **Milestone:** M9 (TypeDuck-Web browser validation) · **Updated:** 2026-06-18 · **Type:** findings / reference
+> **Status:** Complete · **Milestone:** M9 (TypeDuck-Web browser validation) · **Updated:** 2026-06-18 · **Type:** findings / reference
 
 This document records findings from integrating Yune with the upstream TypeDuck-Web browser application.
 

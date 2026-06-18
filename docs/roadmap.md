@@ -53,6 +53,24 @@ Detail: [`plans/archive/compat-foundation-summary.md`](./plans/archive/compat-fo
 
 Detail: [`plans/archive/real-frontend-validation-plan.md`](./plans/archive/real-frontend-validation-plan.md), [`plans/archive/frontend-validation/`](./plans/archive/frontend-validation/).
 
+### M9: TypeDuck-Web browser validation
+
+- Emscripten build emits loadable `yune-typeduck.js`/`.wasm` glue, and a Node
+  smoke instantiates it, calls a `yune_typeduck_*` export, and performs an
+  Emscripten `FS` write/read.
+- TypeDuck-Web adapter maps runtime `candidate.text`, `candidate.comment`, and
+  `context.highlighted` into the upstream candidate panel shape.
+- Patched TypeDuck-Web worker calls the modular Emscripten factory, mounts IDBFS,
+  fetches real `public/schema` assets before init, and runs in a real browser.
+- **Browser result:** composition, candidate rendering, selection, commit output,
+  backspace mutation, and customize pass; candidate paging, candidate deletion,
+  deploy, persistence sync/reload, and v1.1.2 dictionary-comment evidence fail.
+- **Outcome:** **NO-GO** for AI-native frontend exposure. This supersedes the old
+  tooling-blocked Phase 10 NO-GO with a behavioral result: Yune loads and types
+  in-browser, but the full frontend contract is not ready.
+
+Detail: [`plans/typeduck-web-validation-plan.md`](./plans/typeduck-web-validation-plan.md), [`plans/typeduck-web-adapter.md`](./plans/typeduck-web-adapter.md), [`plans/typeduck-web-integration-findings.md`](./plans/typeduck-web-integration-findings.md), [`plans/archive/ai-native-frontend-readiness.md`](./plans/archive/ai-native-frontend-readiness.md) (superseded tooling NO-GO).
+
 ---
 
 ## In progress
@@ -63,12 +81,13 @@ Detail: [`plans/archive/real-frontend-validation-plan.md`](./plans/archive/real-
 > the first real browser evidence: the core TypeDuck-Web typing path works, while
 > paging/deletion/deploy/persistence/dictionary-comment parity still fail. WI-5
 > records the evidence-based result as **NO-GO** for AI-native frontend exposure
-> until those browser-observed failures are fixed. Much of
+> until those browser-observed failures are fixed. M9 is complete as a validation
+> milestone; current work is Post-M9 hardening. Much of
 > the Windows work already done is **shared engine work** (comment shaping,
 > Cantonese goldens, the cross-platform baseline fix) and stays; only the
 > Windows-*platform*-specific pieces wait their turn.
 
-### M9: TypeDuck-Web browser validation *(current focus)*
+### Post-M9 TypeDuck-Web hardening *(current focus)*
 
 Build-out is done — WASM/Emscripten export contract for the `yune_typeduck_*`
 adapter, TypeScript bridge/runtime package, browser filesystem + IDBFS
@@ -87,7 +106,7 @@ dictionary-comment evidence fail. The WI-5 GO/NO-GO update supersedes the old
 tooling-blocked Phase 10 recommendation with a behavioral **NO-GO**:
 Yune loads and types in-browser, but the full frontend contract is not ready.
 
-**Plan:** [`plans/typeduck-web-validation-plan.md`](./plans/typeduck-web-validation-plan.md) — the M9 execution plan.
+**Closed validation plan:** [`plans/typeduck-web-validation-plan.md`](./plans/typeduck-web-validation-plan.md) — the M9 execution plan.
 Detail: [`plans/typeduck-web-adapter.md`](./plans/typeduck-web-adapter.md), [`plans/typeduck-web-integration-findings.md`](./plans/typeduck-web-integration-findings.md), [`plans/archive/ai-native-frontend-readiness.md`](./plans/archive/ai-native-frontend-readiness.md) (superseded NO-GO).
 
 ### M10: TypeDuck-Windows native backend *(started early; platform work deferred)*

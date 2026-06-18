@@ -79,7 +79,7 @@ Requirements for the next integration milestone. These requirements turn the
 Phase 6 TypeDuck-Web validation and the seed Rust adapter into a browser-usable
 path before AI-native product work begins.
 
-**Active focus (web-first).** This milestone was reopened as Phase 17. The
+**M9 completed (web-first).** This milestone was reopened as Phase 17. The
 build-out (WASM export contract, TS bridge, browser filesystem) landed, and the
 WASM artifact now builds as loadable Emscripten `yune-typeduck.js`/`.wasm` with
 a Node smoke for one `yune_typeduck_*` call plus one `FS` operation. The patched
@@ -120,11 +120,11 @@ for AI-native frontend exposure until those failures are fixed.
 
 ## TypeDuck-Windows Native IME Contract Requirements
 
-**Status: parked behind web-first validation.** A first pass landed (Phases 11–16), but this
-milestone is deferred until Yune is validated in a real web browser (Phase 17). Its *shared engine*
+**Status: parked behind Post-M9 web hardening.** A first pass landed (Phases 11–16), but this
+milestone is deferred until the M9 browser-observed failures are fixed after Phase 17. Its *shared engine*
 requirements (WIN-COMMENT-01, WIN-PARITY-01) continue because the web path needs them too; the
-*platform-specific* native build (WIN-BUILD-01) and a real Windows E2E resume after browser
-validation. These requirements target the native TypeDuck-Windows/weasel path, which consumes Yune
+*platform-specific* native build (WIN-BUILD-01) and a real Windows E2E resume after Post-M9
+web hardening. These requirements target the native TypeDuck-Windows/weasel path, which consumes Yune
 through the RIME C ABI rather than the web TypeScript bridge.
 
 - [x] **WIN-TEST-01**: Windows `cargo test --workspace` has a trustworthy green baseline, including portable signature timestamp shape and test-only poison-lock recovery.
