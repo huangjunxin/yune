@@ -156,7 +156,7 @@ then the TypeDuck-Windows contract continues with Phases 11 -> 16.
 | 12. Fork Config List Append ABI | 1/1 | Complete | 2026-06-18 |
 | 13. TypeDuck v1.1.2 Oracle | 1/1 | Complete | 2026-06-18 |
 | 14. Candidate Comment Semantics | 1/1 | Complete | 2026-06-18 |
-| 15. Native Windows Artifact | 0/1 | Planned | - |
+| 15. Native Windows Artifact | 1/1 | Complete | 2026-06-18 |
 | 16. Cantonese/Jyutping Parity Suite | 0/1 | Planned | - |
 
 ## Completed Milestone: TypeDuck-Web Browser Integration
@@ -324,7 +324,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 15-01: Produce or document the native Windows `rime.dll`/`.lib`/headers package.
+- [x] 15-01: Produce or document the native Windows `rime.dll`/`.lib`/headers package.
 
 ### Phase 16: Cantonese/Jyutping Parity Suite
 

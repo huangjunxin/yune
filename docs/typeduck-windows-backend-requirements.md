@@ -84,7 +84,7 @@ The web path is Emscripten/WASM. Windows needs a **native** engine artifact:
 - [x] (1) `config_list_append_string` (+ siblings) on the RIME C ABI
 - [x] (2) `RimeCandidate.comment` emitted with TypeDuck shaping
 - [ ] (3) Cantonese behavior parity vs v1.1.2 (regression suite green)
-- [ ] (4) Native Windows engine artifact (`rime.dll`/`.lib`/headers) + deployment APIs
+- [x] (4) Native Windows engine artifact (`rime.dll`/`.lib`/headers) + deployment APIs
 
 When all four are met (and real E2E passes), revisit `TypeDuck-Windows/INTEGRATION_PLAN.md`: the
 engine swap behind the RIME C ABI is then a contained change, and the (engine-agnostic) frontend

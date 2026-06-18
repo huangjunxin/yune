@@ -111,7 +111,7 @@ TypeScript bridge.
 - [x] **WIN-ABI-01**: `config_list_append_{string,bool,int,double}` is implemented on the RIME C ABI function table with tests that call through `rime_get_api()`.
 - [x] **WIN-ORACLE-01**: The TypeDuck-HK/librime v1.1.2 binary and pinned schema are captured as a reproducible oracle, or a precise blocker is documented.
 - [x] **WIN-COMMENT-01**: Candidate comment semantics match the v1.1.2 oracle for dictionary lookup payloads and reverse lookup joins.
-- [ ] **WIN-BUILD-01**: Yune can produce or document the blocker for a native Windows `rime.dll`, import `.lib`, and compatible header package.
+- [x] **WIN-BUILD-01**: Yune can produce or document the blocker for a native Windows `rime.dll`, import `.lib`, and compatible header package.
 - [ ] **WIN-PARITY-01**: Cantonese/Jyutping parity regression coverage asserts the fork-only behaviors needed by TypeDuck-Windows.
 
 ## Future Requirements
@@ -206,7 +206,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | WIN-ABI-01 | Phase 12 | Complete |
 | WIN-ORACLE-01 | Phase 13 | Complete |
 | WIN-COMMENT-01 | Phase 14 | Complete |
-| WIN-BUILD-01 | Phase 15 | Pending |
+| WIN-BUILD-01 | Phase 15 | Complete |
 | WIN-PARITY-01 | Phase 16 | Pending |
 
 **Coverage:**

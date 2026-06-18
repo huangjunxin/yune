@@ -365,6 +365,16 @@ list-append) APIs the deployer drives — including Item 2's new append function
    reproducible blocker (Phase 7 pattern) and keep the native adapter contract
    tests as the fallback validation path.
 
+### Implemented result
+
+`scripts/package-typeduck-windows.ps1` builds `yune-rime-api` for
+`x86_64-pc-windows-msvc`, copies the Cargo output into the TypeDuck/weasel
+layout as `dist/lib/rime.dll` and `dist/lib/rime.lib`, copies
+`rime_api.h`/`rime_levers_api.h` from the v1.1.2 oracle headers, and smoke-checks
+that the packaged DLL exports `rime_get_api` with a non-null
+`config_list_append_string` table slot. The reproducible steps are documented in
+[`yune-windows-native-build.md`](./yune-windows-native-build.md).
+
 ### Acceptance (Item 5)
 A documented, reproducible build producing `rime.dll`/`.lib`/headers (or a
 documented blocker). A smoke check that `rime_get_api()` from the built DLL
@@ -453,6 +463,6 @@ change), once/if the web path is revived.
 - [x] **Item 2** — `config_list_append_{string,bool,int,double}` on struct + table + impl + tests *(Contract #1)*
 - [x] **Item 3** — v1.1.2 goldens captured (or reproducible blocker) *(prereq)*
 - [x] **Item 4** — comment semantics: TypeDuck dictionary lookup payload + `"; "` reverse-lookup joins, golden-tested *(Contract #2)*
-- [ ] **Item 5** — native `rime.dll`/`.lib`/headers build documented + produced *(Contract #4)*
+- [x] **Item 5** — native `rime.dll`/`.lib`/headers build documented + produced *(Contract #4)*
 - [ ] **Item 6** — Cantonese/Jyutping parity suite green *(Contract #3)*
 - [x] **Item 0** — untracked files committed, EOL policy recorded, planning state reconciled, Windows milestone tracked
