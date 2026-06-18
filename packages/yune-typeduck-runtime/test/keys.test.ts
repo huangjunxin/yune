@@ -25,6 +25,7 @@ describe("keyEventToRimeKey", () => {
 
   it("maps editing and navigation keys", () => {
     expect(keyEventToRimeKey({ key: "Backspace" }).keycode).toBe(0xff08);
+    expect(keyEventToRimeKey({ key: "BackSpace" }).keycode).toBe(0xff08);
     expect(keyEventToRimeKey({ key: "Tab" }).keycode).toBe(0xff09);
     expect(keyEventToRimeKey({ key: "Enter" }).keycode).toBe(0xff0d);
     expect(keyEventToRimeKey({ key: "Escape" }).keycode).toBe(0xff1b);

@@ -53,6 +53,7 @@ export const RIME_MASK = {
 
 const NAMED_KEYCODES: Readonly<Record<string, number>> = {
   Backspace: RIME_KEY.Backspace,
+  BackSpace: RIME_KEY.Backspace,
   Tab: RIME_KEY.Tab,
   Enter: RIME_KEY.Enter,
   Return: RIME_KEY.Enter,
