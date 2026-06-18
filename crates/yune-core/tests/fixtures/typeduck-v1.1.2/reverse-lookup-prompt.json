@@ -1,0 +1,57 @@
+{
+  "oracle": {
+    "engine": "TypeDuck-HK/librime",
+    "engine_tag": "v1.1.2",
+    "engine_commit": "74cb52b78fb2411137a7643f6c8bc6517acfde69",
+    "release_asset": "rime-TypeDuck-v1.1.2-Windows-msvc-x64.7z",
+    "dependency_asset": "rime-deps-TypeDuck-v1.1.2-Windows-msvc-x64.7z",
+    "schema": "scratch HR-6 oracle schema",
+    "captured_on": "2026-06-18",
+    "host": "Windows"
+  },
+  "schema": "hr6_reverse",
+  "module_list": [
+    "default",
+    "dictionary_lookup"
+  ],
+  "capture": {
+    "description": "Scratch schema captured with the local TypeDuck v1.1.2 rime.dll to lock reverse-lookup multi-pronunciation comment joining and affix prompt bytes.",
+    "schema_name": "HR6 粵語",
+    "reverse_lookup_tips": "〔HR6 粵語〕",
+    "lookup_dictionary_rows": [
+      "火\thuo\t1"
+    ],
+    "target_dictionary_rows": [
+      "火\tho\t1",
+      "火\thuo\t1"
+    ]
+  },
+  "cases": [
+    {
+      "schema_id": "hr6_reverse",
+      "schema_name": "HR6 粵語",
+      "input": "`huo",
+      "processed": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "is_composing": true,
+      "is_ascii_mode": false,
+      "preedit": "huo〔HR6 粵語〕",
+      "commit_text_preview": "火",
+      "highlighted_candidate_index": 0,
+      "page_size": 5,
+      "page_no": 0,
+      "is_last_page": true,
+      "selected_candidates": [
+        {
+          "index": 0,
+          "text": "火",
+          "comment": "ho; huo"
+        }
+      ]
+    }
+  ]
+}

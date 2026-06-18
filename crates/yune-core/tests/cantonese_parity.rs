@@ -1,12 +1,20 @@
 use serde_json::Value;
 use yune_core::{
-    Candidate, CandidateFilter, CandidateSource, DictionaryLookupFilter, TableDictionary,
+    Candidate, CandidateFilter, CandidateSource, DictionaryLookupFilter, ReverseLookupTranslator,
+    TableDictionary, Translator,
 };
 
 const ORACLE: &str = include_str!("fixtures/typeduck-v1.1.2/jyut6ping3-mobile-comments.json");
+const REVERSE_LOOKUP_ORACLE: &str =
+    include_str!("fixtures/typeduck-v1.1.2/reverse-lookup-prompt.json");
 
 fn oracle_fixture() -> Value {
     serde_json::from_str(ORACLE).expect("TypeDuck v1.1.2 oracle fixture should be valid JSON")
+}
+
+fn reverse_lookup_fixture() -> Value {
+    serde_json::from_str(REVERSE_LOOKUP_ORACLE)
+        .expect("TypeDuck v1.1.2 reverse-lookup fixture should be valid JSON")
 }
 
 #[test]
@@ -77,6 +85,62 @@ fn typeduck_v112_jyutping_oracle_fixture_is_locked() {
             );
         }
     }
+}
+
+#[test]
+fn typeduck_v112_reverse_lookup_prompt_fixture_is_locked() {
+    let fixture = reverse_lookup_fixture();
+    assert_eq!(fixture["oracle"]["engine"], "TypeDuck-HK/librime");
+    assert_eq!(fixture["oracle"]["engine_tag"], "v1.1.2");
+    assert_eq!(
+        fixture["oracle"]["engine_commit"],
+        "74cb52b78fb2411137a7643f6c8bc6517acfde69"
+    );
+    assert_eq!(fixture["schema"], "hr6_reverse");
+    assert_eq!(fixture["capture"]["schema_name"], "HR6 粵語");
+    assert_eq!(fixture["capture"]["reverse_lookup_tips"], "〔HR6 粵語〕");
+
+    let case = reverse_lookup_case(&fixture);
+    assert_eq!(case["schema_id"], "hr6_reverse");
+    assert_eq!(case["schema_name"], "HR6 粵語");
+    assert_eq!(case["input"], "`huo");
+    assert_eq!(case["preedit"], "huo〔HR6 粵語〕");
+    assert_eq!(case["commit_text_preview"], "火");
+    assert_eq!(case["selected_candidates"][0]["text"], "火");
+    assert_eq!(case["selected_candidates"][0]["comment"], "ho; huo");
+}
+
+#[test]
+fn yune_reverse_lookup_translator_joins_comments_like_v112_oracle() {
+    let fixture = reverse_lookup_fixture();
+    let case = reverse_lookup_case(&fixture);
+    let lookup_dictionary =
+        TableDictionary::parse_rime_dict_yaml(&dictionary_yaml_from_fixture_rows(
+            "hr6_lookup",
+            &fixture["capture"]["lookup_dictionary_rows"],
+        ))
+        .expect("lookup dictionary rows should parse");
+    let target_dictionary =
+        TableDictionary::parse_rime_dict_yaml(&dictionary_yaml_from_fixture_rows(
+            "hr6_target",
+            &fixture["capture"]["target_dictionary_rows"],
+        ))
+        .expect("target dictionary rows should parse");
+    let translator =
+        ReverseLookupTranslator::new(lookup_dictionary, Some(target_dictionary), "`", ";");
+    let input = case["input"]
+        .as_str()
+        .expect("reverse lookup input should be a string");
+    let candidates = translator.translate(input);
+
+    assert_eq!(candidates.len(), 1);
+    assert_eq!(candidates[0].text, case["selected_candidates"][0]["text"]);
+    assert_eq!(
+        candidates[0].comment,
+        case["selected_candidates"][0]["comment"]
+            .as_str()
+            .expect("oracle comment should be a string")
+    );
 }
 
 #[test]
@@ -171,6 +235,25 @@ fn oracle_candidate_comment<'a>(fixture: &'a Value, input: &str, index: i64) -> 
 fn dictionary_yaml_from_source_rows(rows: &[&str]) -> String {
     let rows = rows.join("\n");
     format!("---\nname: typeduck_oracle\nversion: '0.1'\nsort: original\n...\n\n{rows}\n")
+}
+
+fn reverse_lookup_case(fixture: &Value) -> &Value {
+    fixture["cases"]
+        .as_array()
+        .expect("reverse lookup cases should be an array")
+        .first()
+        .expect("reverse lookup fixture should capture one case")
+}
+
+fn dictionary_yaml_from_fixture_rows(name: &str, rows: &Value) -> String {
+    let rows = rows
+        .as_array()
+        .expect("dictionary rows should be an array")
+        .iter()
+        .map(|row| row.as_str().expect("dictionary row should be a string"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    format!("---\nname: {name}\nversion: '0.1'\nsort: original\n...\n\n{rows}\n")
 }
 
 #[test]

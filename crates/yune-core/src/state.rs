@@ -19,10 +19,21 @@ pub enum CandidateSource {
     Switch,
     Unfold,
     Schema,
-    Ai,
+    Ai {
+        provider: String,
+        confidence: AiConfidence,
+    },
 }
 
 impl CandidateSource {
+    #[must_use]
+    pub fn ai(provider: impl Into<String>, confidence: AiConfidence) -> Self {
+        Self::Ai {
+            provider: provider.into(),
+            confidence,
+        }
+    }
+
     #[must_use]
     pub const fn as_str(&self) -> &'static str {
         match self {
@@ -37,8 +48,120 @@ impl CandidateSource {
             Self::Switch => "switch",
             Self::Unfold => "unfold",
             Self::Schema => "schema",
-            Self::Ai => "ai",
+            Self::Ai { .. } => "ai",
         }
+    }
+
+    #[must_use]
+    pub const fn is_ai(&self) -> bool {
+        matches!(self, Self::Ai { .. })
+    }
+
+    #[must_use]
+    pub const fn ai_confidence(&self) -> Option<AiConfidence> {
+        match self {
+            Self::Ai { confidence, .. } => Some(*confidence),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+pub struct AiConfidence {
+    basis_points: u16,
+}
+
+impl AiConfidence {
+    const MAX_BASIS_POINTS: u16 = 10_000;
+
+    #[must_use]
+    pub const fn from_basis_points(basis_points: u16) -> Self {
+        Self {
+            basis_points: if basis_points > Self::MAX_BASIS_POINTS {
+                Self::MAX_BASIS_POINTS
+            } else {
+                basis_points
+            },
+        }
+    }
+
+    #[must_use]
+    pub fn from_score(score: f32) -> Self {
+        if !score.is_finite() || score <= 0.0 {
+            return Self::from_basis_points(0);
+        }
+        if score >= 1.0 {
+            return Self::from_basis_points(Self::MAX_BASIS_POINTS);
+        }
+        Self::from_basis_points((score * f32::from(Self::MAX_BASIS_POINTS)).round() as u16)
+    }
+
+    #[must_use]
+    pub const fn basis_points(self) -> u16 {
+        self.basis_points
+    }
+
+    #[must_use]
+    pub fn as_score(self) -> f32 {
+        f32::from(self.basis_points) / f32::from(Self::MAX_BASIS_POINTS)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum PrivacyClass {
+    #[default]
+    Sensitive,
+    Standard,
+}
+
+impl PrivacyClass {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Sensitive => "sensitive",
+            Self::Standard => "standard",
+        }
+    }
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct AiContext {
+    pub app_id: Option<String>,
+    pub field_id: Option<String>,
+    pub preceding_text: Option<String>,
+    pub privacy_class: PrivacyClass,
+}
+
+impl AiContext {
+    #[must_use]
+    pub fn standard() -> Self {
+        Self {
+            privacy_class: PrivacyClass::Standard,
+            ..Self::default()
+        }
+    }
+
+    #[must_use]
+    pub fn sensitive() -> Self {
+        Self::default()
+    }
+
+    #[must_use]
+    pub fn with_app_id(mut self, app_id: impl Into<String>) -> Self {
+        self.app_id = Some(app_id.into());
+        self
+    }
+
+    #[must_use]
+    pub fn with_field_id(mut self, field_id: impl Into<String>) -> Self {
+        self.field_id = Some(field_id.into());
+        self
+    }
+
+    #[must_use]
+    pub fn with_preceding_text(mut self, preceding_text: impl Into<String>) -> Self {
+        self.preceding_text = Some(preceding_text.into());
+        self
     }
 }
 
@@ -67,6 +190,7 @@ pub struct Context {
     pub highlighted: usize,
     pub last_commit: Option<String>,
     pub commit_history: Vec<CommitRecord>,
+    pub ai_context: AiContext,
 }
 
 impl Default for Context {
@@ -78,6 +202,7 @@ impl Default for Context {
             highlighted: 0,
             last_commit: None,
             commit_history: Vec::new(),
+            ai_context: AiContext::default(),
         }
     }
 }

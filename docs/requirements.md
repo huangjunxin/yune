@@ -79,20 +79,25 @@ Requirements for the next integration milestone. These requirements turn the
 Phase 6 TypeDuck-Web validation and the seed Rust adapter into a browser-usable
 path before AI-native product work begins.
 
-**M9 reopened for real-assets validation.** The build-out (WASM export contract,
+**M9 completed real-assets validation.** The build-out (WASM export contract,
 TS bridge, browser filesystem) landed, and the WASM artifact now builds as
 loadable Emscripten `yune-typeduck.js`/`.wasm` with a Node smoke for one
 `yune_typeduck_*` call plus one `FS` operation. A post-review audit found the
 first WI-4 browser matrix used the placeholder echo path for candidate evidence.
-HR-1 now proves the patched TypeDuck-Web worker can load real
+HR-1 proves the patched TypeDuck-Web worker can load real
 `jyut6ping3_mobile` assets and render `nei` candidates (`你`, `呢`, `尼`) in a
 real browser. HR-2 resolves the startup `setOption` export/wrapper/adapter gap,
-and HR-3 proves browser `deploy()` returns true with real assets after adding the
-plain `jyut6ping3.schema.yaml` preload.
-**TYPEDUCK-E2E-03** and the final **TYPEDUCK-E2E-04** reassessment remain open
-until paging, deletion, and v1.1.2 dictionary-comment evidence are re-run or
-fixed against real assets. HR-4 proves live-worker persistence sync and real
-reload survival.
+HR-3 proves browser `deploy()` returns true with real assets after adding the
+plain `jyut6ping3.schema.yaml` preload, and HR-4 proves live-worker persistence
+sync plus real reload survival. HR-5 reruns the full browser matrix against real
+assets, including paging, deletion, phrase commit, dictionary-panel rendering,
+and zero warning/error console entries after the post-review pure-modifier
+delete-path fix. Rich dictionary-comment byte parity is committed in
+`cantonese_parity`; the browser-shaped native rich-comment test also asserts the
+full real-assets path when local v1.1.2 oracle build assets are present. HR-6
+locks the shared reverse-lookup joiner and schema-prompt bytes against the
+TypeDuck v1.1.2 oracle. HR-7 closes
+M9 with **GO WITH CONDITIONS** for gated AI-native frontend exposure.
 
 ### WASM Build And Export Contract
 
@@ -118,22 +123,23 @@ reload survival.
 
 - [x] **TYPEDUCK-E2E-01**: The upstream TypeDuck-Web repository is cloned or vendored in a reproducible test location, and its current librime/WASM bridge seam is identified.
 - [x] **TYPEDUCK-E2E-02**: TypeDuck-Web is patched or configured so its input-engine binding calls the Yune TypeScript bridge instead of the original librime bridge, with candidate text/comment/highlight mapped from the runtime response shape.
-- [ ] **TYPEDUCK-E2E-03**: Real TypeDuck-Web browser validation covers composition, candidate paging, selection, deletion, commit output, deploy, customize, and persistence smoke flows, with PASS/FAIL evidence recorded. HR-1 proves real candidate rendering, HR-2 proves `setOption`, HR-3 proves deploy true, and HR-4 proves persistence/reload; paging/deletion and dictionary-comment evidence remain open.
-- [ ] **TYPEDUCK-E2E-04**: Integration findings end with a go/no-go recommendation for exposing AI-native behavior through real frontends; current result remains NO-GO pending the real-assets matrix.
+- [x] **TYPEDUCK-E2E-03**: Real TypeDuck-Web browser validation covers composition, candidate paging, selection, deletion, commit output, deploy, customize, persistence smoke flows, and dictionary-panel rendering, with PASS evidence recorded from the HR-5 real-assets matrix. Rich dictionary-comment byte parity is committed in `cantonese_parity`; the browser-shaped native rich-comment test is explicitly skipped unless local v1.1.2 oracle build assets are present.
+- [x] **TYPEDUCK-E2E-04**: Integration findings end with a go/no-go recommendation for exposing AI-native behavior through real frontends; HR-7 records **GO WITH CONDITIONS**.
 
 ## TypeDuck-Windows Native IME Contract Requirements
 
-**Status: parked behind Post-M9 web hardening.** A first pass landed (Phases 11–16), but this
-milestone is deferred until the M9 browser-observed failures are fixed after Phase 17. Its *shared engine*
-requirements (WIN-COMMENT-01, WIN-PARITY-01) continue because the web path needs them too; the
-*platform-specific* native build (WIN-BUILD-01) and a real Windows E2E resume after Post-M9
-web hardening. These requirements target the native TypeDuck-Windows/weasel path, which consumes Yune
-through the RIME C ABI rather than the web TypeScript bridge.
+**Status: ready to resume after M9.** A first pass landed (Phases 11–16), and
+M9 web validation is now complete. The shared comment requirement is covered for
+the current v1.1.2 oracle slices; remaining Cantonese parity captures stay
+explicit blockers. The next platform-specific work is native Windows package
+verification and a real TypeDuck-Windows E2E. These requirements target the
+native TypeDuck-Windows/weasel path, which consumes Yune through the RIME C ABI
+rather than the web TypeScript bridge.
 
 - [x] **WIN-TEST-01**: Windows `cargo test --workspace` has a trustworthy green baseline, including portable signature timestamp shape and test-only poison-lock recovery.
 - [x] **WIN-ABI-01**: `config_list_append_{string,bool,int,double}` is implemented on the RIME C ABI function table with tests that call through `rime_get_api()`.
 - [x] **WIN-ORACLE-01**: The TypeDuck-HK/librime v1.1.2 binary and pinned schema are captured as a reproducible oracle, or a precise blocker is documented.
-- [ ] **WIN-COMMENT-01**: Candidate comment semantics match the v1.1.2 oracle for dictionary lookup payloads, reverse lookup joins, and prompt/schema identity. Dictionary lookup payload bytes are covered; schema-prompt and reverse-lookup joiner oracle coverage remain blocked.
+- [x] **WIN-COMMENT-01**: Candidate comment semantics match the v1.1.2 oracle for dictionary lookup payloads, reverse lookup joins, and prompt/schema identity. Dictionary lookup payload bytes, schema-prompt bytes, and reverse-lookup joiner coverage are oracle-backed.
 - [x] **WIN-BUILD-01**: Yune can produce or document the blocker for a native Windows `rime.dll`, import `.lib`, and compatible header package. Packaging is scripted; artifact smoke verification remains host-dependent.
 - [ ] **WIN-PARITY-01**: Cantonese/Jyutping parity regression coverage locks captured v1.1.2 behavior and records explicit ignored blockers for uncaptured fork-only cases. Full parity remains blocked by missing goldens.
 
@@ -153,13 +159,15 @@ Deferred beyond the TypeDuck-Web browser integration milestone. Tracked but not 
 
 ### AI Extension Layer
 
-- **AI-01**: Engine exposes an `AiCandidateProvider` or equivalent interface that can provide candidates without replacing classic translators.
-- **AI-02**: Candidate ranking supports local model and rule-backed implementations with deterministic timeout/fallback behavior.
-- **AI-03**: Contextual phrase and sentence completion can produce source-labeled AI candidates without allowing AI candidates to auto-commit by default.
-- **AI-04**: Context providers define what app, field, preceding text, cursor, schema, and candidate-list data may be shared with AI providers.
-- **AI-05**: Memory store records user vocabulary, phrase preferences, and domain terms through explicit, inspectable, clearable policy.
-- **AI-06**: Privacy policy disables learning and remote calls for sensitive contexts and keeps classic input fully functional when AI is disabled.
-- **AI-07**: CLI frontend surrogate can demonstrate AI candidate/ranking behavior with mock and local providers before native frontends expose it.
+- [x] **AI-01**: Engine exposes an `AiCandidateProvider` interface and staged,
+  input-keyed AI results without replacing classic translators. S1 implements
+  this for the direct CLI mock path.
+- [x] **AI-02**: Candidate ranking supports local model and rule-backed implementations with deterministic timeout/fallback behavior. S2 covers the background worker, input-keyed fallback, fixed-point confidence metadata, and confidence-ordered AI merge; S5 adds the local rule-backed provider.
+- [x] **AI-03**: Contextual phrase and sentence completion can produce source-labeled AI candidates without allowing AI candidates to auto-commit by default. S1 covers source labeling and the no-default-auto-commit gate; S5 adds contextual local-model completions.
+- [x] **AI-04**: Context providers define what app, field, preceding text, cursor, schema, and candidate-list data may be shared with AI providers. S3 implements `AiContext` plus `EngineAiContextProvider` snapshots.
+- [x] **AI-05**: Memory store records user vocabulary, phrase preferences, and domain terms through explicit, inspectable, clearable policy. S4 implements `MemoryStore`, clear/disable controls, snapshot import/export, and `.ai-memory` namespace helpers.
+- [x] **AI-06**: Privacy policy disables learning and remote calls for sensitive contexts and keeps classic input fully functional when AI is disabled. S3 blocks remote calls; S4 applies the same privacy gate to AI memory writes.
+- [x] **AI-07**: CLI frontend surrogate can demonstrate AI candidate/ranking behavior with mock and local providers before native frontends expose it. S1 covers `yune-cli run --ai-provider mock`; S5 adds `--ai-provider local`.
 
 ## Out of Scope
 
@@ -223,23 +231,30 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TYPEDUCK-FS-04 | Phase 9 | Complete |
 | TYPEDUCK-E2E-01 | Phase 10 | Complete |
 | TYPEDUCK-E2E-02 | Phase 10 | Complete |
-| TYPEDUCK-E2E-03 | Phase 10 / 17 | Reopened — HR-1 real candidate rendering, HR-2 setOption, HR-3 deploy, and HR-4 persistence/reload pass; paging/deletion and dictionary-comment evidence pending |
-| TYPEDUCK-E2E-04 | Phase 10 / 17 | Reopened — current NO-GO pending real-assets matrix |
+| TYPEDUCK-E2E-03 | Phase 10 / 17 | Complete - HR-5 real-assets browser matrix passes; rich comment byte parity is committed in `cantonese_parity` |
+| TYPEDUCK-E2E-04 | Phase 10 / 17 | Complete - HR-7 records GO WITH CONDITIONS |
 | WIN-TEST-01 | Phase 11 | Complete |
 | WIN-ABI-01 | Phase 12 | Complete |
 | WIN-ORACLE-01 | Phase 13 | Complete |
-| WIN-COMMENT-01 | Phase 14 | Partial - dictionary payload covered; schema prompt/joiner oracle blocked |
+| WIN-COMMENT-01 | Phase 14 / 17 | Complete - dictionary payload, schema prompt, and joiner oracle covered |
 | WIN-BUILD-01 | Phase 15 | Complete as scripted; smoke verification pending on MSVC host |
 | WIN-PARITY-01 | Phase 16 | Partial - ignored oracle cases still blocked |
+| AI-01 | M11 S1 | Complete - staged provider interface in `yune-core` |
+| AI-02 | M11 S2/S5 | Complete - worker/fallback/confidence merge plus local rule-backed provider |
+| AI-03 | M11 S1/S5 | Complete - source-labeled contextual/local completions with no default AI auto-commit |
+| AI-04 | M11 S3 | Complete - context snapshot provider covers app, field, preceding text, cursor, schema, and candidate count |
+| AI-05 | M11 S4 | Complete - AI memory store records explicit AI selections, is inspectable/clearable/disable-able, and uses `.ai-memory` namespace helpers |
+| AI-06 | M11 S3/S4 | Complete - default-sensitive privacy blocks remote calls and suppresses AI memory writes while classic input remains available |
+| AI-07 | M11 S1/S5 | Complete - direct CLI demonstrates `--ai-provider mock` and `--ai-provider local` |
 
 **Coverage:**
 - v1 requirements: 25 total
 - v2 validation requirements: 7 total
 - TypeDuck-Web integration requirements: 15 total
 - TypeDuck-Windows native IME requirements: 6 total
-- Mapped to phases: 53
+- Mapped to phases: 60
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-28*
-*Last updated: 2026-06-18 — TypeDuck-Web validation reopened for real-assets matrix; TypeDuck-Windows parked*
+*Last updated: 2026-06-18 — M11 S1-S5 direct CLI/core AI-native layer complete; M9 TypeDuck-Web validation complete with GO WITH CONDITIONS; TypeDuck-Windows ready to resume*

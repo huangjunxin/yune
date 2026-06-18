@@ -84,11 +84,23 @@ impl DictionaryLookupFilter {
             return None;
         }
 
+        let (comment_prefix, lookup_comment) = candidate
+            .comment
+            .split_once('\u{000c}')
+            .map_or(("", candidate.comment.as_str()), |(prefix, comment)| {
+                (prefix, comment)
+            });
+        let lookup_code = lookup_comment
+            .split('\u{000c}')
+            .next()
+            .unwrap_or_default()
+            .replace([';', ' '], "");
         let primary_index = records
             .iter()
-            .position(|record| !candidate.comment.is_empty() && record.code == candidate.comment)
+            .position(|record| !lookup_code.is_empty() && record.code == lookup_code)
             .unwrap_or(0);
-        let mut comment = String::from('\u{000c}');
+        let mut comment = String::from(comment_prefix);
+        comment.push('\u{000c}');
         append_dictionary_lookup_record(&mut comment, true, &records[primary_index]);
         for (index, record) in records.iter().enumerate() {
             if index != primary_index {

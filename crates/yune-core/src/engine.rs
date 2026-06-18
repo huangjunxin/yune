@@ -2,10 +2,12 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 
 use crate::punctuation::punctuation_candidate_comment;
+use crate::AiContext;
 use crate::{
-    parse_key_sequence, Candidate, CandidateFilter, CandidateRanker, CandidateSource, CommitRecord,
-    Composition, Context, EchoTranslator, KeyCode, KeyEvent, KeyModifiers, KeySequenceParseError,
-    RerankResult, Snapshot, Status, Translator, UserDb, UserDbCommitMetadata, UserDbLookupRequest,
+    parse_key_sequence, AiDecision, AiResult, Candidate, CandidateFilter, CandidateRanker,
+    CandidateSource, CommitRecord, Composition, Context, EchoTranslator, KeyCode, KeyEvent,
+    KeyModifiers, KeySequenceParseError, MemoryStore, RerankResult, Snapshot, StagedAiCandidates,
+    Status, Translator, UserDb, UserDbCommitMetadata, UserDbLookupRequest,
 };
 
 pub struct Engine {
@@ -16,12 +18,20 @@ pub struct Engine {
     translators: Vec<Box<dyn Translator>>,
     filters: Vec<Box<dyn CandidateFilter>>,
     rankers: Vec<Box<dyn CandidateRanker>>,
+    staged_ai_result: Option<StagedAiCandidates>,
+    ai_memory: MemoryStore,
     userdb: UserDb,
     pending_userdb_learning: Option<UserDbCommitMetadata>,
     commit_tick: u64,
 }
 
 const DEFAULT_PAGE_SIZE: usize = 5;
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum CommitIntent {
+    DefaultConfirm,
+    ExplicitSelection,
+}
 
 fn clamp_to_char_boundary(input: &str, caret: usize) -> usize {
     let mut caret = caret.min(input.len());
@@ -54,6 +64,8 @@ impl Default for Engine {
             translators: vec![Box::new(EchoTranslator)],
             filters: Vec::new(),
             rankers: Vec::new(),
+            staged_ai_result: None,
+            ai_memory: MemoryStore::default(),
             userdb: UserDb::default(),
             pending_userdb_learning: None,
             commit_tick: 0,
@@ -97,6 +109,57 @@ impl Engine {
         self.refresh_candidates();
     }
 
+    pub fn stage_ai_result(&mut self, result: AiResult) -> AiDecision {
+        let decision = match result {
+            AiResult::Off { for_input, .. } => {
+                if for_input == self.context.composition.input {
+                    self.staged_ai_result = None;
+                    AiDecision::Off
+                } else {
+                    self.ai_decision_for_current_input()
+                }
+            }
+            AiResult::Pending { for_input } => {
+                if for_input == self.context.composition.input {
+                    self.staged_ai_result = None;
+                    AiDecision::Pending
+                } else {
+                    self.ai_decision_for_current_input()
+                }
+            }
+            AiResult::Ready {
+                for_input,
+                candidates,
+            } => {
+                let staged = StagedAiCandidates {
+                    for_input,
+                    candidates,
+                };
+                let decision = if staged.matches_input(&self.context.composition.input) {
+                    AiDecision::Ready
+                } else {
+                    AiDecision::Pending
+                };
+                self.staged_ai_result = Some(staged);
+                decision
+            }
+        };
+        self.refresh_candidates();
+        decision
+    }
+
+    fn ai_decision_for_current_input(&self) -> AiDecision {
+        self.staged_ai_result
+            .as_ref()
+            .map_or(AiDecision::Off, |staged| {
+                if staged.matches_input(&self.context.composition.input) {
+                    AiDecision::Ready
+                } else {
+                    AiDecision::Pending
+                }
+            })
+    }
+
     pub fn set_schema(&mut self, id: impl Into<String>, name: impl Into<String>) {
         self.status.schema_id = id.into();
         self.status.schema_name = name.into();
@@ -114,6 +177,23 @@ impl Engine {
 
     pub fn take_pending_userdb_learning(&mut self) -> Option<UserDbCommitMetadata> {
         self.pending_userdb_learning.take()
+    }
+
+    #[must_use]
+    pub fn ai_memory(&self) -> &MemoryStore {
+        &self.ai_memory
+    }
+
+    pub fn set_ai_memory(&mut self, memory_store: MemoryStore) {
+        self.ai_memory = memory_store;
+    }
+
+    pub fn set_ai_memory_enabled(&mut self, enabled: bool) {
+        self.ai_memory.set_enabled(enabled);
+    }
+
+    pub fn clear_ai_memory(&mut self) {
+        self.ai_memory.clear();
     }
 
     pub fn set_option(&mut self, option: impl Into<String>, value: bool) {
@@ -154,6 +234,14 @@ impl Engine {
             self.context.segment_tags.push("abc".to_owned());
         }
         self.refresh_candidates();
+    }
+
+    pub fn set_ai_context(&mut self, ai_context: AiContext) {
+        self.context.ai_context = ai_context;
+    }
+
+    pub fn clear_ai_context(&mut self) {
+        self.context.ai_context = AiContext::default();
     }
 
     #[must_use]
@@ -410,7 +498,7 @@ impl Engine {
     }
 
     pub fn select_candidate(&mut self, index: usize) -> Option<String> {
-        self.commit_candidate(index)
+        self.commit_candidate(index, CommitIntent::ExplicitSelection)
     }
 
     pub fn select_candidate_on_current_page(&mut self, index: usize) -> Option<String> {
@@ -519,10 +607,12 @@ impl Engine {
         self.context.composition = Composition::default();
         self.context.candidates.clear();
         self.context.highlighted = 0;
+        self.staged_ai_result = None;
     }
 
     pub fn set_input(&mut self, input: impl Into<String>) {
         let input = input.into();
+        self.staged_ai_result = None;
         self.context.composition.input = input.clone();
         self.context.composition.caret = input.len();
         self.context.composition.preedit = input;
@@ -536,6 +626,7 @@ impl Engine {
     ) {
         let input = input.into();
         let text = text.into();
+        self.staged_ai_result = None;
         self.context.composition.input = input.clone();
         self.context.composition.caret = input.len();
         self.context.composition.preedit = input;
@@ -685,7 +776,7 @@ impl Engine {
     }
 
     pub(crate) fn commit_highlighted(&mut self) -> Option<String> {
-        self.commit_candidate(self.context.highlighted)
+        self.commit_candidate(self.context.highlighted, CommitIntent::DefaultConfirm)
     }
 
     fn commit_raw_input_text(&mut self) -> Option<String> {
@@ -734,10 +825,10 @@ impl Engine {
             return None;
         }
         let page_start = (self.context.highlighted / DEFAULT_PAGE_SIZE) * DEFAULT_PAGE_SIZE;
-        self.commit_candidate(page_start + page_index)
+        self.commit_candidate(page_start + page_index, CommitIntent::ExplicitSelection)
     }
 
-    fn commit_candidate(&mut self, candidate_index: usize) -> Option<String> {
+    fn commit_candidate(&mut self, candidate_index: usize, intent: CommitIntent) -> Option<String> {
         let input = self.context.composition.input.clone();
         let segment_start = 0;
         let segment_end = input.len();
@@ -746,6 +837,9 @@ impl Engine {
             .candidates
             .get(candidate_index)
             .map(|candidate| (candidate.text.clone(), candidate.source.clone()))?;
+        if intent == CommitIntent::DefaultConfirm && candidate_source.is_ai() {
+            return None;
+        }
         self.commit_tick = self.commit_tick.saturating_add(1);
         let learning = UserDbCommitMetadata::new(
             input.clone(),
@@ -755,7 +849,12 @@ impl Engine {
             segment_end,
             self.commit_tick,
         );
-        self.pending_userdb_learning = Some(learning.clone());
+        if candidate_source.is_ai() {
+            self.pending_userdb_learning = None;
+            self.ai_memory.record_commit(&self.context, &learning);
+        } else {
+            self.pending_userdb_learning = Some(learning.clone());
+        }
         self.record_commit_with_metadata(learning);
         self.clear_composition();
         Some(text)
@@ -794,17 +893,22 @@ impl Engine {
     }
 
     fn refresh_candidates(&mut self) {
-        let input = self.context.composition.input.as_str();
+        let input = self.context.composition.input.clone();
         let mut candidates = self
             .translators
             .iter()
             .flat_map(|translator| {
-                translator.translate_with_context(input, &self.status, &self.options, &self.context)
+                translator.translate_with_context(
+                    &input,
+                    &self.status,
+                    &self.options,
+                    &self.context,
+                )
             })
             .collect::<Vec<_>>();
         candidates.extend(
             self.userdb
-                .lookup(&UserDbLookupRequest::new(input).with_predictive(true))
+                .lookup(&UserDbLookupRequest::new(input.as_str()).with_predictive(true))
                 .into_iter()
                 .map(|result| result.candidate()),
         );
@@ -822,9 +926,36 @@ impl Engine {
                 candidates = ranked;
             }
         }
-        self.context.candidates = candidates;
+        self.context.candidates =
+            merge_classic_and_staged_ai(&input, candidates, self.staged_ai_result.as_ref());
         self.context.highlighted = 0;
     }
+}
+
+fn merge_classic_and_staged_ai(
+    input: &str,
+    mut classic: Vec<Candidate>,
+    staged_ai_result: Option<&StagedAiCandidates>,
+) -> Vec<Candidate> {
+    if let Some(staged) = staged_ai_result {
+        if staged.matches_input(input) {
+            let mut ai_candidates = staged
+                .candidates
+                .iter()
+                .cloned()
+                .enumerate()
+                .collect::<Vec<_>>();
+            ai_candidates.sort_by(|(left_index, left), (right_index, right)| {
+                right
+                    .source
+                    .ai_confidence()
+                    .cmp(&left.source.ai_confidence())
+                    .then_with(|| left_index.cmp(right_index))
+            });
+            classic.extend(ai_candidates.into_iter().map(|(_, candidate)| candidate));
+        }
+    }
+    classic
 }
 
 const fn is_exact_control_modifier(modifiers: KeyModifiers) -> bool {

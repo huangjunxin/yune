@@ -65,7 +65,7 @@ pub unsafe extern "C" fn RimeGetContext(
 
     clear_context(context);
 
-    let (snapshot, hide_candidate, chord_prompt) = {
+    let (snapshot, hide_candidate, chord_prompt, affix_prompt_preedit) = {
         let mut registry = sessions()
             .lock()
             .expect("session registry should not be poisoned");
@@ -73,6 +73,7 @@ pub unsafe extern "C" fn RimeGetContext(
             return FALSE;
         };
         apply_visible_switch_radio_defaults(session);
+        let composition_input = session.engine.context().composition.input.clone();
         (
             session.engine.snapshot(),
             session.engine.get_option("_hide_candidate"),
@@ -80,6 +81,10 @@ pub unsafe extern "C" fn RimeGetContext(
                 .chord_composer
                 .as_ref()
                 .and_then(|composer| composer.prompt().map(ToOwned::to_owned)),
+            session
+                .affix_segmentors
+                .iter()
+                .find_map(|segmentor| segmentor.prompt_preedit(&composition_input)),
         )
     };
     let menu_settings = context_menu_settings(&snapshot.status.schema_id);
@@ -99,6 +104,9 @@ pub unsafe extern "C" fn RimeGetContext(
             if let Some(chord_prompt) = chord_prompt.filter(|_| composition.input.is_empty()) {
                 let length = chord_prompt.len() as c_int;
                 (chord_prompt, length, 0, 0, 0)
+            } else if let Some((preedit, caret)) = affix_prompt_preedit {
+                let length = preedit.len() as c_int;
+                (preedit, length, caret as c_int, 0, caret as c_int)
             } else {
                 (
                     composition.preedit,

@@ -149,6 +149,74 @@ word	lei5	2	l	variant	lei5	you alt
 }
 
 #[test]
+fn dictionary_lookup_filter_emits_typeduck_panel_comments_from_code_first_rows() {
+    let dictionary_yaml = format!(
+        "---\n\
+name: typeduck_lookup\n\
+version: \"0.1\"\n\
+sort: original\n\
+...\n\
+\n\
+nei5,1,0,,oth,,,,,,,you (singular),tm,nepali,hindi,kamu\t{}\n\
+ne1,1,0,,part,,,,,,,(how about),(particle),,(particle),(imbuhan kata)\t{}\n\
+nei1,2,0,,oth,ver,,,this,,,this,,,,\t{}\n\
+ni1,2,0,,oth,ver,,,this,,,this,,,,\t{}\n",
+        "\u{4f60}", "\u{5462}", "\u{5462}", "\u{5462}",
+    );
+    let dictionary = TableDictionary::parse_typeduck_lookup_dict_yaml(&dictionary_yaml)
+        .expect("TypeDuck code-first lookup rows should parse");
+    let filter = DictionaryLookupFilter::new(dictionary);
+
+    let mut candidates = vec![
+        Candidate {
+            text: "\u{4f60}".to_owned(),
+            comment: "\u{000c}nei5".to_owned(),
+            source: CandidateSource::Table,
+            quality: 1.0,
+        },
+        Candidate {
+            text: "\u{5462}".to_owned(),
+            comment: "\u{000c}nei1".to_owned(),
+            source: CandidateSource::Table,
+            quality: 1.0,
+        },
+    ];
+    filter.apply(&mut candidates);
+
+    assert_eq!(
+        candidates[0].comment,
+        format!(
+            "\u{000c}\r1,{},nei5,1,0,,oth,,,,,,,you (singular),tm,nepali,hindi,kamu",
+            "\u{4f60}",
+        )
+    );
+    assert_eq!(
+        candidates[1].comment,
+        format!(
+            "\u{000c}\r1,{},nei1,2,0,,oth,ver,,,this,,,this,,,,\
+\r0,{},ne1,1,0,,part,,,,,,,(how about),(particle),,(particle),(imbuhan kata)\
+\r0,{},ni1,2,0,,oth,ver,,,this,,,this,,,,",
+            "\u{5462}", "\u{5462}", "\u{5462}",
+        )
+    );
+}
+
+#[test]
+fn typeduck_lookup_parser_rejects_regular_table_rows() {
+    let dictionary_yaml = r#"
+---
+name: regular_lookup
+version: "0.1"
+sort: original
+...
+
+word	nei5	1	n	primary
+"#;
+
+    assert!(TableDictionary::parse_typeduck_lookup_dict_yaml(dictionary_yaml).is_err());
+}
+
+#[test]
 fn uniquifier_filter_removes_later_duplicate_candidate_texts() {
     let mut engine = Engine::new();
     engine.add_translator(StaticTableTranslator::new([("ni", "你"), ("ni", "呢")]));

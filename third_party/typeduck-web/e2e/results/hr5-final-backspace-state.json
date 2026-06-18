@@ -1,0 +1,84 @@
+{
+  "note": "M9 condition closeout recapture after modifier-key fix. Fresh page waited for runtime readiness before physical keypresses; Backspace mutated composition from ngo to ng; no visible runtime-error banner appeared before or after the operation.",
+  "before": {
+    "label": "clean-backspace-before",
+    "url": "http://127.0.0.1:5180/web/?debug&realAssets=1&m9CleanBackspaceFixed=1781825766077",
+    "capturedAt": "2026-06-18T23:36:18.499Z",
+    "alertText": "",
+    "bodyHasRuntimeErrorText": false,
+    "diagnostics": "[{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"worker:diagnostic-ready\",\"timestamp\":\"2026-06-18T23:36:06.190Z\"}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncFromPersistenceBeforeInit:start\",\"reason\":\"before-init\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T23:36:06.337Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":false}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncFromPersistenceBeforeInit:pass\",\"reason\":\"before-init\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T23:36:06.340Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"runtime:init\",\"reason\":\"after-init\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T23:36:12.220Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:start\",\"reason\":\"after-init\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T23:36:12.220Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:pass\",\"reason\":\"after-init\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T23:36:12.222Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:start\",\"reason\":\"customize\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T23:36:12.230Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:pass\",\"reason\":\"customize\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T23:36:12.231Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:start\",\"reason\":\"deploy\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T23:36:17.861Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:pass\",\"reason\":\"deploy\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T23:36:17.863Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}}]",
+    "hasRuntimeErrorBanner": false,
+    "panelText": "ngo‹›1.ngo5我I, meⓘ2.ngo4俄Russianⓘ3.ngo6餓hungryⓘ4.ngo4娥嫦娥ⓘ5.ngo4鵝gooseⓘ",
+    "rows": [
+      {
+        "index": 0,
+        "text": "1.ngo5我I, meⓘ"
+      },
+      {
+        "index": 1,
+        "text": "2.ngo4俄Russianⓘ"
+      },
+      {
+        "index": 2,
+        "text": "3.ngo6餓hungryⓘ"
+      },
+      {
+        "index": 3,
+        "text": "4.ngo4娥嫦娥ⓘ"
+      },
+      {
+        "index": 4,
+        "text": "5.ngo4鵝gooseⓘ"
+      }
+    ],
+    "textareaValue": "",
+    "title": "TypeDuck 網頁版",
+    "warningOrErrorCount": 0,
+    "warningOrErrors": []
+  },
+  "after": {
+    "label": "clean-backspace-after",
+    "url": "http://127.0.0.1:5180/web/?debug&realAssets=1&m9CleanBackspaceFixed=1781825766077",
+    "capturedAt": "2026-06-18T23:36:19.085Z",
+    "alertText": "",
+    "bodyHasRuntimeErrorText": false,
+    "diagnostics": "[{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"worker:diagnostic-ready\",\"timestamp\":\"2026-06-18T23:36:06.190Z\"}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncFromPersistenceBeforeInit:start\",\"reason\":\"before-init\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T23:36:06.337Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":false}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncFromPersistenceBeforeInit:pass\",\"reason\":\"before-init\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T23:36:06.340Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"runtime:init\",\"reason\":\"after-init\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T23:36:12.220Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:start\",\"reason\":\"after-init\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T23:36:12.220Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:pass\",\"reason\":\"after-init\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T23:36:12.222Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:start\",\"reason\":\"customize\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T23:36:12.230Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:pass\",\"reason\":\"customize\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T23:36:12.231Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:start\",\"reason\":\"deploy\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T23:36:17.861Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:pass\",\"reason\":\"deploy\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T23:36:17.863Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}}]",
+    "hasRuntimeErrorBanner": false,
+    "panelText": "ng‹›1.ng5五fiveⓘ2.ng5午noonⓘ3.ng6誤wrongⓘ4.ng4吳surname [Ng]ⓘ5.ng5伍five; surname [Ng]ⓘ",
+    "rows": [
+      {
+        "index": 0,
+        "text": "1.ng5五fiveⓘ"
+      },
+      {
+        "index": 1,
+        "text": "2.ng5午noonⓘ"
+      },
+      {
+        "index": 2,
+        "text": "3.ng6誤wrongⓘ"
+      },
+      {
+        "index": 3,
+        "text": "4.ng4吳surname [Ng]ⓘ"
+      },
+      {
+        "index": 4,
+        "text": "5.ng5伍five; surname [Ng]ⓘ"
+      }
+    ],
+    "textareaValue": "",
+    "title": "TypeDuck 網頁版",
+    "warningOrErrorCount": 0,
+    "warningOrErrors": []
+  },
+  "assertions": {
+    "beforeHasRuntimeErrorBanner": false,
+    "afterHasRuntimeErrorBanner": false,
+    "beforeBodyHasRuntimeErrorText": false,
+    "afterBodyHasRuntimeErrorText": false,
+    "beforePanelText": "ngo‹›1.ngo5我I, meⓘ2.ngo4俄Russianⓘ3.ngo6餓hungryⓘ4.ngo4娥嫦娥ⓘ5.ngo4鵝gooseⓘ",
+    "afterPanelText": "ng‹›1.ng5五fiveⓘ2.ng5午noonⓘ3.ng6誤wrongⓘ4.ng4吳surname [Ng]ⓘ5.ng5伍five; surname [Ng]ⓘ",
+    "compositionMutatedToNg": true
+  }
+}

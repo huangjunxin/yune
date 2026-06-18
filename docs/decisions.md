@@ -409,6 +409,7 @@ deploy false; HR-4 later resolved persistence sync/reload proof.
 recommendation is now evidence-based rather than tooling-based: Yune can load
 and type through TypeDuck-Web, but real frontends must not be treated as ready
 until paging/deletion and v1.1.2 dictionary-comment bytes pass in-browser.
+Superseded by D-P10-13 after HR-5/HR-6 closed those evidence gaps.
 
 **D-P10-8 — Close M9 as a validation milestone, not a pass.** M9 is complete
 because the browser E2E ran and produced a durable GO/NO-GO recommendation. The
@@ -425,7 +426,8 @@ validated. HR-1 fixes the real-asset gate: TypeDuck-Web now loads
 `呢`, `尼`) in-browser. The recommendation remains NO-GO, and
 TYPEDUCK-E2E-03/E2E-04 stay open until the full matrix is re-run against real
 assets. This supersedes D-P10-8's "do not reopen the validation gate" stance —
-the placeholder-evidence finding justified reopening it.
+the placeholder-evidence finding justified reopening it. Superseded by D-P10-13
+after the full real-assets matrix passed.
 
 **D-P10-10 — Treat startup setOption as a real TypeDuck-Web contract, not an
 optional convenience.** The upstream app calls `Actions.setOption` during startup
@@ -454,6 +456,28 @@ startup customize writing `page_size: '6'`, deploy syncing after mutation, and a
 real reload restoring `/rime/jyut6ping3_mobile.custom.yaml` before runtime init.
 Paging/deletion and dictionary-comment parity remain outside this decision.
 
+**D-P10-13 — HR-7 closes M9 as GO WITH CONDITIONS.** HR-5 reran the browser
+matrix against real TypeDuck `jyut6ping3_mobile` assets and proved composition,
+candidate list, paging, selection, deletion, Space commit, phrase commit,
+deploy, customize, persistence sync, reload survival, and dictionary-panel
+comments with zero warning/error console entries. HR-6 locked the shared
+reverse-lookup `"; "` joiner and schema-prompt bytes against TypeDuck-HK/librime
+v1.1.2. AI-native behavior may proceed only behind the separate M11 gating
+policy: disabled by default in real frontends until provider/ranking/privacy
+contracts are proven and explicitly enabled.
+
+**D-P10-14 — Post-review M9 closeout conditions are evidence rules, not a
+new verdict.** The delete/backspace runtime-error banner was a real delete-path
+adapter bug: TypeDuck-Web sends a standalone `{Control_L}` keydown before
+`{Control+Delete}`, and the adapter was forwarding the pure modifier into Yune.
+The adapter now treats pure modifier keydowns as pass-through and the HR-5
+delete/backspace evidence was recaptured with no banner and zero warning/error
+entries. Rich dictionary-comment byte parity is clean-checkout reproducible via
+the committed `cantonese_parity` fixture; the browser-shaped native
+`typeduck_adapter_real_assets_emit_oracle_dictionary_panel_comments` test asserts
+the full real-assets path only when local TypeDuck v1.1.2 oracle build assets
+exist and otherwise emits an explicit skip reason.
+
 **D-12 / TYPEDUCK-E2E-04 — Final findings separate three blocker classes.**
 TypeDuck-Web app/source blockers, Yune adapter/runtime mismatches, and
 environment/tooling blockers are reported separately.
@@ -463,7 +487,8 @@ frontend exposure** due to browser-validation blockers. Strict rubric: lack of
 browser evidence prevents GO / GO WITH CONDITIONS. Blockers are bounded
 (cargo/rustup/emcc have install paths), not a fundamental seam incompatibility; the
 seam patch is structurally sound and the adapter handles mismatches — environment
-setup is the gating requirement.
+setup is the gating requirement. Superseded by D-P10-13 after HR-5/HR-6 produced
+real-assets browser and oracle evidence.
 
 **D-14 — AI-native scope remains deferred.** AI-native provider calls, candidate
 generation, ranking, context, memory, privacy controls, and a new first-party Yune
@@ -493,8 +518,8 @@ commit `3e4605c4fae99f068df2edb85aaeab5a97752795`, and `TypeDuck-HK/schema` comm
 **D-20 / WIN-COMMENT-01 — Represent TypeDuck-Windows candidate comments as source-row
 dictionary lookup payloads (`\f\r1,...\r0,...`) through `dictionary_lookup_filter`.**
 Captured source rows assert byte output against the v1.1.2 fixture. Normal reverse
-lookup joins use `"; "`, but that join and schema-name prompt parity still need
-dedicated oracle coverage.
+lookup joins use `"; "`, and HR-6 adds dedicated v1.1.2 oracle coverage for that
+join plus schema-prompt preedit bytes.
 
 **D-21 / WIN-BUILD-01 — The native Windows package is produced by
 `scripts/package-typeduck-windows.ps1`.** It builds `yune-rime-api` for
@@ -512,9 +537,69 @@ dedicated oracle fixtures are captured.
 **D-23 / SEQUENCING — Re-sequence to web-first.** Validate Yune in a real web browser
 (reopened as Phase 17) before resuming TypeDuck-Windows platform work. Phase 10's
 NO-GO reflected absent browser evidence (the WASM artifact was never built), not a
-failed seam. Shared engine slices (comment shaping, Cantonese goldens, baseline fix)
-are reused by the web path; Windows-specific native packaging (Phases 11–16) is parked
-until browser validation succeeds.
+failed seam. HR-7 closes that browser gate as GO WITH CONDITIONS. Shared engine
+slices (comment shaping, Cantonese goldens, baseline fix) are reused by the web
+path; Windows-specific native packaging and E2E validation can resume under the
+TypeDuck-Windows milestone.
+
+### AI-native milestone (M11)
+
+**D-M11-1 — Start AI-native with a CLI-only staged-result provider slice.** M11 S1
+adds an `AiCandidateProvider` interface and deterministic `MockAiProvider` in
+`yune-core`, but provider execution is owned by the direct `yune-cli run` path,
+not by `Engine::refresh_candidates` and not by `yune-rime-api`/browser/Windows
+frontends. The engine stores only staged, input-keyed `AiResult::Ready`
+candidates and appends matching AI rows after classic candidates, preserving the
+top classic candidate. S1 kept `CandidateSource::Ai` as a unit variant with
+provider/confidence labels in `comment`; D-M11-2 supersedes that shape once the
+merge policy consumes confidence. Default Space/Return confirmation rejects AI
+candidates, while explicit AI selection records a commit without staging librime
+userdb learning. Real frontend AI exposure remains disabled by default until
+later M11 provider, local-model, context, memory, and privacy gates are proven.
+
+**D-M11-2 — S2 uses a host-owned worker and fixed-point AI confidence metadata.**
+Provider/model work remains outside `Engine::refresh_candidates`: `AiWorker`
+runs the provider on a background thread, receives cloned context snapshots from
+the direct CLI host, and returns input-keyed `AiResult::{Pending, Ready}` so
+stale results cannot erase or apply to a different input. `CandidateSource::Ai`
+is promoted to `{ provider, confidence }`, but confidence is stored as fixed
+point `AiConfidence` rather than `f32` so `CandidateSource` keeps `Eq` and can
+continue flowing through `UserDbCommitMetadata` and tests. The merge policy still
+pins all classic rows ahead of AI rows, but now orders AI rows by confidence.
+This completes the worker/confidence part of AI-02 while leaving local-model,
+context, memory, privacy, and real-frontend exposure for later gates.
+
+**D-M11-3 — S3 defaults AI context to sensitive and blocks remote providers before
+invocation.** `Context` now carries `AiContext` metadata (app id, field id,
+preceding text, and `PrivacyClass`), defaulting to `Sensitive` when the host has
+not supplied classification. `EngineAiContextProvider` captures a bounded
+`AiContextSnapshot` with the explicit app/field/text/privacy plus input cursor,
+schema, and candidate-count data a provider may see. Providers declare
+`AiProviderKind::{Mock, Local, Remote}`; `AiPrivacyPolicy` allows mock/local
+providers under sensitive context but blocks remote providers before
+`provide()` is called and returns an input-keyed `AiResult::Off { reason:
+Privacy }`. The policy also exposes the learning gate that S4 must apply to
+`MemoryStore` writes. Real frontend AI exposure remains disabled by default.
+
+**D-M11-4 — S4 routes AI learning into a separate memory store, never librime
+userdb.** `crates/yune-core/src/ai/memory.rs` owns `MemoryStore`, an inspectable,
+clearable, disable-able ledger for explicit AI selections. `Engine::commit_candidate`
+continues to keep `pending_userdb_learning` empty for `CandidateSource::Ai`, but
+now records standard-context AI commits into `MemoryStore`; sensitive contexts
+and disabled memory keep the commit path working while suppressing memory writes.
+The store exports/imports a stable text snapshot for future hosts and exposes
+`memory_store_file_name` / `memory_store_snapshot_file_name`, which produce
+`.ai-memory` / `.ai-memory.txt` resources and reject path-like or `*.userdb`
+logical ids. M9/M10 frontends still do not expose AI.
+
+**D-M11-5 — S5 proves local AI through the direct CLI only.**
+`LocalModelProvider` is a deterministic, local `AiCandidateProvider` with
+rule-backed/contextual completions plus optional `MemoryStore` suggestions. It
+declares `AiProviderKind::Local`, runs through the existing `AiWorker`, returns
+input-keyed candidates with fixed-point confidence, and obeys deterministic
+zero-budget fallback. The direct CLI accepts `--ai-provider local` and records
+the same `ai_decision` field used by the mock provider; the ABI-backed
+`frontend` command, TypeDuck-Web, and Windows surfaces remain AI-free.
 
 ### Initialization notes (process decisions)
 
@@ -548,4 +633,4 @@ this is why the placeholder-echo WI-4 matrix was reopened (D-P10-9) and why HR-1
 committed the real-assets browser run rather than only describing it.
 
 ---
-*Last updated: 2026-06-18 — consolidated from the retired GSD .planning/; added the M9 HR-1/HR-2/HR-3/HR-4 decisions (D-P10-9/10/11/12), the GSD-retirement decision (D-INIT-3), and docs-governance decisions (D-DOC-1/2).*
+*Last updated: 2026-06-18 — added D-P10-14 for the M9 post-review evidence closeout and retained the M11 S5 local-provider decision.*

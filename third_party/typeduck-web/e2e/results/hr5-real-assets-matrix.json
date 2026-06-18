@@ -1,0 +1,202 @@
+{
+  "capturedAt": "2026-06-18T20:29:34.166Z",
+  "environment": {
+    "url": "http://localhost:5180/web/?hr5-final=1",
+    "title": "TypeDuck 網頁版",
+    "browserPath": "Browser plugin Chrome extension fallback; in-app browser tab attach timed out",
+    "vitePort": 5180,
+    "rebuiltArtifacts": [
+      "target/wasm32-unknown-emscripten/debug/yune-typeduck.{js,wasm}",
+      "third_party/typeduck-web/source/public/worker.js"
+    ]
+  },
+  "matrix": {
+    "composition": {
+      "status": "PASS",
+      "panelText": "nei‹›1.nei5你you (singular)ⓘ2.ne1呢(how about)ⓘ3.nei4尼nunⓘ4.nei4妮little girlⓘ5.nei4彌full; fillⓘ呢ne1particle 助詞(how about)呢nei1other 其他vernacular 口語thisWritten Form 書面語這呢ni1other 其他vernacular 口語thisWritten Form 書面語這"
+    },
+    "candidateList": {
+      "status": "PASS",
+      "panelText": "nei‹›1.nei5你you (singular)ⓘ2.ne1呢(how about)ⓘ3.nei4尼nunⓘ4.nei4妮little girlⓘ5.nei4彌full; fillⓘ呢ne1particle 助詞(how about)呢nei1other 其他vernacular 口語thisWritten Form 書面語這呢ni1other 其他vernacular 口語thisWritten Form 書面語這"
+    },
+    "dictionaryPanelComments": {
+      "status": "PASS",
+      "dictionaryText": "呢ne1particle 助詞(how about)呢nei1other 其他vernacular 口語thisWritten Form 書面語這呢ni1other 其他vernacular 口語thisWritten Form 書面語這",
+      "firstCandidateComment": "\f\r1,你,nei5,1,0,,oth,,,,,,,you (singular),تم,तपाईं,आप,kamu",
+      "firstCandidateCommentCodepoints": [
+        12,
+        13,
+        49,
+        44
+      ]
+    },
+    "paging": {
+      "status": "PASS",
+      "page1Rows": [
+        {
+          "index": 0,
+          "text": "1.nei5妳youⓘ"
+        },
+        {
+          "index": 1,
+          "text": "2.nei5您youⓘ"
+        },
+        {
+          "index": 2,
+          "text": "3.nei6膩greasyⓘ"
+        },
+        {
+          "index": 3,
+          "text": "4.nei6餌to feed; baitⓘ"
+        },
+        {
+          "index": 4,
+          "text": "5.nei4瀰a watery expanseⓘ"
+        }
+      ]
+    },
+    "deletion": {
+      "status": "PASS",
+      "before": [
+        {
+          "index": 0,
+          "text": "1.nei5妳youⓘ"
+        },
+        {
+          "index": 1,
+          "text": "2.nei5您youⓘ"
+        },
+        {
+          "index": 2,
+          "text": "3.nei6膩greasyⓘ"
+        },
+        {
+          "index": 3,
+          "text": "4.nei6餌to feed; baitⓘ"
+        },
+        {
+          "index": 4,
+          "text": "5.nei4瀰a watery expanseⓘ"
+        }
+      ],
+      "after": [
+        {
+          "index": 0,
+          "text": "1.nei5您youⓘ"
+        },
+        {
+          "index": 1,
+          "text": "2.nei6膩greasyⓘ"
+        },
+        {
+          "index": 2,
+          "text": "3.nei6餌to feed; baitⓘ"
+        },
+        {
+          "index": 3,
+          "text": "4.nei4瀰a watery expanseⓘ"
+        },
+        {
+          "index": 4,
+          "text": "5.nei4祢ⓘ"
+        }
+      ],
+      "logs": [
+        {
+          "level": "log",
+          "message": "post {\"name\":\"deleteCandidate\",\"args\":[0]}",
+          "timestamp": "2026-06-18T20:29:17.135Z",
+          "url": "http://localhost:5180/web/src/rime.ts"
+        }
+      ]
+    },
+    "selection": {
+      "status": "PASS",
+      "selectionProof": {
+        "panelExists": false,
+        "textarea": "您"
+      },
+      "committed": "您",
+      "logs": [
+        {
+          "level": "log",
+          "message": "post {\"name\":\"selectCandidate\",\"args\":[0]}",
+          "timestamp": "2026-06-18T20:29:28.756Z",
+          "url": "http://localhost:5180/web/src/rime.ts"
+        }
+      ]
+    },
+    "commit": {
+      "status": "PASS",
+      "beforeSpace": {
+        "panelText": "nei‹›1.nei5你you (singular)ⓘ2.ne1呢(how about)ⓘ3.nei4尼nunⓘ4.nei4妮little girlⓘ5.nei4彌full; fillⓘ"
+      },
+      "afterSpace": {
+        "panelExists": false,
+        "textarea": "您你"
+      },
+      "committed": "你"
+    },
+    "deploy": {
+      "status": "PASS"
+    },
+    "customize": {
+      "status": "PASS"
+    },
+    "persistenceSync": {
+      "status": "PASS"
+    },
+    "reload": {
+      "status": "PASS",
+      "persistedRead": {
+        "persistedConfig": {
+          "bytes": 396,
+          "exists": true,
+          "pageSize": "'6'",
+          "path": "/rime/jyut6ping3_mobile.custom.yaml"
+        },
+        "phase": "syncFromPersistenceBeforeInit:pass",
+        "reason": "before-init",
+        "schemaId": "jyut6ping3_mobile",
+        "timestamp": "2026-06-18T20:27:20.005Z",
+        "userDataDir": "/rime"
+      }
+    }
+  },
+  "console": {
+    "warningOrErrorCount": 0,
+    "warningOrErrors": []
+  },
+  "screenshots": [
+    "screenshot-hr5-dictionary-panel.png",
+    "screenshot-hr5-after-delete.png"
+  ],
+  "postReviewCloseout": {
+    "runtimeErrorBanner": {
+      "status": "RESOLVED",
+      "rootCause": "TypeDuck-Web sends a standalone {Control_L} keydown before {Control+Delete}; the adapter forwarded that pure modifier to Yune, which raised the visible operation-error banner even though the following delete chord still removed the candidate.",
+      "fix": "The Yune TypeDuck-Web adapter now passes pure modifier keydowns through without calling the runtime.",
+      "evidence": [
+        "hr5-final-delete-state.json",
+        "hr5-final-backspace-state.json",
+        "hr5-final-delete-before.png",
+        "hr5-final-delete-after.png",
+        "hr5-final-backspace.png"
+      ],
+      "delete": {
+        "afterHasRuntimeErrorBanner": false,
+        "firstCandidateChanged": true
+      },
+      "backspace": {
+        "afterHasRuntimeErrorBanner": false,
+        "compositionMutatedToNg": true
+      }
+    },
+    "dictionaryCommentByteParity": {
+      "status": "DOCUMENTED",
+      "committedGuarantee": "cargo test -p yune-core --test cantonese_parity",
+      "richIntegrationDependency": "target/typeduck-oracle/v1.1.2/rime-user/build",
+      "behaviorWhenDependencyMissing": "typeduck_adapter_real_assets_emit_oracle_dictionary_panel_comments emits an explicit skip reason instead of passing against degraded fallback assets."
+    }
+  }
+}

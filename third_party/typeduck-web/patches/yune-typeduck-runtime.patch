@@ -1250,6 +1250,23 @@ index 0000000..074d9ee
 +let currentExtraSharedAssets: TypeDuckExtraSharedAsset[] = [];
 +let lastKeyResult: RimeResult = { isComposing: false, success: true };
 +const neutralKeyResult: RimeResult = { isComposing: false, success: true };
++const passThroughModifierKeys = new Set([
++  "Alt",
++  "Alt_L",
++  "Alt_R",
++  "Control",
++  "Control_L",
++  "Control_R",
++  "Meta",
++  "Meta_L",
++  "Meta_R",
++  "Shift",
++  "Shift_L",
++  "Shift_R",
++  "Super",
++  "Super_L",
++  "Super_R",
++]);
 +
 +export interface TypeDuckExtraSharedAsset {
 +  path: string;
@@ -1373,13 +1390,31 @@ index 0000000..074d9ee
 +
 +  // Extract key name
 +  let key: string;
++  let shiftKey = false;
++  let ctrlKey = false;
++  let altKey = false;
++  let metaKey = false;
 +  if (input.startsWith("{") && input.endsWith("}")) {
 +    // Special key wrapped in braces
 +    const inner = input.slice(1, -1);
-+    if (isRelease) {
-+      key = inner.replace("Release+", "");
-+    } else {
-+      key = inner;
++    const parts = (isRelease ? inner.replace("Release+", "") : inner).split("+");
++    key = parts.pop() ?? "";
++    for (const modifier of parts) {
++      switch (modifier) {
++        case "Shift":
++          shiftKey = true;
++          break;
++        case "Control":
++          ctrlKey = true;
++          break;
++        case "Alt":
++          altKey = true;
++          break;
++        case "Meta":
++        case "Super":
++          metaKey = true;
++          break;
++      }
 +    }
 +    // Normalize key names
 +    if (key === "BackSpace") key = "Backspace";
@@ -1395,7 +1430,7 @@ index 0000000..074d9ee
 +    key = input;
 +  }
 +
-+  return { key, type };
++  return { key, type, shiftKey, ctrlKey, altKey, metaKey };
 +}
 +
 +/**
@@ -1412,6 +1447,9 @@ index 0000000..074d9ee
 +  const eventLike = parseKeySequence(input);
 +
 +  if (eventLike.type === "keyup") {
++    return lastKeyResult.isComposing ? lastKeyResult : neutralKeyResult;
++  }
++  if (passThroughModifierKeys.has(eventLike.key)) {
 +    return lastKeyResult.isComposing ? lastKeyResult : neutralKeyResult;
 +  }
 +
@@ -2033,3 +2071,77 @@ index 0000000..cced079
 +    committed,
 +  };
 +}
+
+diff --git a/src/Candidate.tsx b/src/Candidate.tsx
+index f0c2b50..7e753dd 100644
+--- a/src/Candidate.tsx
++++ b/src/Candidate.tsx
+@@ -51,9 +51,8 @@ export default function Candidate({ isHighlighted, info, selectCandidate, delete
+ 	const commentStyle300 = isHighlighted ? "bg-primary text-primary-content-300" : "text-base-content-300";
+ 	const commentStyle400 = isHighlighted ? "bg-primary text-primary-content-400" : "text-base-content-400";
+ 	const labelColSpan = definitionLayout.filter(languages => languages.some(language => prefs.displayLanguages.has(language))).length;
+-	return <tbody>
+-		<button
+-			className={`contents join rounded-md${isHighlighted ? " highlighted" : ""}`}
++	return <tbody
++			className={`join rounded-md${isHighlighted ? " highlighted" : ""}`}
+ 			onClick={_selectCandidate}
+ 			onMouseEnter={_showDictionary}
+ 			onMouseMove={_showDictionary}
+@@ -91,6 +90,5 @@ export default function Candidate({ isHighlighted, info, selectCandidate, delete
+ 				<td className={`${prefs.isHeiTypeface ? "font-hei" : "font-sung"} text-[13pt]${isHighlighted ? " bg-primary text-primary-content" : ""}`}>{info.text}</td>
+ 				<td className={`${commentStyle400} w-full`} colSpan={labelColSpan + 2}>{(!info.isReverseLookup || prefs.showReverseCode) && info.note}</td>
+ 			</tr>}
+-		</button>
+ 	</tbody>;
+ }
+diff --git a/src/DictionaryPanel.tsx b/src/DictionaryPanel.tsx
+index d58fbab..f6a855f 100644
+--- a/src/DictionaryPanel.tsx
++++ b/src/DictionaryPanel.tsx
+@@ -35,14 +35,16 @@ const DictionaryPanel = forwardRef<HTMLDivElement, { info: CandidateInfo; prefs:
+ 							[entry.otherData],
+ 							otherData =>
+ 								<table>
+-									{otherData?.map(([key, name, value]) =>
+-										<tr key={key}>
+-											<th>{name}</th>
+-											<td className={prefs.isHeiTypeface ? "font-hei" : "font-sung"}>
+-												{value.split("，").map((line, i) => <div key={i}>{line}</div>)}
+-											</td>
+-										</tr>
+-									)}
++									<tbody>
++										{otherData?.map(([key, name, value]) =>
++											<tr key={key}>
++												<th>{name}</th>
++												<td className={prefs.isHeiTypeface ? "font-hei" : "font-sung"}>
++													{value.split("\u{ff0c}").map((line, i) => <div key={i}>{line}</div>)}
++												</td>
++											</tr>
++										)}
++									</tbody>
+ 								</table>,
+ 						)}
+ 						{letSome(
+@@ -50,12 +52,14 @@ const DictionaryPanel = forwardRef<HTMLDivElement, { info: CandidateInfo; prefs:
+ 							otherDefinitions =>
+ 								<table>
+ 									<caption className="font-medium text-[13pt] pb-1 text-left whitespace-nowrap">More Languages</caption>
+-									{otherDefinitions?.map(([lang, name, value]) =>
+-										<tr key={lang}>
+-											<th>{name}</th>
+-											<td lang={lang}>{value}</td>
+-										</tr>
+-									)}
++									<tbody>
++										{otherDefinitions?.map(([lang, name, value]) =>
++											<tr key={lang}>
++												<th>{name}</th>
++												<td lang={lang}>{value}</td>
++											</tr>
++										)}
++									</tbody>
+ 								</table>,
+ 						)}
+ 					</div>,

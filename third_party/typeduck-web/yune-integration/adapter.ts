@@ -78,6 +78,23 @@ let currentPrepareOptions: PrepareTypeDuckFilesystemOptions | null = null;
 let currentExtraSharedAssets: TypeDuckExtraSharedAsset[] = [];
 let lastKeyResult: RimeResult = { isComposing: false, success: true };
 const neutralKeyResult: RimeResult = { isComposing: false, success: true };
+const passThroughModifierKeys = new Set([
+  "Alt",
+  "Alt_L",
+  "Alt_R",
+  "Control",
+  "Control_L",
+  "Control_R",
+  "Meta",
+  "Meta_L",
+  "Meta_R",
+  "Shift",
+  "Shift_L",
+  "Shift_R",
+  "Super",
+  "Super_L",
+  "Super_R",
+]);
 
 type BooleanRimePreference =
   | "enableCompletion"
@@ -220,13 +237,31 @@ function parseKeySequence(input: string): TypeDuckKeyboardEventLike {
 
   // Extract key name
   let key: string;
+  let shiftKey = false;
+  let ctrlKey = false;
+  let altKey = false;
+  let metaKey = false;
   if (input.startsWith("{") && input.endsWith("}")) {
     // Special key wrapped in braces
     const inner = input.slice(1, -1);
-    if (isRelease) {
-      key = inner.replace("Release+", "");
-    } else {
-      key = inner;
+    const parts = (isRelease ? inner.replace("Release+", "") : inner).split("+");
+    key = parts.pop() ?? "";
+    for (const modifier of parts) {
+      switch (modifier) {
+        case "Shift":
+          shiftKey = true;
+          break;
+        case "Control":
+          ctrlKey = true;
+          break;
+        case "Alt":
+          altKey = true;
+          break;
+        case "Meta":
+        case "Super":
+          metaKey = true;
+          break;
+      }
     }
     // Normalize key names
     if (key === "BackSpace") key = "Backspace";
@@ -242,7 +277,7 @@ function parseKeySequence(input: string): TypeDuckKeyboardEventLike {
     key = input;
   }
 
-  return { key, type };
+  return { key, type, shiftKey, ctrlKey, altKey, metaKey };
 }
 
 /**
@@ -259,6 +294,9 @@ export async function processKey(input: string): Promise<RimeResult> {
   const eventLike = parseKeySequence(input);
 
   if (eventLike.type === "keyup") {
+    return lastKeyResult.isComposing ? lastKeyResult : neutralKeyResult;
+  }
+  if (passThroughModifierKeys.has(eventLike.key)) {
     return lastKeyResult.isComposing ? lastKeyResult : neutralKeyResult;
   }
 

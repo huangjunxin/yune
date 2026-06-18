@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+mod ai;
 mod comment_format;
 mod dictionary;
 mod engine;
@@ -12,6 +13,14 @@ mod state;
 mod tests;
 mod translator;
 mod userdb;
+pub use ai::{
+    memory_store_file_name, memory_store_snapshot_file_name, validate_memory_store_id,
+    AiCandidateProvider, AiContextProvider, AiContextSnapshot, AiDecision, AiMemoryEntry,
+    AiMemoryRecordResult, AiMemorySkipReason, AiMemorySnapshotError, AiOffReason, AiPrivacyPolicy,
+    AiProviderKind, AiResult, AiWorker, EngineAiContextProvider, LocalModelProvider,
+    LocalModelRule, MemoryStore, MockAiProvider, StagedAiCandidates, LOCAL_MODEL_PROVIDER_NAME,
+    MEMORY_STORE_FILE_SUFFIX, MEMORY_STORE_SNAPSHOT_SUFFIX,
+};
 use comment_format::CommentFormat;
 pub use dictionary::{
     parse_rime_prism_bin_metadata, parse_rime_prism_bin_payload, parse_rime_reverse_bin_dictionary,
@@ -33,7 +42,10 @@ pub use filter::{
 };
 pub use key::{parse_key_sequence, KeyCode, KeyEvent, KeyModifiers, KeySequenceParseError};
 pub use punctuation::PunctuationTranslator;
-pub use state::{Candidate, CandidateSource, CommitRecord, Composition, Context, Snapshot, Status};
+pub use state::{
+    AiConfidence, AiContext, Candidate, CandidateSource, CommitRecord, Composition, Context,
+    PrivacyClass, Snapshot, Status,
+};
 pub use translator::{
     EchoTranslator, FoldedSwitchOptions, HistoryTranslator, ReverseLookupTranslator,
     SchemaListTranslator, StaticTableTranslator, SwitchTranslator, SwitchTranslatorSwitch,

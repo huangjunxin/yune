@@ -204,6 +204,60 @@ impl TableDictionary {
         Ok(dictionary)
     }
 
+    pub fn parse_typeduck_lookup_dict_yaml(input: &str) -> Result<Self, TableDictionaryParseError> {
+        let (metadata, body_start) = parse_rime_dict_yaml_header(input)?;
+        let mut lookup_records: HashMap<String, Vec<DictionaryLookupRecord>> = HashMap::new();
+        let mut comments_enabled = true;
+
+        for line in input.lines().skip(body_start) {
+            let line = line.trim_end();
+            if line.trim().is_empty() {
+                continue;
+            }
+            if comments_enabled && line.starts_with('#') {
+                if line == "# no comment" {
+                    comments_enabled = false;
+                }
+                continue;
+            }
+
+            let mut fields = line.splitn(2, '\t');
+            let Some(payload) = fields.next().filter(|payload| !payload.is_empty()) else {
+                continue;
+            };
+            let Some(text) = fields.next().filter(|text| !text.is_empty()) else {
+                continue;
+            };
+            if payload.matches(',').count() < 2 {
+                continue;
+            }
+            let code = payload.split_once(',').map_or(payload, |(code, _)| code);
+            lookup_records
+                .entry(text.to_owned())
+                .or_default()
+                .push(DictionaryLookupRecord {
+                    code: normalize_table_code(code),
+                    fields: vec![text.to_owned(), payload.to_owned()],
+                });
+        }
+
+        if lookup_records.is_empty() {
+            return Err(TableDictionaryParseError::new(
+                "TypeDuck lookup dictionary has no code-first lookup records",
+            ));
+        }
+
+        Ok(Self {
+            entries: Vec::new(),
+            stems: HashMap::new(),
+            dict_settings: metadata.dict_settings,
+            encoder: metadata.encoder,
+            corrections: metadata.corrections,
+            tolerance_rules: metadata.tolerance_rules,
+            lookup_records,
+        })
+    }
+
     #[must_use]
     pub fn entries(&self) -> &[TableEntry] {
         &self.entries
@@ -248,6 +302,32 @@ impl TableDictionary {
 fn parse_rime_dict_yaml_parts(
     input: &str,
 ) -> Result<(RimeTableMetadata, Vec<RimeParsedTableEntry>), TableDictionaryParseError> {
+    let (metadata, body_start) = parse_rime_dict_yaml_header(input)?;
+    let mut entries = Vec::new();
+    let mut comments_enabled = true;
+
+    for line in input.lines().skip(body_start) {
+        if line.trim().is_empty() {
+            continue;
+        }
+        if comments_enabled && line.starts_with('#') {
+            if line == "# no comment" {
+                comments_enabled = false;
+            }
+            continue;
+        }
+
+        if let Some(entry) = metadata.parse_entry(line) {
+            entries.push(entry);
+        }
+    }
+
+    Ok((metadata, entries))
+}
+
+fn parse_rime_dict_yaml_header(
+    input: &str,
+) -> Result<(RimeTableMetadata, usize), TableDictionaryParseError> {
     let mut metadata = RimeTableMetadata::default();
     let mut in_header = false;
     let mut body_start = None;
@@ -284,26 +364,7 @@ fn parse_rime_dict_yaml_parts(
             "RIME dictionary header is missing required name or version",
         ));
     }
-    let mut entries = Vec::new();
-    let mut comments_enabled = true;
-
-    for line in input.lines().skip(body_start) {
-        if line.trim().is_empty() {
-            continue;
-        }
-        if comments_enabled && line.starts_with('#') {
-            if line == "# no comment" {
-                comments_enabled = false;
-            }
-            continue;
-        }
-
-        if let Some(entry) = metadata.parse_entry(line) {
-            entries.push(entry);
-        }
-    }
-
-    Ok((metadata, entries))
+    Ok((metadata, body_start))
 }
 
 fn append_rime_import_table_entries(

@@ -553,21 +553,37 @@ fn install_schema_dictionary_lookup_filter_from_config(
         );
         return;
     };
-    let dictionary = match load_schema_dictionary_by_name(
-        schema_config,
-        name_space,
-        dictionary_name.clone(),
-        false,
-    ) {
-        DictionaryLoadOutcome::Compiled(dictionary) => dictionary,
-        DictionaryLoadOutcome::SourceFallback { dictionary, reason } => {
-            record_dictionary_source_fallback(session, reason);
-            dictionary
+    let source_yaml = load_schema_source_dictionary_yaml(&dictionary_name);
+    let dictionary = match source_yaml.as_deref() {
+        Some(dictionary_yaml) if has_typeduck_lookup_source_rows(dictionary_yaml) => {
+            match TableDictionary::parse_typeduck_lookup_dict_yaml(dictionary_yaml) {
+                Ok(dictionary) => dictionary,
+                Err(_) => {
+                    record_dictionary_load_failure(
+                        session,
+                        dictionary_name,
+                        DictionaryLoadFailure::SourceInvalid,
+                    );
+                    return;
+                }
+            }
         }
-        DictionaryLoadOutcome::NoUsablePath { reason, .. } => {
-            record_dictionary_load_failure(session, dictionary_name, reason);
-            return;
-        }
+        _ => match load_schema_dictionary_by_name(
+            schema_config,
+            name_space,
+            dictionary_name.clone(),
+            false,
+        ) {
+            DictionaryLoadOutcome::Compiled(dictionary) => dictionary,
+            DictionaryLoadOutcome::SourceFallback { dictionary, reason } => {
+                record_dictionary_source_fallback(session, reason);
+                dictionary
+            }
+            DictionaryLoadOutcome::NoUsablePath { reason, .. } => {
+                record_dictionary_load_failure(session, dictionary_name, reason);
+                return;
+            }
+        },
     };
     let tags = schema_filter_tags(schema_config, name_space);
     session.engine.add_filter(TaggedFilter::new(
@@ -805,6 +821,37 @@ fn load_schema_source_dictionary_yaml(dictionary_name: &str) -> Option<String> {
     fs::read_to_string(dictionary_path).ok()
 }
 
+fn has_typeduck_lookup_source_rows(dictionary_yaml: &str) -> bool {
+    let mut in_body = false;
+    let mut comments_enabled = true;
+
+    for line in dictionary_yaml.lines() {
+        let line = line.trim_end();
+        if !in_body {
+            if line.trim() == "..." {
+                in_body = true;
+            }
+            continue;
+        }
+        if line.trim().is_empty() {
+            continue;
+        }
+        if comments_enabled && line.starts_with('#') {
+            if line == "# no comment" {
+                comments_enabled = false;
+            }
+            continue;
+        }
+
+        let Some((payload, text)) = line.split_once('\t') else {
+            continue;
+        };
+        return !text.is_empty() && payload.matches(',').count() >= 2;
+    }
+
+    false
+}
+
 fn parse_schema_source_dictionary(
     schema_config: &Value,
     name_space: &str,
@@ -1024,11 +1071,15 @@ fn load_schema_affix_segmentors(
             let suffix = find_config_value(schema_config, &format!("{name_space}/suffix"))
                 .and_then(config_scalar_string)
                 .unwrap_or_default();
+            let tips = find_config_value(schema_config, &format!("{name_space}/tips"))
+                .and_then(config_scalar_string)
+                .unwrap_or_default();
             let extra_tags = schema_string_list(schema_config, &format!("{name_space}/extra_tags"));
             Some(AffixSegmentor {
                 tag,
                 prefix,
                 suffix,
+                tips,
                 extra_tags,
             })
         })
@@ -1145,20 +1196,33 @@ pub(crate) fn update_session_segment_tags(session: &mut SessionState) {
 }
 
 impl AffixSegmentor {
-    fn matches(&self, input: &str) -> bool {
-        let Some(mut code) = input.strip_prefix(&self.prefix) else {
-            return false;
-        };
+    pub(crate) fn prompt_preedit(&self, input: &str) -> Option<(String, usize)> {
+        if self.tips.is_empty() {
+            return None;
+        }
+        let code = self.stripped_code(input)?;
+        let caret = code.len();
+        Some((format!("{code}{}", self.tips), caret))
+    }
+
+    fn stripped_code<'a>(&self, input: &'a str) -> Option<&'a str> {
+        let mut code = input.strip_prefix(&self.prefix)?;
         if code.is_empty() {
-            return false;
+            return None;
         }
         if !self.suffix.is_empty() {
             code = code.strip_suffix(&self.suffix).unwrap_or(code);
         }
-        !code.is_empty()
+        if code.is_empty() {
+            return None;
+        }
+        Some(code)
+    }
+
+    fn matches(&self, input: &str) -> bool {
+        self.stripped_code(input).is_some()
     }
 }
-
 impl PunctSegmentor {
     fn tag_for_input(
         &self,

@@ -94,11 +94,18 @@ source of truth that behavior, schema semantics, and ABI contracts are validated
 against. (Legacy `/Users/trenton/Projects/librime` mentions in `AGENTS.md` and
 `tests/distribution_schema_comparison.rs` are stale — treat them as legacy.)
 
-**AI-native input is an explicitly separate, later layer** above librime
-compatibility — not part of M9 or M10. The only hook reserved for it today is the
-`CandidateRanker` / `RerankResult` seam in `crates/yune-core/src/lib.rs`;
-`MockAiRanker` is a non-blocking placeholder (`RerankResult::Pending` preserves
-classic order). No AI provider, context, memory, or privacy machinery exists yet.
+**AI-native input is an explicitly separate M11 layer** above librime
+compatibility — not part of M9 or M10. The current implementation is still
+core/CLI-only: `crates/yune-core/src/ai/` owns `AiCandidateProvider`,
+`MockAiProvider`, `LocalModelProvider`, `AiWorker`, staged input-keyed results,
+`AiContext` snapshots, `AiPrivacyPolicy`, and `MemoryStore`; the direct
+`yune-cli run` path can opt into `--ai-provider mock` or `--ai-provider local`.
+ABI, TypeDuck-Web, and Windows frontends keep AI off. AI context defaults to
+sensitive, remote providers are blocked before invocation under sensitive
+context, and AI memory writes are suppressed under the same policy. AI memory
+uses `.ai-memory` / `.ai-memory.txt` namespace helpers rather than librime
+`*.userdb` files. Remote model backends and real frontend exposure remain future
+explicit/default-off work.
 
 **Key data flow (RIME key path):** Frontend obtains the table via `rime_get_api`
 and calls `RimeApi.process_key` (`api_table.rs`, `RimeProcessKey`). `RimeProcessKey`
@@ -399,6 +406,17 @@ fixture, then run Yune's **real production path** and assert it reproduces the o
 `tests/fixtures/typeduck-v1.1.2/jyut6ping3-mobile-comments.json` (each comment begins with
 the panel marker `\u{000c}\r1,`). A companion test locks the fixture's pinned
 engine/tag/commit metadata.
+
+**TypeDuck rich-comment E2E reproducibility.** The browser-shaped
+`typeduck_adapter_real_assets_emit_oracle_dictionary_panel_comments` integration
+test may use local TypeDuck v1.1.2 oracle build artifacts under
+`target/typeduck-oracle/v1.1.2/rime-user/build` to prove the full
+`jyut6ping3_mobile` runtime path emits the rich `\f\r1,.../\r0,...` comment
+payload. That `target/` tree is ignored local oracle state, so the test must
+emit an explicit skip reason when those build assets are absent and must never
+silently pass against a degraded three-column fallback. The committed
+clean-checkout byte-parity guarantee is still
+`cargo test -p yune-core --test cantonese_parity`.
 
 **`#[ignore]` must carry a documented blocker.** A blocked behavior gets a *named* test
 marked `#[ignore = "blocked: <what is missing>"]` whose body `panic!()`s — never silently
