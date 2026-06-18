@@ -1,57 +1,123 @@
 # Yune / 新韵
 
-Yune is a RIME-compatible input engine experiment for modern, contextual
-typing.
+Yune is a Rust input-method engine with a librime-compatible C ABI surface.
+It parses RIME schemas and dictionaries, runs a full input processor pipeline,
+and exposes ~60 librime-shaped API functions so existing frontends can drive it
+without code changes.
 
-新韵是一个面向现代上下文输入体验的输入法引擎实验项目。第一阶段不追求
-完整重写 librime，而是先建立兼容边界、测试基准和可演进的 Rust 核心。
+新韵是一个 Rust 输入法引擎，提供与 librime 兼容的 C ABI 接口。它解析 RIME
+方案与词典，运行完整的输入处理器管线，并暴露约 60 个与 librime 同形的 API
+函数，现有前端无需修改即可接入。
 
 ## Goals
 
-- Keep RIME schema and frontend compatibility as explicit design constraints.
-- Validate AI-assisted candidate ranking and contextual completion before
-  replacing mature engine behavior.
-- Build small Rust components that can be tested independently.
-- Avoid depending on C++ plugin ABI compatibility for the first milestone.
+- Maintain RIME schema and frontend compatibility as explicit design
+  constraints, validated through fixture-driven testing.
+- Build a clean, modular Rust core with typed translators, filters, and
+  processors instead of cloning librime's C++ internals.
+- Keep every compatibility difference measurable against librime before it is
+  accepted.
+- Provide an AI ranking hook (`CandidateRanker` trait) that can reorder
+  candidates without blocking classic input behavior.
 
 ## Workspace
 
-- `crates/yune-core`: session state, composition, candidates, and engine traits.
-- `crates/yune-schema`: RIME schema compatibility layer.
-- `crates/yune-rime-api`: RIME-style C ABI shim and compatibility surface for
-  frontend integration tests.
-- `crates/yune-cli`: local test runner for input sequences and diagnostics.
+| Crate | Description |
+|-------|-------------|
+| `yune-core` | Engine, session state, composition, candidates, translators, filters, ranker trait, key parsing, spelling algebra, punctuation, dictionary parsing (YAML source + compiled `.table.bin` / `.prism.bin` / `.reverse.bin`), table encoding, user dictionary. |
+| `yune-schema` | Standalone RIME schema YAML parser producing typed `Schema` and `EngineSpec` structs. |
+| `yune-rime-api` | Librime-shaped C ABI shim: session registry, runtime paths, config compiler (`__include` / `__patch` / list merge / freshness), deployment, schema installation, 9-processor input pipeline, config/context/candidate/levers APIs, function table (`RimeApi` + `RimeLeversApi`), TypeDuck Web WASM adapter. |
+| `yune-cli` | CLI test harness: run key sequences through core or ABI pipeline, compare output against checked-in JSON fixtures. |
 
 ## Current Compatibility Surface
 
-Yune now has a deterministic compatibility harness, a focused RIME frontend
-shim, and a frontend-style ABI test client:
+1. **Engine core** — typed `Engine` with pluggable translators, filters, and an
+   async-friendly `CandidateRanker` trait. Processes key events, manages
+   composition, produces commits, and integrates with a user dictionary for
+   learning.
 
-1. Load a small RIME-style schema subset and table dictionary fixtures.
-2. Feed deterministic key sequences through a Yune session.
-3. Compare composition, candidate, commit, and status output against checked-in
-   fixtures.
-4. Exercise a RIME-style C ABI surface for sessions, context/status/commit,
-   config, levers, schema lists, deployment helpers, and key processing.
-5. Cover librime-compatible key handling for navigation, editing, selection,
-   keypad keys, modifier fallbacks, `menu/alternative_select_keys`, and
-   simulated key sequences.
-6. Drive the ABI through a frontend-style compatibility client that uses the
-   `RimeApi` function table instead of direct Rust internals.
-7. Exercise deployment, maintenance, config opening, config mutation, levers,
-   schema list, switcher, and plain user dictionary operations through
-   librime-shaped APIs.
-8. Compile deployed configs with librime-style `__include`, `__patch`, list
-   append/merge, custom patch, build-info, and freshness handling.
-9. Load schema-driven table dictionaries into sessions and validate real
-   dictionary candidates through context paging and highlight APIs.
-10. Parse more librime-compatible dictionary header and body forms, including
-   inline and block `columns`, `import_tables`, YAML null and quoted scalar
-   cases, optional document starts, BOM-prefixed headers, duplicate rows, literal
-   hash-prefixed entries, and librime-style numeric weight prefixes.
-11. Provide an AI ranking hook that can reorder candidates without blocking classic
-   input behavior.
+2. **Translators** — echo, static table, punctuation, history, reverse lookup,
+   switch, and schema-list translators. Table translator supports
+   `columns`, `import_tables`, BOM-prefixed headers, numeric weight prefixes,
+   and custom column orders.
 
-The current scope is still a compatibility subset. Yune does not yet aim to
-replace librime's full plugin ecosystem, OpenCC conversion pipeline, spelling
-algebra/prism compiler, compiled binary dictionary formats, or C++ plugin ABI.
+3. **Filters** — charset filter, reverse lookup filter, simplifier,
+   single-character filter, tagged filter, and uniqueness filter.
+
+4. **Input processor pipeline** — 9 schema-loaded processors:
+   speller, selector, navigator, key binder, editor, ascii composer, chord
+   composer, punctuation, and recognizer. Each mirrors librime's processing
+   stages and can be configured through schema YAML.
+
+5. **Dictionary parsing** — reads RIME table dictionary YAML source files and
+   the three compiled binary formats: `Rime::Table/4.0`, `Rime::Prism/4.0`, and
+   `Rime::Reverse/4.0`. Supports checksum validation, spelling maps, correction
+   rules, and reverse lookup entries.
+
+6. **Config compiler** — librime-style `__include`, `__patch`, list
+   append/merge, custom patches, build-info, and timestamp-based freshness
+   handling.
+
+7. **C ABI surface** — ~60 `extern "C"` functions matching the librime API:
+   setup, initialization, finalization, session lifecycle, key processing,
+   context/status/commit reads, config open/read/write/iterate, schema
+   selection, deployment, maintenance, sync, candidate iteration/paging, user
+   dictionary operations, and `RimeApi` / `RimeLeversApi` function tables.
+
+8. **Schema lifecycle** — parse schema YAML → install processors, translators,
+   filters, and segment tags → deploy to workspace → select into sessions.
+
+9. **CLI fixture harness** — deterministic key-sequence replay through both the
+   core engine and the full ABI pipeline, with JSON output compared against
+   checked-in fixtures under `fixtures/`.
+
+10. **Frontend-style tests** — a `frontend_client.rs` integration test drives
+    the `RimeApi` function table like a real frontend would, and a
+    `dynamic_loader.rs` test loads the compiled `cdylib` via `libloading`.
+
+11. **TypeDuck Web adapter** — simplified C API (`yune_typeduck_*`) designed
+    for WASM consumption, with JSON state exchange.
+
+12. **User dictionary** — in-memory store with commit tracking, file-backed
+    persistence, snapshots, sync, and recovery.
+
+## Quick Start
+
+```sh
+# Build everything
+cargo build
+
+# Run all tests (unit + integration + frontend ABI)
+cargo test --workspace
+
+# Quality gate
+cargo clippy --workspace --all-targets -- -D warnings
+
+# Run a key sequence through the core engine
+cargo run -p yune-cli -- run "nihao "
+
+# Check core output against a fixture
+cargo run -p yune-cli -- check fixtures/sample-nihao.json
+
+# Run through the full ABI pipeline
+cargo run -p yune-cli -- frontend \
+  --shared-data-dir /path/to/rime-data \
+  --user-data-dir /tmp/yune-user \
+  --schema luna_pinyin \
+  --sequence "nihao "
+```
+
+## Not Yet Implemented
+
+- **AI/ML ranking** — the `CandidateRanker` trait and `MockAiRanker` exist, but
+  no real model is integrated.
+- **OpenCC conversion** — simplified/traditional Chinese conversion is not yet
+  wired in.
+- **Spelling algebra / prism compiler** — compiled prisms can be read but not
+  generated from source.
+- **Binary dictionary writing** — compiled formats are read-only.
+- **C++ plugin ABI** — out of scope for the current milestone.
+
+## License
+
+BSD-3-Clause
