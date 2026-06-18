@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: typeduck-windows-native-contract
 milestone_name: TypeDuck-Windows Native IME Contract
 status: execution
-stopped_at: Completed 11-01; ready to execute 12-01 Fork Config List Append ABI
+stopped_at: Completed 12-01; ready to execute 13-01 TypeDuck v1.1.2 Oracle
 last_updated: "2026-06-18T00:00:00.000Z"
 last_activity: 2026-06-18
 progress:
   total_phases: 16
-  completed_phases: 11
+  completed_phases: 12
   total_plans: 37
-  completed_plans: 33
-  percent: 89
+  completed_plans: 34
+  percent: 92
 ---
 
 # Project State
@@ -21,23 +21,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-28)
 
 **Core value:** Existing RIME schemas and frontends should behave predictably through Yune's Rust implementation, with every compatibility difference measurable against librime before it is accepted.
-**Current focus:** Phase 12 — fork config list append ABI for TypeDuck-Windows
+**Current focus:** Phase 13 — TypeDuck v1.1.2 oracle for comment and Cantonese parity
 
 ## Current Position
 
-Phase: 12
-Plan: 12-01 — Fork Config List Append ABI
-Next phase: 13 — TypeDuck v1.1.2 Oracle
+Phase: 13
+Plan: 13-01 — TypeDuck v1.1.2 Oracle
+Next phase: 14 — Candidate Comment Semantics
 Status: Ready to execute
 Last activity: 2026-06-18
 
-Progress: [█████████░] 89%
+Progress: [█████████░] 92%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 24
+- Total plans completed: 34
 - Planned Phase 06 plans: 4
 - Average duration: -
 - Total execution time: -
@@ -71,6 +71,7 @@ Progress: [█████████░] 89%
 | Phase 09-browser-filesystem-and-persistence P03 | 5min | 3 tasks | 3 files |
 | Phase 10 P04 | 8m 47s | 3 tasks | 2 files |
 | Phase 11 P01 | - | completed | 8 files |
+| Phase 12 P01 | - | completed | 8 files |
 
 ## Accumulated Context
 
@@ -127,10 +128,10 @@ Recent decisions affecting current work:
 - D-15/WIN-TEST-01: TypeDuck-Windows native IME is the next tracked milestone; first unblock Windows test trust before feature work.
 - D-16/WIN-ABI-01: Fork-only config list append APIs are the first feature slice after the Windows baseline because they need no external oracle.
 - D-17/WIN-ORACLE-01: Comment semantics and Cantonese/Jyutping parity must be driven by TypeDuck-HK/librime v1.1.2 goldens or documented blockers.
+- D-18/WIN-ABI-01: TypeDuck fork list append fields are inserted after `config_list_size` and before `config_begin_list`, matching the fork `RimeApi` order; scalar append values follow the existing string-backed `RimeConfigSet*` representation.
 
 ### Pending Todos
 
-- Phase 12 — Fork Config List Append ABI — implement `config_list_append_{string,bool,int,double}` through `RimeApi`.
 - Acquire TypeDuck-HK/librime v1.1.2 plus the pinned TypeDuck schema before comment semantics or Cantonese parity changes.
 
 ### Blockers/Concerns
@@ -155,10 +156,10 @@ Items acknowledged and carried forward from previous milestone close:
 ## Session Continuity
 
 Last session: 2026-06-18T00:00:00.000Z
-Stopped at: Completed 11-01; ready to execute 12-01 Fork Config List Append ABI
+Stopped at: Completed 12-01; ready to execute 13-01 TypeDuck v1.1.2 Oracle
 Resume file: None
 
-**Completed Phase:** 11 (Windows Test Baseline) — 1 plan — 2026-06-18
-**Next Phase:** 12 (Fork Config List Append ABI) — 1 plan — ready to execute
+**Completed Phase:** 12 (Fork Config List Append ABI) — 1 plan — 2026-06-18
+**Next Phase:** 13 (TypeDuck v1.1.2 Oracle) — 1 plan — ready to execute
 
 **Planned Milestone:** TypeDuck-Windows Native IME Contract — 6 phases — tracked in ROADMAP.md and REQUIREMENTS.md

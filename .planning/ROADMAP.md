@@ -153,7 +153,7 @@ then the TypeDuck-Windows contract continues with Phases 11 -> 16.
 | 9. Browser Filesystem And Persistence | 3/3 | Complete | 2026-05-05 |
 | 10. TypeDuck-Web App Integration And E2E | 4/4 | Complete - NO-GO recommendation | 2026-05-05 |
 | 11. Windows Test Baseline | 1/1 | Complete | 2026-06-18 |
-| 12. Fork Config List Append ABI | 0/1 | Planned | - |
+| 12. Fork Config List Append ABI | 1/1 | Complete | 2026-06-18 |
 | 13. TypeDuck v1.1.2 Oracle | 0/1 | Planned | - |
 | 14. Candidate Comment Semantics | 0/1 | Planned | - |
 | 15. Native Windows Artifact | 0/1 | Planned | - |
@@ -282,7 +282,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 12-01: Implement and test the fork-only config list append C ABI.
+- [x] 12-01: Implement and test the fork-only config list append C ABI.
 
 ### Phase 13: TypeDuck v1.1.2 Oracle
 

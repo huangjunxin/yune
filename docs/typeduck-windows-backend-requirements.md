@@ -79,7 +79,7 @@ The web path is Emscripten/WASM. Windows needs a **native** engine artifact:
 
 ## Status checklist (update as Yune progresses)
 
-- [ ] (1) `config_list_append_string` (+ siblings) on the RIME C ABI
+- [x] (1) `config_list_append_string` (+ siblings) on the RIME C ABI
 - [ ] (2) `RimeCandidate.comment` emitted with TypeDuck shaping
 - [ ] (3) Cantonese behavior parity vs v1.1.2 (regression suite green)
 - [ ] (4) Native Windows engine artifact (`rime.dll`/`.lib`/headers) + deployment APIs

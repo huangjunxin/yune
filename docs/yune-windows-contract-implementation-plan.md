@@ -193,8 +193,9 @@ Adjacent primitives already exist to build on: `RimeConfigCreateList`
    [`crates/yune-rime-api/src/config_api.rs`](../crates/yune-rime-api/src/config_api.rs) next to the other config writers
    (after `RimeConfigSetString`, ~line 417). Each: validate non-null pointers,
    resolve the key, load-or-create the `Value::Sequence` at the key, push the new
-   scalar (`Value::String` / `Bool` / `Int` / `Double`), write it back, return
-   `TRUE`/`FALSE`. Mark `#[no_mangle] pub unsafe extern "C"`. Sketch:
+   scalar using the same string-backed representation as the existing
+   `RimeConfigSet*` writers, write it back, return `TRUE`/`FALSE`. Mark
+   `#[no_mangle] pub unsafe extern "C"`. Sketch:
 
    ```rust
    /// Appends a string to the list at `key`, creating the list if absent.
@@ -214,26 +215,26 @@ Adjacent primitives already exist to build on: `RimeConfigCreateList`
    that does the load-or-create-sequence-and-push, so the four entry points stay thin.
 
 2. **Add struct fields** to the `RimeApi` table in
-   [`crates/yune-rime-api/src/abi.rs`](../crates/yune-rime-api/src/abi.rs), immediately after `config_begin_list`
-   (line 336). Define fn-pointer type aliases consistent with the existing
+   [`crates/yune-rime-api/src/abi.rs`](../crates/yune-rime-api/src/abi.rs), immediately after `config_list_size`
+   and before `config_begin_list`. Define fn-pointer type aliases consistent with the existing
    `ConfigSet*Fn` aliases, e.g.:
    ```rust
-   pub config_list_append_string: Option<ConfigListAppendStringFn>,
    pub config_list_append_bool:   Option<ConfigListAppendBoolFn>,
    pub config_list_append_int:    Option<ConfigListAppendIntFn>,
    pub config_list_append_double: Option<ConfigListAppendDoubleFn>,
+   pub config_list_append_string: Option<ConfigListAppendStringFn>,
    ```
    > **ABI ordering caveat:** append the new fields *after* the existing ones, at
    > the position librime's real `RimeApi` places them (check the fork's
    > `rime_api.h` field order). Field order *is* the ABI for struct-pointer access.
 
 3. **Wire the table** in [`crates/yune-rime-api/src/api_table.rs`](../crates/yune-rime-api/src/api_table.rs) after
-   `config_begin_list: Some(RimeConfigBeginList),` (line 134):
+   `config_list_size: Some(RimeConfigListSize),`:
    ```rust
-   config_list_append_string: Some(RimeConfigListAppendString),
    config_list_append_bool:   Some(RimeConfigListAppendBool),
    config_list_append_int:    Some(RimeConfigListAppendInt),
    config_list_append_double: Some(RimeConfigListAppendDouble),
+   config_list_append_string: Some(RimeConfigListAppendString),
    ```
 
 4. **Tests** — new test module section in
@@ -442,7 +443,7 @@ change), once/if the web path is revived.
 ## Summary checklist
 
 - [x] **Item 1** — Windows test baseline green (`librime_signature_modified_time` shape + poison-tolerant lock)
-- [ ] **Item 2** — `config_list_append_{string,bool,int,double}` on struct + table + impl + tests *(Contract #1)*
+- [x] **Item 2** — `config_list_append_{string,bool,int,double}` on struct + table + impl + tests *(Contract #1)*
 - [ ] **Item 3** — v1.1.2 goldens captured (or reproducible blocker) *(prereq)*
 - [ ] **Item 4** — comment semantics: `"; "` join, reverse-code co-display, schema-in-prompt, golden-tested *(Contract #2)*
 - [ ] **Item 5** — native `rime.dll`/`.lib`/headers build documented + produced *(Contract #4)*
