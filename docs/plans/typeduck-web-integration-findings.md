@@ -2,6 +2,11 @@
 
 This document records findings from integrating Yune with the upstream TypeDuck-Web browser application.
 
+> **Historical scope.** The Phase 10 blocker tables below describe the
+> 2026-05-05 validation attempt, before later local dev-server smoke testing.
+> Treat "browser never ran" as "the Emscripten-backed full TypeDuck-Web E2E did
+> not run"; Phase 17 owns the current full browser-validation gate.
+
 ---
 
 ## Plan 10-01: Upstream seam inspection

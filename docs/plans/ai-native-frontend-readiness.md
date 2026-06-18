@@ -2,7 +2,12 @@
 
 **Generated**: 2026-05-05T16:40:00Z
 **Phase**: 10 (TypeDuck-Web App Integration And E2E)
-**Evidence Source**: docs/typeduck-web-integration-findings.md
+**Evidence Source**: docs/plans/typeduck-web-integration-findings.md
+
+> **Historical scope.** This recommendation records the Phase 10 state on
+> 2026-05-05, when the Emscripten-backed TypeDuck-Web browser run could not
+> execute. Later local dev-server smoke testing proved a narrow adapter path, but
+> it does not replace the full Phase 17 browser validation gate.
 
 ---
 
@@ -14,7 +19,7 @@ Recommendation: NO-GO
 
 Browser validation of TypeDuck-Web + Yune seam cannot run at all due to environment/tooling blockers preventing WASM artifact generation. Composition/candidate/commit flows have not been validated in real browser execution. The seam patch is structurally sound and adapter/runtime mismatches are handled, but without browser validation we cannot demonstrate core classic input behavior through TypeDuck-Web.
 
-**Evidence from Phase 10** (see docs/typeduck-web-integration-findings.md):
+**Evidence from Phase 10** (see docs/plans/typeduck-web-integration-findings.md):
 
 **Upstream seam inspection** (Plan 10-01):
 - TypeDuck-Web upstream source pinned to revision 03f9afd2cf6ca75653197f2193f24d1cd0adbd83
@@ -199,6 +204,6 @@ Following NO-GO recommendation, next work is bounded to resolving blockers and o
 ---
 
 *Recommendation generated: 2026-05-05T16:40:00Z*
-*Evidence source: docs/typeduck-web-integration-findings.md*
+*Evidence source: docs/plans/typeduck-web-integration-findings.md*
 *Phase: 10 (TypeDuck-Web App Integration And E2E)*
 *Decision: D-13 — GO, GO WITH CONDITIONS, or NO-GO for AI-native frontend exposure*

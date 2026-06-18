@@ -68,15 +68,18 @@ Skip only when packaging on a host that cannot load the Windows DLL:
 powershell -ExecutionPolicy Bypass -File scripts\package-typeduck-windows.ps1 -SkipSmoke
 ```
 
-## Local Verification
+## Verification Status
 
-Verified on Windows on 2026-06-18:
+This repository currently provides the packaging script and smoke-check path. Do
+not treat a native artifact as verified until the following commands have been
+run on a Windows host with the MSVC target/toolchain and TypeDuck fork headers:
 
 ```powershell
 cargo build -p yune-rime-api --release --target x86_64-pc-windows-msvc
 powershell -ExecutionPolicy Bypass -File scripts\package-typeduck-windows.ps1
 ```
 
-The build produced `yune_rime_api.dll` and `yune_rime_api.dll.lib`, and the
-packaged `rime.dll` passed the `rime_get_api` / `config_list_append_string`
-smoke check.
+Expected result: the build produces `yune_rime_api.dll` and
+`yune_rime_api.dll.lib`, the script packages them as `rime.dll`/`rime.lib`, and
+the packaged DLL passes the `rime_get_api` / `config_list_append_string` smoke
+check.

@@ -143,15 +143,15 @@ Key directories:
 - `crates/yune-cli/src/` - deterministic CLI fixture runner and ABI-backed frontend surrogate.
 - `crates/yune-schema/src/` - standalone typed RIME schema subset parser.
 - `packages/yune-typeduck-runtime/` - TypeScript bridge package for the TypeDuck adapter.
-- `docs/frontend-validation/` and `docs/typeduck-web-adapter.md` - frontend validation, benchmarks, and browser integration contracts.
+- `docs/plans/frontend-validation/` and `docs/plans/typeduck-web-adapter.md` - frontend validation, benchmarks, and browser integration contracts.
 - `third_party/typeduck-web/` - TypeDuck-Web seam metadata, integration layer, patch, and E2E scaffolding.
 
 Suggested first reading path for a new contributor:
 
 1. Read `.planning/PROJECT.md` for product direction and constraints.
 2. Read this milestone summary for the completed foundation and current blocker taxonomy.
-3. Read `docs/typeduck-web-adapter.md` for the browser/TypeDuck runtime contract.
-4. Read `docs/ai-native-frontend-readiness.md` and `docs/typeduck-web-integration-findings.md` before planning AI-native frontend exposure.
+3. Read `docs/plans/typeduck-web-adapter.md` for the browser/TypeDuck runtime contract.
+4. Read `docs/plans/ai-native-frontend-readiness.md` and `docs/plans/typeduck-web-integration-findings.md` before planning AI-native frontend exposure.
 5. Start code exploration at `crates/yune-rime-api/src/lib.rs`, `crates/yune-rime-api/src/typeduck_web.rs`, `crates/yune-core/src/engine.rs`, and `packages/yune-typeduck-runtime/src/typeduck.ts`.
 
 ---

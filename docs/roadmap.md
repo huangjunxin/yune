@@ -1,241 +1,127 @@
 # Roadmap
 
+Yune is a Rust input-method engine that uses **librime as a compatibility
+oracle** while building toward an AI-native input engine librime cannot provide.
+The strategy: make existing RIME schemas and frontends behave predictably through
+Yune, measuring every difference against librime before accepting it, then layer
+AI-native behavior on top as a separate product milestone.
+
+> **Compatibility oracle.** Upstream librime is the behavior reference for
+> user-visible behavior, schema semantics, ABI contracts, and migration:
+> <https://github.com/rime/librime>. Windows-specific behavior is referenced
+> against the TypeDuck fork (tag `v1.1.2`):
+> <https://github.com/TypeDuck-HK/librime>. (Earlier docs referenced a local
+> checkout path; treat the GitHub sources above as canonical.)
+
+**Document map**
+- This file — high-level roadmap (what's done, what's next).
+- [`analysis.md`](./analysis.md) — founding architecture decisions.
+- [`typeduck-windows-backend-requirements.md`](./typeduck-windows-backend-requirements.md) — the parked Windows engine contract to resume after web validation.
+- [`plans/`](./plans/) — per-stage implementation plans, findings, build notes, and validation artifacts.
+- `.planning/` — the detailed phase-by-phase execution record (GSD): `ROADMAP.md`, `REQUIREMENTS.md`, `STATE.md`, and per-phase `SUMMARY` files.
+
+---
+
 ## Completed
 
-### M0: Skeleton
+### M0–M4: Foundation
+- Rust workspace (`yune-core`, `yune-schema`, `yune-rime-api`, `yune-cli`); core session/candidate types; CLI smoke test.
+- Deterministic compatibility harness: recorded fixtures, JSON output for context/candidates/commit/status, workspace tests.
+- RIME-style schema subset: processors, segmentors, translators, filters as named components; config patch/include behavior.
+- Table dictionary prototype with deterministic lookup and ranking.
+- Non-blocking candidate reranking trait with a mock ranker; classic ordering preserved as fallback.
 
-- Rust workspace.
-- Core session and candidate types.
-- CLI smoke test.
-- Initial analysis and architecture notes.
+### M5–M7: RIME ABI, schema, and data compatibility
+- Focused RIME-style C ABI (`yune-rime-api`): sessions, context/status/commit, config, levers, schema lists, deployment, modules, runtime options, key processing — driven through the exported `RimeApi` function table.
+- Broad librime-compatible key-table coverage and aligned core/ABI key handling.
+- Schema-loaded compatibility across the high-value processor/segmentor/translator/filter set (speller, editor, navigator, selector, chord, punctuation, shape; abc/ascii/affix/matcher segmentors; table/script/r10n/reverse-lookup/history/switch/schema-list translators; simplifier/uniquifier/charset/reverse-lookup filters).
+- Source `.dict.yaml` parsing aligned with librime/yaml-cpp edge cases; `import_tables`; preset vocabulary; table-encoder primitives; checksum/rebuild-plan groundwork.
+- Compiled `.table.bin`/`.prism.bin`/`.reverse.bin` payload consumption and rebuild execution; correction/tolerance data in the compiled path.
+- UserDB compatibility beyond the plain-text shim: storage, snapshot/restore/recovery/sync, transaction rollback, learning, frequency updates, predictive lookup.
 
-### M1: Compatibility Harness
+Detail: [`plans/compat-foundation-summary.md`](./plans/compat-foundation-summary.md), [`plans/refactor-plan.md`](./plans/refactor-plan.md) (module/test ownership rules), and `.planning/phases/01–05`.
 
-- Recorded deterministic fixtures, including checked-in composing-state output.
-- Run Yune fixtures from CLI.
-- Defined JSON output for context, candidates, commit, and status.
-- Added workspace tests for deterministic behavior.
+### M8: Real frontend validation & benchmarks
+- Host-shaped native loader validates the full `rime_get_api` → setup → deploy → schema select → session → key process → context/status → commit → teardown lifecycle.
+- Squirrel/macOS and ibus/fcitx Linux paths attempted and documented with reproducible blockers (not claimed as completed native integration).
+- Frontend-sensitive benchmark baselines for session lifecycle, per-key processing, deploy/dictionary loading, and userdb learning/sync.
+- **Outcome:** *GO WITH CONDITIONS* to begin AI-native candidate/ranking **design**.
 
-### M2: Schema Subset
+Detail: [`plans/real-frontend-validation-plan.md`](./plans/real-frontend-validation-plan.md), [`plans/frontend-validation/`](./plans/frontend-validation/).
 
-- Parse a RIME-style schema subset.
-- Model processors, segmentors, translators, and filters as named components.
-- Support minimal punctuation and echo translation.
-- Support selected RIME config patch/include behavior used by compatibility tests.
+---
 
-### M3: Dictionary Prototype
+## In progress
 
-- Implement a simple table dictionary format.
-- Support deterministic lookup and candidate ranking.
-- Add fixture coverage for pinyin and shape-based schemas.
+> **Sequencing — web first.** The original plan stands: prove Yune in a real
+> **web browser before** expanding to Windows and other native platforms. The
+> M9 *NO-GO* was a *tooling* block, not a behavioral one — the engine has never
+> actually run in a browser, so that verdict reflects absent evidence, not a
+> failed frontend. Finishing browser validation is the current priority. Much of
+> the Windows work already done is **shared engine work** (comment shaping,
+> Cantonese goldens, the cross-platform baseline fix) and stays; only the
+> Windows-*platform*-specific pieces wait their turn.
 
-### M4: AI Hook
+### M9: TypeDuck-Web browser validation *(current focus)*
 
-- Add a non-blocking candidate reranking trait.
-- Provide a mock ranker for tests.
-- Keep classic candidate ordering as fallback.
+Build-out is done — WASM/Emscripten export contract for the `yune_typeduck_*`
+adapter, TypeScript bridge/runtime package, browser filesystem + IDBFS
+persistence, and an app-shaped E2E seam against upstream TypeDuck-Web. **What's
+missing is the full official browser validation:** the Emscripten WASM artifact
+has not yet been built locally, so the real TypeDuck schema/E2E path has not
+been observed end to end. A limited local dev-server smoke has run through the
+adapter, but it does not replace the Phase 17 browser validation gate.
 
-### M5: RIME Frontend Shim
+Detail: [`plans/typeduck-web-adapter.md`](./plans/typeduck-web-adapter.md), [`plans/typeduck-web-integration-findings.md`](./plans/typeduck-web-integration-findings.md), [`plans/ai-native-frontend-readiness.md`](./plans/ai-native-frontend-readiness.md).
 
-- Implemented a focused RIME-style C ABI subset for sessions, context, status,
-  commit, config, levers, schema lists, deployment helpers, modules, runtime
-  options/properties, and key processing.
-- Added librime-compatible key-table lookup coverage for broad X11 keysym name
-  groups, including function keys, keypad keys, modifiers, ISO/XKB/dead keys,
-  input-method keys, Latin, kana, Arabic, Cyrillic, Greek, technical,
-  publishing/APL, and Hebrew names.
-- Aligned core and ABI key handling for navigation, editing, selection, keypad
-  keys, Return variants, modifier fallbacks, and
-  `menu/alternative_select_keys`.
-- Extended simulated key-sequence parsing so known librime key names either
-  process as printable characters or parse as ignored no-op events instead of
-  failing.
-- Validated the compatibility surface with focused Rust tests.
+### M10: TypeDuck-Windows native backend *(started early; platform work deferred)*
 
-### M6: Frontend-Style ABI And Dictionary Compatibility
+TypeDuck-Windows (a weasel fork) talks only to the RIME C ABI, so swapping
+`librime → Yune` is contained **iff** Yune presents the same ABI surface and
+emits the same candidate data. The contract is in
+[`typeduck-windows-backend-requirements.md`](./typeduck-windows-backend-requirements.md);
+the implementation plan and its execution notes are in
+[`plans/yune-windows-contract-implementation-plan.md`](./plans/yune-windows-contract-implementation-plan.md).
+A first pass already landed — but under web-first sequencing the
+**platform-specific** items (4, and surfacing the new ABI in 1 for the native
+build) wait until the web path is validated, while the **shared engine** items
+(2, 3) continue because the web path needs them too.
 
-- Added a dedicated frontend-style compatibility client that drives
-  `yune-rime-api` through the exported `RimeApi` function table instead of
-  direct Rust internals.
-- Expanded function-table coverage for candidate iteration, version/runtime
-  metadata, raw input and caret editing, runtime state, schema labels, config
-  load/read/write/update, config cleanup, deployed/schema/user config opening,
-  deployment helpers, schema lists, module registration/lookup, notification
-  callbacks, levers custom settings, schema selection, switcher hotkeys, and
-  user dictionary iteration.
-- Added schema-driven table dictionary loading for RIME sessions and validated
-  real dictionary candidates through frontend-facing context paging and
-  highlight behavior.
-- Expanded deployment and maintenance shims for prebuild, deploy, schema/config
-  deploy, task dispatch, workspace update, sync, staging freshness, stale user
-  copy cleanup, and notification events.
-- Expanded config compiler behavior for librime-style `__include`, `__patch`,
-  nested references, optional references, list append/merge, explicit root
-  patches, custom patches, dependency timestamps, and build-info freshness.
-- Expanded levers compatibility for custom settings, switcher schema lists,
-  schema metadata, hotkeys, patching list/map config items, and plain text
-  user dictionary backup, restore, import, export, iteration, and sync.
-- Aligned RIME dictionary parsing with librime/yaml-cpp behavior for required
-  header metadata, optional document starts, BOM-prefixed headers, comments,
-  quoted mapping keys, mapping-key colons with leading spaces, inline and block
-  `columns`, YAML null and quoted-empty values, text-only rows, duplicate rows,
-  literal hash-prefixed entries, raw text-column whitespace, and
-  numeric-prefix row weights.
-- Implemented librime-style `import_tables` handling for schema-loaded
-  dictionaries, including YAML null entries, quoted literal names, collection
-  entries, quoted collection-shaped names, and double-quoted escape decoding.
-- Aligned RIME config hex integer parsing with librime behavior for unsigned
-  values that wrap through C `int` conversion.
+**Status** (workspace tests green and clippy clean, independently verified):
 
-### M7: Schema Pipeline Compatibility
+| # | Contract item | State | Notes |
+|---|---|---|---|
+| 0 | Windows test baseline | ✅ Done | Was 233 failing (timestamp-shape mismatch poisoning a shared test lock); fixed with a cross-platform ctime formatter + poison-tolerant lock. |
+| 1 | `config_list_append_{string,bool,int,double}` C ABI | ✅ Done | Implemented with create-on-missing semantics, wired into the `RimeApi` table; field order **verified to match the fork's `rime_api.h`** (right after `config_list_size`). |
+| 2 | `RimeCandidate.comment` fork shaping | 🟡 Panel bytes proven; joiner/prompt pending | `dictionary_lookup_filter` emits the `\f\r1,…\r0,…` panel format; transport already existed. The byte-parity test now feeds authored TSV source rows through the real filter and asserts the golden bytes (**non-circular** — fixed on main). Remaining: the `"; "` reverse-lookup join and schema-name-in-prompt still need a dedicated v1.1.2 oracle case, and the source rows are authored in-test rather than extracted from the shipped `.dict.yaml`. |
+| 3 | Cantonese/Jyutping parity suite vs v1.1.2 | 🟡 Partial | 2 active golden-locked tests; 5 behaviors (`combine_candidates`/`show_full_code`/`enable_sentence`, completion/prediction, correction, schema-menu hiding, userdb pronunciations) are honestly `#[ignore]`d pending captured goldens. |
+| 4 | Native `rime.dll` + `.lib` + headers | 🟡 Scripted, unverified | `scripts/package-typeduck-windows.ps1` + [`plans/yune-windows-native-build.md`](./plans/yune-windows-native-build.md) build/package/smoke-check the artifact, but the build has not been independently verified on an MSVC host. |
 
-- Expanded schema-loaded processor coverage for librime-style `key_binder`,
-  `punctuator`, `recognizer`, `speller`, and `ascii_composer` behavior,
-  including preset imports, namespaced prescriptions, paging and redirect
-  bindings, switch option updates, punctuation cycling, paired punctuation,
-  digit separators, recognizer `use_space`, speller alphabet/delimiter and
-  initials/finals gating, speller `use_space`, focused `auto_clear` modes, and
-  max-code-length preselection before the next initial, focused `auto_select`
-  exact-table unique-candidate commits, focused `auto_select_pattern` gating,
-  focused previous-match auto-commit reuse with `express_editor`, focused
-  `speller/algebra` lookup expansion for `xlit`, `xform`, `erase`, and
-  `derive` spelling rules plus generated-spelling credibility penalties for
-  `fuzz`, `abbrev`, and correction formulas, focused `selector` raw-segment
-  exclusion for candidate selection, focused layout-sensitive selector
-  arrow/page bindings for linear and vertical candidate lists, focused
-  schema-configured selector binding overrides,
-  focused schema-configured `navigator` binding overrides, focused
-  `navigator/syllable_jump_position` delimiter stops, and delimiter-derived
-  navigator syllable loop/no-loop boundary behavior, focused `express_editor`
-  Return raw-input commits, focused schema-configured `editor/bindings`
-  overrides for commit, deletion, `noop`, and modified printable keys, focused
-  schema-configured `editor/char_handler` defaults and overrides for
-  printable-key `direct_commit`, `add_to_input`, and `noop`, focused
-  `chord_composer` printable-key chord serialization on release with
-  `algebra`/`output_format` projection, ABI-visible `prompt_format` prompt
-  segments while keys are held, plus `commit_raw_input` bindings for the
-  original raw key sequence, focused modifier chord options for control, shift,
-  alt, super, and caps-lock `Lock` modified printable keys, focused active-chord
-  cancellation on non-chording function keys, focused raw-sequence clearing
-  after generated chord output direct-commits ASCII and after API-level context
-  commits leave generated chord compositions, plus ASCII mode switch-key handling.
-- Expanded schema-loaded segmentor coverage for `abc_segmentor`,
-  `ascii_segmentor`, `matcher`, namespaced `affix_segmentor`, focused
-  `punct_segmentor`, and focused `fallback_segmentor` subsets,
-  including `abc_segmentor/extra_tags` propagation onto the current default
-  `abc` segment, recognizer-pattern tags, namespace fallback behavior, sorted
-  pattern precedence, raw ASCII tags, exclusive affix-tag behavior for prefixed
-  reverse lookup, exclusive single-key shape punctuation tags, focused
-  `punct_number` digit-separator translation after numeric commits, and raw
-  fallback tagging for otherwise unclaimed input.
-- Expanded schema-loaded translator coverage for `table_translator`,
-  `script_translator`, `r10n_translator`, `reverse_lookup_translator`,
-  `history_translator`, `switch_translator`, and `schema_list_translator`,
-  including namespace aliases, tag gating, completion toggles, sentence
-  fallback, candidate quality, `dictionary_exclude`, `comment_format`, pack
-  dictionaries, focused preset-vocabulary weight lookup/scaling for coded
-  source entries, focused rule-based table-encoder phrase injection for uncoded
-  source rows and preset vocabulary phrases, persisted switcher options, folded
-  switch menus, radio defaults, state-label ABI indexing, schema-list ordering,
-  schema selection commands, schema-list access-time recency sorting, and
-  `switcher/fix_schema_list_order`.
-- Expanded schema-loaded filter coverage for `simplifier`, `uniquifier`,
-  `single_char_filter`, `charset_filter`/`cjk_minifier`, and
-  `reverse_lookup_filter`, including tag gating, namespace aliases, OpenCC
-  config selection, excluded types, tip comments, duplicate removal,
-  single-character promotion, extended-CJK gating, and reverse-lookup comment
-  updates on completion and sentence candidates.
-- Added focused full-shape `shape_formatter`/`shape_processor` coverage for
-  ABI commits: committed ASCII table text is converted to full-width text under
-  `full_shape`, and otherwise unhandled printable ASCII keys are post-processed
-  into full-width commits.
-- Expanded source dictionary compatibility to retain librime-style `stem`
-  column metadata for coded entries, deduped per entry text, as groundwork for
-  reverse data and encoder compatibility, and added a focused Rust table-encoder
-  primitive for librime-compatible `encoder/rules` formulas, exclude-pattern
-  matching, tail-anchor indexing, raw-code encoding, source `.dict.yaml`
-  encoder-setting parsing, and focused phrase lookup/injection through that
-  parsed rule-based encoder, plus a focused librime-compatible
-  `ChecksumComputer`/dictionary-source checksum primitive and table/prism/reverse
-  checksum rebuild-plan primitive, plus focused compiled
-  `.table.bin`/`.prism.bin`/`.reverse.bin` metadata checksum/version parsing for
-  future compiled data freshness checks.
-- Tightened librime ABI lifecycle behavior for `RimeTraits`, session activity
-  cleanup, `RimeFinalize`, deployment notifications, `RimeSyncUserData`,
-  unread commit buffering, struct-layout coverage, menu page-size parsing,
-  and switch state-label lookup.
+The v1.1.2 oracle fixture used for items 2–3 is **genuine captured fork output**
+(`crates/yune-core/tests/fixtures/typeduck-v1.1.2/`).
+
+---
 
 ## Next
 
-- Treat `/Users/trenton/Projects/librime` as the compatibility oracle for
-  user-visible behavior, schema semantics, ABI contracts, and migration support,
-  but do not clone librime's internal architecture by default. Prefer idiomatic
-  Rust designs, cleaner abstractions, stronger typing, deterministic tests, and
-  better algorithms where they preserve or intentionally extend the external
-  contract.
-- Keep compatibility work from growing into a second copy of librime's internal
-  complexity. Before adding a librime-derived mechanism, name the external
-  behavior it protects: user-visible input behavior, frontend ABI behavior,
-  schema/config semantics, or deployed data compatibility. If the mechanism is
-  only an internal librime implementation detail, use a smaller Yune-native
-  design, isolate it behind an adapter, or document a deferral.
-- Treat the mechanical refactor track in `docs/refactor-plan.md` as complete
-  for the current code shape. Keep future compatibility work within the new
-  module boundaries, and only split further when a new behavior slice exposes a
-  real ownership problem.
-- Apply the refactor lesson to all new work: choose the owning implementation
-  module, matching test module, and librime comparison target before writing a
-  compatibility slice. Keep `lib.rs`/`main.rs` as facades, and extract a
-  temporary spike before it becomes the home for multiple related behaviors.
-- Build `yune-cli` into a frontend-surrogate input method that drives
-  `yune-rime-api` rather than `yune-core` directly: initialize with real shared
-  and user data directories, deploy and select schemas, create sessions, process
-  interactive keys, render commits/preedit/candidates/highlight/status after
-  each event, and provide a transcript replay mode for comparing key sequences
-  against librime. The preparatory CLI module split is complete; the remaining
-  work is the actual RIME API-backed frontend implementation.
-- Run the current ABI against real frontend clients such as Squirrel, Weasel,
-  ibus-rime, fcitx-rime, or fcitx5-rime, and record any struct-layout,
-  lifetime, notification, deployment, and session-behavior gaps. Treat the CLI
-  frontend as a useful intermediate validation layer, not as proof that native
-  frontend integration is complete.
-- Continue broadening schema coverage beyond the current focused subset toward
-  the remaining librime gear components and deeper semantics: deeper
-  `abc_segmentor` segmentation beyond current extra-tag propagation, librime
-  `memory` memorization hooks, `poet`/`grammar` contextual weighting,
-  `contextual_translation`, `unity_table_encoder`/UniTE behavior, `speller`
-  previous-match segment splitting and non-auto-commit composition behavior,
-  deeper `editor` variant behavior such as full segment/selection semantics,
-  deeper `navigator` candidate/segment span semantics, deeper
-  `selector` navigator fallback interactions beyond the current focused coverage,
-  deeper `chord_composer` behavior such as remaining raw-sequence lifecycle
-  edge cases beyond focused API-level context commit handling,
-  deeper `shape_processor`/`shape_formatter` interactions, deeper
-  `punct_segmentor` behavior such as segment-order interactions and
-  `punct_number` translation through larger chains beyond the focused
-  digit-separator path, deeper multi-segment `fallback_segmentor` behavior, full
-  spelling algebra beyond the current focused lookup-side
-  `xlit`/`xform`/`erase`/`derive` expansion and generated spelling ranking
-  penalties, full OpenCC conversion data, and larger real-world
-  processor/segmentor/translator/filter chains from distribution schemas.
-- Expand dictionary compatibility beyond source `.dict.yaml` parsing toward
-  librime's compiled `.table.bin`, `.prism.bin`, `.reverse.bin`, pack
-  dictionaries at compiled-data level, deeper preset-vocabulary phrase
-  injection, stem-column consumption in compiled reverse data and encoders,
-  broader phrase lookup around the focused table-encoder primitive,
-  source-vs-prebuilt table fallback behavior, pack checksum chaining, reverse-db
-  `dict_settings` payloads used by UniTE-style encoders, correction/tolerance
-  search data, compiled binary payload parsing beyond the current checksum
-  metadata slice, and rebuild execution.
-- Expand user dictionary compatibility beyond the current plain text userdb
-  shims toward librime's LevelDB/userdb storage, snapshot merging, recovery,
-  learning, transaction rollback, predictive lookup/backdated scan behavior, and
-  frequency update semantics.
-- Keep plugin compatibility explicit: support Yune-native extension points
-  first; defer librime C++ plugin ABI compatibility unless there is a concrete
-  frontend or distribution requirement.
-- Keep AI/LLM-native work as a separate product layer above the compatibility
-  foundation: AI can provide candidates, rerank, use context, and maintain memory
-  only through source-labeled, local-first, non-blocking interfaces with strict
-  timeout/fallback and privacy policy. Do not let AI behavior replace or block
-  classic RIME input paths.
+Concrete, in priority order (**web first, then Windows, then other platforms**):
+
+1. **Build the WASM artifact.** Install the Emscripten SDK and run the documented build (`scripts/typeduck-wasm-build.sh`) to produce `yune-typeduck.js`/`.wasm`. This is the single tooling step that blocked M9.
+2. **Fix the TypeDuck-Web adapter mismatches** (Appendix A of the implementation plan): `adapter.ts` passes the whole candidate object as `text` and reads non-existent context-level `comments`/`highlighted_candidate_index`. Align it to the real runtime shape (`candidate.text`, `candidate.comment`, `context.highlighted`).
+3. **Run the TypeDuck-Web E2E in a real browser** — composition, candidate paging/selection/deletion, commit, deploy, customize, persistence — and record a *real* GO/NO-GO based on observed behavior. This is the validation the original plan called for.
+4. **Land the remaining shared engine parity** (benefits web *and* Windows): the dictionary-panel comment byte-parity is now proven non-circularly from authored source rows — extend it with the `"; "` reverse-lookup joiner and schema-name-in-prompt oracle cases (and, ideally, real `.dict.yaml` rows), and capture the remaining Cantonese goldens to activate the 5 ignored tests.
+5. **Keep tracking honest.** (Done on main: the future-dated "verified" claim was removed and the circular parity test reworked; the roll-up is set to partial.) Keep statuses evidence-based as Phase 17 proceeds.
+6. **Then Windows, then other platforms.** Once the browser path is validated: verify the native `rime.dll`/`.lib`/headers build on an MSVC host (incl. the `rime_get_api`/`config_list_append_string` smoke check and header field-order parity), then run the real TypeDuck-Windows E2E per the fork's `INTEGRATION_PLAN.md`. Other native frontends (Squirrel/macOS, ibus/fcitx Linux) follow the same engine.
+
+---
+
+## Deferred / future
+
+- **librime C++ plugin ABI** (Lua, octagram, predict, proto): deferred until a concrete frontend or distribution requires it; prefer Yune-native extension points first.
+- **AI-native input layer** — a separate product milestone above the compatibility foundation. AI may provide candidates, rerank, use context, and keep memory **only** through source-labeled, local-first, non-blocking interfaces with strict timeout/fallback and privacy policy. AI must never replace or block classic RIME input paths, and must not auto-commit by default. Baseline behavior must work with local/mock providers; remote LLM calls are optional enhancements.
+
+## Principles (carried forward)
+
+- **Oracle, not template.** Treat librime as the behavior oracle, but prefer idiomatic Rust, cleaner abstractions, stronger typing, and deterministic tests over cloning librime's internal C++ structure.
+- **Name the behavior.** Before adding a librime-derived mechanism, name the external behavior it protects (user-visible input, frontend ABI, schema/config semantics, or deployed-data compatibility). If it's only an internal librime detail, use a smaller Yune-native design, isolate it behind an adapter, or document a deferral.
+- **Own each slice.** Choose the owning implementation module, matching test module, and librime comparison target before writing a compatibility slice. Keep `lib.rs`/`main.rs` as facades.

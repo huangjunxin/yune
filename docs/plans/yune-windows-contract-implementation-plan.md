@@ -5,7 +5,7 @@
 > and ends with copy-pasteable verification commands.
 >
 > **Goal.** Make Yune satisfy the four-item *graduation contract* in
-> [`typeduck-windows-backend-requirements.md`](./typeduck-windows-backend-requirements.md)
+> [`typeduck-windows-backend-requirements.md`](../typeduck-windows-backend-requirements.md)
 > so the parked `TypeDuck-Windows` (weasel fork) can swap `librime → Yune` behind
 > the RIME C ABI.
 >
@@ -29,11 +29,11 @@ agents. Results that shaped the ordering below:
 
 ### The blocker, precisely
 
-`librime_signature_modified_time()` ([`crates/yune-rime-api/src/lib.rs:1833-1856`](../crates/yune-rime-api/src/lib.rs)) returns a
+`librime_signature_modified_time()` ([`crates/yune-rime-api/src/lib.rs:1833-1856`](../../crates/yune-rime-api/src/lib.rs)) returns a
 ctime(3)-shaped string on Unix but a **bare Unix-seconds integer on Windows**.
-`assert_librime_ctime_shape()` ([`tests/mod.rs:317-332`](../crates/yune-rime-api/src/tests/mod.rs)) unconditionally asserts
+`assert_librime_ctime_shape()` ([`tests/mod.rs:317-332`](../../crates/yune-rime-api/src/tests/mod.rs)) unconditionally asserts
 `parts.len() == 5`. On Windows it panics `left: 1, right: 5`. The panic fires while
-holding the shared `TEST_LOCK` in `test_guard()` ([`tests/mod.rs:98-103`](../crates/yune-rime-api/src/tests/mod.rs), `.expect("test lock should not be poisoned")`),
+holding the shared `TEST_LOCK` in `test_guard()` ([`tests/mod.rs:98-103`](../../crates/yune-rime-api/src/tests/mod.rs), `.expect("test lock should not be poisoned")`),
 so the mutex **poisons** and ~230 downstream tests fail with `PoisonError`.
 
 Reproduce:
@@ -88,7 +88,7 @@ bare integer. librime itself produces a ctime-style string on all platforms, so
 **make the Windows arm match the shape** rather than hiding the divergence in the test.
 
 Replace the non-Unix arm of `librime_signature_modified_time()` in
-[`crates/yune-rime-api/src/lib.rs:1848-1856`](../crates/yune-rime-api/src/lib.rs) with a dependency-free ctime-shaped
+[`crates/yune-rime-api/src/lib.rs:1848-1856`](../../crates/yune-rime-api/src/lib.rs) with a dependency-free ctime-shaped
 formatter (illustrative — verify edge cases):
 
 ```rust
@@ -144,7 +144,7 @@ real cross-platform ABI divergence, so prefer 1a.
 
 ### 1b. Stop one assertion from poisoning the whole suite *(do regardless of 1a)*
 
-In `test_guard()` ([`tests/mod.rs:100-103`](../crates/yune-rime-api/src/tests/mod.rs)) replace the poison-panicking lock with
+In `test_guard()` ([`tests/mod.rs:100-103`](../../crates/yune-rime-api/src/tests/mod.rs)) replace the poison-panicking lock with
 poison-tolerant recovery, so a single failing test no longer masks ~230 others:
 
 ```rust
@@ -184,13 +184,13 @@ is **not** an equivalent and must not be confused with this C API.
 a scalar value to the sequence at `key`; if no list exists at `key`, create one
 and append (mirrors librime's `Config::AppendToList` "create-on-missing" behavior).
 Adjacent primitives already exist to build on: `RimeConfigCreateList`
-([`config_api.rs:504`](../crates/yune-rime-api/src/config_api.rs)), `RimeConfigListSize` ([`config_api.rs:524`](../crates/yune-rime-api/src/config_api.rs)),
+([`config_api.rs:504`](../../crates/yune-rime-api/src/config_api.rs)), `RimeConfigListSize` ([`config_api.rs:524`](../../crates/yune-rime-api/src/config_api.rs)),
 `RimeConfigSetString`/`SetItem`, and the internal `config_lookup` / `config_set` /
 `find_config_value` / `set_config_value` helpers.
 
 ### Steps
 1. **Implement four `extern "C"` functions** in
-   [`crates/yune-rime-api/src/config_api.rs`](../crates/yune-rime-api/src/config_api.rs) next to the other config writers
+   [`crates/yune-rime-api/src/config_api.rs`](../../crates/yune-rime-api/src/config_api.rs) next to the other config writers
    (after `RimeConfigSetString`, ~line 417). Each: validate non-null pointers,
    resolve the key, load-or-create the `Value::Sequence` at the key, push the new
    scalar using the same string-backed representation as the existing
@@ -215,7 +215,7 @@ Adjacent primitives already exist to build on: `RimeConfigCreateList`
    that does the load-or-create-sequence-and-push, so the four entry points stay thin.
 
 2. **Add struct fields** to the `RimeApi` table in
-   [`crates/yune-rime-api/src/abi.rs`](../crates/yune-rime-api/src/abi.rs), immediately after `config_list_size`
+   [`crates/yune-rime-api/src/abi.rs`](../../crates/yune-rime-api/src/abi.rs), immediately after `config_list_size`
    and before `config_begin_list`. Define fn-pointer type aliases consistent with the existing
    `ConfigSet*Fn` aliases, e.g.:
    ```rust
@@ -228,7 +228,7 @@ Adjacent primitives already exist to build on: `RimeConfigCreateList`
    > the position librime's real `RimeApi` places them (check the fork's
    > `rime_api.h` field order). Field order *is* the ABI for struct-pointer access.
 
-3. **Wire the table** in [`crates/yune-rime-api/src/api_table.rs`](../crates/yune-rime-api/src/api_table.rs) after
+3. **Wire the table** in [`crates/yune-rime-api/src/api_table.rs`](../../crates/yune-rime-api/src/api_table.rs) after
    `config_list_size: Some(RimeConfigListSize),`:
    ```rust
    config_list_append_bool:   Some(RimeConfigListAppendBool),
@@ -238,7 +238,7 @@ Adjacent primitives already exist to build on: `RimeConfigCreateList`
    ```
 
 4. **Tests** — new test module section in
-   [`crates/yune-rime-api/src/tests/config_api.rs`](../crates/yune-rime-api/src/tests/config_api.rs):
+   [`crates/yune-rime-api/src/tests/config_api.rs`](../../crates/yune-rime-api/src/tests/config_api.rs):
    - append to a **missing** key creates a list of size 1;
    - append twice → `RimeConfigListSize == 2`, values readable in order;
    - each of the 4 type variants round-trips;
@@ -360,7 +360,7 @@ list-append) APIs the deployer drives — including Item 2's new append function
    verify field-order parity (tie this back to the Item 2 ABI-ordering caveat).
 4. Document required linker/export flags, the artifact layout, and the
    release-tag (`git describe`) keying that `github.install.bat` relies on, in a
-   new `docs/yune-windows-native-build.md`.
+   new `docs/plans/yune-windows-native-build.md`.
 5. If the MSVC toolchain isn't available in this environment, record a
    reproducible blocker (Phase 7 pattern) and keep the native adapter contract
    tests as the fallback validation path.

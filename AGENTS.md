@@ -40,7 +40,7 @@ librime before it is accepted.
 
 ## Languages
 - Rust 2021 edition - all production crates under `crates/`; workspace metadata in `Cargo.toml` sets `rust-version = "1.76"`.
-- Markdown - project notes in `README.md`, `docs/analysis.md`, `docs/roadmap.md`, and `docs/refactor-plan.md`.
+- Markdown - project notes in `README.md`, `docs/analysis.md`, `docs/roadmap.md`, and `docs/plans/refactor-plan.md`.
 - JSON - deterministic CLI fixtures in `fixtures/*.json`; handwritten JSON rendering lives in `crates/yune-cli/src/transcript.rs`.
 - YAML - RIME schema/config/user data compatibility is parsed and emitted by `crates/yune-schema/src/lib.rs`, `crates/yune-rime-api/src/config_api.rs`, `crates/yune-rime-api/src/config_compiler.rs`, and `crates/yune-rime-api/src/deployment.rs`.
 - C ABI surface - Rust exposes librime-shaped `extern "C"` APIs from `crates/yune-rime-api/src/*` using `#[repr(C)]` structs from `crates/yune-rime-api/src/abi.rs`.
@@ -117,7 +117,7 @@ librime before it is accepted.
 - Keep early-return `let Some(...) = ... else { return ...; };` and `let Ok(...) = ... else { return ...; };` patterns for validation-heavy code, as in `crates/yune-rime-api/src/config_api.rs` and `crates/yune-rime-api/src/runtime.rs`.
 - Prefer small focused production modules. Keep `crates/yune-core/src/lib.rs` and `crates/yune-rime-api/src/lib.rs` as public facades and glue; add new implementation work to focused modules such as `crates/yune-core/src/key.rs` or `crates/yune-rime-api/src/processors/speller.rs`.
 - Treat the root `Cargo.toml` lint policy as the intended standard: `[workspace.lints.clippy] all = "warn"` and `pedantic = "warn"`.
-- Use the documented quality gate from `docs/refactor-plan.md`: `cargo clippy --workspace --all-targets -- -D warnings`.
+- Use the documented quality gate from `docs/plans/refactor-plan.md`: `cargo clippy --workspace --all-targets -- -D warnings`.
 - Public pure accessors and constructors commonly carry `#[must_use]`, for example `Engine::new` in `crates/yune-core/src/engine.rs`, `Schema::minimal` in `crates/yune-schema/src/lib.rs`, and `TableEntry::new` in `crates/yune-core/src/dictionary/source.rs`.
 - FFI boundary functions use explicit `unsafe extern "C" fn` signatures plus `# Safety` docs and local `// SAFETY:` comments, as in `crates/yune-rime-api/src/config_api.rs`, `crates/yune-rime-api/src/runtime.rs`, and `crates/yune-rime-api/src/ffi_memory.rs`.
 ## Import Organization

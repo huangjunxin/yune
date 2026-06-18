@@ -2,7 +2,7 @@
 
 > **Purpose.** This records what the **TypeDuck-Windows** native IME frontend needs from the
 > engine, so Yune development can target it deliberately. It complements
-> [`typeduck-web-integration-findings.md`](./typeduck-web-integration-findings.md), which covers the
+> [`typeduck-web-integration-findings.md`](./plans/typeduck-web-integration-findings.md), which covers the
 > *web* frontend. As of 2026-06-17 the TypeDuck-Windows modernization is **intentionally parked**
 > pending Yune reaching the contract below; the engine is on the critical path, the Windows
 > frontend is the downstream consumer.
@@ -50,10 +50,12 @@ custom struct. Yune must emit comments **byte-compatible with the librime fork v
 
 **Implemented in Yune:** the C ABI transport already had `RimeCandidate.comment`; Yune now also
 emits the TypeDuck dictionary-panel payload through `dictionary_lookup_filter`: `\f` followed by
-`\r1,` for the candidate's own source row and `\r0,` for alternate pronunciations. Normal reverse
-lookup joins now use `"; "`. The older TypeDuck-Web adapter mismatch around context-level
-`comments` and `highlighted_candidate_index` is web-only and does not change the Windows C ABI
-contract.
+`\r1,` for the candidate's own source row and `\r0,` for alternate pronunciations. Captured
+`jyut6ping3_mobile` source rows now assert byte output against the v1.1.2 fixture. Normal reverse
+lookup joins currently use `"; "`, but that joiner still needs a dedicated v1.1.2 oracle case.
+Schema-name-in-prompt parity is also still blocked on a captured oracle case. The older TypeDuck-Web
+adapter mismatch around context-level `comments` and `highlighted_candidate_index` is web-only and
+does not change the Windows C ABI contract.
 
 ### 3. Cantonese / Jyutping engine behaviors carried by the librime fork
 These are the genuinely fork-only behaviors (everything else has converged with upstream librime):
@@ -87,9 +89,11 @@ The web path is Emscripten/WASM. Windows needs a **native** engine artifact:
 ## Status checklist (update as Yune progresses)
 
 - [x] (1) `config_list_append_string` (+ siblings) on the RIME C ABI
-- [x] (2) `RimeCandidate.comment` emitted with TypeDuck shaping
+- [ ] (2) `RimeCandidate.comment` emitted with full TypeDuck shaping
+  - [x] dictionary lookup payload bytes from captured source rows
+  - [ ] reverse-lookup joiner and schema-name prompt parity captured against v1.1.2
 - [ ] (3) Cantonese behavior parity vs v1.1.2 (regression suite added; full parity still has documented ignored oracle gaps)
-- [x] (4) Native Windows engine artifact (`rime.dll`/`.lib`/headers) + deployment APIs
+- [ ] (4) Native Windows engine artifact (`rime.dll`/`.lib`/headers) + deployment APIs (packaging script added; MSVC-host smoke verification pending)
 
 When all four are met (and real E2E passes), revisit `TypeDuck-Windows/INTEGRATION_PLAN.md`: the
 engine swap behind the RIME C ABI is then a contained change, and the (engine-agnostic) frontend

@@ -2,15 +2,22 @@
 
 ## Overview
 
-This milestone turns Yune's focused compatibility surface into a stronger
-frontend and data-compatibility validation track. It starts with a RIME
-API-backed CLI frontend surrogate, uses that to harden ABI behavior against real
-frontend expectations, then deepens schema, compiled dictionary, and user
-dictionary compatibility while preserving the module boundaries created by the
-recent refactor. AI-native input is the product direction after this foundation:
-it should be planned as a separate layer of providers, rankers, context policy,
-memory policy, and privacy controls rather than mixed into librime compatibility
-work.
+Yune's compatibility foundation (Phases 1–6) is complete: a RIME-API-backed CLI
+surrogate, native ABI validation, schema-pipeline depth, compiled dictionary
+data, userdb hardening, and frontend validation + benchmarks. On top of that,
+TypeDuck-Web browser integration was **built** (Phases 7–10) but not fully
+validated in the real Emscripten-backed browser path — the WASM artifact could
+not be built locally, so Phase 10 closed with a NO-GO that reflects absent full
+browser evidence, not a failed seam. A first pass at the TypeDuck-Windows native
+contract (Phases 11–16) also landed.
+
+**Current direction — web first.** Per the original plan, the active priority is
+to actually run and validate Yune in a web browser (Phase 17) **before**
+expanding to Windows and other native platforms. The TypeDuck-Windows milestone
+is **parked**: its *shared engine* work (comment shaping, Cantonese goldens,
+cross-platform baseline) stays and is reused by the web path, but its
+*platform-specific* work (native `rime.dll` packaging) waits until the browser
+path is validated. AI-native input remains a separate later milestone.
 
 ## Phases
 
@@ -136,9 +143,12 @@ Plans:
 
 ## Progress
 
-**Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10,
-then the TypeDuck-Windows contract continues with Phases 11 -> 16.
+**Execution order & current sequencing (web first):**
+Phases 1–6 (foundation) → 7–10 (TypeDuck-Web build-out) → 11–16 (TypeDuck-Windows
+first pass) executed in numeric order. **The current priority is Phase 17 —
+actually validating Yune in a real web browser** — before resuming the parked
+TypeDuck-Windows platform work. Phase numbers are chronological, not priority
+order.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -151,24 +161,30 @@ then the TypeDuck-Windows contract continues with Phases 11 -> 16.
 | 7. WASM Build And Export Contract | 3/3 | Complete | 2026-05-05 |
 | 8. TypeScript Bridge And Runtime Package | 3/3 | Complete | 2026-05-05 |
 | 9. Browser Filesystem And Persistence | 3/3 | Complete | 2026-05-05 |
-| 10. TypeDuck-Web App Integration And E2E | 4/4 | Complete - NO-GO recommendation | 2026-05-05 |
-| 11. Windows Test Baseline | 1/1 | Complete | 2026-06-18 |
-| 12. Fork Config List Append ABI | 1/1 | Complete | 2026-06-18 |
-| 13. TypeDuck v1.1.2 Oracle | 1/1 | Complete | 2026-06-18 |
-| 14. Candidate Comment Semantics | 1/1 | Complete | 2026-06-18 |
-| 15. Native Windows Artifact | 1/1 | Complete | 2026-06-18 |
-| 16. Cantonese/Jyutping Parity Suite | 1/1 | Complete with documented ignored oracle gaps | 2026-06-18 |
+| 10. TypeDuck-Web App Integration And E2E | 4/4 | Built; NO-GO reflects browser validation never run — reopened as Phase 17 | 2026-05-05 |
+| 11. Windows Test Baseline | 1/1 | Complete | 2026-06-17 |
+| 12. Fork Config List Append ABI | 1/1 | Complete | 2026-06-17 |
+| 13. TypeDuck v1.1.2 Oracle | 1/1 | Complete | 2026-06-17 |
+| 14. Candidate Comment Semantics | 0/1 | Partial - dictionary payload covered, schema prompt blocked | - |
+| 15. Native Windows Artifact | 1/1 | Packaging script complete; smoke pending on MSVC host | 2026-06-17 |
+| 16. Cantonese/Jyutping Parity Suite | 0/1 | Partial - blocked on uncaptured oracle goldens | - |
+| 17. TypeDuck-Web Browser Validation | 0/3 | **Active — current priority** (build WASM, fix adapter, run real-browser E2E) | - |
 
-## Completed Milestone: TypeDuck-Web Browser Integration
+> **Parked:** Phases 11–16 (TypeDuck-Windows) are paused under web-first
+> sequencing. Their *shared engine* outputs (comment shaping in Phase 14,
+> Cantonese goldens in Phase 16, the baseline fix in Phase 11) remain in use; the
+> *platform-specific* native build (Phase 15) and real Windows E2E resume after
+> browser validation (Phase 17) succeeds.
 
-Phase 6 proved that TypeDuck-Web-style lifecycle expectations can be modeled at
-the RIME ABI boundary. The next milestone turns that validation into a practical
-browser integration path: keep the Rust adapter stable, make the WASM/export
-contract reproducible, add the TypeScript bridge, and prove the flow inside a
-browser-like host before AI-native work depends on frontend plumbing.
-Execution is complete through Phase 10. The milestone ended with a NO-GO
-recommendation for AI-native frontend exposure because browser validation could
-not run without a WASM artifact/tooling path, not because the seam design failed.
+## Active Milestone (reopened): TypeDuck-Web Browser Validation
+
+**Web-first is the current priority.** Phases 7–10 built the browser integration
+(WASM export contract, TypeScript bridge, browser filesystem/persistence, and an
+app-shaped E2E seam), but the WASM artifact was never built locally, so the
+engine has **never actually run in a browser** — Phase 10's NO-GO reflects absent
+evidence, not a failed seam. Before expanding to Windows/native platforms, finish
+and validate the browser path (Phase 17, below). The seed adapter remains the
+foundation.
 
 ### Seed Work: Yune TypeDuck Adapter
 
@@ -177,7 +193,7 @@ not run without a WASM artifact/tooling path, not because the seam design failed
 Completed seed work:
 - `crates/yune-rime-api/src/typeduck_web.rs` exports the `yune_typeduck_*` C/WASM bridge.
 - `crates/yune-rime-api/tests/typeduck_web.rs` covers native adapter lifecycle, JSON responses, candidate actions, deploy/customize, null handling, and response freeing.
-- `docs/typeduck-web-adapter.md` documents the browser filesystem contract and JS call shape.
+- `docs/plans/typeduck-web-adapter.md` documents the browser filesystem contract and JS call shape.
 
 ### Phase 7: WASM Build And Export Contract
 
@@ -246,15 +262,40 @@ Plans:
 Plans:
 - [x] 10-01: Clone TypeDuck-Web, inspect its librime/WASM bridge, and document the replacement seam for Yune.
 - [x] 10-02: Patch or configure TypeDuck-Web so its input-engine binding calls the Yune TypeScript bridge.
-- [x] 10-03: Add real TypeDuck-Web browser E2E coverage for composition, candidate actions, deploy/customize, and persistence smoke flows.
+- [x] 10-03: Add TypeDuck-Web browser E2E scaffolding and blocker evidence for composition, candidate actions, deploy/customize, and persistence smoke flows.
 - [x] 10-04: Write TypeDuck-Web integration findings and the AI-native frontend exposure recommendation.
 
-## Next Milestone: TypeDuck-Windows Native IME Contract
+Phase 10 plan completion means the seam, scaffolding, and blocker evidence were
+recorded. It did **not** satisfy the real-browser E2E requirement; that remains
+active as Phase 17.
 
-TypeDuck-Windows talks to the engine through the RIME C ABI, so the next milestone
-targets the native Windows/weasel contract directly. This work parks the blocked
-web exposure path and makes Yune consumable as the `rime.dll` backend once the
-graduation contract in `docs/typeduck-windows-backend-requirements.md` is met.
+### Phase 17: TypeDuck-Web Browser Validation *(active — current priority)*
+
+**Goal**: Yune is observed actually working in a real web browser through the
+TypeDuck-Web seam, turning the Phase 10 NO-GO into an evidence-based GO/NO-GO.
+**Depends on**: Phase 10 (build-out) + an Emscripten toolchain
+**Requirements**: TYPEDUCK-E2E-03 (now exercised for real), plus shared engine parity (WIN-COMMENT-01, WIN-PARITY-01)
+**Success Criteria** (what must be TRUE):
+  1. The WASM artifact (`yune-typeduck.js`/`.wasm`) is built via the documented Emscripten path.
+  2. The TypeDuck-Web adapter mismatches are fixed (`candidate.text` / `candidate.comment` / `context.highlighted`, not the non-existent context-level keys).
+  3. A real browser run validates composition, candidate paging/selection/deletion, commit, deploy, customize, and persistence, recorded as an evidence-based GO/NO-GO.
+  4. Remaining shared engine parity lands: the `"; "` reverse-lookup joiner and schema-name-in-prompt oracle cases (the dictionary-panel byte-parity test is already non-circular on main), plus captured goldens that activate the 5 ignored Cantonese cases.
+**Plans**: 3 plans
+
+Plans:
+- [ ] 17-01: Build the WASM artifact (install Emscripten) and fix the TypeDuck-Web adapter shape mismatches.
+- [ ] 17-02: Run the real-browser TypeDuck-Web E2E and record an evidence-based GO/NO-GO.
+- [ ] 17-03: Land remaining shared engine parity (`"; "` joiner + schema-prompt oracle cases; capture remaining Cantonese goldens).
+
+## Deferred Milestone (parked under web-first): TypeDuck-Windows Native IME Contract
+
+TypeDuck-Windows talks to the engine through the RIME C ABI. A first pass landed
+(Phases 11–16), but this milestone is now **parked behind web validation**
+(Phase 17). Its *shared engine* slices (comment shaping in Phase 14, Cantonese
+goldens in Phase 16, the baseline fix in Phase 11) stay in use; the
+*platform-specific* native artifact (Phase 15) and the real Windows E2E resume
+only after the browser path is validated. The graduation contract is in
+`docs/typeduck-windows-backend-requirements.md`.
 
 ### Phase 11: Windows Test Baseline
 
@@ -304,13 +345,13 @@ Plans:
 **Depends on**: Phase 13
 **Requirements**: WIN-COMMENT-01
 **Success Criteria** (what must be TRUE):
-  1. Multiple reverse-lookup pronunciations use the oracle-confirmed joiner.
-  2. TypeDuck dictionary lookup records emit the oracle-confirmed `\f\r1,...\r0,...` payload.
-  3. Schema identity remains available through the existing status/menu fields captured by the oracle.
+  1. Multiple reverse-lookup pronunciations use a dedicated v1.1.2 oracle-confirmed joiner.
+  2. TypeDuck dictionary lookup records emit the oracle-confirmed `\f\r1,...\r0,...` payload from real source rows.
+  3. Schema identity/prompt behavior is captured or explicitly blocked against the v1.1.2 oracle.
 **Plans**: 1 plan
 
 Plans:
-- [x] 14-01: Implement golden-driven candidate comment semantics.
+- [ ] 14-01: Implement golden-driven candidate comment semantics. Dictionary lookup payload bytes are covered; schema prompt and reverse-lookup joiner oracle coverage remain blocked.
 
 ### Phase 15: Native Windows Artifact
 
@@ -324,7 +365,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [x] 15-01: Produce or document the native Windows `rime.dll`/`.lib`/headers package.
+- [x] 15-01: Produce or document the native Windows `rime.dll`/`.lib`/headers package. Packaging is scripted; no local smoke-verified artifact is claimed until run on an MSVC host.
 
 ### Phase 16: Cantonese/Jyutping Parity Suite
 
@@ -338,7 +379,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [x] 16-01: Add the Cantonese/Jyutping parity regression suite.
+- [ ] 16-01: Add the Cantonese/Jyutping parity regression suite. Captured fixture coverage is present; completion, prediction, correction, schema-menu, and userdb pronunciation goldens remain blocked.
 
 ## Future Milestone: AI-Native Input Layer
 

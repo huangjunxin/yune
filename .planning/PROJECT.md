@@ -77,7 +77,7 @@ ranking, context, and memory.
 ## Context
 
 Yune's planning documents live in `docs/analysis.md`, `docs/roadmap.md`, and
-`docs/refactor-plan.md`. They establish that librime is the behavior oracle for
+`docs/plans/refactor-plan.md`. They establish that librime is the behavior oracle for
 schema semantics, config behavior, candidate output, C ABI expectations,
 deployed data compatibility, and frontend integration. The implementation is
 allowed to remain idiomatic Rust internally when the external contract remains
