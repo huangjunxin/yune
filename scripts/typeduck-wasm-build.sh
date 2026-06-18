@@ -39,8 +39,8 @@ find_native_library() {
   for candidate in \
     "$REPO_ROOT/target/debug/libyune_rime_api.dylib" \
     "$REPO_ROOT/target/debug/libyune_rime_api.so" \
-    "$REPO_ROOT/target/debug/yune_rime_api.dll" \
-    "$REPO_ROOT/target/debug/yune_rime_api.dll.lib"
+    "$REPO_ROOT/target/debug/yune_rime_api.dll.lib" \
+    "$REPO_ROOT/target/debug/yune_rime_api.dll"
   do
     if [ -f "$candidate" ]; then
       printf '%s\n' "$candidate"
@@ -50,14 +50,33 @@ find_native_library() {
   return 1
 }
 
+find_tool() {
+  for tool in "$@"; do
+    if command -v "$tool" >/dev/null 2>&1; then
+      command -v "$tool"
+      return 0
+    fi
+
+    if [ "${EMSDK+x}" = x ]; then
+      for candidate in "$EMSDK/upstream/bin/$tool" "$EMSDK/upstream/bin/$tool.exe"; do
+        if [ -x "$candidate" ]; then
+          printf '%s\n' "$candidate"
+          return 0
+        fi
+      done
+    fi
+  done
+  return 1
+}
+
 verify_native_exports() {
   NATIVE_LIBRARY=$1
-  if ! command -v nm >/dev/null 2>&1; then
-    echo "TypeDuck WASM build failed: missing native symbol inspector \`nm\` on PATH." >&2
+  SYMBOL_TOOL=$(find_tool nm llvm-nm) || {
+    echo "TypeDuck WASM build failed: missing native symbol inspector \`nm\` or \`llvm-nm\` on PATH." >&2
     exit 1
-  fi
+  }
 
-  NM_OUTPUT=$(nm -g "$NATIVE_LIBRARY" 2>/dev/null || nm "$NATIVE_LIBRARY")
+  NM_OUTPUT=$("$SYMBOL_TOOL" -g "$NATIVE_LIBRARY" 2>/dev/null || "$SYMBOL_TOOL" "$NATIVE_LIBRARY")
   for symbol in $EXPORTS; do
     if ! printf '%s\n' "$NM_OUTPUT" | grep -Eq "(^|[[:space:]])_?${symbol}($|[[:space:]])"; then
       echo "TypeDuck WASM build failed: native library is missing export $symbol" >&2
@@ -79,6 +98,27 @@ join_exported_functions() {
   printf '%s\n' "$PREFIXED"
 }
 
+configure_emscripten_linker() {
+  if [ "${CARGO_TARGET_WASM32_UNKNOWN_EMSCRIPTEN_LINKER+x}" = x ]; then
+    return
+  fi
+
+  if [ "${EMSDK+x}" != x ]; then
+    return
+  fi
+
+  for candidate in "$EMSDK/upstream/emscripten/emcc.exe" "$EMSDK/upstream/emscripten/emcc.bat"; do
+    if [ -x "$candidate" ]; then
+      if command -v cygpath >/dev/null 2>&1; then
+        export CARGO_TARGET_WASM32_UNKNOWN_EMSCRIPTEN_LINKER=$(cygpath -w "$candidate")
+      else
+        export CARGO_TARGET_WASM32_UNKNOWN_EMSCRIPTEN_LINKER="$candidate"
+      fi
+      return
+    fi
+  done
+}
+
 find_first_artifact() {
   EXT=$1
   ARTIFACT_DIR="$REPO_ROOT/target/wasm32-unknown-emscripten/debug"
@@ -92,8 +132,8 @@ verify_wasm_exports() {
   WASM_ARTIFACT=$1
   JS_ARTIFACT=$2
 
-  if command -v wasm-nm >/dev/null 2>&1; then
-    WASM_SYMBOLS=$(wasm-nm "$WASM_ARTIFACT")
+  if WASM_NM=$(find_tool wasm-nm); then
+    WASM_SYMBOLS=$("$WASM_NM" "$WASM_ARTIFACT")
     for symbol in $EXPORTS; do
       if ! printf '%s\n' "$WASM_SYMBOLS" | grep -Eq "(^|[[:space:]])_?${symbol}($|[[:space:]])"; then
         echo "TypeDuck WASM build failed: wasm-nm did not find export $symbol" >&2
@@ -103,8 +143,8 @@ verify_wasm_exports() {
     return 0
   fi
 
-  if command -v wasm-objdump >/dev/null 2>&1; then
-    WASM_SYMBOLS=$(wasm-objdump -x "$WASM_ARTIFACT")
+  if WASM_OBJDUMP=$(find_tool wasm-objdump); then
+    WASM_SYMBOLS=$("$WASM_OBJDUMP" -x "$WASM_ARTIFACT")
     for symbol in $EXPORTS; do
       if ! printf '%s\n' "$WASM_SYMBOLS" | grep -Eq "(^|[[:space:]])_?${symbol}($|[[:space:]])"; then
         echo "TypeDuck WASM build failed: wasm-objdump did not find export $symbol" >&2
@@ -114,8 +154,8 @@ verify_wasm_exports() {
     return 0
   fi
 
-  if command -v llvm-nm >/dev/null 2>&1; then
-    WASM_SYMBOLS=$(llvm-nm "$WASM_ARTIFACT")
+  if LLVM_NM=$(find_tool llvm-nm); then
+    WASM_SYMBOLS=$("$LLVM_NM" "$WASM_ARTIFACT")
     for symbol in $EXPORTS; do
       if ! printf '%s\n' "$WASM_SYMBOLS" | grep -Eq "(^|[[:space:]])_?${symbol}($|[[:space:]])"; then
         echo "TypeDuck WASM build failed: llvm-nm did not find export $symbol" >&2
@@ -167,6 +207,8 @@ if ! command -v emar >/dev/null 2>&1; then
   block_missing_emscripten "emar"
   exit 0
 fi
+
+configure_emscripten_linker
 
 EXPORTED_FUNCTIONS=$(join_exported_functions)
 RUNTIME_METHODS="ccall,cwrap,UTF8ToString"

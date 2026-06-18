@@ -69,13 +69,13 @@ artifact → browser validation could not run. WI-1 removes that block.
    ```
 2. Run the documented build:
    ```sh
-   ./scripts/typeduck-wasm-build.sh        # -> yune-typeduck.js + yune-typeduck.wasm
+   ./scripts/typeduck-wasm-build.sh        # -> target/wasm32-unknown-emscripten/debug/.../yune_rime_api.wasm
    ```
 3. Verify **every** symbol in `scripts/typeduck-exports.txt` is present in the build's `EXPORTED_FUNCTIONS` (the script should fail loudly if not).
 4. If the toolchain genuinely cannot be installed in this environment, record a *reproducible* blocker (same discipline as the findings doc) and stop — but note this is an environment fix, not a design gap.
 
 ### Acceptance
-- `yune-typeduck.js` / `.wasm` produced; all `typeduck-exports.txt` symbols exported.
+- `yune_rime_api.wasm` is produced under `target/wasm32-unknown-emscripten/debug/`; all `typeduck-exports.txt` symbols exported. If the browser host needs a different filename/location, handle that as a WI-3 packaging step rather than as a Rust build blocker.
 - `cargo test -p yune-rime-api --test typeduck_web` still green (native fallback intact).
 
 ---
