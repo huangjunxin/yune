@@ -21,7 +21,14 @@ records a fresh-origin load where before-init persistence is empty, startup
 `customize` writes `page_size: '6'`, deploy syncs after mutation, and a real page
 reload restores the persisted custom config before runtime init.
 
+**HR-5 update**: the full real-assets browser matrix now passes. See
+`hr5-real-assets-matrix.json`, `screenshot-hr5-dictionary-panel.png`, and
+`screenshot-hr5-after-delete.png` for composition, candidate list, paging,
+selection, Space commit, long-press deletion, deploy, customize, persistence
+sync, reload, and dictionary-panel comment evidence. The final HR-5 browser
+capture has zero warning/error console entries.
+
 **Still open**:
 
-- HR-5: paging/deletion and dictionary-panel oracle comment bytes still need the
-  full real-assets E2E matrix.
+- HR-6: shared parity goldens and prompt/joiner oracle coverage.
+- HR-7: final evidence-based GO/NO-GO reassessment.

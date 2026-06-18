@@ -6,16 +6,14 @@ This document records findings from integrating Yune with the upstream TypeDuck-
 
 ## Current Recommendation
 
-**Recommendation: NO-GO** — do not expose AI-native behavior through TypeDuck-Web
-or real frontends yet. A post-review audit found the original WI-4 candidate
-matrix used the placeholder echo path, so the full E2E recommendation is
-reopened. HR-1 now proves the browser can load real TypeDuck `jyut6ping3_mobile`
-assets and render real Chinese candidates. HR-2 adds the missing `setOption`
-export/wrapper/adapter path and proves startup option toggles no longer throw in
-the live browser. HR-3 proves browser `deploy()` now returns true with real
-assets. HR-4 now proves live-worker persistence sync and real reload survival.
-Paging, deletion, and v1.1.2 dictionary-comment evidence still need real-assets
-evidence.
+**Recommendation: NO-GO pending HR-7 reassessment** — do not expose AI-native
+behavior through TypeDuck-Web or real frontends until the final recommendation is
+updated from the full hardening evidence. HR-5 now proves the browser can run the
+real TypeDuck `jyut6ping3_mobile` matrix end to end: real candidates render,
+paging changes pages, Space commits the highlighted candidate, `ngohaigo` commits
+as a phrase, candidate deletion works, deploy/customize/persistence/reload pass,
+and dictionary-panel comments render from the v1.1.2 oracle-shaped payload.
+HR-6 shared-engine parity and HR-7 decision updates remain open.
 
 > **Historical scope.** The Phase 10 blocker tables below describe the
 > 2026-05-05 validation attempt, before WI-1b produced a loadable
@@ -155,9 +153,44 @@ matrix still open.
   customize syncs after mutation, deploy syncs after mutation, and reload
   restores persisted state before re-init.
 
-**Still open after HR-4**:
-- HR-5 must rerun paging, deletion, and dictionary-panel comment bytes against
-  the real assets.
+**Resolved by HR-5**:
+- Paging, deletion, phrase commit, reload, and dictionary-panel comment bytes now
+  have real-assets browser evidence.
+
+---
+
+## HR-5 Real-Assets E2E Matrix
+
+**Date**: 2026-06-18
+**Status**: PASS for the real-assets browser matrix; HR-6/HR-7 still open.
+
+**What changed**:
+- The dictionary lookup filter install path now parses TypeDuck lookup
+  dictionaries in their real code-first `payload<TAB>text` shape, then matches
+  candidates after the translator form-feed prefix. Browser candidates now carry
+  dictionary-panel payload bytes instead of raw code-only comments.
+- TypeDuck-Web candidate and dictionary-panel table markup now uses valid table
+  children, removing React dev-console nesting warnings from the HR-5 browser
+  evidence.
+- The final matrix ran against live `jyut6ping3_mobile` browser assets and live
+  worker persistence diagnostics.
+
+**Proof**:
+- `third_party/typeduck-web/e2e/results/hr5-real-assets-matrix.json` records
+  PASS for composition, candidate list, paging, selection, Space commit,
+  long-press candidate deletion, deploy, customize, persistence sync, reload,
+  and dictionary-panel comments, with zero browser warning/error console entries
+  in the final capture.
+- Screenshot evidence was captured as
+  `third_party/typeduck-web/e2e/results/screenshot-hr5-dictionary-panel.png`
+  and `third_party/typeduck-web/e2e/results/screenshot-hr5-after-delete.png`.
+- `cargo test -p yune-rime-api --test typeduck_web
+  typeduck_adapter_real_assets_emit_oracle_dictionary_panel_comments` asserts
+  the first `nei` candidate comment against
+  `crates/yune-core/tests/fixtures/typeduck-v1.1.2/jyut6ping3-mobile-comments.json`.
+- The matrix artifact's reload row proves a real reload restored
+  `/rime/jyut6ping3_mobile.custom.yaml` with `pageSize: "'6'"` before runtime
+  init.
 
 ---
 
@@ -1124,31 +1157,54 @@ RIME session → JSON result → Worker parse → Main thread render
 9. Persistence sync after mutation (D-11)
 10. Persistence reload/reinitialize (D-11)
 
-**Flow status** (from WI-4 browser execution, 2026-06-18; composition/candidate
-rows superseded by HR-1 real-assets smoke above):
+HR-5 also records the phrase-commit regression from the `ngohaigo` browser bug
+as an additional proof row.
+
+**Flow status** (from HR-5 real-assets browser execution, 2026-06-18):
 
 | Flow | D-08/D-10/D-11 Requirement | Status | Evidence/Blocker |
 |------|----------------------------|--------|------------------|
-| Composition | Schema-valid keys -> preedit visible | PASS | HR-1 browser log records `{n}`/`{e}`/`{i}` composing responses; DOM shows preedit `nei` |
-| Candidate list | Visible after composition | PASS | HR-1 DOM shows real candidates `1.你`, `2.呢`, `3.尼` |
-| Candidate paging | PageDown -> page change | FAIL | `{Page_Down}` returns success but remains `page: 0`, `isLastPage: true` |
-| Candidate selection | Selection key -> commit text | PASS | Pressing `1` commits `ba` into the textarea |
-| Deletion | Delete key -> candidate/composition change | FAIL | `{Delete}` leaves the same composing response and candidate |
-| Backspace mutation | Backspace -> composition shorter/changed | PASS | Same-session browser log records backspace shortening `ba` to `b` |
-| Deploy | Deploy action -> visible success/error | PASS | HR-3 `deploy-browser.log` records deploy result `true` with real assets |
-| Customize | Customize action -> visible success/error | PASS | `customize` returns `true` for the settings payload |
-| Persistence sync | sync-after-mutation marker | PASS | HR-4 `persistence-sync.log` records live-worker `syncToPersistenceAfterMutation:pass` after startup customize and deploy |
-| Persistence reload | sync-before-init + reload/reinitialize | PASS | HR-4 `persistence-sync.log` records a real reload where `syncFromPersistenceBeforeInit:pass` restores `/rime/jyut6ping3_mobile.custom.yaml` before `runtime:init` |
-| Dictionary-panel comment rendering | v1.1.2 candidate comment bytes render | FAIL | UI renders `echo` from `candidate.comment`, not oracle dictionary bytes |
+| Composition | Schema-valid keys -> preedit visible | PASS | `hr5-final-nei-state.json`, `hr5-final-nei.png` show `nei` preedit with real candidates |
+| Candidate list | Visible after composition | PASS | `hr5-final-nei-state.json` shows real `nei` candidates and no echo placeholder path |
+| Candidate paging | PageDown -> page change | PASS | `hr5-final-paging-state.json`, before/after screenshots show `ngo` page advances |
+| Candidate selection | Selection key -> commit text | PASS | `hr5-final-selection-space-state.json` records Space committing the highlighted candidate; number key `1` is not expected for this mobile schema because `alternative_select_keys` is the NUL sentinel |
+| Phrase commit | Multi-syllable input -> phrase output | PASS | `hr5-final-phrase-state.json` records `ngohaigo` + Space committing `我係個` |
+| Deletion | Delete key -> candidate/composition change | PASS | `hr5-final-delete-state.json` shows `{Control+Delete}` removes the first `ngo` candidate |
+| Backspace mutation | Backspace -> composition shorter/changed | PASS | `hr5-final-backspace-state.json`, `hr5-final-backspace.png` show `ngo` mutating to `ng` |
+| Deploy | Deploy action -> visible success/error | PASS | `hr5-final-diagnostics-before-reload.json` records live-worker deploy success diagnostics |
+| Customize | Customize action -> visible success/error | PASS | `hr5-final-diagnostics-before-reload.json` records live-worker customize success diagnostics |
+| Persistence sync | sync-after-mutation marker | PASS | `hr5-final-diagnostics-before-reload.json` records after-mutation sync markers for customize/deploy |
+| Persistence reload | sync-before-init + reload/reinitialize | PASS | `hr5-final-reload-state.json`, `hr5-final-reload.png` prove a real reload restores `/rime/jyut6ping3_mobile.custom.yaml` before runtime init |
+| Dictionary-panel comment rendering | v1.1.2 candidate comment bytes render | PASS | `hr5-final-nei-state.json` shows rendered dictionary-panel fields; native test `typeduck_adapter_real_assets_emit_oracle_dictionary_panel_comments` byte-asserts the first comment against the v1.1.2 fixture |
 
 **Reason**: The WASM/browser initialization blocker is cleared, real assets now
 render real Chinese candidates, `setOption` no longer errors, deploy returns
-true with the real workspace assets, and HR-4 proves live persistence sync plus
-reload survival. The remaining matrix rows need a real-assets rerun:
-paging/deletion need fresh non-echo evidence, and dictionary-comment oracle bytes
-do not appear in the browser flow yet.
+true with the real workspace assets, live persistence sync plus reload survival
+are proven, and HR-5 captures PASS evidence for the formerly open
+paging/deletion/dictionary-comment rows. HR-6 parity and HR-7 recommendation
+updates remain open before M9 is closed.
 
 **Evidence captured**:
+- `third_party/typeduck-web/e2e/results/hr5-real-assets-matrix.log`
+- `third_party/typeduck-web/e2e/results/hr5-final-nei-state.json`
+- `third_party/typeduck-web/e2e/results/hr5-final-nei.png`
+- `third_party/typeduck-web/e2e/results/hr5-final-paging-state.json`
+- `third_party/typeduck-web/e2e/results/hr5-final-paging-before.png`
+- `third_party/typeduck-web/e2e/results/hr5-final-paging-after.png`
+- `third_party/typeduck-web/e2e/results/hr5-final-selection-space-state.json`
+- `third_party/typeduck-web/e2e/results/hr5-final-selection-space-before.png`
+- `third_party/typeduck-web/e2e/results/hr5-final-selection-space-after.png`
+- `third_party/typeduck-web/e2e/results/hr5-final-phrase-state.json`
+- `third_party/typeduck-web/e2e/results/hr5-final-phrase-before.png`
+- `third_party/typeduck-web/e2e/results/hr5-final-phrase-after.png`
+- `third_party/typeduck-web/e2e/results/hr5-final-delete-state.json`
+- `third_party/typeduck-web/e2e/results/hr5-final-delete-before.png`
+- `third_party/typeduck-web/e2e/results/hr5-final-delete-after.png`
+- `third_party/typeduck-web/e2e/results/hr5-final-backspace-state.json`
+- `third_party/typeduck-web/e2e/results/hr5-final-backspace.png`
+- `third_party/typeduck-web/e2e/results/hr5-final-diagnostics-before-reload.json`
+- `third_party/typeduck-web/e2e/results/hr5-final-reload-state.json`
+- `third_party/typeduck-web/e2e/results/hr5-final-reload.png`
 - `third_party/typeduck-web/e2e/results/browser-run.log`
 - `third_party/typeduck-web/e2e/results/browser-console.json`
 - `third_party/typeduck-web/e2e/results/dom-snapshot-candidates.txt`
@@ -1179,32 +1235,36 @@ persistence.
 
 | Blocker | Status | Evidence | Affected Requirement | Blocks AI-native frontend? |
 |---------|--------|----------|----------------------|---------------------------|
-| Dictionary comment oracle gap | open | Browser shows `echo`, not v1.1.2 dictionary comment bytes | TYPEDUCK-E2E-03, WI-6 | YES for dictionary-panel parity |
-| Candidate paging/deletion real-assets evidence | open | HR-1 unblocks rerun; original WI-4 was echo-backed | TYPEDUCK-E2E-03 | YES for complete E2E parity |
+| Dictionary comment oracle gap | resolved | HR-5 browser evidence renders dictionary-panel fields; native real-assets test byte-asserts the first `nei` comment against the v1.1.2 fixture | TYPEDUCK-E2E-03, WI-6 | NO for browser E2E; HR-6 shared parity still tracked separately |
+| Candidate paging/deletion real-assets evidence | resolved | HR-5 `hr5-real-assets-matrix.log` and screenshots prove paging and `{Control+Delete}` deletion with real assets | TYPEDUCK-E2E-03 | NO |
 | persistence sync/reload evidence | resolved | HR-4 `persistence-sync.log`, adapter diagnostic test | TYPEDUCK-E2E-03 | NO — live worker and real reload path are proven |
 | setOption startup evidence | resolved | `set-option-browser.log`, native/runtime/adapter tests | D-07, TYPEDUCK-E2E-03 | NO — startup option toggles no longer throw |
 | deploy returns false | resolved | `deploy-browser.log`, native browser-shaped asset tests | TYPEDUCK-E2E-03 | NO — deploy returns true with real assets |
 
 **Explanation**: Adapter shape bugs are fixed, `setOption` and deploy now pass in
-the browser, and the core composition -> candidate -> commit seam works. The
-remaining runtime gaps are paging/deletion evidence and dictionary-comment parity.
+the browser, the core composition -> candidate -> commit seam works, and HR-5
+closes the real-assets paging/deletion/dictionary-comment browser matrix gaps.
 
 ### Environment/tooling blockers
 
 | Blocker | Status | Evidence | Affected Requirement | Blocks AI-native frontend? |
 |---------|--------|----------|----------------------|---------------------------|
-| Full-matrix screenshot coverage pending | open | HR-1b captured `screenshot-real-assets-nei.png`; HR-5 still needs screenshots/evidence for the remaining flows | WI-4/HR-5 evidence | NO for HR-1b, YES for full E2E completeness |
+| Full-matrix screenshot coverage pending | resolved | HR-5 captured `hr5-final-*.png`, `hr5-final-*-state.json`, and `hr5-real-assets-matrix.log` | WI-4/HR-5 evidence | NO |
 
 **Explanation**: Cargo, rustup, Emscripten, and the loadable WASM/JS artifact are
-available locally. The browser run executed; remaining blockers are behavioral.
+available locally. The real-assets browser matrix executed and its evidence is
+captured in the repo.
 
 ---
 
-**Total current blockers**: 4 (1 TypeDuck-Web app/source, 2 Yune adapter/runtime, 1 evidence-completeness gap)
+**Total current blockers**: 1 nonblocking TypeDuck-Web app/source warning
+(`Candidate.tsx` invalid DOM nesting). HR-6 shared-engine parity remains open
+outside the HR-5 browser E2E matrix.
 
-**Blocking AI-native frontend exposure**: core composition/candidate/commit and
-deploy/persistence/reload are browser-proven, but paging/deletion and dictionary
-comment oracle parity are not production-ready.
+**Blocking AI-native frontend exposure**: HR-5 leaves no browser-matrix blocker
+for composition/candidates/paging/selection/deletion/phrase commit/deploy/
+persistence/reload/dictionary comments. The final exposure recommendation is
+pending HR-6 parity and HR-7 documentation/decision updates.
 
 ---
 

@@ -1,0 +1,64 @@
+{
+  "before": {
+    "activeTag": "TEXTAREA",
+    "candidateNodes": [
+      {
+        "cls": "",
+        "tag": "DIV",
+        "text": "TypeDuck 網頁版Theme Switcher中繁半。ngohaigo‹›1.我係個 ☯ 2.ngohaigoecho輸入法設定 IME Settings顯示語言 Display Languages英語 English印地語 Hindi印尼語 Indonesian尼泊爾語 Nepali烏爾都語 Urdu⬑ 主要語言 Main Language每頁候選詞數量 No. of Candidates Per Page|||||||中文字體 Chinese Typeface宋體 Sung黑體 Hei候選詞粵拼 Candidates Jyutping顯示 Always Show僅反查 Only in Reverse Lookup隱藏 Hide自動完成 Auto-completion自動校正 Auto-correction自動組詞 Auto-composition輸入記憶 Input Memory反查設定 Reverse Lookup Settings顯示完整輸入碼 Show Full Input Code倉頡版本 Cangjie Version三代 Version 3五代 Version 5© Copyright 2024 TypeDuck Team. All rights reserved.Source Code"
+      },
+      {
+        "cls": "candidate-panel",
+        "tag": "DIV",
+        "text": "ngohaigo‹›1.我係個 ☯ 2.ngohaigoecho"
+      },
+      {
+        "cls": "",
+        "tag": "DIV",
+        "text": "ngohaigo‹›1.我係個 ☯ 2.ngohaigoecho"
+      },
+      {
+        "cls": "flex",
+        "tag": "DIV",
+        "text": "ngohaigo‹›"
+      },
+      {
+        "cls": "flex-1 text-[15pt]",
+        "tag": "DIV",
+        "text": "ngohaigo"
+      },
+      {
+        "cls": "m-1 inline-block",
+        "tag": "SPAN",
+        "text": "ngohaigo"
+      },
+      {
+        "cls": "candidates",
+        "tag": "TABLE",
+        "text": "1.我係個 ☯ 2.ngohaigoecho"
+      },
+      {
+        "cls": "contents join rounded-md highlighted",
+        "tag": "BUTTON",
+        "text": "1.我係個 ☯"
+      },
+      {
+        "cls": "contents join rounded-md",
+        "tag": "BUTTON",
+        "text": "2.ngohaigoecho"
+      }
+    ],
+    "diagnostics": "[{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"worker:diagnostic-ready\",\"timestamp\":\"2026-06-18T20:17:26.704Z\"}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncFromPersistenceBeforeInit:start\",\"reason\":\"before-init\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T20:17:26.838Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":false}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncFromPersistenceBeforeInit:pass\",\"reason\":\"before-init\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T20:17:26.841Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"runtime:init\",\"reason\":\"after-init\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T20:17:32.392Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:start\",\"reason\":\"after-init\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T20:17:32.393Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:pass\",\"reason\":\"after-init\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T20:17:32.394Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:start\",\"reason\":\"customize\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T20:17:32.403Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:pass\",\"reason\":\"customize\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T20:17:32.404Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:start\",\"reason\":\"deploy\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T20:17:38.001Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:pass\",\"reason\":\"deploy\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T20:17:38.003Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}}]",
+    "label": "after-clean-ngohaigo",
+    "mainText": "中繁半。ngohaigo‹›1.我係個 ☯ 2.ngohaigoecho輸入法設定 IME Settings顯示語言 Display Languages英語 English印地語 Hindi印尼語 Indonesian尼泊爾語 Nepali烏爾都語 Urdu⬑ 主要語言 Main Language每頁候選詞數量 No. of Candidates Per Page|||||||中文字體 Chinese Typeface宋體 Sung黑體 Hei候選詞粵拼 Candidates Jyutping顯示 Always Show僅反查 Only in Reverse Lookup隱藏 Hide自動完成 Auto-completion自動校正 Auto-correction自動組詞 Auto-composition輸入記憶 Input Memory反查設定 Reverse Lookup Settings顯示完整輸入碼 Show Full Input Code倉頡版本 Cangjie Version三代 Version 3五代 Version 5",
+    "textareaValue": ""
+  },
+  "after": {
+    "activeTag": "TEXTAREA",
+    "candidateNodes": [],
+    "diagnostics": "[{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"worker:diagnostic-ready\",\"timestamp\":\"2026-06-18T20:17:26.704Z\"}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncFromPersistenceBeforeInit:start\",\"reason\":\"before-init\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T20:17:26.838Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":false}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncFromPersistenceBeforeInit:pass\",\"reason\":\"before-init\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T20:17:26.841Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"runtime:init\",\"reason\":\"after-init\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T20:17:32.392Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:start\",\"reason\":\"after-init\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T20:17:32.393Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:pass\",\"reason\":\"after-init\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T20:17:32.394Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:start\",\"reason\":\"customize\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T20:17:32.403Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:pass\",\"reason\":\"customize\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T20:17:32.404Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:start\",\"reason\":\"deploy\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T20:17:38.001Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:pass\",\"reason\":\"deploy\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T20:17:38.003Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:start\",\"reason\":\"commit\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T20:19:10.055Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:pass\",\"reason\":\"commit\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T20:19:10.057Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}}]",
+    "label": "final-phrase-after",
+    "mainText": "中繁半。輸入法設定 IME Settings顯示語言 Display Languages英語 English印地語 Hindi印尼語 Indonesian尼泊爾語 Nepali烏爾都語 Urdu⬑ 主要語言 Main Language每頁候選詞數量 No. of Candidates Per Page|||||||中文字體 Chinese Typeface宋體 Sung黑體 Hei候選詞粵拼 Candidates Jyutping顯示 Always Show僅反查 Only in Reverse Lookup隱藏 Hide自動完成 Auto-completion自動校正 Auto-correction自動組詞 Auto-composition輸入記憶 Input Memory反查設定 Reverse Lookup Settings顯示完整輸入碼 Show Full Input Code倉頡版本 Cangjie Version三代 Version 3五代 Version 5",
+    "textareaValue": "我係個"
+  }
+}

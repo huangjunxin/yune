@@ -1,0 +1,94 @@
+{
+  "url": "http://127.0.0.1:5179/web/?debug&realAssets=1&hr5MatrixReady=1781813846503",
+  "generatedAt": "2026-06-18T20:19:03.690Z",
+  "flows": {
+    "composition": {
+      "status": "PASS",
+      "evidence": "hr5-final-nei-state.json, hr5-final-nei.png",
+      "observed": "nei‹›1.nei5你you (singular)ⓘ2.ne1呢(how about)ⓘ3.nei4尼nunⓘ4.nei4妮little girlⓘ5.nei4彌full; fillⓘ"
+    },
+    "candidateList": {
+      "status": "PASS",
+      "evidence": "hr5-final-nei-state.json, hr5-final-nei.png",
+      "observed": "nei‹›1.nei5你you (singular)ⓘ2.ne1呢(how about)ⓘ3.nei4尼nunⓘ4.nei4妮little girlⓘ5.nei4彌full; fillⓘ"
+    },
+    "dictionaryPanelComments": {
+      "status": "PASS",
+      "evidence": "hr5-final-nei-state.json, hr5-final-nei.png; raw oracle assertion covered by cargo test -p yune-rime-api --test typeduck_web typeduck_adapter_real_assets_emit_oracle_dictionary_panel_comments",
+      "observed": "nei‹›1.nei5你you (singular)ⓘ2.ne1呢(how about)ⓘ3.nei4尼nunⓘ4.nei4妮little girlⓘ5.nei4彌full; fillⓘ",
+      "oracleFirstCommentEscaped": "\"\\f\\r1,你,nei5,1,0,,oth,,,,,,,you (singular),تم,तपाईं,आप,kamu\""
+    },
+    "candidatePaging": {
+      "status": "PASS",
+      "evidence": "hr5-final-paging-state.json, hr5-final-paging-before.png, hr5-final-paging-after.png",
+      "before": "ngo‹›1.ngo5我I, meⓘ2.ngo4俄Russianⓘ3.ngo6餓hungryⓘ4.ngo4娥嫦娥ⓘ5.ngo4鵝gooseⓘ",
+      "after": "ngo‹›1.ngo4鵝gooseⓘ2.ngo6卧lie downⓘ3.ngo4訛rumour; errorⓘ4.ngo4蛾mothⓘ5.ngo4峨loftyⓘ"
+    },
+    "candidateSelection": {
+      "status": "PASS",
+      "evidence": "hr5-final-selection-space-state.json, hr5-final-selection-space-before.png, hr5-final-selection-space-after.png",
+      "textareaValue": "我",
+      "note": "Number key 1 is not expected for jyut6ping3_mobile because alternative_select_keys is the NUL sentinel; Space selects the highlighted candidate."
+    },
+    "commitOutput": {
+      "status": "PASS",
+      "evidence": "hr5-final-phrase-state.json, hr5-final-phrase-before.png, hr5-final-phrase-after.png",
+      "textareaValue": "我係個"
+    },
+    "candidateDeletion": {
+      "status": "PASS",
+      "evidence": "hr5-final-delete-state.json, hr5-final-delete-before.png, hr5-final-delete-after.png",
+      "before": "ngo‹›1.ngo5我I, meⓘ2.ngo4俄Russianⓘ3.ngo6餓hungryⓘ4.ngo4娥嫦娥ⓘ5.ngo4鵝gooseⓘ",
+      "after": "ngo‹›1.ngo4俄Russianⓘ2.ngo6餓hungryⓘ3.ngo4娥嫦娥ⓘ4.ngo4鵝gooseⓘ5.ngo4鵝gooseⓘ"
+    },
+    "backspaceMutation": {
+      "status": "PASS",
+      "evidence": "hr5-final-backspace-state.json, hr5-final-backspace.png",
+      "after": "ng‹›1.ng5五fiveⓘ2.ng5午noonⓘ3.ng6誤wrongⓘ4.ng4吳surname [Ng]ⓘ5.ng5伍five; surname [Ng]ⓘ"
+    },
+    "deploy": {
+      "status": "PASS",
+      "evidence": "hr5-final-diagnostics-before-reload.json"
+    },
+    "customize": {
+      "status": "PASS",
+      "evidence": "hr5-final-diagnostics-before-reload.json"
+    },
+    "persistenceSync": {
+      "status": "PASS",
+      "evidence": "hr5-final-diagnostics-before-reload.json"
+    },
+    "persistenceReload": {
+      "status": "PASS",
+      "evidence": "hr5-final-reload-state.json, hr5-final-reload.png",
+      "persistedBeforeRuntime": {
+        "beforeExists": true,
+        "beforePageSize": "'6'",
+        "beforeTimestamp": "2026-06-18T20:19:15.270Z",
+        "runtimeTimestamp": "2026-06-18T20:19:21.401Z",
+        "beforePrecedesRuntime": true
+      }
+    }
+  },
+  "evidenceFiles": [
+    "hr5-final-nei-state.json",
+    "hr5-final-nei.png",
+    "hr5-final-paging-state.json",
+    "hr5-final-paging-before.png",
+    "hr5-final-paging-after.png",
+    "hr5-final-phrase-state.json",
+    "hr5-final-phrase-before.png",
+    "hr5-final-phrase-after.png",
+    "hr5-final-delete-state.json",
+    "hr5-final-delete-before.png",
+    "hr5-final-delete-after.png",
+    "hr5-final-backspace-state.json",
+    "hr5-final-backspace.png",
+    "hr5-final-diagnostics-before-reload.json",
+    "hr5-final-reload-state.json",
+    "hr5-final-reload.png",
+    "hr5-final-selection-space-state.json",
+    "hr5-final-selection-space-before.png",
+    "hr5-final-selection-space-after.png"
+  ]
+}

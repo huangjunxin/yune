@@ -220,13 +220,31 @@ function parseKeySequence(input: string): TypeDuckKeyboardEventLike {
 
   // Extract key name
   let key: string;
+  let shiftKey = false;
+  let ctrlKey = false;
+  let altKey = false;
+  let metaKey = false;
   if (input.startsWith("{") && input.endsWith("}")) {
     // Special key wrapped in braces
     const inner = input.slice(1, -1);
-    if (isRelease) {
-      key = inner.replace("Release+", "");
-    } else {
-      key = inner;
+    const parts = (isRelease ? inner.replace("Release+", "") : inner).split("+");
+    key = parts.pop() ?? "";
+    for (const modifier of parts) {
+      switch (modifier) {
+        case "Shift":
+          shiftKey = true;
+          break;
+        case "Control":
+          ctrlKey = true;
+          break;
+        case "Alt":
+          altKey = true;
+          break;
+        case "Meta":
+        case "Super":
+          metaKey = true;
+          break;
+      }
     }
     // Normalize key names
     if (key === "BackSpace") key = "Backspace";
@@ -242,7 +260,7 @@ function parseKeySequence(input: string): TypeDuckKeyboardEventLike {
     key = input;
   }
 
-  return { key, type };
+  return { key, type, shiftKey, ctrlKey, altKey, metaKey };
 }
 
 /**

@@ -11,12 +11,12 @@
 > build-out already exists; the engine has never been *observed* working in a
 > browser because the WASM artifact was never built locally.
 >
-> **Current result.** **NO-GO** for AI-native frontend exposure. The first WI-4
-> browser run proved the Yune/TypeDuck-Web seam could initialize, but a
-> post-review audit found it used the placeholder echo path for the candidate
-> matrix. The real TypeDuck `jyut6ping3_mobile` assets now load and render
-> Chinese candidates in-browser; the remaining flows must be re-run against those
-> real assets before M9 can be closed or merged.
+> **Current result.** **NO-GO pending HR-7 reassessment** for AI-native frontend
+> exposure. The first WI-4 browser run proved the Yune/TypeDuck-Web seam could
+> initialize, but a post-review audit found it used the placeholder echo path for
+> the candidate matrix. HR-5 has now rerun the browser matrix against the real
+> TypeDuck `jyut6ping3_mobile` assets and captured PASS evidence for the E2E
+> rows; HR-6 parity and HR-7 documentation/recommendation are still open.
 >
 > **Line anchors** are accurate as of 2026-06-17 but *will drift* — re-`grep` the
 > named symbol/file before editing. Trust names over line numbers.
@@ -38,7 +38,7 @@ Verified present on `main`:
 | TypeScript runtime | `packages/yune-typeduck-runtime/src/` (`response.ts`, `keys.ts`) | Parses per-candidate `comment`; `TypeDuckContext` exposes `highlighted` + `candidates`; key/mask mapping (incl. the recent `BackSpace` alias). |
 | WASM build script | `scripts/typeduck-wasm-build.sh` | Emscripten / `wasm32-unknown-emscripten`; export list in `scripts/typeduck-exports.txt`. |
 | Upstream app seam | tracked source: `third_party/typeduck-web/yune-integration/adapter.ts`; patch: `third_party/typeduck-web/patches/yune-typeduck-runtime.patch`; ignored checkout: `third_party/typeduck-web/source/src/yune-integration/adapter.ts` | Wires TypeDuck-Web's input engine to the Yune bridge. The tracked source/patch are the versions to fix in WI-2; the ignored checkout may be hot-patched locally but will not land in git. |
-| Findings + blockers | [`typeduck-web-integration-findings.md`](./typeduck-web-integration-findings.md) | WI-4 browser run recorded PASS/FAIL evidence; core composition/selection pass, but paging/deletion/deploy/persistence/dictionary-comment parity fail. |
+| Findings + blockers | [`typeduck-web-integration-findings.md`](./typeduck-web-integration-findings.md) | HR-5 real-assets browser matrix records PASS evidence for composition, paging, selection, deletion, deploy, persistence, reload, and dictionary-comment rendering. |
 | Superseded recommendation | [`archive/ai-native-frontend-readiness.md`](./archive/ai-native-frontend-readiness.md) | The tooling-blocked NO-GO this plan replaces. |
 
 The single thing that blocked Phase 10 was **no Emscripten toolchain** → no WASM
@@ -84,7 +84,7 @@ commit per item:
   TypeDuck's real workspace deployment reaches through `default.custom.yaml`.
 - [x] **HR-4 live persistence** — prove before-init and after-mutation IDBFS sync
   in the live worker path, including reload survival.
-- [ ] **HR-5 real-assets E2E matrix** — re-run paging, deletion, deploy,
+- [x] **HR-5 real-assets E2E matrix** — re-run paging, deletion, deploy,
   persistence, reload, and dictionary-panel comments against real assets.
 - [ ] **HR-6 shared parity** — `"; "` reverse-lookup joiner, schema-name-in-prompt
   oracle cases, and remaining Cantonese goldens.
@@ -230,6 +230,6 @@ frontends share. Drive from the v1.1.2 oracle:
 - [x] **WI-1** — Emscripten + loadable WASM/JS artifact built; exports verified; native fallback green
 - [x] **WI-2** — `adapter.ts` text/comment/highlight shapes fixed + unit-tested
 - [x] **WI-3** — browser FS layout, asset preload, and IDBFS sync wired into the patched app seam
-- [ ] **WI-4** — 10 E2E flows run in a real browser with captured PASS/FAIL evidence against real TypeDuck assets
+- [x] **WI-4** — 10 E2E flows run in a real browser with captured PASS/FAIL evidence against real TypeDuck assets
 - [ ] **WI-5** — evidence-based GO/NO-GO recorded from the real-assets matrix; tracking docs updated
 - [ ] **WI-6** — optional shared engine parity follow-up (`"; "` joiner + schema-prompt; Cantonese goldens)

@@ -16,6 +16,8 @@ use yune_rime_api::{
 };
 
 const SCHEMA_ID: &str = "typeduck_luna";
+const TYPEDUCK_V112_COMMENTS: &str =
+    include_str!("../../yune-core/tests/fixtures/typeduck-v1.1.2/jyut6ping3-mobile-comments.json");
 
 fn test_guard() -> MutexGuard<'static, ()> {
     static TEST_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
@@ -758,6 +760,52 @@ fn typeduck_adapter_real_assets_sentence_mode_commits_multisyllable_phrase() {
     assert_eq!(
         committed["commits"],
         Value::Array(vec![Value::String("\u{6211}\u{4fc2}\u{500b}".to_owned())])
+    );
+
+    unsafe { yune_typeduck_cleanup(state) };
+    runtime.remove();
+}
+
+#[test]
+fn typeduck_adapter_real_assets_emit_oracle_dictionary_panel_comments() {
+    let _guard = test_guard();
+    let runtime = TypeDuckRuntime::create_with_schema(
+        "browser-real-dictionary-comments",
+        "jyut6ping3_mobile",
+    );
+    runtime.write_browser_real_assets();
+
+    let state = unsafe {
+        yune_typeduck_init(
+            runtime.shared_c.as_ptr(),
+            runtime.user_c.as_ptr(),
+            runtime.schema_id_c.as_ptr(),
+        )
+    };
+    assert!(!state.is_null());
+
+    let mut composing = Value::Null;
+    for key in "nei".chars() {
+        composing = response_json(unsafe { yune_typeduck_process_key(state, key as i32, 0) });
+    }
+    let oracle: Value = serde_json::from_str(TYPEDUCK_V112_COMMENTS)
+        .expect("TypeDuck v1.1.2 comments fixture should parse");
+    let expected_comment = oracle["cases"]
+        .as_array()
+        .expect("oracle cases should be an array")
+        .iter()
+        .find(|case| case["input"] == "nei")
+        .expect("nei should be captured by the v1.1.2 oracle")["selected_candidates"][0]["comment"]
+        .as_str()
+        .expect("oracle candidate comment should be a string");
+
+    assert_eq!(
+        composing["context"]["candidates"][0]["text"],
+        Value::String("\u{4f60}".to_owned())
+    );
+    assert_eq!(
+        composing["context"]["candidates"][0]["comment"],
+        Value::String(expected_comment.to_owned())
     );
 
     unsafe { yune_typeduck_cleanup(state) };

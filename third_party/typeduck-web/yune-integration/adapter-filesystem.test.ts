@@ -246,6 +246,44 @@ describe("initYuneRuntime browser filesystem ordering", () => {
     expect(module.calls("yune_typeduck_process_key")).toEqual([[1, 0x20, 0]]);
   });
 
+  it("maps TypeDuck-Web modifier key chords to RIME masks", async () => {
+    const fs = new FakeTypeDuckFilesystem();
+    const module = new FakeTypeDuckModule();
+    module.processKeyResult = module.response({
+      handled: true,
+      commits: [],
+      context: {
+        input: "ngo",
+        preedit: "ngo",
+        caret: 3,
+        highlighted: 0,
+        page_size: 5,
+        page_no: 0,
+        is_last_page: true,
+        select_keys: "12345",
+        select_labels: ["1", "2", "3", "4", "5"],
+        candidates: [{ text: "我", comment: "\fngo5" }],
+      },
+      status: null,
+    });
+
+    await initYuneRuntime(module, fs, initOptions, assets, "luna_pinyin");
+
+    await expect(processKey("{Control+Delete}")).resolves.toMatchObject({
+      isComposing: true,
+      success: true,
+    });
+    await expect(processKey("{Shift+Delete}")).resolves.toMatchObject({
+      isComposing: true,
+      success: true,
+    });
+
+    expect(module.calls("yune_typeduck_process_key")).toEqual([
+      [1, 0xffff, 1 << 2],
+      [1, 0xffff, 1],
+    ]);
+  });
+
   it("forwards TypeDuck IME preference toggles into schema customizations", async () => {
     const fs = new FakeTypeDuckFilesystem();
     const module = new FakeTypeDuckModule();
