@@ -14,7 +14,9 @@ mod tests;
 mod translator;
 mod userdb;
 pub use ai::{
-    AiCandidateProvider, AiDecision, AiResult, AiWorker, MockAiProvider, StagedAiCandidates,
+    AiCandidateProvider, AiContextProvider, AiContextSnapshot, AiDecision, AiOffReason,
+    AiPrivacyPolicy, AiProviderKind, AiResult, AiWorker, EngineAiContextProvider, MockAiProvider,
+    StagedAiCandidates,
 };
 use comment_format::CommentFormat;
 pub use dictionary::{
@@ -38,7 +40,8 @@ pub use filter::{
 pub use key::{parse_key_sequence, KeyCode, KeyEvent, KeyModifiers, KeySequenceParseError};
 pub use punctuation::PunctuationTranslator;
 pub use state::{
-    AiConfidence, Candidate, CandidateSource, CommitRecord, Composition, Context, Snapshot, Status,
+    AiConfidence, AiContext, Candidate, CandidateSource, CommitRecord, Composition, Context,
+    PrivacyClass, Snapshot, Status,
 };
 pub use translator::{
     EchoTranslator, FoldedSwitchOptions, HistoryTranslator, ReverseLookupTranslator,

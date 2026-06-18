@@ -2,6 +2,7 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 
 use crate::punctuation::punctuation_candidate_comment;
+use crate::AiContext;
 use crate::{
     parse_key_sequence, AiDecision, AiResult, Candidate, CandidateFilter, CandidateRanker,
     CandidateSource, CommitRecord, Composition, Context, EchoTranslator, KeyCode, KeyEvent,
@@ -108,6 +109,14 @@ impl Engine {
 
     pub fn stage_ai_result(&mut self, result: AiResult) -> AiDecision {
         let decision = match result {
+            AiResult::Off { for_input, .. } => {
+                if for_input == self.context.composition.input {
+                    self.staged_ai_result = None;
+                    AiDecision::Off
+                } else {
+                    self.ai_decision_for_current_input()
+                }
+            }
             AiResult::Pending { for_input } => {
                 if for_input == self.context.composition.input {
                     self.staged_ai_result = None;
@@ -206,6 +215,14 @@ impl Engine {
             self.context.segment_tags.push("abc".to_owned());
         }
         self.refresh_candidates();
+    }
+
+    pub fn set_ai_context(&mut self, ai_context: AiContext) {
+        self.context.ai_context = ai_context;
+    }
+
+    pub fn clear_ai_context(&mut self) {
+        self.context.ai_context = AiContext::default();
     }
 
     #[must_use]

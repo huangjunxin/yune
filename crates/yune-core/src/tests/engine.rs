@@ -1,6 +1,6 @@
 use crate::{
-    AiConfidence, AiResult, Candidate, CandidateRanker, CandidateSource, Context, Engine,
-    MockAiRanker, RerankResult, StaticTableTranslator, Translator,
+    AiConfidence, AiOffReason, AiResult, Candidate, CandidateRanker, CandidateSource, Context,
+    Engine, MockAiRanker, RerankResult, StaticTableTranslator, Translator,
 };
 
 struct CommentTranslator;
@@ -1137,6 +1137,31 @@ fn stale_or_pending_ai_result_does_not_change_classic_candidates() {
 
     assert_eq!(pending_decision.as_str(), "pending");
     assert_eq!(engine.context().candidates, baseline);
+}
+
+#[test]
+fn off_ai_result_clears_matching_staged_candidates() {
+    let mut engine = Engine::new();
+    engine.add_translator(StaticTableTranslator::new([("ba", "把")]));
+    engine.set_input("ba");
+    engine.stage_ai_result(AiResult::Ready {
+        for_input: "ba".to_owned(),
+        candidates: vec![ai_candidate("吧呀")],
+    });
+    assert!(engine
+        .context()
+        .candidates
+        .iter()
+        .any(|candidate| candidate.source.is_ai()));
+
+    let decision = engine.stage_ai_result(AiResult::off("ba", AiOffReason::Privacy));
+
+    assert_eq!(decision.as_str(), "off");
+    assert!(engine
+        .context()
+        .candidates
+        .iter()
+        .all(|candidate| !candidate.source.is_ai()));
 }
 
 #[test]

@@ -557,6 +557,18 @@ pins all classic rows ahead of AI rows, but now orders AI rows by confidence.
 This completes the worker/confidence part of AI-02 while leaving local-model,
 context, memory, privacy, and real-frontend exposure for later gates.
 
+**D-M11-3 — S3 defaults AI context to sensitive and blocks remote providers before
+invocation.** `Context` now carries `AiContext` metadata (app id, field id,
+preceding text, and `PrivacyClass`), defaulting to `Sensitive` when the host has
+not supplied classification. `EngineAiContextProvider` captures a bounded
+`AiContextSnapshot` with the explicit app/field/text/privacy plus input cursor,
+schema, and candidate-count data a provider may see. Providers declare
+`AiProviderKind::{Mock, Local, Remote}`; `AiPrivacyPolicy` allows mock/local
+providers under sensitive context but blocks remote providers before
+`provide()` is called and returns an input-keyed `AiResult::Off { reason:
+Privacy }`. The policy also exposes the learning gate that S4 must apply to
+`MemoryStore` writes. Real frontend AI exposure remains disabled by default.
+
 ### Initialization notes (process decisions)
 
 **D-INIT-1 — Existing `docs/analysis.md`, `docs/roadmap.md`,
@@ -589,4 +601,4 @@ this is why the placeholder-echo WI-4 matrix was reopened (D-P10-9) and why HR-1
 committed the real-assets browser run rather than only describing it.
 
 ---
-*Last updated: 2026-06-18 — added the M11 S2 worker/confidence decision (D-M11-2) and updated shared comment-oracle/web-first status.*
+*Last updated: 2026-06-18 — added the M11 S3 context/privacy decision (D-M11-3) and updated shared comment-oracle/web-first status.*

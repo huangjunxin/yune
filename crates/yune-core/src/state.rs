@@ -107,6 +107,64 @@ impl AiConfidence {
     }
 }
 
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum PrivacyClass {
+    #[default]
+    Sensitive,
+    Standard,
+}
+
+impl PrivacyClass {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Sensitive => "sensitive",
+            Self::Standard => "standard",
+        }
+    }
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct AiContext {
+    pub app_id: Option<String>,
+    pub field_id: Option<String>,
+    pub preceding_text: Option<String>,
+    pub privacy_class: PrivacyClass,
+}
+
+impl AiContext {
+    #[must_use]
+    pub fn standard() -> Self {
+        Self {
+            privacy_class: PrivacyClass::Standard,
+            ..Self::default()
+        }
+    }
+
+    #[must_use]
+    pub fn sensitive() -> Self {
+        Self::default()
+    }
+
+    #[must_use]
+    pub fn with_app_id(mut self, app_id: impl Into<String>) -> Self {
+        self.app_id = Some(app_id.into());
+        self
+    }
+
+    #[must_use]
+    pub fn with_field_id(mut self, field_id: impl Into<String>) -> Self {
+        self.field_id = Some(field_id.into());
+        self
+    }
+
+    #[must_use]
+    pub fn with_preceding_text(mut self, preceding_text: impl Into<String>) -> Self {
+        self.preceding_text = Some(preceding_text.into());
+        self
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CommitRecord {
     pub candidate_type: String,
@@ -132,6 +190,7 @@ pub struct Context {
     pub highlighted: usize,
     pub last_commit: Option<String>,
     pub commit_history: Vec<CommitRecord>,
+    pub ai_context: AiContext,
 }
 
 impl Default for Context {
@@ -143,6 +202,7 @@ impl Default for Context {
             highlighted: 0,
             last_commit: None,
             commit_history: Vec::new(),
+            ai_context: AiContext::default(),
         }
     }
 }

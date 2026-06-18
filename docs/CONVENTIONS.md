@@ -97,10 +97,12 @@ against. (Legacy `/Users/trenton/Projects/librime` mentions in `AGENTS.md` and
 **AI-native input is an explicitly separate M11 layer** above librime
 compatibility — not part of M9 or M10. The current implementation is still
 core/CLI-only: `crates/yune-core/src/ai/` owns `AiCandidateProvider`,
-`MockAiProvider`, `AiWorker`, and staged input-keyed results; the direct
-`yune-cli run` path can opt into `--ai-provider mock`. ABI, TypeDuck-Web, and
-Windows frontends keep AI off. Context capture, AI memory persistence, privacy
-classification, and local/remote model backends remain later M11 gates.
+`MockAiProvider`, `AiWorker`, staged input-keyed results, `AiContext` snapshots,
+and `AiPrivacyPolicy`; the direct `yune-cli run` path can opt into
+`--ai-provider mock`. ABI, TypeDuck-Web, and Windows frontends keep AI off.
+AI context defaults to sensitive, and remote providers are blocked before
+invocation under sensitive context. AI memory persistence and local/remote model
+backends remain later M11 gates.
 
 **Key data flow (RIME key path):** Frontend obtains the table via `rime_get_api`
 and calls `RimeApi.process_key` (`api_table.rs`, `RimeProcessKey`). `RimeProcessKey`
