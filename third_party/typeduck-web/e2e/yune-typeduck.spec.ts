@@ -20,7 +20,7 @@ const APP_URL = process.env.TYPEDUCK_APP_URL || "http://localhost:5173";
 const TIMEOUT_MS = 30000; // WASM load and runtime init may be slow
 
 // E2E evidence directory
-const EVIDENCE_DIR = "third_party/typeduck-web/e2e/results";
+const EVIDENCE_DIR = process.env.TYPEDUCK_EVIDENCE_DIR || "../e2e/results";
 
 /**
  * Helper: Capture browser console errors to evidence file
@@ -28,8 +28,16 @@ const EVIDENCE_DIR = "third_party/typeduck-web/e2e/results";
 async function captureConsoleErrors(page: Page, evidenceFile: string): Promise<string[]> {
   const errors: string[] = [];
   page.on("console", (msg) => {
-    if (msg.type() === "error") {
-      errors.push(`[${new Date().toISOString()}] ${msg.text()}`);
+    if (msg.type() === "error" || APP_URL.includes("debug")) {
+      errors.push(`[${new Date().toISOString()}] console:${msg.type()} ${msg.text()}`);
+    }
+  });
+  page.on("pageerror", (error) => {
+    errors.push(`[${new Date().toISOString()}] pageerror: ${error.message}`);
+  });
+  page.on("response", (response) => {
+    if (response.status() >= 400) {
+      errors.push(`[${new Date().toISOString()}] response: ${response.status()} ${response.url()}`);
     }
   });
   return errors;
@@ -42,14 +50,17 @@ async function saveEvidence(filename: string, content: string): Promise<void> {
   const fs = await import("fs/promises");
   const path = await import("path");
   const evidencePath = path.join(EVIDENCE_DIR, filename);
-  await fs.writeFile(evidencePath, content, "utf8");
+  await fs.mkdir(EVIDENCE_DIR, { recursive: true });
+  await fs.appendFile(evidencePath, content, "utf8");
 }
 
 /**
  * Helper: Take screenshot with evidence filename
  */
 async function takeEvidenceScreenshot(page: Page, flowName: string): Promise<void> {
-  const screenshotPath = `${EVIDENCE_DIR}/screenshot-${flowName}.png`;
+  const path = await import("path");
+  await (await import("fs/promises")).mkdir(EVIDENCE_DIR, { recursive: true });
+  const screenshotPath = path.join(EVIDENCE_DIR, `screenshot-${flowName}.png`);
   await page.screenshot({ path: screenshotPath, fullPage: false });
 }
 
@@ -93,15 +104,11 @@ test.describe("TypeDuck-Web Browser E2E", () => {
   });
 
   test.beforeEach(async ({ page }) => {
-    // Navigate to patched TypeDuck-Web app
-    await page.goto(APP_URL, { timeout: TIMEOUT_MS, waitUntil: "networkidle" });
-
-    // Capture console errors for evidence
     consoleErrors = await captureConsoleErrors(page, "browser-console.log");
 
-    // Wait for app initialization
-    // The patched worker dispatches "initialized" listener event
-    await page.waitForTimeout(2000); // Allow WASM load and runtime init
+    await page.goto(APP_URL, { timeout: TIMEOUT_MS, waitUntil: "domcontentloaded" });
+
+    await expect(page.locator("text=載入中 Loading…")).toHaveCount(0, { timeout: TIMEOUT_MS });
   });
 
   test.afterEach(async ({ page }, testInfo) => {
@@ -172,8 +179,7 @@ test.describe("TypeDuck-Web Browser E2E", () => {
     if (candidatePanel) {
       expect(candidatePanel).toBeTruthy();
 
-      // Verify candidates exist
-      const candidates = await page.locator(".candidate, [data-candidate]").count();
+      const candidates = await page.locator(".candidate-panel .candidates button, .candidate-panel .candidates tbody").count();
       expect(candidates).toBeGreaterThan(0);
 
       await saveEvidence(
@@ -181,11 +187,11 @@ test.describe("TypeDuck-Web Browser E2E", () => {
         `[${new Date().toISOString()}] Candidates: ${candidates} visible\n`
       );
     } else {
-      // Candidate panel may have different selector
       await saveEvidence(
         "blocker.md",
-        `# Browser E2E Blocker\n\n**Category**: TypeDuck-Web app/source\n\n**Flow**: Candidate list visible\n\n**Issue**: No candidate panel selector found\n\n**Selectors tried**: [data-candidates], .candidate-panel, .candidate-list\n\n**Evidence**: screenshot-candidates.png\n\n**Impact**: Cannot verify candidate paging/selection flows\n`
+        `# Browser E2E Blocker\n\n**Category**: Yune adapter/runtime\n\n**Flow**: Candidate list visible\n\n**Issue**: No candidate panel appeared after schema-valid input\n\n**Selectors tried**: [data-candidates], .candidate-panel, .candidate-list\n\n**Evidence**: screenshot-candidates.png\n\n**Impact**: Cannot verify candidate paging/selection flows\n`
       );
+      expect(candidatePanel).toBeTruthy();
     }
   });
 
@@ -205,23 +211,12 @@ test.describe("TypeDuck-Web Browser E2E", () => {
 
     await takeEvidenceScreenshot(page, "candidate-paging");
 
-    // Verify page changed (page indicator or candidate set changed)
-    // TypeDuck-Web may show page number or update candidate list
-    const pageIndicator = await page.locator("[data-page], .page-indicator").textContent().catch(() => null);
-
-    if (pageIndicator) {
-      await saveEvidence(
-        "browser-run.log",
-        `[${new Date().toISOString()}] Candidate paging: page="${pageIndicator}"\n`
-      );
-      expect(pageIndicator).toBeDefined();
-    } else {
-      // Candidate set may have changed without visible indicator
-      await saveEvidence(
-        "browser-run.log",
-        `[${new Date().toISOString()}] Candidate paging: PageDown pressed (no visible page indicator)\n`
-      );
-    }
+    const candidatePanel = await page.locator(".candidate-panel").count();
+    await saveEvidence(
+      "browser-run.log",
+      `[${new Date().toISOString()}] Candidate paging: PageDown pressed, panel count=${candidatePanel}\n`
+    );
+    expect(candidatePanel).toBeGreaterThan(0);
   });
 
   test("Candidate selection → commit output", async ({ page }) => {
@@ -319,7 +314,7 @@ test.describe("TypeDuck-Web Browser E2E", () => {
     await page.waitForTimeout(2000);
 
     // Verify deploy result visible (toast notification, console log, status change)
-    const deployNotification = await page.locator(".toast, [data-deploy-status], .notification").textContent().catch(() => null);
+    const deployNotification = await page.locator(".Toastify__toast, .toast, [data-deploy-status], .notification").first().textContent({ timeout: 1000 }).catch(() => null);
 
     await takeEvidenceScreenshot(page, "deploy");
 
@@ -362,7 +357,7 @@ test.describe("TypeDuck-Web Browser E2E", () => {
       await takeEvidenceScreenshot(page, "customize");
 
       // Verify customize result visible
-      const customizeNotification = await page.locator(".toast, [data-customize-status], .notification").textContent().catch(() => null);
+      const customizeNotification = await page.locator(".Toastify__toast, .toast, [data-customize-status], .notification").first().textContent({ timeout: 1000 }).catch(() => null);
 
       if (customizeNotification) {
         await saveEvidence(
@@ -421,7 +416,7 @@ test.describe("TypeDuck-Web Browser E2E", () => {
     await page.waitForTimeout(2000);
 
     // Step 3: Reload page (full browser reload)
-    await page.reload({ waitUntil: "networkidle" });
+    await page.reload({ waitUntil: "domcontentloaded" });
 
     await page.waitForTimeout(2000);
 

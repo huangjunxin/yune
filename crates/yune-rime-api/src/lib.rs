@@ -1830,7 +1830,7 @@ fn first_unicode_byte_length(value: &str) -> usize {
     value.chars().next().map_or(0, |first| first.len_utf8())
 }
 
-#[cfg(unix)]
+#[cfg(all(unix, not(target_os = "emscripten")))]
 pub(crate) fn librime_signature_modified_time() -> String {
     // librime's Signature::Sign stores a trimmed ctime(3) string.
     let now = unsafe { libc::time(ptr::null_mut()) };
@@ -1845,7 +1845,7 @@ pub(crate) fn librime_signature_modified_time() -> String {
         .to_owned()
 }
 
-#[cfg(not(unix))]
+#[cfg(any(not(unix), target_os = "emscripten"))]
 pub(crate) fn librime_signature_modified_time() -> String {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)

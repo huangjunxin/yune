@@ -1,6 +1,12 @@
 /target/
 /.idea/
 /.vscode/
+.claude/
 .DS_Store
 node_modules/
 packages/*/dist/
+test-results/
+
+# E2E test artifacts (keep README.md and blocker.md tracked)
+third_party/typeduck-web/e2e/results/*.log
+third_party/typeduck-web/e2e/results/screenshot-*.png
