@@ -62,18 +62,19 @@ Detail: [`plans/archive/real-frontend-validation-plan.md`](./plans/archive/real-
   `context.highlighted` into the upstream candidate panel shape.
 - Patched TypeDuck-Web worker calls the modular Emscripten factory, mounts IDBFS,
   fetches real `public/schema` assets before init, and runs in a real browser.
-- **Browser result:** the post-review real-assets smoke now renders
-  `jyut6ping3_mobile` candidates for `nei` (`你`, `呢`, `尼`). The full matrix
-  still needs a real-assets rerun for paging, deletion, and v1.1.2
-  dictionary-comment evidence. HR-2 resolves the startup `setOption`
-  adapter/export gap; HR-3 proves browser `deploy()` returns true with the real
-  TypeDuck workspace assets; HR-4 proves live persistence sync and real reload
-  survival.
-- **Outcome:** **NO-GO** for AI-native frontend exposure. This supersedes the old
-  tooling-blocked Phase 10 NO-GO with a behavioral result: Yune loads and types
-  real candidates in-browser, but the full frontend contract is not ready.
+- **Browser result:** the HR-5 real-assets matrix passes for composition,
+  candidate list, paging, selection, deletion, Space commit, phrase commit,
+  deploy, customize, persistence sync, reload survival, and dictionary-panel
+  comments against `jyut6ping3_mobile`. HR-6 also locks the shared
+  reverse-lookup `"; "` joiner and schema-prompt bytes against the TypeDuck
+  v1.1.2 oracle.
+- **Outcome:** **GO WITH CONDITIONS** for AI-native frontend exposure. This
+  supersedes the old tooling-blocked Phase 10 NO-GO and the interim hardening
+  NO-GO: real browser compatibility is proven, but AI-native behavior remains
+  disabled by default in real frontends until the M11 provider/ranking/privacy
+  contracts are proven and explicitly enabled.
 
-Detail: [`plans/typeduck-web-validation-plan.md`](./plans/typeduck-web-validation-plan.md), [`plans/typeduck-web-adapter.md`](./plans/typeduck-web-adapter.md), [`plans/typeduck-web-integration-findings.md`](./plans/typeduck-web-integration-findings.md), [`plans/archive/ai-native-frontend-readiness.md`](./plans/archive/ai-native-frontend-readiness.md) (superseded tooling NO-GO).
+Detail: [`plans/typeduck-web-validation-plan.md`](./plans/typeduck-web-validation-plan.md), [`plans/typeduck-web-adapter.md`](./plans/typeduck-web-adapter.md), [`plans/typeduck-web-integration-findings.md`](./plans/typeduck-web-integration-findings.md), [`plans/archive/ai-native-frontend-readiness.md`](./plans/archive/ai-native-frontend-readiness.md) (HR-7 recommendation).
 
 ---
 
@@ -81,18 +82,16 @@ Detail: [`plans/typeduck-web-validation-plan.md`](./plans/typeduck-web-validatio
 
 > **Sequencing — web first.** The original plan stands: prove Yune in a real
 > **web browser before** expanding to Windows and other native platforms. The
-> M9 *NO-GO* was a *tooling* block, not a behavioral one. The post-review
-> hardening round found that the first WI-4 matrix used the placeholder echo path
-> for candidate evidence. HR-1 now proves the real TypeDuck `jyut6ping3_mobile`
-> assets render Chinese candidates in-browser, and HR-4 proves live
-> persistence/reload survival. The remaining real-assets flows
-> are still open, so M9 is **not merge-ready**; current work is TypeDuck-Web
-> hardening and revalidation. Much of
+> M9's original *NO-GO* was a *tooling* block, not a behavioral one. The
+> post-review hardening round found that the first WI-4 matrix used the
+> placeholder echo path for candidate evidence; HR-5 reran the matrix against
+> real TypeDuck assets, and HR-6 locked the remaining shared joiner/prompt oracle
+> slice. M9 is now closed as **GO WITH CONDITIONS**. Much of
 > the Windows work already done is **shared engine work** (comment shaping,
 > Cantonese goldens, the cross-platform baseline fix) and stays; only the
 > Windows-*platform*-specific pieces wait their turn.
 
-### Post-M9 TypeDuck-Web hardening *(current focus)*
+### Post-M9 TypeDuck-Web hardening *(completed 2026-06-18)*
 
 Build-out is done — WASM/Emscripten export contract for the `yune_typeduck_*`
 adapter, TypeScript bridge/runtime package, browser filesystem + IDBFS
@@ -104,19 +103,14 @@ Emscripten `FS` write/read. The TypeDuck-Web adapter now maps runtime
 upstream candidate panel shape with a focused mapper smoke. The patched
 TypeDuck-Web worker now calls the modular Emscripten factory, mounts IDBFS,
 fetches real `public/schema` assets before init, and participates in the real
-browser run. **HR-1 browser result:** typing `nei` renders real
-`jyut6ping3_mobile` candidates (`你`, `呢`, `尼`). The original echo-backed WI-4
-matrix is now partial evidence; paging, deletion, and v1.1.2
-dictionary-comment bytes remain to be re-run or fixed. HR-2 adds and
-browser-smokes `setOption`, so startup option toggles no longer throw. HR-3 fixes
-the deploy false gap by preloading the plain `jyut6ping3.schema.yaml` that the
-real workspace deployment reaches. HR-4 proves live-worker IDBFS sync before init
-and after customize/deploy, plus a real reload restoring persisted custom config
-before runtime init. The current recommendation remains **NO-GO** for AI-native
-frontend exposure.
+browser run. HR-1 through HR-4 cleared real-asset loading, startup `setOption`,
+deploy, and live persistence/reload. HR-5 reran the full browser matrix against
+real TypeDuck assets with zero warning/error console entries. HR-6 covered the
+shared reverse-lookup joiner and schema-prompt oracle cases. The current
+recommendation is **GO WITH CONDITIONS** for AI-native frontend exposure.
 
-**Active validation plan:** [`plans/typeduck-web-validation-plan.md`](./plans/typeduck-web-validation-plan.md) — reopened for real-assets hardening.
-Detail: [`plans/typeduck-web-adapter.md`](./plans/typeduck-web-adapter.md), [`plans/typeduck-web-integration-findings.md`](./plans/typeduck-web-integration-findings.md), [`plans/archive/ai-native-frontend-readiness.md`](./plans/archive/ai-native-frontend-readiness.md) (superseded NO-GO).
+**Validation plan:** [`plans/typeduck-web-validation-plan.md`](./plans/typeduck-web-validation-plan.md) — complete for M9; keep its evidence gates green.
+Detail: [`plans/typeduck-web-adapter.md`](./plans/typeduck-web-adapter.md), [`plans/typeduck-web-integration-findings.md`](./plans/typeduck-web-integration-findings.md), [`plans/archive/ai-native-frontend-readiness.md`](./plans/archive/ai-native-frontend-readiness.md) (HR-7 recommendation).
 
 ### M10: TypeDuck-Windows native backend *(started early; platform work deferred)*
 
@@ -126,10 +120,10 @@ emits the same candidate data. The contract is in
 [`typeduck-windows-backend-requirements.md`](./typeduck-windows-backend-requirements.md);
 the implementation plan and its execution notes are in
 [`plans/yune-windows-contract-implementation-plan.md`](./plans/yune-windows-contract-implementation-plan.md).
-A first pass already landed — but under web-first sequencing the
-**platform-specific** items (4, and surfacing the new ABI in 1 for the native
-build) wait until the web path is validated, while the **shared engine** items
-(2, 3) continue because the web path needs them too.
+A first pass already landed. Now that M9 browser validation is complete, the
+platform-specific Windows package and real TypeDuck-Windows E2E can resume. The
+remaining shared Cantonese parity captures continue to benefit both web and
+Windows.
 
 **Status** (workspace tests green and clippy clean, independently verified):
 
@@ -137,8 +131,8 @@ build) wait until the web path is validated, while the **shared engine** items
 |---|---|---|---|
 | 0 | Windows test baseline | ✅ Done | Was 233 failing (timestamp-shape mismatch poisoning a shared test lock); fixed with a cross-platform ctime formatter + poison-tolerant lock. |
 | 1 | `config_list_append_{string,bool,int,double}` C ABI | ✅ Done | Implemented with create-on-missing semantics, wired into the `RimeApi` table; field order **verified to match the fork's `rime_api.h`** (right after `config_list_size`). |
-| 2 | `RimeCandidate.comment` fork shaping | 🟡 Panel bytes proven; joiner/prompt pending | `dictionary_lookup_filter` emits the `\f\r1,…\r0,…` panel format; transport already existed. The byte-parity test now feeds authored TSV source rows through the real filter and asserts the golden bytes (**non-circular** — fixed on main). Remaining: the `"; "` reverse-lookup join and schema-name-in-prompt still need a dedicated v1.1.2 oracle case, and the source rows are authored in-test rather than extracted from the shipped `.dict.yaml`. |
-| 3 | Cantonese/Jyutping parity suite vs v1.1.2 | 🟡 Partial | 2 active golden-locked tests; 5 behaviors (`combine_candidates`/`show_full_code`/`enable_sentence`, completion/prediction, correction, schema-menu hiding, userdb pronunciations) are honestly `#[ignore]`d pending captured goldens. |
+| 2 | `RimeCandidate.comment` fork shaping | ✅ Covered for current v1.1.2 slices | `dictionary_lookup_filter` emits the `\f\r1,…\r0,…` panel format; HR-5 byte-asserts dictionary-panel comments against the v1.1.2 fixture, and HR-6 locks the `"; "` reverse-lookup join plus schema-name prompt/preedit bytes against a dedicated v1.1.2 oracle fixture. |
+| 3 | Cantonese/Jyutping parity suite vs v1.1.2 | 🟡 Partial | 4 active golden-locked tests; 5 behaviors (`combine_candidates`/`show_full_code`/`enable_sentence`, completion/prediction, correction, schema-menu hiding, userdb pronunciations) are honestly `#[ignore]`d pending captured goldens. |
 | 4 | Native `rime.dll` + `.lib` + headers | 🟡 Scripted, unverified | `scripts/package-typeduck-windows.ps1` + [`plans/yune-windows-native-build.md`](./plans/yune-windows-native-build.md) build/package/smoke-check the artifact, but the build has not been independently verified on an MSVC host. |
 
 The v1.1.2 oracle fixture used for items 2–3 is **genuine captured fork output**
@@ -150,11 +144,10 @@ The v1.1.2 oracle fixture used for items 2–3 is **genuine captured fork output
 
 Concrete, in priority order (**web first, then Windows, then other platforms**):
 
-1. **Fix the browser-observed failures before production exposure** — paging/deletion behavior and v1.1.2 dictionary-comment bytes.
-2. **Keep the loadable WASM artifact, adapter mapper, and app filesystem gates green.** The documented build now produces `yune-typeduck.js`/`.wasm` and smokes `cwrap`/`FS`; preserve that gate plus the candidate/comment/highlight and app init-order smokes.
-3. **Land the remaining shared engine parity** (benefits web *and* Windows): the dictionary-panel comment byte-parity is now proven non-circularly from authored source rows — extend it with the `"; "` reverse-lookup joiner and schema-name-in-prompt oracle cases (and, ideally, real `.dict.yaml` rows), and capture the remaining Cantonese goldens to activate the 5 ignored tests.
-4. **Keep tracking honest.** (Done on main: the future-dated "verified" claim was removed and the circular parity test reworked; the roll-up is set to partial.) Keep statuses evidence-based as Phase 17 proceeds.
-5. **Then Windows, then other platforms.** Once the browser path is validated: verify the native `rime.dll`/`.lib`/headers build on an MSVC host (incl. the `rime_get_api`/`config_list_append_string` smoke check and header field-order parity), then run the real TypeDuck-Windows E2E per the fork's `INTEGRATION_PLAN.md`. Other native frontends (Squirrel/macOS, ibus/fcitx Linux) follow the same engine.
+1. **Keep the M9 web gates green on merge.** Preserve the reproducible Emscripten build, TypeScript runtime tests/build, TypeDuck-Web worker build, real-assets browser evidence, and native `typeduck_web` fallback.
+2. **Capture the remaining shared Cantonese goldens.** Five fork-specific cases remain explicit ignored blockers pending TypeDuck v1.1.2 oracle captures: option-combination behavior, completion/prediction, correction, schema-menu hiding, and per-entry userdb pronunciations.
+3. **Resume Windows, then other platforms.** Verify the native `rime.dll`/`.lib`/headers build on an MSVC host, including `rime_get_api`/`config_list_append_string` smoke and header field-order parity, then run the real TypeDuck-Windows E2E per the fork's `INTEGRATION_PLAN.md`. Other native frontends follow the same engine.
+4. **Continue M11 AI-native work behind its own gates.** The M9 verdict permits real-frontend exposure only with AI default-off until the separate provider, ranking, context, memory, and privacy gates are proven.
 
 ---
 

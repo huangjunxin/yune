@@ -6,15 +6,16 @@ This document records findings from integrating Yune with the upstream TypeDuck-
 
 ## Current Recommendation
 
-**Recommendation: NO-GO pending HR-7 reassessment** — do not expose AI-native
-behavior through TypeDuck-Web or real frontends until the final recommendation is
-updated from the full hardening evidence. HR-5 now proves the browser can run the
-real TypeDuck `jyut6ping3_mobile` matrix end to end: real candidates render,
-paging changes pages, Space commits the highlighted candidate, `ngohaigo` commits
-as a phrase, candidate deletion works, deploy/customize/persistence/reload pass,
-and dictionary-panel comments render from the v1.1.2 oracle-shaped payload.
-HR-6 also locks the shared reverse-lookup comment joiner and schema-prompt bytes;
-the final HR-7 decision update remains open.
+**Recommendation: GO WITH CONDITIONS** — the TypeDuck-Web browser path is proven
+for classic real-asset RIME flows, so AI-native frontend exposure may proceed
+only behind the separate M11 gating policy: AI remains off by default in real
+frontends until provider/ranking/privacy behavior is proven through the CLI
+slice and explicitly enabled. HR-5 proves the browser can run the real TypeDuck
+`jyut6ping3_mobile` matrix end to end: real candidates render, paging changes
+pages, Space commits the highlighted candidate, `ngohaigo` commits as a phrase,
+candidate deletion works, deploy/customize/persistence/reload pass, and
+dictionary-panel comments render from the v1.1.2 oracle-shaped payload. HR-6
+also locks the shared reverse-lookup comment joiner and schema-prompt bytes.
 
 > **Historical scope.** The Phase 10 blocker tables below describe the
 > 2026-05-05 validation attempt, before WI-1b produced a loadable
@@ -164,7 +165,7 @@ matrix still open.
 
 **Date**: 2026-06-18
 **Status**: PASS for the real-assets browser matrix; HR-7 final recommendation
-still open.
+recorded as GO WITH CONDITIONS.
 
 **What changed**:
 - The dictionary lookup filter install path now parses TypeDuck lookup
@@ -1226,8 +1227,8 @@ true with the real workspace assets, live persistence sync plus reload survival
 are proven, and HR-5 captures PASS evidence for the formerly open
 paging/deletion/dictionary-comment rows. HR-6 now covers the reverse-lookup
 joiner and prompt oracle cases, with five broader Cantonese goldens documented
-as explicit capture blockers. HR-7 recommendation updates remain open before M9
-is closed.
+as explicit capture blockers. HR-7 closes M9 with a GO WITH CONDITIONS
+recommendation for gated AI-native frontend exposure.
 
 **Evidence captured**:
 - `third_party/typeduck-web/e2e/results/hr5-real-assets-matrix.log`
@@ -1268,13 +1269,12 @@ Phase 10 blockers categorized per D-12 with status, evidence, affected requireme
 
 | Blocker | Status | Evidence | Affected Requirement | Blocks AI-native frontend? |
 |---------|--------|----------|----------------------|---------------------------|
-| Candidate DOM nesting warning | open | Browser console React warning from `Candidate.tsx` | TYPEDUCK-E2E-03 | NO — candidate rendering works, but the DOM is invalid |
+| Candidate DOM nesting warning | resolved | HR-5 patched `Candidate.tsx`/`DictionaryPanel.tsx` table markup and captured zero warning/error console entries in `hr5-real-assets-matrix.json` | TYPEDUCK-E2E-03 | NO |
 | Browser reload evidence gap | resolved | HR-4 `persistence-sync.log` | TYPEDUCK-E2E-03 | NO — reload survival is browser-proven |
 
 **Explanation**: The app now loads explicit assets and the generated
-`yune-typeduck.js` / `.wasm` artifact. Remaining app-source issues are around
-UI/testability and invalid candidate DOM shape, not missing WASM or reload
-persistence.
+`yune-typeduck.js` / `.wasm` artifact. The HR-5 patch also removes the invalid
+candidate/dictionary table markup warnings from the browser evidence.
 
 ### Yune adapter/runtime mismatches
 
@@ -1308,8 +1308,9 @@ console warning/error entries after the TypeDuck-Web DOM nesting fixes.
 
 **Blocking AI-native frontend exposure**: HR-5 leaves no browser-matrix blocker
 for composition/candidates/paging/selection/deletion/phrase commit/deploy/
-persistence/reload/dictionary comments. The final exposure recommendation is
-pending HR-7 documentation/decision updates.
+persistence/reload/dictionary comments. Exposure is GO WITH CONDITIONS: keep
+AI-native behavior disabled by default in real frontends until the separate M11
+provider/ranking/privacy contracts are proven and explicitly enabled.
 
 ---
 

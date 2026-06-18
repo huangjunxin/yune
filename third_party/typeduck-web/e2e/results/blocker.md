@@ -33,6 +33,10 @@ joiner and schema-prompt preedit bytes. The five broader Cantonese/Jyutping
 goldens remain explicit ignored tests until dedicated v1.1.2 fixtures are
 captured.
 
-**Still open**:
+**HR-7 update**: the final recommendation is **GO WITH CONDITIONS** for gated
+AI-native frontend exposure. The real-assets browser matrix has no remaining
+blocking rows; AI-native behavior stays disabled by default in real frontends
+until the separate M11 provider/ranking/privacy contracts are proven and
+explicitly enabled.
 
-- HR-7: final evidence-based GO/NO-GO reassessment.
+**Still open**: none for the M9 TypeDuck-Web browser matrix.
