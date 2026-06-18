@@ -65,9 +65,11 @@ Detail: [`plans/archive/real-frontend-validation-plan.md`](./plans/archive/real-
 - **Browser result:** the HR-5 real-assets matrix passes for composition,
   candidate list, paging, selection, deletion, Space commit, phrase commit,
   deploy, customize, persistence sync, reload survival, and dictionary-panel
-  comments against `jyut6ping3_mobile`. HR-6 also locks the shared
-  reverse-lookup `"; "` joiner and schema-prompt bytes against the TypeDuck
-  v1.1.2 oracle.
+  rendering against `jyut6ping3_mobile`; the committed byte-parity guarantee
+  for rich dictionary comments is the `cantonese_parity` fixture, with the
+  browser-shaped native rich-comment test enabled when local v1.1.2 oracle
+  build assets are present. HR-6 also locks the shared reverse-lookup `"; "`
+  joiner and schema-prompt bytes against the TypeDuck v1.1.2 oracle.
 - **Outcome:** **GO WITH CONDITIONS** for AI-native frontend exposure. This
   supersedes the old tooling-blocked Phase 10 NO-GO and the interim hardening
   NO-GO: real browser compatibility is proven, but AI-native behavior remains
@@ -105,8 +107,9 @@ TypeDuck-Web worker now calls the modular Emscripten factory, mounts IDBFS,
 fetches real `public/schema` assets before init, and participates in the real
 browser run. HR-1 through HR-4 cleared real-asset loading, startup `setOption`,
 deploy, and live persistence/reload. HR-5 reran the full browser matrix against
-real TypeDuck assets with zero warning/error console entries. HR-6 covered the
-shared reverse-lookup joiner and schema-prompt oracle cases. The current
+real TypeDuck assets with zero warning/error console entries after the
+post-review pure-modifier delete-path fix. HR-6 covered the shared
+reverse-lookup joiner and schema-prompt oracle cases. The current
 recommendation is **GO WITH CONDITIONS** for AI-native frontend exposure.
 
 **Validation plan:** [`plans/typeduck-web-validation-plan.md`](./plans/typeduck-web-validation-plan.md) — complete for M9; keep its evidence gates green.
@@ -131,7 +134,7 @@ Windows.
 |---|---|---|---|
 | 0 | Windows test baseline | ✅ Done | Was 233 failing (timestamp-shape mismatch poisoning a shared test lock); fixed with a cross-platform ctime formatter + poison-tolerant lock. |
 | 1 | `config_list_append_{string,bool,int,double}` C ABI | ✅ Done | Implemented with create-on-missing semantics, wired into the `RimeApi` table; field order **verified to match the fork's `rime_api.h`** (right after `config_list_size`). |
-| 2 | `RimeCandidate.comment` fork shaping | ✅ Covered for current v1.1.2 slices | `dictionary_lookup_filter` emits the `\f\r1,…\r0,…` panel format; HR-5 byte-asserts dictionary-panel comments against the v1.1.2 fixture, and HR-6 locks the `"; "` reverse-lookup join plus schema-name prompt/preedit bytes against a dedicated v1.1.2 oracle fixture. |
+| 2 | `RimeCandidate.comment` fork shaping | ✅ Covered for current v1.1.2 slices | `dictionary_lookup_filter` emits the `\f\r1,…\r0,…` panel format; `cantonese_parity` byte-asserts rich dictionary comments against the committed v1.1.2 fixture, the HR-5 browser-shaped native test byte-asserts the full real-assets path when local oracle build assets are present, and HR-6 locks the `"; "` reverse-lookup join plus schema-name prompt/preedit bytes against a dedicated v1.1.2 oracle fixture. |
 | 3 | Cantonese/Jyutping parity suite vs v1.1.2 | 🟡 Partial | 4 active golden-locked tests; 5 behaviors (`combine_candidates`/`show_full_code`/`enable_sentence`, completion/prediction, correction, schema-menu hiding, userdb pronunciations) are honestly `#[ignore]`d pending captured goldens. |
 | 4 | Native `rime.dll` + `.lib` + headers | 🟡 Scripted, unverified | `scripts/package-typeduck-windows.ps1` + [`plans/yune-windows-native-build.md`](./plans/yune-windows-native-build.md) build/package/smoke-check the artifact, but the build has not been independently verified on an MSVC host. |
 

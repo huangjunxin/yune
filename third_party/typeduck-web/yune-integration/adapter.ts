@@ -78,6 +78,23 @@ let currentPrepareOptions: PrepareTypeDuckFilesystemOptions | null = null;
 let currentExtraSharedAssets: TypeDuckExtraSharedAsset[] = [];
 let lastKeyResult: RimeResult = { isComposing: false, success: true };
 const neutralKeyResult: RimeResult = { isComposing: false, success: true };
+const passThroughModifierKeys = new Set([
+  "Alt",
+  "Alt_L",
+  "Alt_R",
+  "Control",
+  "Control_L",
+  "Control_R",
+  "Meta",
+  "Meta_L",
+  "Meta_R",
+  "Shift",
+  "Shift_L",
+  "Shift_R",
+  "Super",
+  "Super_L",
+  "Super_R",
+]);
 
 type BooleanRimePreference =
   | "enableCompletion"
@@ -277,6 +294,9 @@ export async function processKey(input: string): Promise<RimeResult> {
   const eventLike = parseKeySequence(input);
 
   if (eventLike.type === "keyup") {
+    return lastKeyResult.isComposing ? lastKeyResult : neutralKeyResult;
+  }
+  if (passThroughModifierKeys.has(eventLike.key)) {
     return lastKeyResult.isComposing ? lastKeyResult : neutralKeyResult;
   }
 

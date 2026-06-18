@@ -170,5 +170,33 @@
   "screenshots": [
     "screenshot-hr5-dictionary-panel.png",
     "screenshot-hr5-after-delete.png"
-  ]
+  ],
+  "postReviewCloseout": {
+    "runtimeErrorBanner": {
+      "status": "RESOLVED",
+      "rootCause": "TypeDuck-Web sends a standalone {Control_L} keydown before {Control+Delete}; the adapter forwarded that pure modifier to Yune, which raised the visible operation-error banner even though the following delete chord still removed the candidate.",
+      "fix": "The Yune TypeDuck-Web adapter now passes pure modifier keydowns through without calling the runtime.",
+      "evidence": [
+        "hr5-final-delete-state.json",
+        "hr5-final-backspace-state.json",
+        "hr5-final-delete-before.png",
+        "hr5-final-delete-after.png",
+        "hr5-final-backspace.png"
+      ],
+      "delete": {
+        "afterHasRuntimeErrorBanner": false,
+        "firstCandidateChanged": true
+      },
+      "backspace": {
+        "afterHasRuntimeErrorBanner": false,
+        "compositionMutatedToNg": true
+      }
+    },
+    "dictionaryCommentByteParity": {
+      "status": "DOCUMENTED",
+      "committedGuarantee": "cargo test -p yune-core --test cantonese_parity",
+      "richIntegrationDependency": "target/typeduck-oracle/v1.1.2/rime-user/build",
+      "behaviorWhenDependencyMissing": "typeduck_adapter_real_assets_emit_oracle_dictionary_panel_comments emits an explicit skip reason instead of passing against degraded fallback assets."
+    }
+  }
 }

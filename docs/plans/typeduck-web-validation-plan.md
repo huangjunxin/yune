@@ -182,7 +182,9 @@ acceptable fallback). Move every row of the findings matrix from **BLOCKED** to
 8. persistence sync
 9. persistence reload
 10. **dictionary-panel comment rendering** — assert the `RimeCandidate.comment`
-    bytes against the v1.1.2 oracle (`crates/yune-core/tests/fixtures/typeduck-v1.1.2/`) where applicable.
+    bytes against the committed v1.1.2 oracle fixture in `cantonese_parity`; the
+    browser-shaped rich-comment integration test asserts the full real-assets
+    path only when local TypeDuck v1.1.2 oracle build assets are present.
 
 ### Acceptance
 - Each of the 10 flows has a recorded PASS/FAIL with evidence (screenshot / console / trace).

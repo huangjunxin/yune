@@ -14,8 +14,14 @@ slice and explicitly enabled. HR-5 proves the browser can run the real TypeDuck
 `jyut6ping3_mobile` matrix end to end: real candidates render, paging changes
 pages, Space commits the highlighted candidate, `ngohaigo` commits as a phrase,
 candidate deletion works, deploy/customize/persistence/reload pass, and
-dictionary-panel comments render from the v1.1.2 oracle-shaped payload. HR-6
-also locks the shared reverse-lookup comment joiner and schema-prompt bytes.
+dictionary-panel comments render from the v1.1.2 oracle-shaped payload. The
+post-review closeout fixed the `{Control_L}` modifier-key banner that appeared
+before `{Control+Delete}` and recaptured delete/backspace evidence with no
+visible runtime-error banner. HR-6 also locks the shared reverse-lookup comment
+joiner and schema-prompt bytes. Clean-checkout dictionary-comment byte parity is
+guaranteed by the committed `cantonese_parity` fixture; the browser-shaped
+native rich-comment integration test runs its byte assertion only when the local
+TypeDuck v1.1.2 oracle build assets are present.
 
 > **Historical scope.** The Phase 10 blocker tables below describe the
 > 2026-05-05 validation attempt, before WI-1b produced a loadable
@@ -184,12 +190,23 @@ recorded as GO WITH CONDITIONS.
   long-press candidate deletion, deploy, customize, persistence sync, reload,
   and dictionary-panel comments, with zero browser warning/error console entries
   in the final capture.
+- Post-review delete/backspace recaptures replaced the stale banner-bearing
+  artifacts. `hr5-final-delete-state.json` now records the root cause: the page
+  sent `{Control_L}` immediately before `{Control+Delete}`; the adapter now
+  treats pure modifier keydowns as pass-through, so the first `ngo` candidate is
+  removed without a visible runtime-error banner. `hr5-final-backspace-state.json`
+  also records `ngo` mutating to `ng` with no banner.
 - Screenshot evidence was captured as
   `third_party/typeduck-web/e2e/results/screenshot-hr5-dictionary-panel.png`
   and `third_party/typeduck-web/e2e/results/screenshot-hr5-after-delete.png`.
 - `cargo test -p yune-rime-api --test typeduck_web
   typeduck_adapter_real_assets_emit_oracle_dictionary_panel_comments` asserts
-  the first `nei` candidate comment against
+  the first `nei` candidate comment against the v1.1.2 fixture when the local
+  `target/typeduck-oracle/v1.1.2/rime-user/build` assets are present. If those
+  ignored local oracle-build assets are absent, the test emits an explicit skip
+  reason instead of passing against the degraded fallback. The committed
+  clean-checkout byte-parity guarantee is
+  `cargo test -p yune-core --test cantonese_parity`, which uses
   `crates/yune-core/tests/fixtures/typeduck-v1.1.2/jyut6ping3-mobile-comments.json`.
 - The matrix artifact's reload row proves a real reload restored
   `/rime/jyut6ping3_mobile.custom.yaml` with `pageSize: "'6'"` before runtime
@@ -1213,13 +1230,13 @@ as an additional proof row.
 | Candidate paging | PageDown -> page change | PASS | `hr5-final-paging-state.json`, before/after screenshots show `ngo` page advances |
 | Candidate selection | Selection key -> commit text | PASS | `hr5-final-selection-space-state.json` records Space committing the highlighted candidate; number key `1` is not expected for this mobile schema because `alternative_select_keys` is the NUL sentinel |
 | Phrase commit | Multi-syllable input -> phrase output | PASS | `hr5-final-phrase-state.json` records `ngohaigo` + Space committing `我係個` |
-| Deletion | Delete key -> candidate/composition change | PASS | `hr5-final-delete-state.json` shows `{Control+Delete}` removes the first `ngo` candidate |
-| Backspace mutation | Backspace -> composition shorter/changed | PASS | `hr5-final-backspace-state.json`, `hr5-final-backspace.png` show `ngo` mutating to `ng` |
+| Deletion | Delete key -> candidate/composition change | PASS | `hr5-final-delete-state.json` shows `{Control+Delete}` removes the first `ngo` candidate after the `{Control_L}` banner fix; no runtime-error banner is present |
+| Backspace mutation | Backspace -> composition shorter/changed | PASS | `hr5-final-backspace-state.json`, `hr5-final-backspace.png` show `ngo` mutating to `ng` with no runtime-error banner |
 | Deploy | Deploy action -> visible success/error | PASS | `hr5-final-diagnostics-before-reload.json` records live-worker deploy success diagnostics |
 | Customize | Customize action -> visible success/error | PASS | `hr5-final-diagnostics-before-reload.json` records live-worker customize success diagnostics |
 | Persistence sync | sync-after-mutation marker | PASS | `hr5-final-diagnostics-before-reload.json` records after-mutation sync markers for customize/deploy |
 | Persistence reload | sync-before-init + reload/reinitialize | PASS | `hr5-final-reload-state.json`, `hr5-final-reload.png` prove a real reload restores `/rime/jyut6ping3_mobile.custom.yaml` before runtime init |
-| Dictionary-panel comment rendering | v1.1.2 candidate comment bytes render | PASS | `hr5-final-nei-state.json` shows rendered dictionary-panel fields; native test `typeduck_adapter_real_assets_emit_oracle_dictionary_panel_comments` byte-asserts the first comment against the v1.1.2 fixture |
+| Dictionary-panel comment rendering | v1.1.2 candidate comment bytes render | PASS | `hr5-final-nei-state.json` shows rendered dictionary-panel fields; `cantonese_parity` is the committed byte-parity guarantee, while `typeduck_adapter_real_assets_emit_oracle_dictionary_panel_comments` byte-asserts the browser-shaped rich path only when local oracle build assets are present |
 
 **Reason**: The WASM/browser initialization blocker is cleared, real assets now
 render real Chinese candidates, `setOption` no longer errors, deploy returns
@@ -1280,8 +1297,9 @@ candidate/dictionary table markup warnings from the browser evidence.
 
 | Blocker | Status | Evidence | Affected Requirement | Blocks AI-native frontend? |
 |---------|--------|----------|----------------------|---------------------------|
-| Dictionary comment oracle gap | resolved | HR-5 browser evidence renders dictionary-panel fields; native real-assets test byte-asserts the first `nei` comment against the v1.1.2 fixture; HR-6 locks reverse-lookup `"; "` joining and schema-prompt bytes against a v1.1.2 fixture | TYPEDUCK-E2E-03, WI-6 | NO |
-| Candidate paging/deletion real-assets evidence | resolved | HR-5 `hr5-real-assets-matrix.log` and screenshots prove paging and `{Control+Delete}` deletion with real assets | TYPEDUCK-E2E-03 | NO |
+| Dictionary comment oracle gap | resolved | HR-5 browser evidence renders dictionary-panel fields; `cantonese_parity` is the committed clean-checkout byte guarantee; the browser-shaped native real-assets test byte-asserts the first `nei` rich comment only when local v1.1.2 oracle build assets are present, otherwise it emits an explicit skip reason; HR-6 locks reverse-lookup `"; "` joining and schema-prompt bytes against a v1.1.2 fixture | TYPEDUCK-E2E-03, WI-6 | NO |
+| `{Control_L}` pre-delete runtime-error banner | resolved | Adapter now ignores pure modifier keydowns before modified key chords; `hr5-final-delete-state.json` recaptures `{Control+Delete}` deleting the first `ngo` candidate with no visible runtime-error banner | TYPEDUCK-E2E-03 | NO |
+| Candidate paging/deletion real-assets evidence | resolved | HR-5 `hr5-real-assets-matrix.log` and screenshots prove paging and `{Control+Delete}` deletion with real assets; post-review clean recapture proves no banner remains | TYPEDUCK-E2E-03 | NO |
 | persistence sync/reload evidence | resolved | HR-4 `persistence-sync.log`, adapter diagnostic test | TYPEDUCK-E2E-03 | NO — live worker and real reload path are proven |
 | setOption startup evidence | resolved | `set-option-browser.log`, native/runtime/adapter tests | D-07, TYPEDUCK-E2E-03 | NO — startup option toggles no longer throw |
 | deploy returns false | resolved | `deploy-browser.log`, native browser-shaped asset tests | TYPEDUCK-E2E-03 | NO — deploy returns true with real assets |
@@ -1303,8 +1321,9 @@ captured in the repo.
 ---
 
 **Total current blockers**: 5 non-browser Cantonese parity capture blockers
-left as explicit ignored tests. The HR-5 real-browser matrix captured zero
-console warning/error entries after the TypeDuck-Web DOM nesting fixes.
+left as explicit ignored tests. The HR-5 real-browser matrix and post-review
+delete/backspace recaptures captured zero warning/error entries after the
+TypeDuck-Web DOM nesting and modifier-key fixes.
 
 **Blocking AI-native frontend exposure**: HR-5 leaves no browser-matrix blocker
 for composition/candidates/paging/selection/deletion/phrase commit/deploy/

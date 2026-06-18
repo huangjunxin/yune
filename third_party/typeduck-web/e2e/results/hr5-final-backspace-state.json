@@ -1,135 +1,84 @@
 {
+  "note": "M9 condition closeout recapture after modifier-key fix. Fresh page waited for runtime readiness before physical keypresses; Backspace mutated composition from ngo to ng; no visible runtime-error banner appeared before or after the operation.",
   "before": {
-    "activeTag": "TEXTAREA",
-    "candidateNodes": [
+    "label": "clean-backspace-before",
+    "url": "http://127.0.0.1:5180/web/?debug&realAssets=1&m9CleanBackspaceFixed=1781825766077",
+    "capturedAt": "2026-06-18T23:36:18.499Z",
+    "alertText": "",
+    "bodyHasRuntimeErrorText": false,
+    "diagnostics": "[{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"worker:diagnostic-ready\",\"timestamp\":\"2026-06-18T23:36:06.190Z\"}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncFromPersistenceBeforeInit:start\",\"reason\":\"before-init\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T23:36:06.337Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":false}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncFromPersistenceBeforeInit:pass\",\"reason\":\"before-init\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T23:36:06.340Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"runtime:init\",\"reason\":\"after-init\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T23:36:12.220Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:start\",\"reason\":\"after-init\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T23:36:12.220Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:pass\",\"reason\":\"after-init\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T23:36:12.222Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:start\",\"reason\":\"customize\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T23:36:12.230Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:pass\",\"reason\":\"customize\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T23:36:12.231Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:start\",\"reason\":\"deploy\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T23:36:17.861Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:pass\",\"reason\":\"deploy\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T23:36:17.863Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}}]",
+    "hasRuntimeErrorBanner": false,
+    "panelText": "ngo‹›1.ngo5我I, meⓘ2.ngo4俄Russianⓘ3.ngo6餓hungryⓘ4.ngo4娥嫦娥ⓘ5.ngo4鵝gooseⓘ",
+    "rows": [
       {
-        "cls": "",
-        "tag": "DIV",
-        "text": "TypeDuck 網頁版Theme Switcher中繁半。ngo‹›1.ngo5我I, meⓘ2.ngo4俄Russianⓘ3.ngo6餓hungryⓘ4.ngo4娥嫦娥ⓘ5.ngo4鵝gooseⓘ輸入法設定 IME Settings顯示語言 Display Languages英語 English印地語 Hindi印尼語 Indonesian尼泊爾語 Nepali烏爾都語 Urdu⬑ 主要語言 Main Language每頁候選詞數量 No. of Candidates Per Page|||||||中文字體 Chinese Typeface宋體 Sung黑體 Hei候選詞粵拼 Candidates Jyutping顯示 Always Show僅反查 Only in Reverse Lookup隱藏 Hide自動完成 Auto-completion自動校正 Auto-correction自動組詞 Auto-composition輸入記憶 Input Memory反查設定 Reverse Lookup Settings顯示完整輸入碼 Show Full Input Code倉頡版本 Cangjie Version三代 Version 3五代 Version 5© Copyright 2024 TypeDuck Team. All rights reserved.Source Code執行操作時發生錯誤。如輸入法不能正常運作，請重新載入頁面。\nAn error occurred while performing the operation. If the input method does not work properly, please reload the page."
-      },
-      {
-        "cls": "candidate-panel",
-        "tag": "DIV",
-        "text": "ngo‹›1.ngo5我I, meⓘ2.ngo4俄Russianⓘ3.ngo6餓hungryⓘ4.ngo4娥嫦娥ⓘ5.ngo4鵝gooseⓘ"
-      },
-      {
-        "cls": "",
-        "tag": "DIV",
-        "text": "ngo‹›1.ngo5我I, meⓘ2.ngo4俄Russianⓘ3.ngo6餓hungryⓘ4.ngo4娥嫦娥ⓘ5.ngo4鵝gooseⓘ"
-      },
-      {
-        "cls": "flex",
-        "tag": "DIV",
-        "text": "ngo‹›"
-      },
-      {
-        "cls": "flex-1 text-[15pt]",
-        "tag": "DIV",
-        "text": "ngo"
-      },
-      {
-        "cls": "m-1 inline-block",
-        "tag": "SPAN",
-        "text": "ngo"
-      },
-      {
-        "cls": "candidates",
-        "tag": "TABLE",
-        "text": "1.ngo5我I, meⓘ2.ngo4俄Russianⓘ3.ngo6餓hungryⓘ4.ngo4娥嫦娥ⓘ5.ngo4鵝gooseⓘ"
-      },
-      {
-        "cls": "contents join rounded-md highlighted",
-        "tag": "BUTTON",
+        "index": 0,
         "text": "1.ngo5我I, meⓘ"
       },
       {
-        "cls": "text-[10pt] bg-primary text-primary-content-300",
-        "tag": "DIV",
-        "text": "ngo5"
-      },
-      {
-        "cls": "contents join rounded-md",
-        "tag": "BUTTON",
+        "index": 1,
         "text": "2.ngo4俄Russianⓘ"
       },
       {
-        "cls": "text-[10pt] text-base-content-300",
-        "tag": "DIV",
-        "text": "ngo4"
-      },
-      {
-        "cls": "contents join rounded-md",
-        "tag": "BUTTON",
+        "index": 2,
         "text": "3.ngo6餓hungryⓘ"
       },
       {
-        "cls": "text-[10pt] text-base-content-300",
-        "tag": "DIV",
-        "text": "ngo6"
-      },
-      {
-        "cls": "contents join rounded-md",
-        "tag": "BUTTON",
+        "index": 3,
         "text": "4.ngo4娥嫦娥ⓘ"
       },
       {
-        "cls": "text-[10pt] text-base-content-300",
-        "tag": "DIV",
-        "text": "ngo4"
-      },
-      {
-        "cls": "contents join rounded-md",
-        "tag": "BUTTON",
+        "index": 4,
         "text": "5.ngo4鵝gooseⓘ"
-      },
-      {
-        "cls": "text-[10pt] text-base-content-300",
-        "tag": "DIV",
-        "text": "ngo4"
       }
     ],
-    "diagnostics": "[{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"worker:diagnostic-ready\",\"timestamp\":\"2026-06-18T20:17:26.704Z\"}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncFromPersistenceBeforeInit:start\",\"reason\":\"before-init\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T20:17:26.838Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":false}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncFromPersistenceBeforeInit:pass\",\"reason\":\"before-init\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T20:17:26.841Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"runtime:init\",\"reason\":\"after-init\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T20:17:32.392Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:start\",\"reason\":\"after-init\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T20:17:32.393Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:pass\",\"reason\":\"after-init\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T20:17:32.394Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:start\",\"reason\":\"customize\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T20:17:32.403Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:pass\",\"reason\":\"customize\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T20:17:32.404Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:start\",\"reason\":\"deploy\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T20:17:38.001Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:pass\",\"reason\":\"deploy\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T20:17:38.003Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:start\",\"reason\":\"commit\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T20:19:10.055Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:pass\",\"reason\":\"commit\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T20:19:10.057Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}}]",
-    "label": "after-clean-ngo",
-    "mainText": "中繁半。ngo‹›1.ngo5我I, meⓘ2.ngo4俄Russianⓘ3.ngo6餓hungryⓘ4.ngo4娥嫦娥ⓘ5.ngo4鵝gooseⓘ輸入法設定 IME Settings顯示語言 Display Languages英語 English印地語 Hindi印尼語 Indonesian尼泊爾語 Nepali烏爾都語 Urdu⬑ 主要語言 Main Language每頁候選詞數量 No. of Candidates Per Page|||||||中文字體 Chinese Typeface宋體 Sung黑體 Hei候選詞粵拼 Candidates Jyutping顯示 Always Show僅反查 Only in Reverse Lookup隱藏 Hide自動完成 Auto-completion自動校正 Auto-correction自動組詞 Auto-composition輸入記憶 Input Memory反查設定 Reverse Lookup Settings顯示完整輸入碼 Show Full Input Code倉頡版本 Cangjie Version三代 Version 3五代 Version 5",
-    "textareaValue": "我係個"
+    "textareaValue": "",
+    "title": "TypeDuck 網頁版",
+    "warningOrErrorCount": 0,
+    "warningOrErrors": []
   },
   "after": {
-    "activeTag": "TEXTAREA",
-    "candidateNodes": [
+    "label": "clean-backspace-after",
+    "url": "http://127.0.0.1:5180/web/?debug&realAssets=1&m9CleanBackspaceFixed=1781825766077",
+    "capturedAt": "2026-06-18T23:36:19.085Z",
+    "alertText": "",
+    "bodyHasRuntimeErrorText": false,
+    "diagnostics": "[{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"worker:diagnostic-ready\",\"timestamp\":\"2026-06-18T23:36:06.190Z\"}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncFromPersistenceBeforeInit:start\",\"reason\":\"before-init\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T23:36:06.337Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":false}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncFromPersistenceBeforeInit:pass\",\"reason\":\"before-init\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T23:36:06.340Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"runtime:init\",\"reason\":\"after-init\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T23:36:12.220Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:start\",\"reason\":\"after-init\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T23:36:12.220Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:pass\",\"reason\":\"after-init\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T23:36:12.222Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:start\",\"reason\":\"customize\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T23:36:12.230Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:pass\",\"reason\":\"customize\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T23:36:12.231Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:start\",\"reason\":\"deploy\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T23:36:17.861Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:pass\",\"reason\":\"deploy\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T23:36:17.863Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}}]",
+    "hasRuntimeErrorBanner": false,
+    "panelText": "ng‹›1.ng5五fiveⓘ2.ng5午noonⓘ3.ng6誤wrongⓘ4.ng4吳surname [Ng]ⓘ5.ng5伍five; surname [Ng]ⓘ",
+    "rows": [
       {
-        "cls": "",
-        "tag": "DIV",
-        "text": "TypeDuck 網頁版Theme Switcher中繁半。ng‹›1.ng5五fiveⓘ2.ng5午noonⓘ3.ng6誤wrongⓘ4.ng4吳surname [Ng]ⓘ5.ng5伍five; surname [Ng]ⓘ輸入法設定 IME Settings顯示語言 Display Languages英語 English印地語 Hindi印尼語 Indonesian尼泊爾語 Nepali烏爾都語 Urdu⬑ 主要語言 Main Language每頁候選詞數量 No. of Candidates Per Page|||||||中文字體 Chinese Typeface宋體 Sung黑體 Hei候選詞粵拼 Candidates Jyutping顯示 Always Show僅反查 Only in Reverse Lookup隱藏 Hide自動完成 Auto-completion自動校正 Auto-correction自動組詞 Auto-composition輸入記憶 Input Memory反查設定 Reverse Lookup Settings顯示完整輸入碼 Show Full Input Code倉頡版本 Cangjie Version三代 Version 3五代 Version 5© Copyright 2024 TypeDuck Team. All rights reserved.Source Code執行操作時發生錯誤。如輸入法不能正常運作，請重新載入頁面。\nAn error occurred while performing the operation. If the input method does not work properly, please reload the page."
-      },
-      {
-        "cls": "candidate-panel",
-        "tag": "DIV",
-        "text": "ng‹›1.ng5五fiveⓘ2.ng5午noonⓘ3.ng6誤wrongⓘ4.ng4吳surname [Ng]ⓘ5.ng5伍five; surname [Ng]ⓘ"
-      },
-      {
-        "cls": "",
-        "tag": "DIV",
-        "text": "ng‹›1.ng5五fiveⓘ2.ng5午noonⓘ3.ng6誤wrongⓘ4.ng4吳surname [Ng]ⓘ5.ng5伍five; surname [Ng]ⓘ"
-      },
-      {
-        "cls": "candidates",
-        "tag": "TABLE",
-        "text": "1.ng5五fiveⓘ2.ng5午noonⓘ3.ng6誤wrongⓘ4.ng4吳surname [Ng]ⓘ5.ng5伍five; surname [Ng]ⓘ"
-      },
-      {
-        "cls": "contents join rounded-md highlighted",
-        "tag": "BUTTON",
+        "index": 0,
         "text": "1.ng5五fiveⓘ"
       },
       {
-        "cls": "contents join rounded-md",
-        "tag": "BUTTON",
+        "index": 1,
         "text": "2.ng5午noonⓘ"
+      },
+      {
+        "index": 2,
+        "text": "3.ng6誤wrongⓘ"
+      },
+      {
+        "index": 3,
+        "text": "4.ng4吳surname [Ng]ⓘ"
+      },
+      {
+        "index": 4,
+        "text": "5.ng5伍five; surname [Ng]ⓘ"
       }
     ],
-    "diagnostics": "[{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"worker:diagnostic-ready\",\"timestamp\":\"2026-06-18T20:17:26.704Z\"}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncFromPersistenceBeforeInit:start\",\"reason\":\"before-init\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T20:17:26.838Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":false}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncFromPersistenceBeforeInit:pass\",\"reason\":\"before-init\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T20:17:26.841Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"runtime:init\",\"reason\":\"after-init\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T20:17:32.392Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:start\",\"reason\":\"after-init\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T20:17:32.393Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:pass\",\"reason\":\"after-init\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T20:17:32.394Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:start\",\"reason\":\"customize\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T20:17:32.403Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:pass\",\"reason\":\"customize\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T20:17:32.404Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:start\",\"reason\":\"deploy\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T20:17:38.001Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:pass\",\"reason\":\"deploy\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T20:17:38.003Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:start\",\"reason\":\"commit\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T20:19:10.055Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}},{\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:pass\",\"reason\":\"commit\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T20:19:10.057Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}}]",
-    "label": "final-backspace-after",
-    "mainText": "中繁半。ng‹›1.ng5五fiveⓘ2.ng5午noonⓘ3.ng6誤wrongⓘ4.ng4吳surname [Ng]ⓘ5.ng5伍five; surname [Ng]ⓘ輸入法設定 IME Settings顯示語言 Display Languages英語 English印地語 Hindi印尼語 Indonesian尼泊爾語 Nepali烏爾都語 Urdu⬑ 主要語言 Main Language每頁候選詞數量 No. of Candidates Per Page|||||||中文字體 Chinese Typeface宋體 Sung黑體 Hei候選詞粵拼 Candidates Jyutping顯示 Always Show僅反查 Only in Reverse Lookup隱藏 Hide自動完成 Auto-completion自動校正 Auto-correction自動組詞 Auto-composition輸入記憶 Input Memory反查設定 Reverse Lookup Settings顯示完整輸入碼 Show Full Input Code倉頡版本 Cangjie Version三代 Version 3五代 Version 5",
-    "textareaValue": "我係個"
+    "textareaValue": "",
+    "title": "TypeDuck 網頁版",
+    "warningOrErrorCount": 0,
+    "warningOrErrors": []
+  },
+  "assertions": {
+    "beforeHasRuntimeErrorBanner": false,
+    "afterHasRuntimeErrorBanner": false,
+    "beforeBodyHasRuntimeErrorText": false,
+    "afterBodyHasRuntimeErrorText": false,
+    "beforePanelText": "ngo‹›1.ngo5我I, meⓘ2.ngo4俄Russianⓘ3.ngo6餓hungryⓘ4.ngo4娥嫦娥ⓘ5.ngo4鵝gooseⓘ",
+    "afterPanelText": "ng‹›1.ng5五fiveⓘ2.ng5午noonⓘ3.ng6誤wrongⓘ4.ng4吳surname [Ng]ⓘ5.ng5伍five; surname [Ng]ⓘ",
+    "compositionMutatedToNg": true
   }
 }

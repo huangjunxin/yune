@@ -466,6 +466,18 @@ v1.1.2. AI-native behavior may proceed only behind the separate M11 gating
 policy: disabled by default in real frontends until provider/ranking/privacy
 contracts are proven and explicitly enabled.
 
+**D-P10-14 — Post-review M9 closeout conditions are evidence rules, not a
+new verdict.** The delete/backspace runtime-error banner was a real delete-path
+adapter bug: TypeDuck-Web sends a standalone `{Control_L}` keydown before
+`{Control+Delete}`, and the adapter was forwarding the pure modifier into Yune.
+The adapter now treats pure modifier keydowns as pass-through and the HR-5
+delete/backspace evidence was recaptured with no banner and zero warning/error
+entries. Rich dictionary-comment byte parity is clean-checkout reproducible via
+the committed `cantonese_parity` fixture; the browser-shaped native
+`typeduck_adapter_real_assets_emit_oracle_dictionary_panel_comments` test asserts
+the full real-assets path only when local TypeDuck v1.1.2 oracle build assets
+exist and otherwise emits an explicit skip reason.
+
 **D-12 / TYPEDUCK-E2E-04 — Final findings separate three blocker classes.**
 TypeDuck-Web app/source blockers, Yune adapter/runtime mismatches, and
 environment/tooling blockers are reported separately.
@@ -621,4 +633,4 @@ this is why the placeholder-echo WI-4 matrix was reopened (D-P10-9) and why HR-1
 committed the real-assets browser run rather than only describing it.
 
 ---
-*Last updated: 2026-06-18 — added the M11 S5 local-provider decision (D-M11-5) and updated shared comment-oracle/web-first status.*
+*Last updated: 2026-06-18 — added D-P10-14 for the M9 post-review evidence closeout and retained the M11 S5 local-provider decision.*

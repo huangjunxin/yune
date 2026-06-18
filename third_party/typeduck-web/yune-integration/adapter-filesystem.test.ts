@@ -196,6 +196,42 @@ describe("initYuneRuntime browser filesystem ordering", () => {
     expect(module.calls("yune_typeduck_process_key")).toHaveLength(1);
   });
 
+  it("ignores pure modifier keydowns before TypeDuck-Web sends the modified key chord", async () => {
+    const fs = new FakeTypeDuckFilesystem();
+    const module = new FakeTypeDuckModule();
+    module.processKeyResult = module.response({
+      handled: true,
+      commits: [],
+      context: {
+        input: "ngo",
+        preedit: "ngo",
+        caret: 3,
+        highlighted: 0,
+        page_size: 5,
+        page_no: 0,
+        is_last_page: true,
+        select_keys: "12345",
+        select_labels: ["1", "2", "3", "4", "5"],
+        candidates: [{ text: "我", comment: "\fngo5" }],
+      },
+      status: null,
+    });
+
+    await initYuneRuntime(module, fs, initOptions, assets, "luna_pinyin");
+
+    const composing = await processKey("{n}");
+    await expect(processKey("{Control_L}")).resolves.toEqual(composing);
+    await expect(processKey("{Control+Delete}")).resolves.toMatchObject({
+      isComposing: true,
+      success: true,
+    });
+
+    expect(module.calls("yune_typeduck_process_key")).toEqual([
+      [1, "n".charCodeAt(0), 0],
+      [1, 0xffff, 1 << 2],
+    ]);
+  });
+
   it("accepts TypeDuck-Web underscore page-key spellings", async () => {
     const fs = new FakeTypeDuckFilesystem();
     const module = new FakeTypeDuckModule();

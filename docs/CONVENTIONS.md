@@ -407,6 +407,17 @@ fixture, then run Yune's **real production path** and assert it reproduces the o
 the panel marker `\u{000c}\r1,`). A companion test locks the fixture's pinned
 engine/tag/commit metadata.
 
+**TypeDuck rich-comment E2E reproducibility.** The browser-shaped
+`typeduck_adapter_real_assets_emit_oracle_dictionary_panel_comments` integration
+test may use local TypeDuck v1.1.2 oracle build artifacts under
+`target/typeduck-oracle/v1.1.2/rime-user/build` to prove the full
+`jyut6ping3_mobile` runtime path emits the rich `\f\r1,.../\r0,...` comment
+payload. That `target/` tree is ignored local oracle state, so the test must
+emit an explicit skip reason when those build assets are absent and must never
+silently pass against a degraded three-column fallback. The committed
+clean-checkout byte-parity guarantee is still
+`cargo test -p yune-core --test cantonese_parity`.
+
 **`#[ignore]` must carry a documented blocker.** A blocked behavior gets a *named* test
 marked `#[ignore = "blocked: <what is missing>"]` whose body `panic!()`s — never silently
 drop a slice. The reason names the precise blocker (usually a missing oracle fixture). See the

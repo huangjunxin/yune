@@ -90,9 +90,13 @@ real browser. HR-2 resolves the startup `setOption` export/wrapper/adapter gap,
 HR-3 proves browser `deploy()` returns true with real assets after adding the
 plain `jyut6ping3.schema.yaml` preload, and HR-4 proves live-worker persistence
 sync plus real reload survival. HR-5 reruns the full browser matrix against real
-assets, including paging, deletion, phrase commit, dictionary-panel comments,
-and zero warning/error console entries. HR-6 locks the shared reverse-lookup
-joiner and schema-prompt bytes against the TypeDuck v1.1.2 oracle. HR-7 closes
+assets, including paging, deletion, phrase commit, dictionary-panel rendering,
+and zero warning/error console entries after the post-review pure-modifier
+delete-path fix. Rich dictionary-comment byte parity is committed in
+`cantonese_parity`; the browser-shaped native rich-comment test also asserts the
+full real-assets path when local v1.1.2 oracle build assets are present. HR-6
+locks the shared reverse-lookup joiner and schema-prompt bytes against the
+TypeDuck v1.1.2 oracle. HR-7 closes
 M9 with **GO WITH CONDITIONS** for gated AI-native frontend exposure.
 
 ### WASM Build And Export Contract
@@ -119,7 +123,7 @@ M9 with **GO WITH CONDITIONS** for gated AI-native frontend exposure.
 
 - [x] **TYPEDUCK-E2E-01**: The upstream TypeDuck-Web repository is cloned or vendored in a reproducible test location, and its current librime/WASM bridge seam is identified.
 - [x] **TYPEDUCK-E2E-02**: TypeDuck-Web is patched or configured so its input-engine binding calls the Yune TypeScript bridge instead of the original librime bridge, with candidate text/comment/highlight mapped from the runtime response shape.
-- [x] **TYPEDUCK-E2E-03**: Real TypeDuck-Web browser validation covers composition, candidate paging, selection, deletion, commit output, deploy, customize, persistence smoke flows, and dictionary-panel comments, with PASS evidence recorded from the HR-5 real-assets matrix.
+- [x] **TYPEDUCK-E2E-03**: Real TypeDuck-Web browser validation covers composition, candidate paging, selection, deletion, commit output, deploy, customize, persistence smoke flows, and dictionary-panel rendering, with PASS evidence recorded from the HR-5 real-assets matrix. Rich dictionary-comment byte parity is committed in `cantonese_parity`; the browser-shaped native rich-comment test is explicitly skipped unless local v1.1.2 oracle build assets are present.
 - [x] **TYPEDUCK-E2E-04**: Integration findings end with a go/no-go recommendation for exposing AI-native behavior through real frontends; HR-7 records **GO WITH CONDITIONS**.
 
 ## TypeDuck-Windows Native IME Contract Requirements
@@ -227,7 +231,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TYPEDUCK-FS-04 | Phase 9 | Complete |
 | TYPEDUCK-E2E-01 | Phase 10 | Complete |
 | TYPEDUCK-E2E-02 | Phase 10 | Complete |
-| TYPEDUCK-E2E-03 | Phase 10 / 17 | Complete - HR-5 real-assets browser matrix passes |
+| TYPEDUCK-E2E-03 | Phase 10 / 17 | Complete - HR-5 real-assets browser matrix passes; rich comment byte parity is committed in `cantonese_parity` |
 | TYPEDUCK-E2E-04 | Phase 10 / 17 | Complete - HR-7 records GO WITH CONDITIONS |
 | WIN-TEST-01 | Phase 11 | Complete |
 | WIN-ABI-01 | Phase 12 | Complete |

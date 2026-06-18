@@ -585,8 +585,7 @@ schema:\n  schema_id: typeduck_luna\n  name: TypeDuck Luna\nmenu:\n  page_size: 
     fn write_browser_real_assets(&self) {
         let app_schema_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("../../third_party/typeduck-web/source/public/schema");
-        let oracle_root =
-            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/typeduck-oracle/v1.1.2");
+        let oracle_root = typeduck_oracle_root();
         let oracle_schema_root = oracle_root.join("rime-shared");
         let schema_root = if oracle_schema_root.is_dir() {
             oracle_schema_root
@@ -773,6 +772,15 @@ fn typeduck_adapter_real_assets_emit_oracle_dictionary_panel_comments() {
         "browser-real-dictionary-comments",
         "jyut6ping3_mobile",
     );
+    if let Err(reason) = rich_dictionary_comment_oracle_build_status() {
+        eprintln!(
+            "SKIP typeduck_adapter_real_assets_emit_oracle_dictionary_panel_comments: {reason}. \
+             This integration test does not pass against the degraded three-column fallback. \
+             Clean-checkout byte parity is covered by `cargo test -p yune-core --test cantonese_parity`."
+        );
+        runtime.remove();
+        return;
+    }
     runtime.write_browser_real_assets();
 
     let state = unsafe {
@@ -810,6 +818,35 @@ fn typeduck_adapter_real_assets_emit_oracle_dictionary_panel_comments() {
 
     unsafe { yune_typeduck_cleanup(state) };
     runtime.remove();
+}
+
+fn typeduck_oracle_root() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/typeduck-oracle/v1.1.2")
+}
+
+fn rich_dictionary_comment_oracle_build_status() -> Result<PathBuf, String> {
+    let build_root = typeduck_oracle_root().join("rime-user/build");
+    let required_files = [
+        "jyut6ping3.table.bin",
+        "jyut6ping3.reverse.bin",
+        "jyut6ping3_mobile.prism.bin",
+        "jyut6ping3_scolar.table.bin",
+        "jyut6ping3_scolar.reverse.bin",
+        "jyut6ping3_scolar.prism.bin",
+    ];
+    let missing = required_files
+        .into_iter()
+        .filter(|file_name| !build_root.join(file_name).is_file())
+        .collect::<Vec<_>>();
+    if missing.is_empty() {
+        Ok(build_root)
+    } else {
+        Err(format!(
+            "missing local TypeDuck v1.1.2 oracle build assets at {} ({})",
+            build_root.display(),
+            missing.join(", ")
+        ))
+    }
 }
 
 fn reset_rime() {
