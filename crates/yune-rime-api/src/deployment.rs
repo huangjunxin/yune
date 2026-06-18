@@ -1244,7 +1244,7 @@ fn deployed_config_needs_update(
         return true;
     }
     let custom_resource_id = custom_patch_resource_id(&resource_id);
-    if source_uses_auto_custom_patch(&shared_data_dir.join(file_name))
+    if resource_uses_custom_patch(&resource_id, &shared_data_dir.join(file_name))
         && !timestamps.contains_key(Value::String(custom_resource_id.clone()))
         && config_resource_path(shared_data_dir, user_data_dir, &custom_resource_id).exists()
     {
@@ -1286,6 +1286,7 @@ fn deployed_config_yaml_with_build_info(
     let resource_id = normalize_config_resource_id(file_name)?;
     let timestamp = source_modified_secs(source).unwrap_or(0);
     let mut patch_dependencies = Vec::new();
+    let source_uses_custom_patch = resource_uses_custom_patch(&resource_id, source);
     let apply_auto_custom_patch =
         apply_config_directives(&mut root, shared_data_dir, &mut patch_dependencies)?;
     apply_legacy_preset_config_plugins(
@@ -1296,7 +1297,7 @@ fn deployed_config_yaml_with_build_info(
     )?;
     set_build_info(&mut root, &resource_id, timestamp)?;
 
-    if apply_auto_custom_patch {
+    if apply_auto_custom_patch || source_uses_custom_patch {
         let custom_resource_id = custom_patch_resource_id(&resource_id);
         let custom_path = user_data_dir.join(format!("{custom_resource_id}.yaml"));
         if let Some(custom_root) = fs::read_to_string(&custom_path)
@@ -1327,6 +1328,10 @@ fn deployed_config_yaml_with_build_info(
 fn custom_patch_resource_id(resource_id: &str) -> String {
     let base = resource_id.strip_suffix(".schema").unwrap_or(resource_id);
     format!("{base}.custom")
+}
+
+fn resource_uses_custom_patch(resource_id: &str, source: &Path) -> bool {
+    resource_id.ends_with(".schema") || source_uses_auto_custom_patch(source)
 }
 
 fn config_resource_path(

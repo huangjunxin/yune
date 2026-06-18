@@ -49,6 +49,11 @@ export interface Actions {
  */
 export interface RimePreferences {
   pageSize?: number;
+  enableCompletion?: boolean;
+  enableCorrection?: boolean;
+  enableSentence?: boolean;
+  enableLearning?: boolean;
+  isCangjie5?: boolean;
   /** Pre-2024 options encoding */
   options?: number;
 }
@@ -72,6 +77,26 @@ let currentSchemaId: string | null = null;
 let currentPrepareOptions: PrepareTypeDuckFilesystemOptions | null = null;
 let currentExtraSharedAssets: TypeDuckExtraSharedAsset[] = [];
 let lastKeyResult: RimeResult = { isComposing: false, success: true };
+const neutralKeyResult: RimeResult = { isComposing: false, success: true };
+
+type BooleanRimePreference =
+  | "enableCompletion"
+  | "enableCorrection"
+  | "enableSentence"
+  | "enableLearning";
+
+const BOOLEAN_CUSTOMIZATION_KEYS: readonly {
+  preference: BooleanRimePreference;
+  keys: readonly string[];
+}[] = [
+  { preference: "enableCompletion", keys: ["translator/enable_completion"] },
+  { preference: "enableCorrection", keys: ["translator/enable_correction"] },
+  { preference: "enableSentence", keys: ["translator/enable_sentence"] },
+  {
+    preference: "enableLearning",
+    keys: ["translator/enable_user_dict", "translator/encode_commit_history"],
+  },
+];
 
 export interface TypeDuckExtraSharedAsset {
   path: string;
@@ -234,7 +259,7 @@ export async function processKey(input: string): Promise<RimeResult> {
   const eventLike = parseKeySequence(input);
 
   if (eventLike.type === "keyup") {
-    return lastKeyResult;
+    return lastKeyResult.isComposing ? lastKeyResult : neutralKeyResult;
   }
 
   // Delegate to Yune runtime via keyEventToRimeKey per D-04
@@ -335,7 +360,7 @@ export async function deploy(): Promise<boolean> {
  *
  * Replaces upstream Module.ccall("customize", ...)
  *
- * Note: Upstream customize uses pageSize and options bitmap.
+ * Note: upstream TypeDuck used pageSize and an options bitmap.
  * Yune customize API accepts configId, key, value strings.
  * This adapter maps preferences to Yune customize calls.
  */
@@ -346,15 +371,31 @@ export async function customize(preferences: RimePreferences): Promise<boolean> 
 
   // Map preferences to Yune customize calls
   let success = true;
+  let customizedAny = false;
+
+  const customizeSetting = (key: string, value: string): void => {
+    const customized = currentRuntime.customize(currentSchemaId, key, value);
+    success = success && customized;
+    customizedAny = true;
+  };
 
   if (preferences.pageSize !== undefined) {
-    const customized = currentRuntime.customize(currentSchemaId, "page_size", String(preferences.pageSize));
-    await syncCurrentStateToPersistence("customize");
-    success = success && customized;
+    customizeSetting("page_size", String(preferences.pageSize));
   }
 
-  // Note: options bitmap handling not implemented yet
-  // Requires Yune adapter widening or explicit preference mapping
+  for (const { preference, keys } of BOOLEAN_CUSTOMIZATION_KEYS) {
+    const value = preferences[preference];
+    if (value === undefined) {
+      continue;
+    }
+    for (const key of keys) {
+      customizeSetting(key, value ? "true" : "false");
+    }
+  }
+
+  if (customizedAny) {
+    await syncCurrentStateToPersistence("customize");
+  }
 
   return success;
 }

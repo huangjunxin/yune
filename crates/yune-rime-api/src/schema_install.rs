@@ -191,7 +191,8 @@ fn install_schema_dictionary_translator_from_config(
     let comment_format = schema_comment_format(schema_config, name_space);
     let dictionary_exclude =
         schema_string_list(schema_config, &format!("{name_space}/dictionary_exclude"));
-    let spelling_algebra = schema_string_list(schema_config, "speller/algebra");
+    let spelling_algebra =
+        spelling_algebra_for_dictionary(schema_config, dictionary.entries().len());
     session.engine.add_translator(
         StaticTableTranslator::from_dictionary(dictionary)
             .with_spelling_algebra(&spelling_algebra)
@@ -205,6 +206,31 @@ fn install_schema_dictionary_translator_from_config(
             .with_comment_format(&comment_format)
             .with_dictionary_exclude(dictionary_exclude),
     );
+}
+
+fn spelling_algebra_for_dictionary(schema_config: &Value, entry_count: usize) -> Vec<String> {
+    let formulas = schema_string_list(schema_config, "speller/algebra");
+    if entry_count < 50_000 {
+        return formulas;
+    }
+
+    formulas
+        .into_iter()
+        .filter(|formula| is_large_dictionary_spelling_formula(formula))
+        .collect()
+}
+
+fn is_large_dictionary_spelling_formula(formula: &str) -> bool {
+    matches!(
+        formula,
+        "derive/\\d//"
+            | "xform/1/v/"
+            | "xform/4/vv/"
+            | "xform/2/x/"
+            | "xform/5/xx/"
+            | "xform/3/q/"
+            | "xform/6/qq/"
+    )
 }
 
 fn install_schema_reverse_lookup_translator_from_config(
@@ -527,25 +553,22 @@ fn install_schema_dictionary_lookup_filter_from_config(
         );
         return;
     };
-    let Some((_, dictionary_result)) =
-        load_schema_source_dictionary(schema_config, name_space, &dictionary_name)
-    else {
-        record_dictionary_load_failure(
-            session,
-            dictionary_name,
-            DictionaryLoadFailure::SourceMissing,
-        );
-        return;
+    let dictionary = match load_schema_dictionary_by_name(
+        schema_config,
+        name_space,
+        dictionary_name.clone(),
+        false,
+    ) {
+        DictionaryLoadOutcome::Compiled(dictionary) => dictionary,
+        DictionaryLoadOutcome::SourceFallback { dictionary, reason } => {
+            record_dictionary_source_fallback(session, reason);
+            dictionary
+        }
+        DictionaryLoadOutcome::NoUsablePath { reason, .. } => {
+            record_dictionary_load_failure(session, dictionary_name, reason);
+            return;
+        }
     };
-    let Ok(dictionary) = dictionary_result else {
-        record_dictionary_load_failure(
-            session,
-            dictionary_name,
-            DictionaryLoadFailure::SourceInvalid,
-        );
-        return;
-    };
-
     let tags = schema_filter_tags(schema_config, name_space);
     session.engine.add_filter(TaggedFilter::new(
         DictionaryLookupFilter::new(dictionary),
@@ -659,22 +682,29 @@ fn load_schema_dictionary_by_name(
         };
     };
 
-    let source = load_schema_source_dictionary(schema_config, name_space, &dictionary_name);
+    let source_yaml = load_schema_source_dictionary_yaml(&dictionary_name);
+    let prism_name = find_config_value(schema_config, &format!("{name_space}/prism"))
+        .and_then(config_scalar_string)
+        .and_then(|name| validate_data_resource_id(&name))
+        .unwrap_or_else(|| dictionary_name.clone());
     let compiled = load_schema_compiled_dictionary(
         &dictionary_name,
-        source.as_ref().map(|(yaml, _)| yaml),
+        &prism_name,
+        source_yaml.as_ref(),
         require_prism,
     );
     match compiled {
         Ok(dictionary) => DictionaryLoadOutcome::Compiled(dictionary),
-        Err(reason) => match source {
-            Some((_, Ok(dictionary))) => {
-                DictionaryLoadOutcome::SourceFallback { dictionary, reason }
+        Err(reason) => match source_yaml {
+            Some(dictionary_yaml) => {
+                match parse_schema_source_dictionary(schema_config, name_space, &dictionary_yaml) {
+                    Ok(dictionary) => DictionaryLoadOutcome::SourceFallback { dictionary, reason },
+                    Err(_) => DictionaryLoadOutcome::NoUsablePath {
+                        dictionary_id: dictionary_name,
+                        reason: DictionaryLoadFailure::SourceInvalid,
+                    },
+                }
             }
-            Some((_, Err(_))) => DictionaryLoadOutcome::NoUsablePath {
-                dictionary_id: dictionary_name,
-                reason: DictionaryLoadFailure::SourceInvalid,
-            },
             None => {
                 let failure = if reason == CompiledRejectReason::Missing {
                     DictionaryLoadFailure::SourceMissing
@@ -692,12 +722,13 @@ fn load_schema_dictionary_by_name(
 
 fn load_schema_compiled_dictionary(
     dictionary_name: &str,
+    prism_name: &str,
     source_yaml: Option<&String>,
     require_prism: bool,
 ) -> Result<TableDictionary, CompiledRejectReason> {
     let table_name = validate_data_resource_id(&format!("{dictionary_name}.table.bin"))
         .ok_or_else(|| CompiledRejectReason::Invalid("invalid table resource id".to_owned()))?;
-    let prism_name = validate_data_resource_id(&format!("{dictionary_name}.prism.bin"))
+    let prism_name = validate_data_resource_id(&format!("{prism_name}.prism.bin"))
         .ok_or_else(|| CompiledRejectReason::Invalid("invalid prism resource id".to_owned()))?;
     let reverse_name = validate_data_resource_id(&format!("{dictionary_name}.reverse.bin"))
         .ok_or_else(|| CompiledRejectReason::Invalid("invalid reverse resource id".to_owned()))?;
@@ -769,19 +800,19 @@ fn load_schema_compiled_dictionary(
         })
 }
 
-fn load_schema_source_dictionary(
+fn load_schema_source_dictionary_yaml(dictionary_name: &str) -> Option<String> {
+    let dictionary_path = selected_runtime_data_path(&format!("{dictionary_name}.dict.yaml"))?;
+    fs::read_to_string(dictionary_path).ok()
+}
+
+fn parse_schema_source_dictionary(
     schema_config: &Value,
     name_space: &str,
-    dictionary_name: &str,
-) -> Option<(
-    String,
-    Result<TableDictionary, yune_core::TableDictionaryParseError>,
-)> {
-    let dictionary_path = selected_runtime_data_path(&format!("{dictionary_name}.dict.yaml"))?;
-    let dictionary_yaml = fs::read_to_string(dictionary_path).ok()?;
+    dictionary_yaml: &str,
+) -> Result<TableDictionary, yune_core::TableDictionaryParseError> {
     let packs = schema_dictionary_packs(schema_config, name_space);
-    let result = TableDictionary::parse_rime_dict_yaml_with_imports_packs_and_vocabulary(
-        &dictionary_yaml,
+    TableDictionary::parse_rime_dict_yaml_with_imports_packs_and_vocabulary(
+        dictionary_yaml,
         packs,
         |import_table| {
             let import_table = validate_data_resource_id(import_table)?;
@@ -793,8 +824,7 @@ fn load_schema_source_dictionary(
             selected_runtime_data_path(&format!("{vocabulary}.txt"))
                 .and_then(|path| fs::read_to_string(path).ok())
         },
-    );
-    Some((dictionary_yaml, result))
+    )
 }
 
 fn record_dictionary_source_fallback(session: &mut SessionState, reason: CompiledRejectReason) {

@@ -19,8 +19,14 @@ pub(crate) fn apply_config_directives(
     shared_data_dir: &Path,
     patch_dependencies: &mut Vec<(String, c_int)>,
 ) -> Option<bool> {
-    let root_has_patch =
-        apply_config_directives_inner(root, shared_data_dir, patch_dependencies, true)?;
+    let local_reference_root = root.clone();
+    let root_has_patch = apply_config_directives_inner(
+        root,
+        shared_data_dir,
+        patch_dependencies,
+        true,
+        &local_reference_root,
+    )?;
     Some(!root_has_patch)
 }
 
@@ -29,12 +35,19 @@ pub(crate) fn apply_config_directives_inner(
     shared_data_dir: &Path,
     patch_dependencies: &mut Vec<(String, c_int)>,
     is_root: bool,
+    local_reference_root: &Value,
 ) -> Option<bool> {
     let mut root_has_patch = false;
     match root {
         Value::Sequence(sequence) => {
             for value in sequence {
-                apply_config_directives_inner(value, shared_data_dir, patch_dependencies, false)?;
+                apply_config_directives_inner(
+                    value,
+                    shared_data_dir,
+                    patch_dependencies,
+                    false,
+                    local_reference_root,
+                )?;
             }
         }
         Value::Mapping(mapping) => {
@@ -49,12 +62,22 @@ pub(crate) fn apply_config_directives_inner(
                         shared_data_dir,
                         patch_dependencies,
                         false,
+                        local_reference_root,
                     )?;
                 }
             }
-            apply_node_include_directive(root, shared_data_dir, patch_dependencies)?;
-            let node_has_patch =
-                apply_node_patch_directive(root, shared_data_dir, patch_dependencies)?;
+            apply_node_include_directive(
+                root,
+                shared_data_dir,
+                patch_dependencies,
+                local_reference_root,
+            )?;
+            let node_has_patch = apply_node_patch_directive(
+                root,
+                shared_data_dir,
+                patch_dependencies,
+                local_reference_root,
+            )?;
             root_has_patch = is_root && node_has_patch;
         }
         _ => {}
@@ -66,6 +89,7 @@ pub(crate) fn apply_node_include_directive(
     root: &mut Value,
     shared_data_dir: &Path,
     patch_dependencies: &mut Vec<(String, c_int)>,
+    local_reference_root: &Value,
 ) -> Option<()> {
     let include = {
         let Value::Mapping(mapping) = root else {
@@ -76,7 +100,13 @@ pub(crate) fn apply_node_include_directive(
     let Some(Value::String(reference)) = include else {
         return include.is_none().then_some(());
     };
-    apply_include_reference(root, &reference, shared_data_dir, patch_dependencies)
+    apply_include_reference(
+        root,
+        &reference,
+        shared_data_dir,
+        patch_dependencies,
+        local_reference_root,
+    )
 }
 
 pub(crate) fn apply_include_reference(
@@ -84,6 +114,7 @@ pub(crate) fn apply_include_reference(
     reference: &str,
     shared_data_dir: &Path,
     patch_dependencies: &mut Vec<(String, c_int)>,
+    local_reference_root: &Value,
 ) -> Option<()> {
     let (reference, optional) = reference
         .strip_suffix('?')
@@ -94,7 +125,9 @@ pub(crate) fn apply_include_reference(
         ("", reference)
     };
     let included = if resource.is_empty() {
-        find_config_value(root, path).cloned()
+        find_config_value(root, path)
+            .cloned()
+            .or_else(|| find_config_value(local_reference_root, path).cloned())
     } else {
         load_external_config_reference(
             resource,
@@ -117,6 +150,7 @@ pub(crate) fn apply_node_patch_directive(
     root: &mut Value,
     shared_data_dir: &Path,
     patch_dependencies: &mut Vec<(String, c_int)>,
+    local_reference_root: &Value,
 ) -> Option<bool> {
     let (patch, directive_only_node) = {
         let Value::Mapping(mapping) = root else {
@@ -131,7 +165,13 @@ pub(crate) fn apply_node_patch_directive(
     if directive_only_node {
         *root = Value::Null;
     }
-    apply_patch_directive(root, &patch, shared_data_dir, patch_dependencies)?;
+    apply_patch_directive(
+        root,
+        &patch,
+        shared_data_dir,
+        patch_dependencies,
+        local_reference_root,
+    )?;
     Some(true)
 }
 
@@ -140,15 +180,32 @@ pub(crate) fn apply_patch_directive(
     patch: &Value,
     shared_data_dir: &Path,
     patch_dependencies: &mut Vec<(String, c_int)>,
+    local_reference_root: &Value,
 ) -> Option<()> {
     match patch {
-        Value::Mapping(patch) => apply_patch_map(root, patch, shared_data_dir, patch_dependencies),
-        Value::String(reference) => {
-            apply_patch_reference(root, reference, shared_data_dir, patch_dependencies)
-        }
+        Value::Mapping(patch) => apply_patch_map(
+            root,
+            patch,
+            shared_data_dir,
+            patch_dependencies,
+            local_reference_root,
+        ),
+        Value::String(reference) => apply_patch_reference(
+            root,
+            reference,
+            shared_data_dir,
+            patch_dependencies,
+            local_reference_root,
+        ),
         Value::Sequence(patches) => {
             for patch in patches {
-                apply_patch_directive(root, patch, shared_data_dir, patch_dependencies)?;
+                apply_patch_directive(
+                    root,
+                    patch,
+                    shared_data_dir,
+                    patch_dependencies,
+                    local_reference_root,
+                )?;
             }
             Some(())
         }
@@ -161,6 +218,7 @@ pub(crate) fn apply_patch_reference(
     reference: &str,
     shared_data_dir: &Path,
     patch_dependencies: &mut Vec<(String, c_int)>,
+    local_reference_root: &Value,
 ) -> Option<()> {
     let (reference, optional) = reference
         .strip_suffix('?')
@@ -182,16 +240,27 @@ pub(crate) fn apply_patch_reference(
             return Some(());
         };
         return match referenced {
-            Value::Mapping(patch) => {
-                apply_patch_map(root, &patch, shared_data_dir, patch_dependencies)
-            }
+            Value::Mapping(patch) => apply_patch_map(
+                root,
+                &patch,
+                shared_data_dir,
+                patch_dependencies,
+                local_reference_root,
+            ),
             _ => None,
         };
     }
-    match find_config_value(root, path).cloned() {
-        Some(Value::Mapping(patch)) => {
-            apply_patch_map(root, &patch, shared_data_dir, patch_dependencies)
-        }
+    match find_config_value(root, path)
+        .cloned()
+        .or_else(|| find_config_value(local_reference_root, path).cloned())
+    {
+        Some(Value::Mapping(patch)) => apply_patch_map(
+            root,
+            &patch,
+            shared_data_dir,
+            patch_dependencies,
+            local_reference_root,
+        ),
         Some(_) => None,
         None => optional.then_some(()),
     }
@@ -212,15 +281,23 @@ pub(crate) fn load_external_config_reference(
         0
     };
     patch_dependencies.push((resource_id, timestamp));
-    let Some(mut resource_root) = fs::read_to_string(&resource_path)
+    let Some(resource_root) = fs::read_to_string(&resource_path)
         .ok()
         .and_then(|yaml| serde_yaml::from_str::<Value>(&yaml).ok())
     else {
         return optional.then_some(None);
     };
-    apply_config_directives(&mut resource_root, shared_data_dir, patch_dependencies)?;
     match find_config_value(&resource_root, path).cloned() {
-        Some(value) => Some(Some(value)),
+        Some(mut value) => {
+            apply_config_directives_inner(
+                &mut value,
+                shared_data_dir,
+                patch_dependencies,
+                false,
+                &resource_root,
+            )?;
+            Some(Some(value))
+        }
         None => optional.then_some(None),
     }
 }
@@ -234,7 +311,13 @@ pub(crate) fn apply_custom_patch(
     let Some(Value::Mapping(patch)) = find_config_value(custom_root, "patch") else {
         return Some(());
     };
-    apply_patch_map(root, patch, shared_data_dir, patch_dependencies)
+    apply_patch_map(
+        root,
+        patch,
+        shared_data_dir,
+        patch_dependencies,
+        custom_root,
+    )
 }
 
 pub(crate) fn apply_legacy_preset_config_plugins(
@@ -330,11 +413,18 @@ pub(crate) fn apply_patch_map(
     patch: &Mapping,
     shared_data_dir: &Path,
     patch_dependencies: &mut Vec<(String, c_int)>,
+    local_reference_root: &Value,
 ) -> Option<()> {
     for (key, value) in patch {
         let key = key.as_str()?;
         let mut value = value.clone();
-        apply_config_directives_inner(&mut value, shared_data_dir, patch_dependencies, false)?;
+        apply_config_directives_inner(
+            &mut value,
+            shared_data_dir,
+            patch_dependencies,
+            false,
+            local_reference_root,
+        )?;
         if !apply_patch_entry(root, key, value, false) {
             return None;
         }

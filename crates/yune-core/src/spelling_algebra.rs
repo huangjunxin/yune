@@ -1,5 +1,6 @@
 use super::Candidate;
 use regex::Regex;
+use std::collections::HashMap;
 
 #[derive(Clone, Default)]
 pub(crate) struct SpellingAlgebra {
@@ -14,10 +15,9 @@ impl SpellingAlgebra {
     pub(crate) fn parse(formulas: &[String]) -> Self {
         let mut parsed = Vec::new();
         for formula in formulas {
-            let Some(parsed_formula) = SpellingAlgebraFormula::parse(formula) else {
-                return Self::default();
-            };
-            parsed.push(parsed_formula);
+            if let Some(parsed_formula) = SpellingAlgebraFormula::parse(formula) {
+                parsed.push(parsed_formula);
+            }
         }
         Self { formulas: parsed }
     }
@@ -203,20 +203,20 @@ impl SpellingAlgebraFormula {
 
 fn dedupe_spelling_algebra_entries(entries: Vec<(String, Candidate)>) -> Vec<(String, Candidate)> {
     let mut deduped: Vec<(String, Candidate)> = Vec::new();
+    let mut indexes = HashMap::<(String, String, String), usize>::new();
     for (code, candidate) in entries {
-        if let Some((_, existing_candidate)) =
-            deduped
-                .iter_mut()
-                .find(|(existing_code, existing_candidate)| {
-                    existing_code == &code
-                        && existing_candidate.text == candidate.text
-                        && existing_candidate.comment == candidate.comment
-                })
-        {
+        let key = (
+            code.clone(),
+            candidate.text.clone(),
+            candidate.comment.clone(),
+        );
+        if let Some(index) = indexes.get(&key).copied() {
+            let (_, existing_candidate) = &mut deduped[index];
             if candidate.quality > existing_candidate.quality {
                 *existing_candidate = candidate;
             }
         } else {
+            indexes.insert(key, deduped.len());
             deduped.push((code, candidate));
         }
     }

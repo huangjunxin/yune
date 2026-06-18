@@ -274,6 +274,66 @@ fn typeduck_adapter_composes_source_dictionary_with_mobile_schema_algebra() {
 }
 
 #[test]
+fn typeduck_adapter_customized_sentence_mode_commits_multisyllable_phrase() {
+    let _guard = test_guard();
+    let runtime = TypeDuckRuntime::create("mobile-sentence-customize");
+    runtime.write_mobile_schema_with_dictionary("jyut6ping3");
+    runtime.write_cantonese_sentence_dictionary();
+
+    let state = unsafe {
+        yune_typeduck_init(
+            runtime.shared_c.as_ptr(),
+            runtime.user_c.as_ptr(),
+            runtime.schema_id_c.as_ptr(),
+        )
+    };
+    assert!(!state.is_null());
+
+    let config_id = CString::new("typeduck_luna.schema").expect("config id should be valid");
+    let key =
+        CString::new("translator/enable_sentence").expect("custom key should be valid CString");
+    let value = CString::new("true").expect("custom value should be valid CString");
+    assert_eq!(
+        unsafe { yune_typeduck_customize(state, config_id.as_ptr(), key.as_ptr(), value.as_ptr()) },
+        TRUE
+    );
+    assert_eq!(unsafe { yune_typeduck_deploy(state) }, TRUE);
+    let deployed_schema: Value = serde_yaml::from_str(
+        &fs::read_to_string(runtime.user.join("build").join("typeduck_luna.schema.yaml"))
+            .expect("deployed sentence fixture schema should be readable"),
+    )
+    .expect("deployed sentence fixture schema should parse");
+    assert_eq!(
+        deployed_schema
+            .pointer("/translator/enable_sentence")
+            .and_then(config_bool_like),
+        Some(true)
+    );
+
+    let mut composing = Value::Null;
+    for key in "ngohaigo".chars() {
+        composing = response_json(unsafe { yune_typeduck_process_key(state, key as i32, 0) });
+    }
+    assert_eq!(
+        composing["context"]["input"],
+        Value::String("ngohaigo".to_owned())
+    );
+    assert_eq!(
+        composing["context"]["candidates"][0]["text"],
+        Value::String("\u{6211}\u{4fc2}\u{500b}".to_owned())
+    );
+
+    let committed = response_json(unsafe { yune_typeduck_process_key(state, ' ' as i32, 0) });
+    assert_eq!(
+        committed["commits"],
+        Value::Array(vec![Value::String("\u{6211}\u{4fc2}\u{500b}".to_owned())])
+    );
+
+    unsafe { yune_typeduck_cleanup(state) };
+    runtime.remove();
+}
+
+#[test]
 fn typeduck_adapter_deploy_and_customize_are_explicit() {
     let _guard = test_guard();
     let runtime = TypeDuckRuntime::create("deploy-customize");
@@ -386,6 +446,18 @@ fn response_json(response: *mut yune_rime_api::YuneTypeDuckResponse) -> Value {
     value
 }
 
+fn config_bool_like(value: &Value) -> Option<bool> {
+    value.as_bool().or_else(|| {
+        value
+            .as_str()
+            .and_then(|value| match value.to_ascii_lowercase().as_str() {
+                "true" => Some(true),
+                "false" => Some(false),
+                _ => None,
+            })
+    })
+}
+
 struct TypeDuckRuntime {
     root: PathBuf,
     shared: PathBuf,
@@ -468,7 +540,7 @@ schema:\n  schema_id: typeduck_luna\n  name: TypeDuck Luna\nmenu:\n  page_size: 
             "config_version: typeduck-web\nschema_list:\n  - schema: typeduck_luna\n";
         let schema_config = format!(
             "\
-schema:\n  schema_id: typeduck_luna\n  name: TypeDuck Luna\nmenu:\n  page_size: 50\n  alternative_select_keys: \"\\x00\"\nswitches:\n  - name: ascii_mode\n    reset: 0\nengine:\n  processors:\n    - speller\n    - express_editor\n  translators:\n    - script_translator\nspeller:\n  alphabet: zyxwvutsrqponmlkjihgfedcba\n  delimiter: \" '\"\n  algebra:\n    - \"derive/\\\\d//\"\ntranslator:\n  dictionary: {dictionary}\n  enable_completion: true\n"
+schema:\n  schema_id: typeduck_luna\n  name: TypeDuck Luna\nmenu:\n  page_size: 50\n  alternative_select_keys: \"\\x00\"\nswitches:\n  - name: ascii_mode\n    reset: 0\nengine:\n  processors:\n    - speller\n    - express_editor\n  translators:\n    - script_translator\nspeller:\n  alphabet: zyxwvutsrqponmlkjihgfedcba\n  delimiter: \" '\"\n  algebra:\n    - \"derive/\\\\d//\"\ntranslator:\n  dictionary: {dictionary}\n  enable_completion: true\n  enable_sentence: false\n"
         );
         let staging = self.user.join("build");
         fs::write(staging.join("default.yaml"), default_config)
@@ -500,13 +572,34 @@ schema:\n  schema_id: typeduck_luna\n  name: TypeDuck Luna\nmenu:\n  page_size: 
             .expect("dictionary should be written");
     }
 
+    fn write_cantonese_sentence_dictionary(&self) {
+        fs::write(
+            self.shared.join("jyut6ping3.dict.yaml"),
+            "---\nname: jyut6ping3\nversion: '1'\nsort: original\n...\n\n\u{6211}\tngo5\t10\n\u{4fc2}\thai6\t9\n\u{500b}\tgo3\t8\n",
+        )
+        .expect("dictionary should be written");
+    }
+
     fn write_browser_real_assets(&self) {
-        let schema_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        let app_schema_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("../../third_party/typeduck-web/source/public/schema");
+        let oracle_root =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/typeduck-oracle/v1.1.2");
+        let oracle_schema_root = oracle_root.join("rime-shared");
+        let schema_root = if oracle_schema_root.is_dir() {
+            oracle_schema_root
+        } else {
+            app_schema_root
+        };
         copy_asset(&schema_root, &self.shared, "default.yaml");
         copy_asset(&schema_root, &self.shared, "jyut6ping3_mobile.schema.yaml");
         copy_asset(&schema_root, &self.shared, "jyut6ping3.dict.yaml");
-        let build_root = schema_root.join("build");
+        let oracle_build_root = oracle_root.join("rime-user/build");
+        let build_root = if oracle_build_root.is_dir() {
+            oracle_build_root.clone()
+        } else {
+            schema_root.join("build")
+        };
         let staging = self.user.join("build");
         for file_name in ["default.yaml", "jyut6ping3_mobile.schema.yaml"] {
             fs::copy(build_root.join(file_name), staging.join(file_name))
@@ -539,6 +632,18 @@ schema:\n  schema_id: typeduck_luna\n  name: TypeDuck Luna\nmenu:\n  page_size: 
             "opencc/TSPhrases.ocd2",
         ] {
             copy_asset(&schema_root, &self.shared, file_name);
+        }
+        if oracle_build_root.is_dir() {
+            for file_name in [
+                "jyut6ping3.table.bin",
+                "jyut6ping3.reverse.bin",
+                "jyut6ping3_mobile.prism.bin",
+                "jyut6ping3_scolar.table.bin",
+                "jyut6ping3_scolar.reverse.bin",
+                "jyut6ping3_scolar.prism.bin",
+            ] {
+                copy_asset(&oracle_build_root, &self.shared, file_name);
+            }
         }
     }
 
@@ -593,6 +698,67 @@ fn typeduck_adapter_deploys_browser_real_assets_after_customize() {
         TRUE
     );
     assert_eq!(unsafe { yune_typeduck_deploy(state) }, TRUE);
+
+    unsafe { yune_typeduck_cleanup(state) };
+    runtime.remove();
+}
+
+#[test]
+fn typeduck_adapter_real_assets_sentence_mode_commits_multisyllable_phrase() {
+    let _guard = test_guard();
+    let runtime =
+        TypeDuckRuntime::create_with_schema("browser-real-sentence-mode", "jyut6ping3_mobile");
+    runtime.write_browser_real_assets();
+
+    let state = unsafe {
+        yune_typeduck_init(
+            runtime.shared_c.as_ptr(),
+            runtime.user_c.as_ptr(),
+            runtime.schema_id_c.as_ptr(),
+        )
+    };
+    assert!(!state.is_null());
+
+    let config_id = CString::new("jyut6ping3_mobile.schema").expect("config id should be valid");
+    let key =
+        CString::new("translator/enable_sentence").expect("custom key should be valid CString");
+    let value = CString::new("true").expect("custom value should be valid CString");
+    assert_eq!(
+        unsafe { yune_typeduck_customize(state, config_id.as_ptr(), key.as_ptr(), value.as_ptr()) },
+        TRUE
+    );
+    assert_eq!(unsafe { yune_typeduck_deploy(state) }, TRUE);
+    let deployed_schema: Value = serde_yaml::from_str(
+        &fs::read_to_string(
+            runtime
+                .user
+                .join("build")
+                .join("jyut6ping3_mobile.schema.yaml"),
+        )
+        .expect("deployed real-assets schema should be readable"),
+    )
+    .expect("deployed real-assets schema should parse");
+    assert_eq!(
+        deployed_schema
+            .pointer("/translator/enable_sentence")
+            .and_then(config_bool_like),
+        Some(true)
+    );
+
+    let mut composing = Value::Null;
+    for key in "ngohaigo".chars() {
+        composing = response_json(unsafe { yune_typeduck_process_key(state, key as i32, 0) });
+    }
+    assert_eq!(
+        composing["context"]["candidates"][0]["text"],
+        Value::String("\u{6211}\u{4fc2}\u{500b}".to_owned())
+    );
+
+    let committed = response_json(unsafe { yune_typeduck_process_key(state, ' ' as i32, 0) });
+    assert_eq!(
+        committed["commits"],
+        Value::Array(vec![Value::String("\u{6211}\u{4fc2}\u{500b}".to_owned())])
+    );
 
     unsafe { yune_typeduck_cleanup(state) };
     runtime.remove();

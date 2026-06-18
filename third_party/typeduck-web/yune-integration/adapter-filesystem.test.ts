@@ -172,6 +172,30 @@ describe("initYuneRuntime browser filesystem ordering", () => {
     expect(module.calls("yune_typeduck_process_key")).toHaveLength(1);
   });
 
+  it("does not replay a commit on TypeDuck-Web key release events", async () => {
+    const fs = new FakeTypeDuckFilesystem();
+    const module = new FakeTypeDuckModule();
+    module.processKeyResult = module.response({
+      handled: true,
+      commits: ["我係個"],
+      context: null,
+      status: null,
+    });
+
+    await initYuneRuntime(module, fs, initOptions, assets, "luna_pinyin");
+
+    await expect(processKey("{space}")).resolves.toEqual({
+      isComposing: false,
+      success: true,
+      committed: "我係個",
+    });
+    await expect(processKey("{Release+space}")).resolves.toEqual({
+      isComposing: false,
+      success: true,
+    });
+    expect(module.calls("yune_typeduck_process_key")).toHaveLength(1);
+  });
+
   it("accepts TypeDuck-Web underscore page-key spellings", async () => {
     const fs = new FakeTypeDuckFilesystem();
     const module = new FakeTypeDuckModule();
@@ -220,6 +244,31 @@ describe("initYuneRuntime browser filesystem ordering", () => {
     });
 
     expect(module.calls("yune_typeduck_process_key")).toEqual([[1, 0x20, 0]]);
+  });
+
+  it("forwards TypeDuck IME preference toggles into schema customizations", async () => {
+    const fs = new FakeTypeDuckFilesystem();
+    const module = new FakeTypeDuckModule();
+
+    await initYuneRuntime(module, fs, initOptions, assets, "luna_pinyin");
+
+    await expect(customize({
+      pageSize: 6,
+      enableCompletion: true,
+      enableCorrection: false,
+      enableSentence: true,
+      enableLearning: true,
+      isCangjie5: true,
+    })).resolves.toBe(true);
+
+    expect(module.calls("yune_typeduck_customize")).toEqual([
+      [1, "luna_pinyin", "page_size", "6"],
+      [1, "luna_pinyin", "translator/enable_completion", "true"],
+      [1, "luna_pinyin", "translator/enable_correction", "false"],
+      [1, "luna_pinyin", "translator/enable_sentence", "true"],
+      [1, "luna_pinyin", "translator/enable_user_dict", "true"],
+      [1, "luna_pinyin", "translator/encode_commit_history", "true"],
+    ]);
   });
 
   it("forwards upstream setOption calls into the Yune runtime", async () => {

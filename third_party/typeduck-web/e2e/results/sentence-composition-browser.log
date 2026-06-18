@@ -1,0 +1,461 @@
+{
+  "url": "http://127.0.0.1:5178/web/?debug&realAssets=1&sentenceCompositionClean=1781812700000",
+  "title": "TypeDuck 網頁版",
+  "startedAt": "2026-06-18T19:46:07.973Z",
+  "flow": "real assets -> type ngohaigo -> candidate 我係個 -> Space -> one committed 我係個",
+  "initialized": true,
+  "candidateState": {
+    "panelText": "ngohaigo‹›1.我係個 ☯ 2.我係個3.ngohaigo4.ngohaigoecho",
+    "textareaValue": "",
+    "toasts": [],
+    "yuneVersion": "sentence-composition"
+  },
+  "commitState": {
+    "panelText": null,
+    "textareaValue": "我係個",
+    "toasts": [],
+    "yuneVersion": "sentence-composition"
+  },
+  "screenshots": [
+    "sentence-composition-before-space.png",
+    "sentence-composition-after-space.png"
+  ],
+  "runLogs": [
+    {
+      "level": "info",
+      "message": "%cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold",
+      "timestamp": "2026-06-18T19:46:08.081Z",
+      "url": "http://127.0.0.1:5178/web/node_modules/.vite/deps/react-dom_client.js?v=2c54d3ba"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"soft_cursor\",true]}",
+      "timestamp": "2026-06-18T19:46:08.091Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "info",
+      "message": "diagnostic {\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"worker:diagnostic-ready\",\"timestamp\":\"2026-06-18T19:46:08.113Z\"}}",
+      "timestamp": "2026-06-18T19:46:08.114Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "info",
+      "message": "diagnostic {\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncFromPersistenceBeforeInit:start\",\"reason\":\"before-init\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T19:46:08.243Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":false}}}",
+      "timestamp": "2026-06-18T19:46:08.244Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "info",
+      "message": "diagnostic {\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncFromPersistenceBeforeInit:pass\",\"reason\":\"before-init\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T19:46:08.267Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}}",
+      "timestamp": "2026-06-18T19:46:08.268Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "info",
+      "message": "diagnostic {\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"runtime:init\",\"reason\":\"after-init\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T19:46:14.694Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}}",
+      "timestamp": "2026-06-18T19:46:14.697Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "info",
+      "message": "diagnostic {\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:start\",\"reason\":\"after-init\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T19:46:14.696Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}}",
+      "timestamp": "2026-06-18T19:46:14.697Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "info",
+      "message": "diagnostic {\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:pass\",\"reason\":\"after-init\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T19:46:14.699Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}}",
+      "timestamp": "2026-06-18T19:46:14.699Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"listener\",\"name\":\"initialized\",\"args\":[true]}",
+      "timestamp": "2026-06-18T19:46:14.700Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\"}",
+      "timestamp": "2026-06-18T19:46:14.700Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"ascii_mode\",false]}",
+      "timestamp": "2026-06-18T19:46:14.700Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\"}",
+      "timestamp": "2026-06-18T19:46:14.702Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"simplification\",false]}",
+      "timestamp": "2026-06-18T19:46:14.702Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\"}",
+      "timestamp": "2026-06-18T19:46:14.702Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"full_shape\",false]}",
+      "timestamp": "2026-06-18T19:46:14.702Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\"}",
+      "timestamp": "2026-06-18T19:46:14.702Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"ascii_punct\",false]}",
+      "timestamp": "2026-06-18T19:46:14.702Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\"}",
+      "timestamp": "2026-06-18T19:46:14.702Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"customize\",\"args\":[{\"pageSize\":6,\"enableCompletion\":true,\"enableCorrection\":false,\"enableSentence\":true,\"enableLearning\":true,\"isCangjie5\":true}]}",
+      "timestamp": "2026-06-18T19:46:14.702Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "info",
+      "message": "diagnostic {\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:start\",\"reason\":\"customize\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T19:46:14.707Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}}",
+      "timestamp": "2026-06-18T19:46:14.709Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "info",
+      "message": "diagnostic {\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:pass\",\"reason\":\"customize\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T19:46:14.709Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}}",
+      "timestamp": "2026-06-18T19:46:14.709Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\",\"result\":true}",
+      "timestamp": "2026-06-18T19:46:14.710Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"deploy\",\"args\":[]}",
+      "timestamp": "2026-06-18T19:46:14.710Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "info",
+      "message": "diagnostic {\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:start\",\"reason\":\"deploy\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T19:46:21.030Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}}",
+      "timestamp": "2026-06-18T19:46:21.033Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "info",
+      "message": "diagnostic {\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:pass\",\"reason\":\"deploy\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T19:46:21.034Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}}",
+      "timestamp": "2026-06-18T19:46:21.034Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\",\"result\":true}",
+      "timestamp": "2026-06-18T19:46:21.034Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"soft_cursor\",true]}",
+      "timestamp": "2026-06-18T19:46:21.035Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\"}",
+      "timestamp": "2026-06-18T19:46:21.036Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"ascii_mode\",false]}",
+      "timestamp": "2026-06-18T19:46:21.036Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\"}",
+      "timestamp": "2026-06-18T19:46:21.037Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"simplification\",false]}",
+      "timestamp": "2026-06-18T19:46:21.037Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\"}",
+      "timestamp": "2026-06-18T19:46:21.037Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"full_shape\",false]}",
+      "timestamp": "2026-06-18T19:46:21.037Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\"}",
+      "timestamp": "2026-06-18T19:46:21.037Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"ascii_punct\",false]}",
+      "timestamp": "2026-06-18T19:46:21.037Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\"}",
+      "timestamp": "2026-06-18T19:46:21.037Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"processKey\",\"args\":[\"{n}\"]}",
+      "timestamp": "2026-06-18T19:46:24.592Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":true,\"inputBuffer\":{\"before\":\"n\",\"active\":\"\",\"after\":\"\"},\"page\":0,\"isLastPage\":false,\"highlightedIndex\":0,\"candidates\":[{\"text\":\"那\",\"comment\":\"\\\\fnaa5\"},{\"text\":\"拿\",\"comment\":\"\\\\fnaa4\"},{\"text\":\"娜\",\"comment\":\"\\\\fnaa4\"},{\"text\":\"哪\",\"comment\":\"\\\\fnaa5\"},{\"text\":\"嗱\",\"comment\":\"\\\\fnaa4\"}],\"success\":true}}",
+      "timestamp": "2026-06-18T19:46:24.621Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"processKey\",\"args\":[\"{g}\"]}",
+      "timestamp": "2026-06-18T19:46:24.621Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "error",
+      "message": "Warning: validateDOMNesting(...): %s cannot appear as a child of <%s>.%s%s%s <tr> button   \n    at tr\n    at button\n    at tbody\n    at Candidate (http://127.0.0.1:5178/web/src/Candidate.tsx:25:37)\n    at table\n    at div\n    at div\n    at CaretFollower (http://127.0.0.1:5178/web/src/CaretFollower.tsx:24:84)\n    at CandidatePanel (http://127.0.0.1:5178/web/src/CandidatePanel.tsx?t=1781811161665:30:42)\n    at main\n    at App (http://127.0.0.1:5178/web/src/App.tsx?t=1781811161665:34:37)",
+      "timestamp": "2026-06-18T19:46:24.622Z",
+      "url": "http://127.0.0.1:5178/web/node_modules/.vite/deps/react-dom_client.js?v=2c54d3ba"
+    },
+    {
+      "level": "error",
+      "message": "Warning: validateDOMNesting(...): %s cannot appear as a child of <%s>.%s%s%s <button> tbody   \n    at button\n    at tbody\n    at Candidate (http://127.0.0.1:5178/web/src/Candidate.tsx:25:37)\n    at table\n    at div\n    at div\n    at CaretFollower (http://127.0.0.1:5178/web/src/CaretFollower.tsx:24:84)\n    at CandidatePanel (http://127.0.0.1:5178/web/src/CandidatePanel.tsx?t=1781811161665:30:42)\n    at main\n    at App (http://127.0.0.1:5178/web/src/App.tsx?t=1781811161665:34:37)",
+      "timestamp": "2026-06-18T19:46:24.623Z",
+      "url": "http://127.0.0.1:5178/web/node_modules/.vite/deps/react-dom_client.js?v=2c54d3ba"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":true,\"inputBuffer\":{\"before\":\"ng\",\"active\":\"\",\"after\":\"\"},\"page\":0,\"isLastPage\":false,\"highlightedIndex\":0,\"candidates\":[{\"text\":\"五\",\"comment\":\"\\\\fng5\"},{\"text\":\"午\",\"comment\":\"\\\\fng5\"},{\"text\":\"誤\",\"comment\":\"\\\\fng6\"},{\"text\":\"吳\",\"comment\":\"\\\\fng4\"},{\"text\":\"伍\",\"comment\":\"\\\\fng5\"}],\"success\":true}}",
+      "timestamp": "2026-06-18T19:46:24.641Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"processKey\",\"args\":[\"{o}\"]}",
+      "timestamp": "2026-06-18T19:46:24.641Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":true,\"inputBuffer\":{\"before\":\"ngo\",\"active\":\"\",\"after\":\"\"},\"page\":0,\"isLastPage\":false,\"highlightedIndex\":0,\"candidates\":[{\"text\":\"我\",\"comment\":\"\\\\fngo5\"},{\"text\":\"俄\",\"comment\":\"\\\\fngo4\"},{\"text\":\"餓\",\"comment\":\"\\\\fngo6\"},{\"text\":\"娥\",\"comment\":\"\\\\fngo4\"},{\"text\":\"鵝\",\"comment\":\"\\\\fngo4\"}],\"success\":true}}",
+      "timestamp": "2026-06-18T19:46:24.657Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"processKey\",\"args\":[\"{Release+o}\"]}",
+      "timestamp": "2026-06-18T19:46:24.657Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":true,\"inputBuffer\":{\"before\":\"ngo\",\"active\":\"\",\"after\":\"\"},\"page\":0,\"isLastPage\":false,\"highlightedIndex\":0,\"candidates\":[{\"text\":\"我\",\"comment\":\"\\\\fngo5\"},{\"text\":\"俄\",\"comment\":\"\\\\fngo4\"},{\"text\":\"餓\",\"comment\":\"\\\\fngo6\"},{\"text\":\"娥\",\"comment\":\"\\\\fngo4\"},{\"text\":\"鵝\",\"comment\":\"\\\\fngo4\"}],\"success\":true}}",
+      "timestamp": "2026-06-18T19:46:24.657Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"processKey\",\"args\":[\"{h}\"]}",
+      "timestamp": "2026-06-18T19:46:24.657Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":true,\"inputBuffer\":{\"before\":\"ngoh\",\"active\":\"\",\"after\":\"\"},\"page\":0,\"isLastPage\":false,\"highlightedIndex\":0,\"candidates\":[{\"text\":\"我係\",\"comment\":\"\\\\fngo5hai6\"},{\"text\":\"我喺\",\"comment\":\"\\\\fngo5hai2\"},{\"text\":\"我係咪\",\"comment\":\"\\\\fngo5hai6mai6\"},{\"text\":\"我去\",\"comment\":\"\\\\fngo5heoi3\"},{\"text\":\"我可以\",\"comment\":\"\\\\fngo5ho2ji5\"}],\"success\":true}}",
+      "timestamp": "2026-06-18T19:46:24.659Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"processKey\",\"args\":[\"{Release+h}\"]}",
+      "timestamp": "2026-06-18T19:46:24.659Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":true,\"inputBuffer\":{\"before\":\"ngoh\",\"active\":\"\",\"after\":\"\"},\"page\":0,\"isLastPage\":false,\"highlightedIndex\":0,\"candidates\":[{\"text\":\"我係\",\"comment\":\"\\\\fngo5hai6\"},{\"text\":\"我喺\",\"comment\":\"\\\\fngo5hai2\"},{\"text\":\"我係咪\",\"comment\":\"\\\\fngo5hai6mai6\"},{\"text\":\"我去\",\"comment\":\"\\\\fngo5heoi3\"},{\"text\":\"我可以\",\"comment\":\"\\\\fngo5ho2ji5\"}],\"success\":true}}",
+      "timestamp": "2026-06-18T19:46:24.659Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"processKey\",\"args\":[\"{a}\"]}",
+      "timestamp": "2026-06-18T19:46:24.670Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":true,\"inputBuffer\":{\"before\":\"ngoha\",\"active\":\"\",\"after\":\"\"},\"page\":0,\"isLastPage\":false,\"highlightedIndex\":0,\"candidates\":[{\"text\":\"我係\",\"comment\":\"\\\\fngo5hai6\"},{\"text\":\"我喺\",\"comment\":\"\\\\fngo5hai2\"},{\"text\":\"我係咪\",\"comment\":\"\\\\fngo5hai6mai6\"},{\"text\":\"鵝行鴨步\",\"comment\":\"\\\\fngo4haang4aap3bou6\"},{\"text\":\"蛾喉\",\"comment\":\"\\\\fngo4hau4\"}],\"success\":true}}",
+      "timestamp": "2026-06-18T19:46:24.677Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"processKey\",\"args\":[\"{Release+a}\"]}",
+      "timestamp": "2026-06-18T19:46:24.677Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":true,\"inputBuffer\":{\"before\":\"ngoha\",\"active\":\"\",\"after\":\"\"},\"page\":0,\"isLastPage\":false,\"highlightedIndex\":0,\"candidates\":[{\"text\":\"我係\",\"comment\":\"\\\\fngo5hai6\"},{\"text\":\"我喺\",\"comment\":\"\\\\fngo5hai2\"},{\"text\":\"我係咪\",\"comment\":\"\\\\fngo5hai6mai6\"},{\"text\":\"鵝行鴨步\",\"comment\":\"\\\\fngo4haang4aap3bou6\"},{\"text\":\"蛾喉\",\"comment\":\"\\\\fngo4hau4\"}],\"success\":true}}",
+      "timestamp": "2026-06-18T19:46:24.677Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"processKey\",\"args\":[\"{i}\"]}",
+      "timestamp": "2026-06-18T19:46:24.690Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":true,\"inputBuffer\":{\"before\":\"ngohai\",\"active\":\"\",\"after\":\"\"},\"page\":0,\"isLastPage\":true,\"highlightedIndex\":0,\"candidates\":[{\"text\":\"我係\",\"comment\":\"\\\\fngo5hai6\"},{\"text\":\"我喺\",\"comment\":\"\\\\fngo5hai2\"},{\"text\":\"我係咪\",\"comment\":\"\\\\fngo5hai6mai6\"},{\"text\":\"ngohai\",\"comment\":\"echo\"}],\"success\":true}}",
+      "timestamp": "2026-06-18T19:46:24.697Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"processKey\",\"args\":[\"{Release+i}\"]}",
+      "timestamp": "2026-06-18T19:46:24.697Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":true,\"inputBuffer\":{\"before\":\"ngohai\",\"active\":\"\",\"after\":\"\"},\"page\":0,\"isLastPage\":true,\"highlightedIndex\":0,\"candidates\":[{\"text\":\"我係\",\"comment\":\"\\\\fngo5hai6\"},{\"text\":\"我喺\",\"comment\":\"\\\\fngo5hai2\"},{\"text\":\"我係咪\",\"comment\":\"\\\\fngo5hai6mai6\"},{\"text\":\"ngohai\",\"comment\":\"echo\"}],\"success\":true}}",
+      "timestamp": "2026-06-18T19:46:24.697Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"processKey\",\"args\":[\"{g}\"]}",
+      "timestamp": "2026-06-18T19:46:24.709Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":true,\"inputBuffer\":{\"before\":\"ngohaig\",\"active\":\"\",\"after\":\"\"},\"page\":0,\"isLastPage\":true,\"highlightedIndex\":0,\"candidates\":[{\"text\":\"ngohaig\",\"comment\":\"echo\"}],\"success\":true}}",
+      "timestamp": "2026-06-18T19:46:24.717Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"processKey\",\"args\":[\"{Release+g}\"]}",
+      "timestamp": "2026-06-18T19:46:24.717Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":true,\"inputBuffer\":{\"before\":\"ngohaig\",\"active\":\"\",\"after\":\"\"},\"page\":0,\"isLastPage\":true,\"highlightedIndex\":0,\"candidates\":[{\"text\":\"ngohaig\",\"comment\":\"echo\"}],\"success\":true}}",
+      "timestamp": "2026-06-18T19:46:24.717Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"processKey\",\"args\":[\"{o}\"]}",
+      "timestamp": "2026-06-18T19:46:24.728Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":true,\"inputBuffer\":{\"before\":\"ngohaigo\",\"active\":\"\",\"after\":\"\"},\"page\":0,\"isLastPage\":true,\"highlightedIndex\":0,\"candidates\":[{\"text\":\"我係個\",\"comment\":\" ☯ \"},{\"text\":\"我係個\",\"comment\":\"\"},{\"text\":\"ngohaigo\",\"comment\":\"\"},{\"text\":\"ngohaigo\",\"comment\":\"echo\"}],\"success\":true}}",
+      "timestamp": "2026-06-18T19:46:24.736Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"processKey\",\"args\":[\"{Release+o}\"]}",
+      "timestamp": "2026-06-18T19:46:24.736Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":true,\"inputBuffer\":{\"before\":\"ngohaigo\",\"active\":\"\",\"after\":\"\"},\"page\":0,\"isLastPage\":true,\"highlightedIndex\":0,\"candidates\":[{\"text\":\"我係個\",\"comment\":\" ☯ \"},{\"text\":\"我係個\",\"comment\":\"\"},{\"text\":\"ngohaigo\",\"comment\":\"\"},{\"text\":\"ngohaigo\",\"comment\":\"echo\"}],\"success\":true}}",
+      "timestamp": "2026-06-18T19:46:24.736Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"processKey\",\"args\":[\"{space}\"]}",
+      "timestamp": "2026-06-18T19:46:25.840Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "info",
+      "message": "diagnostic {\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:start\",\"reason\":\"commit\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T19:46:25.843Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}}",
+      "timestamp": "2026-06-18T19:46:25.847Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "info",
+      "message": "diagnostic {\"type\":\"diagnostic\",\"source\":\"yune-persistence\",\"marker\":{\"phase\":\"syncToPersistenceAfterMutation:pass\",\"reason\":\"commit\",\"schemaId\":\"jyut6ping3_mobile\",\"userDataDir\":\"/rime\",\"timestamp\":\"2026-06-18T19:46:25.845Z\",\"persistedConfig\":{\"path\":\"/rime/jyut6ping3_mobile.custom.yaml\",\"exists\":true,\"pageSize\":\"'6'\",\"bytes\":396}}}",
+      "timestamp": "2026-06-18T19:46:25.848Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":false,\"success\":true,\"committed\":\"我係個\"}}",
+      "timestamp": "2026-06-18T19:46:25.848Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"processKey\",\"args\":[\"{Release+space}\"]}",
+      "timestamp": "2026-06-18T19:46:25.848Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":false,\"success\":true}}",
+      "timestamp": "2026-06-18T19:46:25.848Z",
+      "url": "http://127.0.0.1:5178/web/src/rime.ts?t=1781811161665"
+    }
+  ],
+  "notes": [
+    "Compiled bin assets are loaded when present; missing optional bins fall back to source assets instead of failing init.",
+    "Release-key events return a neutral success after commits, so Space keyup does not replay the commit."
+  ]
+}

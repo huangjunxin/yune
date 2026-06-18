@@ -485,7 +485,7 @@ index 4393a9e..f02f81a 100644
  }
  
 -const worker = new Worker("./worker.js");
-+const YUNE_TYPEDUCK_WORKER_VERSION = "hr4-persistence-diagnostics-v2";
++const YUNE_TYPEDUCK_WORKER_VERSION = "sentence-composition";
 +const debugWindow = window as typeof window & { __YUNE_RIME_VERSION__?: string };
 +debugWindow.__YUNE_RIME_VERSION__ = YUNE_TYPEDUCK_WORKER_VERSION;
 +document.documentElement.dataset.yuneRimeVersion = YUNE_TYPEDUCK_WORKER_VERSION;
@@ -771,7 +771,7 @@ index 92b9a90..a813822 100644
 -});
 +const SCHEMA_ID = "jyut6ping3_mobile";
 +const DICTIONARY_ID = "jyut6ping3";
-+const YUNE_TYPEDUCK_ASSET_VERSION = "hr3-deploy-true";
++const YUNE_TYPEDUCK_ASSET_VERSION = "sentence-composition";
 +
 +// Yune runtime initialization
 +const loadRime = (async () => {
@@ -830,6 +830,14 @@ index 92b9a90..a813822 100644
 +      "opencc/TSCharacters.ocd2",
 +      "opencc/TSPhrases.ocd2",
 +    ]);
++    extraSharedAssets.push(...await loadExtraSharedAssets([
++      "jyut6ping3.table.bin",
++      "jyut6ping3.reverse.bin",
++      "jyut6ping3_mobile.prism.bin",
++      "jyut6ping3_scolar.table.bin",
++      "jyut6ping3_scolar.reverse.bin",
++      "jyut6ping3_scolar.prism.bin",
++    ], true));
 +
 +    await initYuneRuntime(
 +      module,
@@ -870,16 +878,24 @@ index 92b9a90..a813822 100644
 +  }
 +}
 +
-+async function loadExtraSharedAssets(paths: string[]) {
-+  return Promise.all(
++async function loadExtraSharedAssets(paths: string[], optional = false) {
++  const assets = await Promise.all(
 +    paths.map(async (path) => {
 +      const source: AssetSource = { type: "url", url: `schema/${path}` };
-+      return {
-+        path,
-+        content: await loadAssetContent(source),
-+      };
++      try {
++        return {
++          path,
++          content: await loadAssetContent(source),
++        };
++      } catch (error) {
++        if (optional) {
++          return null;
++        }
++        throw error;
++      }
 +    }),
 +  );
++  return assets.filter((asset): asset is { path: string; content: string | Uint8Array } => asset !== null);
 +}
  
  addEventListener("message", async ({ data: { name, args } }: MessageEvent<Message>) => {
@@ -1233,6 +1249,7 @@ index 0000000..074d9ee
 +let currentPrepareOptions: PrepareTypeDuckFilesystemOptions | null = null;
 +let currentExtraSharedAssets: TypeDuckExtraSharedAsset[] = [];
 +let lastKeyResult: RimeResult = { isComposing: false, success: true };
++const neutralKeyResult: RimeResult = { isComposing: false, success: true };
 +
 +export interface TypeDuckExtraSharedAsset {
 +  path: string;
@@ -1395,7 +1412,7 @@ index 0000000..074d9ee
 +  const eventLike = parseKeySequence(input);
 +
 +  if (eventLike.type === "keyup") {
-+    return lastKeyResult;
++    return lastKeyResult.isComposing ? lastKeyResult : neutralKeyResult;
 +  }
 +
 +  // Delegate to Yune runtime via keyEventToRimeKey per D-04

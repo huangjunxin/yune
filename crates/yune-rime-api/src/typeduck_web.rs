@@ -194,25 +194,29 @@ pub unsafe extern "C" fn yune_typeduck_deploy(state: *mut YuneTypeDuckState) -> 
     let Some(deployer_initialize) = api.deployer_initialize else {
         return FALSE;
     };
-    let Some(start_maintenance) = api.start_maintenance else {
-        return FALSE;
-    };
-    let Some(join_maintenance_thread) = api.join_maintenance_thread else {
-        return FALSE;
-    };
-    let Some(deploy) = api.deploy else {
+    let Some(deploy_schema) = api.deploy_schema else {
         return FALSE;
     };
     let state = unsafe { &*state };
+    if !state.initialized || state.session_id == 0 {
+        return FALSE;
+    }
     let mut traits = empty_traits();
     traits.shared_data_dir = state.shared_data_dir.as_ptr();
     traits.user_data_dir = state.user_data_dir.as_ptr();
     unsafe { deployer_initialize(&traits) };
-    if start_maintenance(TRUE) != TRUE {
+    let Ok(schema_file) =
+        CString::new(format!("{}.schema.yaml", state.schema_id.to_string_lossy()))
+    else {
+        return FALSE;
+    };
+    if deploy_schema(schema_file.as_ptr()) != TRUE {
         return FALSE;
     }
-    join_maintenance_thread();
-    deploy()
+    let Some(select_schema) = api.select_schema else {
+        return FALSE;
+    };
+    unsafe { select_schema(state.session_id, state.schema_id.as_ptr()) }
 }
 
 /// # Safety

@@ -438,6 +438,62 @@ fn static_table_translator_sentence_over_completion_prioritizes_sentence() {
 }
 
 #[test]
+fn static_table_translator_sentence_uses_spelling_algebra_expanded_codes() {
+    let dictionary = TableDictionary::parse_rime_dict_yaml(
+        r#"
+---
+name: jyut6ping3_sentence
+version: "0.1"
+sort: original
+...
+
+我	ngo5	10
+係	hai6	9
+個	go3	8
+"#,
+    )
+    .expect("dictionary should parse");
+    let formulas = vec![
+        "derive/^ng(?=[aeiou])//".to_owned(),
+        "derive/^(?=[aeiou])/ng/".to_owned(),
+        "derive/^n(?!g)/l/".to_owned(),
+        "derive/^ng(?=\\d)/m/".to_owned(),
+        "derive/^(g|k)w(?=o)/$1/".to_owned(),
+        "derive/^jy?(?=[aeiou])/y/".to_owned(),
+        "derive/^jyu/ju/".to_owned(),
+        "derive/yu(?!ng|k)/y/".to_owned(),
+        "derive/(g|k)u(?!ng|k)/$1wu/".to_owned(),
+        "derive/^([zcs])/$1h/".to_owned(),
+        "derive/eoi(?=\\d)/eoy/".to_owned(),
+        "derive/eo/oe/".to_owned(),
+        "derive/oe/eo/".to_owned(),
+        "derive/aa(?=\\d)/a/".to_owned(),
+        "derive/\\d//".to_owned(),
+        "abbrev/^([a-z]).+$/$1/".to_owned(),
+        "xform/1/v/".to_owned(),
+        "xform/4/vv/".to_owned(),
+        "xform/2/x/".to_owned(),
+        "xform/5/xx/".to_owned(),
+        "xform/3/q/".to_owned(),
+        "xform/6/qq/".to_owned(),
+    ];
+    let translator = StaticTableTranslator::from_dictionary(dictionary)
+        .with_spelling_algebra(&formulas)
+        .with_sentence(true);
+    assert_eq!(translator.translate("ngo")[0].text, "我");
+    assert_eq!(translator.translate("hai")[0].text, "係");
+    assert_eq!(translator.translate("go")[0].text, "個");
+
+    let mut engine = Engine::new();
+    engine.add_translator(translator);
+    engine
+        .process_key_sequence("ngohaigo")
+        .expect("key sequence should parse");
+
+    assert_eq!(engine.context().candidates[0].text, "我係個");
+}
+
+#[test]
 fn static_table_translator_initial_quality_participates_in_candidate_order() {
     let mut engine = Engine::new();
     engine.add_translator(StaticTableTranslator::new([("ba", "低")]));

@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use crate::comment_format::CommentFormat;
 use crate::dictionary::normalize_table_code;
@@ -33,6 +33,7 @@ impl Translator for EchoTranslator {
 
 pub struct StaticTableTranslator {
     entries: Vec<(String, Candidate)>,
+    entries_by_code: BTreeMap<String, Vec<Candidate>>,
     enable_completion: bool,
     enable_charset_filter: bool,
     enable_sentence: bool,
@@ -49,7 +50,7 @@ pub struct StaticTableTranslator {
 impl StaticTableTranslator {
     #[must_use]
     pub fn new(entries: impl IntoIterator<Item = (impl Into<String>, impl Into<String>)>) -> Self {
-        let entries = entries
+        let entries: Vec<(String, Candidate)> = entries
             .into_iter()
             .map(|(code, text)| {
                 let code = code.into();
@@ -65,8 +66,10 @@ impl StaticTableTranslator {
                 )
             })
             .collect();
+        let entries_by_code = entries_by_code(&entries);
         Self {
             entries,
+            entries_by_code,
             enable_completion: false,
             enable_charset_filter: false,
             enable_sentence: false,
@@ -85,7 +88,7 @@ impl StaticTableTranslator {
     pub fn from_dictionary(dictionary: TableDictionary) -> Self {
         let corrections = dictionary.corrections().to_vec();
         let tolerance_rules = dictionary.tolerance_rules().to_vec();
-        let entries = dictionary
+        let entries: Vec<(String, Candidate)> = dictionary
             .entries
             .into_iter()
             .map(|entry| {
@@ -98,8 +101,10 @@ impl StaticTableTranslator {
                 (entry.code, candidate)
             })
             .collect();
+        let entries_by_code = entries_by_code(&entries);
         Self {
             entries,
+            entries_by_code,
             enable_completion: false,
             enable_charset_filter: false,
             enable_sentence: false,
@@ -200,6 +205,7 @@ impl StaticTableTranslator {
         let algebra = SpellingAlgebra::parse(formulas);
         if !algebra.is_empty() {
             self.entries = algebra.expand_entries(self.entries);
+            self.entries_by_code = entries_by_code(&self.entries);
         }
         self
     }
@@ -216,13 +222,6 @@ impl StaticTableTranslator {
         self.tags
             .iter()
             .any(|tag| segment_tags.iter().any(|segment_tag| segment_tag == tag))
-    }
-
-    fn matches_lookup_code(&self, entry_code: &str, lookup_code: &str) -> bool {
-        entry_code == lookup_code
-            || (self.enable_completion
-                && !lookup_code.is_empty()
-                && entry_code.starts_with(lookup_code))
     }
 
     fn expanded_lookup_codes(&self, lookup_code: &str) -> Vec<String> {
@@ -266,6 +265,53 @@ impl StaticTableTranslator {
         candidate
     }
 
+    fn candidates_for_lookup_codes(
+        &self,
+        lookup_codes: &[String],
+        filter_by_charset: bool,
+    ) -> Vec<Candidate> {
+        let mut candidates = Vec::new();
+        for lookup_code in lookup_codes {
+            if let Some(exact_candidates) = self.entries_by_code.get(lookup_code) {
+                candidates.extend(
+                    exact_candidates
+                        .iter()
+                        .filter(|candidate| {
+                            self.is_dictionary_word_allowed(candidate)
+                                && (!filter_by_charset || !contains_extended_cjk(&candidate.text))
+                        })
+                        .map(|candidate| {
+                            self.candidate_for_lookup(lookup_code, candidate, lookup_code)
+                        }),
+                );
+            }
+            if !self.enable_completion || lookup_code.is_empty() {
+                continue;
+            }
+            for (entry_code, entry_candidates) in self.entries_by_code.range(lookup_code.clone()..)
+            {
+                if !entry_code.starts_with(lookup_code) {
+                    break;
+                }
+                if entry_code == lookup_code {
+                    continue;
+                }
+                candidates.extend(
+                    entry_candidates
+                        .iter()
+                        .filter(|candidate| {
+                            self.is_dictionary_word_allowed(candidate)
+                                && (!filter_by_charset || !contains_extended_cjk(&candidate.text))
+                        })
+                        .map(|candidate| {
+                            self.candidate_for_lookup(entry_code, candidate, lookup_code)
+                        }),
+                );
+            }
+        }
+        candidates
+    }
+
     fn translated_candidates(&self, input: &str, filter_by_charset: bool) -> Vec<Candidate> {
         self.translated_candidates_for_segment(input, filter_by_charset, None)
     }
@@ -285,19 +331,8 @@ impl StaticTableTranslator {
 
         let lookup_code = self.lookup_code(input);
         let expanded_lookup_codes = self.expanded_lookup_codes(lookup_code);
-        let mut candidates = self
-            .entries
-            .iter()
-            .filter_map(|(entry_code, candidate)| {
-                let matched_lookup_code =
-                    expanded_lookup_codes.iter().find(|candidate_lookup_code| {
-                        self.matches_lookup_code(entry_code, candidate_lookup_code)
-                    })?;
-                (self.is_dictionary_word_allowed(candidate)
-                    && (!filter_by_charset || !contains_extended_cjk(&candidate.text)))
-                .then(|| self.candidate_for_lookup(entry_code, candidate, matched_lookup_code))
-            })
-            .collect::<Vec<_>>();
+        let mut candidates =
+            self.candidates_for_lookup_codes(&expanded_lookup_codes, filter_by_charset);
 
         if candidates.is_empty() && self.enable_sentence {
             if let Some(sentence) = self.sentence_candidate(input, filter_by_charset, None) {
@@ -351,15 +386,16 @@ impl StaticTableTranslator {
             let Some(path) = paths.get(pos).and_then(Clone::clone) else {
                 continue;
             };
-            let active_input = &input[pos..];
-            for (entry_code, candidate) in &self.entries {
-                if entry_code.is_empty()
-                    || !active_input.starts_with(entry_code)
-                    || !self.is_dictionary_word_allowed(candidate)
-                    || (filter_by_charset && contains_extended_cjk(&candidate.text))
-                {
+            for end in input[pos..]
+                .char_indices()
+                .skip(1)
+                .map(|(offset, _)| pos + offset)
+                .chain(std::iter::once(input.len()))
+            {
+                let entry_code = &input[pos..end];
+                let Some(candidates) = self.entries_by_code.get(entry_code) else {
                     continue;
-                }
+                };
                 let mut end_pos = pos + entry_code.len();
                 while end_pos < input.len() {
                     let Some(ch) = input[end_pos..].chars().next() else {
@@ -370,15 +406,22 @@ impl StaticTableTranslator {
                     }
                     end_pos += ch.len_utf8();
                 }
-                let mut next_path = path.clone();
-                next_path.quality += candidate.quality.exp();
-                next_path.pieces.push(candidate.text.clone());
-                let replace = match paths[end_pos].as_ref() {
-                    Some(existing) => next_path.quality > existing.quality,
-                    None => true,
-                };
-                if replace {
-                    paths[end_pos] = Some(next_path);
+                for candidate in candidates {
+                    if !self.is_dictionary_word_allowed(candidate)
+                        || (filter_by_charset && contains_extended_cjk(&candidate.text))
+                    {
+                        continue;
+                    }
+                    let mut next_path = path.clone();
+                    next_path.quality += candidate.quality.exp();
+                    next_path.pieces.push(candidate.text.clone());
+                    let replace = match paths[end_pos].as_ref() {
+                        Some(existing) => next_path.quality > existing.quality,
+                        None => true,
+                    };
+                    if replace {
+                        paths[end_pos] = Some(next_path);
+                    }
                 }
             }
         }
@@ -433,6 +476,17 @@ impl StaticTableTranslator {
         )
         .map(Self::from_dictionary)
     }
+}
+
+fn entries_by_code(entries: &[(String, Candidate)]) -> BTreeMap<String, Vec<Candidate>> {
+    let mut indexed = BTreeMap::<String, Vec<Candidate>>::new();
+    for (code, candidate) in entries {
+        indexed
+            .entry(code.clone())
+            .or_default()
+            .push(candidate.clone());
+    }
+    indexed
 }
 
 impl Translator for StaticTableTranslator {
