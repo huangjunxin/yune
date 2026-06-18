@@ -424,7 +424,8 @@ validated. HR-1 fixes the real-asset gate: TypeDuck-Web now loads
 `alternative_select_keys` sentinel, and renders real `nei` candidates (`你`,
 `呢`, `尼`) in-browser. The recommendation remains NO-GO, and
 TYPEDUCK-E2E-03/E2E-04 stay open until the full matrix is re-run against real
-assets.
+assets. This supersedes D-P10-8's "do not reopen the validation gate" stance —
+the placeholder-evidence finding justified reopening it.
 
 **D-P10-10 — Treat startup setOption as a real TypeDuck-Web contract, not an
 optional convenience.** The upstream app calls `Actions.setOption` during startup
@@ -507,5 +508,25 @@ was driven by existing docs and direct librime comparison.
 ownership, and the librime comparison target before implementation.** (Captured as a
 standing principle; see "Standing principles" and D-05.)
 
+**D-INIT-3 — Retire the GSD (get-shit-done) planning system.** The upstream GSD tool
+was abandoned/rug-pulled, so `.planning/` was removed and its durable content
+consolidated under `docs/`: `decisions.md` (this log), `requirements.md` (requirement
+tracker), `CONVENTIONS.md` (architecture/stack/conventions/testing reference), and
+`roadmap.md` (milestone map M0–M10). No code change — the engine never depended on
+`.planning/`. Rationale: the planning content is durable and worth keeping, but the
+tool itself is dead and unsafe to keep installed. Outcome: Good.
+
+**D-DOC-1 — Every doc under `docs/plans/` (and `archive/`) opens with a status banner
+whose `Milestone` field names its owning milestone/stage**, kept separate from the
+`Status` field. Rationale: a plan's scope and state are visible at a glance and
+`grep`-auditable (`grep -rn "Status:" docs/plans`); banner milestones stay consistent
+with `roadmap.md`. Finished/superseded plans move to `docs/plans/archive/`, never
+deleted. See CONVENTIONS §10.
+
+**D-DOC-2 — Browser-validation claims require committed real-browser, real-asset
+evidence.** An assertion without a committed artifact does not count as validation —
+this is why the placeholder-echo WI-4 matrix was reopened (D-P10-9) and why HR-1b
+committed the real-assets browser run rather than only describing it.
+
 ---
-*Last updated: 2026-06-17 — consolidated from the retired GSD .planning/ (PROJECT.md, STATE.md, phase summaries).*
+*Last updated: 2026-06-18 — consolidated from the retired GSD .planning/; added the M9 HR-1/HR-2 decisions (D-P10-9/10), the GSD-retirement decision (D-INIT-3), and docs-governance decisions (D-DOC-1/2).*
