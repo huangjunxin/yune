@@ -1,6 +1,6 @@
 # AI-Native Frontend Exposure Readiness Recommendation
 
-> **Status:** Superseded · **Milestone:** M9 / Phase 10 record · **Closed:** 2026-05-05 · **Type:** decision record (archived) — NO-GO superseded pending the Phase 17 real-browser GO/NO-GO.
+> **Status:** Superseded · **Milestone:** M9 / Phase 10 record · **Closed:** 2026-05-05 · **Type:** decision record (archived) — superseded by the WI-5 browser-evidence NO-GO in `docs/plans/typeduck-web-integration-findings.md`.
 
 **Generated**: 2026-05-05T16:40:00Z
 **Phase**: 10 (TypeDuck-Web App Integration And E2E)
@@ -9,7 +9,8 @@
 > **Historical scope.** This recommendation records the Phase 10 state on
 > 2026-05-05, when the Emscripten-backed TypeDuck-Web browser run could not
 > execute. Later local dev-server smoke testing proved a narrow adapter path, but
-> it does not replace the full Phase 17 browser validation gate.
+> it does not replace the full Phase 17 browser validation gate. WI-5 later
+> replaced this tooling-based NO-GO with a browser-evidence NO-GO.
 
 ---
 

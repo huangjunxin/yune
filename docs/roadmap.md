@@ -53,30 +53,60 @@ Detail: [`plans/archive/compat-foundation-summary.md`](./plans/archive/compat-fo
 
 Detail: [`plans/archive/real-frontend-validation-plan.md`](./plans/archive/real-frontend-validation-plan.md), [`plans/archive/frontend-validation/`](./plans/archive/frontend-validation/).
 
+### M9: TypeDuck-Web browser validation
+
+- Emscripten build emits loadable `yune-typeduck.js`/`.wasm` glue, and a Node
+  smoke instantiates it, calls a `yune_typeduck_*` export, and performs an
+  Emscripten `FS` write/read.
+- TypeDuck-Web adapter maps runtime `candidate.text`, `candidate.comment`, and
+  `context.highlighted` into the upstream candidate panel shape.
+- Patched TypeDuck-Web worker calls the modular Emscripten factory, mounts IDBFS,
+  fetches real `public/schema` assets before init, and runs in a real browser.
+- **Browser result:** composition, candidate rendering, selection, commit output,
+  backspace mutation, and customize pass; candidate paging, candidate deletion,
+  deploy, persistence sync/reload, and v1.1.2 dictionary-comment evidence fail.
+- **Outcome:** **NO-GO** for AI-native frontend exposure. This supersedes the old
+  tooling-blocked Phase 10 NO-GO with a behavioral result: Yune loads and types
+  in-browser, but the full frontend contract is not ready.
+
+Detail: [`plans/typeduck-web-validation-plan.md`](./plans/typeduck-web-validation-plan.md), [`plans/typeduck-web-adapter.md`](./plans/typeduck-web-adapter.md), [`plans/typeduck-web-integration-findings.md`](./plans/typeduck-web-integration-findings.md), [`plans/archive/ai-native-frontend-readiness.md`](./plans/archive/ai-native-frontend-readiness.md) (superseded tooling NO-GO).
+
 ---
 
 ## In progress
 
 > **Sequencing — web first.** The original plan stands: prove Yune in a real
 > **web browser before** expanding to Windows and other native platforms. The
-> M9 *NO-GO* was a *tooling* block, not a behavioral one — the engine has never
-> actually run in a browser, so that verdict reflects absent evidence, not a
-> failed frontend. Finishing browser validation is the current priority. Much of
+> M9 *NO-GO* was a *tooling* block, not a behavioral one. WI-4 has now produced
+> the first real browser evidence: the core TypeDuck-Web typing path works, while
+> paging/deletion/deploy/persistence/dictionary-comment parity still fail. WI-5
+> records the evidence-based result as **NO-GO** for AI-native frontend exposure
+> until those browser-observed failures are fixed. M9 is complete as a validation
+> milestone; current work is Post-M9 hardening. Much of
 > the Windows work already done is **shared engine work** (comment shaping,
 > Cantonese goldens, the cross-platform baseline fix) and stays; only the
 > Windows-*platform*-specific pieces wait their turn.
 
-### M9: TypeDuck-Web browser validation *(current focus)*
+### Post-M9 TypeDuck-Web hardening *(current focus)*
 
 Build-out is done — WASM/Emscripten export contract for the `yune_typeduck_*`
 adapter, TypeScript bridge/runtime package, browser filesystem + IDBFS
-persistence, and an app-shaped E2E seam against upstream TypeDuck-Web. **What's
-missing is the full official browser validation:** the Emscripten WASM artifact
-has not yet been built locally, so the real TypeDuck schema/E2E path has not
-been observed end to end. A limited local dev-server smoke has run through the
-adapter, but it does not replace the Phase 17 browser validation gate.
+persistence, and an app-shaped E2E seam against upstream TypeDuck-Web. The
+Emscripten build now emits loadable `yune-typeduck.js`/`.wasm` glue, and a Node
+smoke instantiates it, calls a `yune_typeduck_*` export, and performs an
+Emscripten `FS` write/read. The TypeDuck-Web adapter now maps runtime
+`candidate.text`, `candidate.comment`, and `context.highlighted` into the
+upstream candidate panel shape with a focused mapper smoke. The patched
+TypeDuck-Web worker now calls the modular Emscripten factory, mounts IDBFS,
+fetches real `public/schema` assets before init, and participates in the real
+browser run. **Browser result:** composition, candidate rendering, selection,
+commit output, backspace mutation, and customize pass; candidate paging,
+candidate deletion, deploy, persistence sync/reload, and v1.1.2
+dictionary-comment evidence fail. The WI-5 GO/NO-GO update supersedes the old
+tooling-blocked Phase 10 recommendation with a behavioral **NO-GO**:
+Yune loads and types in-browser, but the full frontend contract is not ready.
 
-**Plan:** [`plans/typeduck-web-validation-plan.md`](./plans/typeduck-web-validation-plan.md) — the M9 execution plan.
+**Closed validation plan:** [`plans/typeduck-web-validation-plan.md`](./plans/typeduck-web-validation-plan.md) — the M9 execution plan.
 Detail: [`plans/typeduck-web-adapter.md`](./plans/typeduck-web-adapter.md), [`plans/typeduck-web-integration-findings.md`](./plans/typeduck-web-integration-findings.md), [`plans/archive/ai-native-frontend-readiness.md`](./plans/archive/ai-native-frontend-readiness.md) (superseded NO-GO).
 
 ### M10: TypeDuck-Windows native backend *(started early; platform work deferred)*
@@ -111,12 +141,11 @@ The v1.1.2 oracle fixture used for items 2–3 is **genuine captured fork output
 
 Concrete, in priority order (**web first, then Windows, then other platforms**):
 
-1. **Build the WASM artifact.** Install the Emscripten SDK and run the documented build (`scripts/typeduck-wasm-build.sh`) to produce `yune-typeduck.js`/`.wasm`. This is the single tooling step that blocked M9.
-2. **Fix the TypeDuck-Web adapter mismatches** (WI-2 of the M9 plan): update the tracked adapter/patch source, then sync it into the ignored TypeDuck-Web checkout before browser E2E. The tracked `adapter.ts` currently passes the whole candidate object as `text` and reads non-existent context-level `comments`/`highlighted_candidate_index`; align it to the real runtime shape (`candidate.text`, `candidate.comment`, `context.highlighted`).
-3. **Run the TypeDuck-Web E2E in a real browser** — composition, candidate paging/selection/deletion, commit, deploy, customize, persistence — and record a *real* GO/NO-GO based on observed behavior. This is the validation the original plan called for.
-4. **Land the remaining shared engine parity** (benefits web *and* Windows): the dictionary-panel comment byte-parity is now proven non-circularly from authored source rows — extend it with the `"; "` reverse-lookup joiner and schema-name-in-prompt oracle cases (and, ideally, real `.dict.yaml` rows), and capture the remaining Cantonese goldens to activate the 5 ignored tests.
-5. **Keep tracking honest.** (Done on main: the future-dated "verified" claim was removed and the circular parity test reworked; the roll-up is set to partial.) Keep statuses evidence-based as Phase 17 proceeds.
-6. **Then Windows, then other platforms.** Once the browser path is validated: verify the native `rime.dll`/`.lib`/headers build on an MSVC host (incl. the `rime_get_api`/`config_list_append_string` smoke check and header field-order parity), then run the real TypeDuck-Windows E2E per the fork's `INTEGRATION_PLAN.md`. Other native frontends (Squirrel/macOS, ibus/fcitx Linux) follow the same engine.
+1. **Fix the browser-observed failures before production exposure** — paging/deletion behavior, deploy false, browser-visible persistence sync/reload proof, `setOption`, and v1.1.2 dictionary-comment bytes.
+2. **Keep the loadable WASM artifact, adapter mapper, and app filesystem gates green.** The documented build now produces `yune-typeduck.js`/`.wasm` and smokes `cwrap`/`FS`; preserve that gate plus the candidate/comment/highlight and app init-order smokes.
+3. **Land the remaining shared engine parity** (benefits web *and* Windows): the dictionary-panel comment byte-parity is now proven non-circularly from authored source rows — extend it with the `"; "` reverse-lookup joiner and schema-name-in-prompt oracle cases (and, ideally, real `.dict.yaml` rows), and capture the remaining Cantonese goldens to activate the 5 ignored tests.
+4. **Keep tracking honest.** (Done on main: the future-dated "verified" claim was removed and the circular parity test reworked; the roll-up is set to partial.) Keep statuses evidence-based as Phase 17 proceeds.
+5. **Then Windows, then other platforms.** Once the browser path is validated: verify the native `rime.dll`/`.lib`/headers build on an MSVC host (incl. the `rime_get_api`/`config_list_append_string` smoke check and header field-order parity), then run the real TypeDuck-Windows E2E per the fork's `INTEGRATION_PLAN.md`. Other native frontends (Squirrel/macOS, ibus/fcitx Linux) follow the same engine.
 
 ---
 

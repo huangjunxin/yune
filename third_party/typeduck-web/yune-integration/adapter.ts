@@ -16,10 +16,10 @@
 import {
   TypeDuckRuntime,
   type EmscriptenTypeDuckModule,
-  type TypeDuckResponse,
   type TypeDuckInitOptions,
   keyEventToRimeKey,
   type TypeDuckKeyboardEventLike,
+  joinTypeDuckVirtualPath,
   prepareTypeDuckFilesystem,
   syncFromPersistenceBeforeInit,
   syncToPersistenceAfterMutation,
@@ -31,27 +31,7 @@ import {
   type PrepareTypeDuckFilesystemOptions,
 } from "@yune-ime/typeduck-runtime";
 
-/**
- * Upstream RimeResult shape from src/types.ts
- */
-export interface RimeResult {
-  isComposing: boolean;
-  inputBuffer?: {
-    before: string;
-    active: string;
-    after: string;
-  };
-  page?: number;
-  isLastPage?: boolean;
-  highlightedIndex?: number;
-  candidates?: Array<{
-    label?: string;
-    text: string;
-    comment?: string;
-  }>;
-  success: boolean;
-  committed?: string;
-}
+import { translateResponse, type RimeResult } from "./response.js";
 
 /**
  * Upstream Actions interface from src/types.ts
@@ -91,6 +71,12 @@ let currentRuntime: TypeDuckRuntime | null = null;
 let currentModule: EmscriptenTypeDuckModule | null = null;
 let currentFs: TypeDuckFilesystem | null = null;
 let currentSchemaId: string | null = null;
+let lastKeyResult: RimeResult = { isComposing: false, success: true };
+
+export interface TypeDuckExtraSharedAsset {
+  path: string;
+  content: string | Uint8Array;
+}
 
 /**
  * Initialize Yune runtime with Emscripten Module and filesystem
@@ -103,6 +89,7 @@ export async function initYuneRuntime(
   options: TypeDuckInitOptions,
   assets: TypeDuckFilesystemAssets,
   dictionaryId: string,
+  extraSharedAssets: TypeDuckExtraSharedAsset[] = [],
 ): Promise<void> {
   // Cleanup previous runtime if exists (one-active-runtime constraint)
   if (currentRuntime !== null) {
@@ -113,6 +100,7 @@ export async function initYuneRuntime(
   currentModule = module;
   currentFs = fs;
   currentSchemaId = options.schemaId;
+  lastKeyResult = { isComposing: false, success: true };
 
   // Prepare filesystem with explicit assets per D-06
   const prepareOptions: PrepareTypeDuckFilesystemOptions = {
@@ -123,10 +111,13 @@ export async function initYuneRuntime(
     assets,
   };
 
-  prepareTypeDuckFilesystem(fs, prepareOptions);
-
-  // Sync from persistence before init per Phase 9 pattern
+  // Load persisted user/build state before writing fresh app-owned assets.
   await syncFromPersistenceBeforeInit(fs);
+
+  prepareTypeDuckFilesystem(fs, prepareOptions);
+  for (const asset of extraSharedAssets) {
+    writeExtraSharedAsset(fs, options.sharedDataDir, asset);
+  }
 
   // Initialize runtime
   currentRuntime = TypeDuckRuntime.init(module, options);
@@ -148,59 +139,7 @@ export function cleanupYuneRuntime(): void {
   currentModule = null;
   currentFs = null;
   currentSchemaId = null;
-}
-
-/**
- * Translate TypeDuckResponse to upstream RimeResult shape
- */
-function translateResponse(response: TypeDuckResponse): RimeResult {
-  if (!response.handled) {
-    return { isComposing: false, success: false };
-  }
-
-  // Extract commit text
-  const committed = response.commits.length > 0 ? response.commits.join("") : undefined;
-
-  // Extract composing state from context
-  if (response.context && response.context.preedit) {
-    const preedit = response.context.preedit;
-    const caretPos = response.context.caret || 0;
-
-    // Split preedit at caret position
-    const before = preedit.slice(0, caretPos);
-    const active = preedit.slice(caretPos);
-    const after = "";
-
-    // Extract candidates
-    const candidates = response.context.candidates?.map((candidate, index) => ({
-      label: response.context.select_labels?.[index],
-      text: candidate,
-      comment: response.context.comments?.[index],
-    }));
-
-    // Extract page state
-    const page = response.context.page_no || 0;
-    const isLastPage = response.context.is_last_page || false;
-    const highlightedIndex = response.context.highlighted_candidate_index || 0;
-
-    return {
-      isComposing: true,
-      inputBuffer: { before, active, after },
-      page,
-      isLastPage,
-      highlightedIndex,
-      candidates,
-      success: true,
-      committed,
-    };
-  }
-
-  // Non-composing state with commit
-  return {
-    isComposing: false,
-    success: true,
-    committed,
-  };
+  lastKeyResult = { isComposing: false, success: true };
 }
 
 /**
@@ -225,6 +164,9 @@ function parseKeySequence(input: string): TypeDuckKeyboardEventLike {
       key = inner;
     }
     // Normalize key names
+    if (key === "BackSpace") key = "Backspace";
+    if (key === "Page_Up") key = "PageUp";
+    if (key === "Page_Down") key = "PageDown";
     if (key === "Return") key = "Enter";
     if (key === "Esc") key = "Escape";
     if (key === "Prior") key = "PageUp";
@@ -250,11 +192,16 @@ export async function processKey(input: string): Promise<RimeResult> {
   // Parse upstream key sequence to event-like object
   const eventLike = parseKeySequence(input);
 
+  if (eventLike.type === "keyup") {
+    return lastKeyResult;
+  }
+
   // Delegate to Yune runtime via keyEventToRimeKey per D-04
   const response = currentRuntime.processKeyboardEvent(eventLike);
 
   // Translate to upstream RimeResult
   const result = translateResponse(response);
+  lastKeyResult = result;
 
   // Sync persistence after commit
   if (result.committed && currentFs !== null) {
@@ -385,6 +332,46 @@ export async function setOption(option: string, value: boolean): Promise<void> {
     `Yune adapter gap: setOption("${option}", ${value}) not implemented. ` +
       `Requires Yune adapter widening or mapping to customize/status API.`,
   );
+}
+
+function writeExtraSharedAsset(
+  fs: TypeDuckFilesystem,
+  sharedDataDir: string,
+  asset: TypeDuckExtraSharedAsset,
+): void {
+  if (
+    asset.path.length === 0 ||
+    asset.path.startsWith("/") ||
+    asset.path.includes("\\") ||
+    asset.path.split("/").includes("..")
+  ) {
+    throw new Error(`Invalid TypeDuck shared asset path: ${asset.path}`);
+  }
+
+  const fullPath = joinTypeDuckVirtualPath(sharedDataDir, asset.path);
+  ensureVirtualDirectory(fs, fullPath.split("/").slice(0, -1).join("/"));
+  fs.writeFile(fullPath, asset.content, { flags: "w" });
+}
+
+function ensureVirtualDirectory(fs: TypeDuckFilesystem, path: string): void {
+  if (fs.analyzePath(path).exists) {
+    return;
+  }
+  if (fs.mkdirTree !== undefined) {
+    fs.mkdirTree(path);
+    return;
+  }
+  if (fs.mkdir === undefined) {
+    throw new Error(`TypeDuck filesystem cannot create directory: ${path}`);
+  }
+  const segments = path.split("/").filter((segment) => segment.length > 0);
+  let current = path.startsWith("/") ? "/" : "";
+  for (const segment of segments) {
+    current = current === "/" || current === "" ? `${current}${segment}` : `${current}/${segment}`;
+    if (!fs.analyzePath(current).exists) {
+      fs.mkdir(current);
+    }
+  }
 }
 
 /**

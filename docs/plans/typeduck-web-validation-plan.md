@@ -1,6 +1,6 @@
 # Yune → TypeDuck-Web: Browser Validation Plan (M9)
 
-> **Status:** Active · **Milestone:** M9 (TypeDuck-Web browser validation) · **Created:** 2026-06-17 · **Type:** execution plan
+> **Status:** Complete · **Milestone:** M9 (TypeDuck-Web browser validation) · **Created:** 2026-06-17 · **Closed:** 2026-06-18 · **Type:** execution plan
 
 > **Audience.** An autonomous coding agent (e.g. GPT) executing in the `yune` repo.
 > Each work item is independently committable, names exact files, and ends with
@@ -10,6 +10,10 @@
 > seam and turn the Phase-10 *NO-GO* into an **evidence-based GO/NO-GO**. The web
 > build-out already exists; the engine has never been *observed* working in a
 > browser because the WASM artifact was never built locally.
+>
+> **Result.** Complete with **NO-GO** for AI-native frontend exposure: Yune loads
+> and types through TypeDuck-Web in a real browser, but paging/deletion, deploy,
+> persistence sync/reload, and v1.1.2 dictionary-comment evidence fail.
 >
 > **Line anchors** are accurate as of 2026-06-17 but *will drift* — re-`grep` the
 > named symbol/file before editing. Trust names over line numbers.
@@ -31,7 +35,7 @@ Verified present on `main`:
 | TypeScript runtime | `packages/yune-typeduck-runtime/src/` (`response.ts`, `keys.ts`) | Parses per-candidate `comment`; `TypeDuckContext` exposes `highlighted` + `candidates`; key/mask mapping (incl. the recent `BackSpace` alias). |
 | WASM build script | `scripts/typeduck-wasm-build.sh` | Emscripten / `wasm32-unknown-emscripten`; export list in `scripts/typeduck-exports.txt`. |
 | Upstream app seam | tracked source: `third_party/typeduck-web/yune-integration/adapter.ts`; patch: `third_party/typeduck-web/patches/yune-typeduck-runtime.patch`; ignored checkout: `third_party/typeduck-web/source/src/yune-integration/adapter.ts` | Wires TypeDuck-Web's input engine to the Yune bridge. The tracked source/patch are the versions to fix in WI-2; the ignored checkout may be hot-patched locally but will not land in git. |
-| Findings + blockers | [`typeduck-web-integration-findings.md`](./typeduck-web-integration-findings.md) | 10 E2E flows recorded as **BLOCKED** (WASM artifact never built). |
+| Findings + blockers | [`typeduck-web-integration-findings.md`](./typeduck-web-integration-findings.md) | WI-4 browser run recorded PASS/FAIL evidence; core composition/selection pass, but paging/deletion/deploy/persistence/dictionary-comment parity fail. |
 | Superseded recommendation | [`archive/ai-native-frontend-readiness.md`](./archive/ai-native-frontend-readiness.md) | The tooling-blocked NO-GO this plan replaces. |
 
 The single thing that blocked Phase 10 was **no Emscripten toolchain** → no WASM
@@ -53,7 +57,7 @@ artifact → browser validation could not run. WI-1 removes that block.
 ### Cross-cutting rules
 - **Ownership (QUAL-01/02):** new behavior gets an owning module + owning test; keep facades thin.
 - **Quality gate:** `cargo fmt`, `cargo clippy --workspace --all-targets -- -D warnings`, focused tests, then `cargo test --workspace` if shared Rust changed; for TS, the package's typecheck + unit tests.
-- **One commit per work item.** Update this plan's checklist + `.planning` Phase 17 status as each lands.
+- **One commit per work item.** Update this plan's checklist plus `docs/roadmap.md` / `docs/requirements.md` as each lands.
 - **Native fallback stays green:** `crates/yune-rime-api/tests/typeduck_web.rs` is the deterministic fallback when a browser isn't available — keep it passing throughout.
 
 ---
@@ -69,13 +73,14 @@ artifact → browser validation could not run. WI-1 removes that block.
    ```
 2. Run the documented build:
    ```sh
-   ./scripts/typeduck-wasm-build.sh        # -> target/wasm32-unknown-emscripten/debug/.../yune_rime_api.wasm
+   ./scripts/typeduck-wasm-build.sh        # -> target/wasm32-unknown-emscripten/debug/yune-typeduck.{js,wasm}
    ```
 3. Verify **every** symbol in `scripts/typeduck-exports.txt` is present in the build's `EXPORTED_FUNCTIONS` (the script should fail loudly if not).
-4. If the toolchain genuinely cannot be installed in this environment, record a *reproducible* blocker (same discipline as the findings doc) and stop — but note this is an environment fix, not a design gap.
+4. Verify the emitted Emscripten module instantiates and exposes `cwrap`, `UTF8ToString`, `FS`, and `IDBFS`; call one `yune_typeduck_*` export and perform one `FS` write/read.
+5. If the toolchain genuinely cannot be installed in this environment, record a *reproducible* blocker (same discipline as the findings doc) and stop — but note this is an environment fix, not a design gap.
 
 ### Acceptance
-- `yune_rime_api.wasm` is produced under `target/wasm32-unknown-emscripten/debug/`; all `typeduck-exports.txt` symbols exported. If the browser host needs a different filename/location, handle that as a WI-3 packaging step rather than as a Rust build blocker.
+- `yune-typeduck.js` + `yune-typeduck.wasm` are produced under `target/wasm32-unknown-emscripten/debug/`; all `typeduck-exports.txt` symbols are exported and the module smoke proves one `yune_typeduck_*` call plus one `FS` operation.
 - `cargo test -p yune-rime-api --test typeduck_web` still green (native fallback intact).
 
 ---
@@ -186,14 +191,14 @@ frontends share. Drive from the v1.1.2 oracle:
 - **17-03** = WI-6 (shared engine parity)
 
 ## Known risks / blockers
-- **Emscripten availability** — the original Phase-10 blocker; WI-1 must install `emsdk`.
+- **Emscripten availability** — cleared locally by WI-1/WI-1b; keep the reproducible build green.
 - **Headless browser availability** for automated E2E (else documented manual smoke).
 - **Upstream TypeDuck-Web build** — the app must build and serve with the Yune bridge wired in.
 
 ## Summary checklist
-- [ ] **WI-1** — Emscripten + WASM artifact built; exports verified; native fallback green
-- [ ] **WI-2** — `adapter.ts` text/comment/highlight shapes fixed + unit-tested
-- [ ] **WI-3** — browser FS layout, asset preload, and IDBFS sync working
-- [ ] **WI-4** — 10 E2E flows run in a real browser with captured PASS/FAIL evidence
-- [ ] **WI-5** — evidence-based GO/NO-GO recorded; tracking docs updated
-- [ ] **WI-6** — shared engine parity (`"; "` joiner + schema-prompt; Cantonese goldens)
+- [x] **WI-1** — Emscripten + loadable WASM/JS artifact built; exports verified; native fallback green
+- [x] **WI-2** — `adapter.ts` text/comment/highlight shapes fixed + unit-tested
+- [x] **WI-3** — browser FS layout, asset preload, and IDBFS sync wired into the patched app seam
+- [x] **WI-4** — 10 E2E flows run in a real browser with captured PASS/FAIL evidence
+- [x] **WI-5** — evidence-based GO/NO-GO recorded; tracking docs updated
+- [ ] **WI-6** — optional shared engine parity follow-up (`"; "` joiner + schema-prompt; Cantonese goldens)

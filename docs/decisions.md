@@ -294,7 +294,12 @@ against the export list, accepting macOS leading underscores) before browser
 prerequisite detection; missing `wasm32-unknown-emscripten`/`emcc`/`emar` are
 deterministic, actionable blockers only when `cargo test -p yune-rime-api --test
 typeduck_web` passes. Native adapter contract tests in
-`crates/yune-rime-api/tests/typeduck_web.rs` are the authoritative fallback.
+`crates/yune-rime-api/tests/typeduck_web.rs` are the authoritative fallback. The
+browser artifact must be a loadable Emscripten main module (`yune-typeduck.js` +
+`.wasm`) rather than a bare side-module wasm; the build exports the
+`yune_typeduck_*` list plus `ccall`, `cwrap`, `UTF8ToString`, `FS`, and `IDBFS`,
+then smokes the module by calling one export and performing one filesystem
+write/read.
 
 **D-P7-5 — Document the one-active-process-global-service constraint and host
 filesystem assumptions.** `yune_typeduck_cleanup` finalizes the process-global RIME
@@ -364,26 +369,51 @@ Phase 8/9 package surface.** Prefer a patch/configuration layer over UI rewrites
 seam calls `TypeDuckRuntime`, `keyEventToRimeKey`, filesystem preparation, and
 persistence sync helpers from `@yune-ime/typeduck-runtime` rather than raw
 `yune_typeduck_*` exports. Preserve one active runtime per Emscripten Module with
-deterministic cleanup; do not promise multi-instance browser isolation.
+deterministic cleanup; do not promise multi-instance browser isolation. The
+adapter's upstream `RimeResult` mapper must consume the runtime's actual shape:
+per-candidate `text`/`comment` plus `context.highlighted`.
 
 **D-P10-3 — Use explicit TypeDuck-Web-owned assets; never fabricate fallback
 schema/dictionary data.** Missing or mismatched `default.yaml`/schema/dictionary YAML
 remain visible integration failures (grep-gated against fallback/dummy/placeholder
-wording).
+wording). The app seam loads TypeDuck-Web `public/schema` assets by URL, rejects
+empty or missing content before init, and may preload extra shared support files
+such as OpenCC data without synthesizing substitutes.
 
-**D-P10-4 — Record adapter mismatches before widening Yune.** Map missing
-`TypeDuckContext` properties to defaults (comments, `highlighted_candidate_index`);
-document the `setOption` gap as an error rather than implementing a workaround; widen
-the Yune adapter only for the smallest proven blocker, documented first.
+**D-P10-4 — Record adapter mismatches before widening Yune.** The web mapper now
+uses the runtime-owned response shape (`candidate.text`, `candidate.comment`,
+`context.highlighted`) instead of compatibility guesses. Keep documenting the
+`setOption` gap as an error rather than implementing a workaround; widen the Yune
+adapter only for the smallest proven blocker, documented first.
 
 **D-P10-5 — Real browser validation is required and never silently skipped.** Use a
 standalone Playwright spec (upstream has no browser test framework) covering
 composition, candidate paging, selection, deletion, commit output, deploy, customize,
 and persistence smoke; persistence follows the Phase 9 explicit sync contract
 (populate before init, flush after mutation, reload/reinitialize to prove survival).
-Missing browser/local tooling is recorded reproducibly (command, missing dependency,
-fallback evidence). Asset configuration was recorded as an E2E blocker, not a build
-blocker.
+The patched app seam mounts IDBFS before init and leaves explicit before/after
+sync markers for the E2E evidence. Missing browser/local tooling is recorded
+reproducibly (command, missing dependency, fallback evidence). Asset configuration
+was recorded as an E2E blocker, not a build blocker.
+
+**D-P10-6 — WI-4 browser evidence replaces the old tooling blocker with concrete
+behavioral failures.** The TypeDuck-Web app now loads the Yune Emscripten
+JS/WASM module in a real browser. Composition, candidate rendering, selection,
+commit output, backspace mutation, and customize pass. Candidate paging,
+candidate deletion, deploy, persistence sync/reload proof, and v1.1.2
+dictionary-comment rendering fail and must be tracked as behavior/runtime gaps,
+not as missing-tooling blockers.
+
+**D-P10-7 — M9 remains NO-GO for AI-native frontend exposure after WI-5.** The
+recommendation is now evidence-based rather than tooling-based: Yune can load
+and type through TypeDuck-Web, but real frontends must not be treated as ready
+until paging/deletion, deploy, persistence/reload proof, `setOption`, and
+v1.1.2 dictionary-comment bytes pass in-browser.
+
+**D-P10-8 — Close M9 as a validation milestone, not a pass.** M9 is complete
+because the browser E2E ran and produced a durable GO/NO-GO recommendation. The
+follow-up milestone is Post-M9 TypeDuck-Web hardening; it starts from the WI-4
+failure matrix rather than reopening the validation gate itself.
 
 **D-12 / TYPEDUCK-E2E-04 — Final findings separate three blocker classes.**
 TypeDuck-Web app/source blockers, Yune adapter/runtime mismatches, and

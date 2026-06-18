@@ -54,8 +54,8 @@ emits the TypeDuck dictionary-panel payload through `dictionary_lookup_filter`: 
 `jyut6ping3_mobile` source rows now assert byte output against the v1.1.2 fixture. Normal reverse
 lookup joins currently use `"; "`, but that joiner still needs a dedicated v1.1.2 oracle case.
 Schema-name-in-prompt parity is also still blocked on a captured oracle case. The older TypeDuck-Web
-adapter mismatch around context-level `comments` and `highlighted_candidate_index` is web-only and
-does not change the Windows C ABI contract.
+adapter mismatch around context-level `comments` and `highlighted_candidate_index` was web-only, is
+resolved in the TypeDuck-Web adapter, and does not change the Windows C ABI contract.
 
 ### 3. Cantonese / Jyutping engine behaviors carried by the librime fork
 These are the genuinely fork-only behaviors (everything else has converged with upstream librime):

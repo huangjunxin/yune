@@ -24,7 +24,7 @@ agents. Results that shaped the ordering below:
 | Claim | Verdict | Consequence for the plan |
 |---|---|---|
 | `RimeCandidate.comment` transport already exists in the C ABI | **Confirmed present** (`abi.rs:54`, populated `context_api.rs:167-187` & `candidate_api.rs:104-127`, E2E-tested `frontend_client.rs:3260-3267`) | Item #2 is **not** missing plumbing. Do **not** rebuild transport. |
-| TS runtime parses `candidate.comment`; `TypeDuckContext` lacks context-level `comments`/`highlighted_candidate_index` | **Confirmed** | Web-only adapter key-name mismatch; **deferred** (see Appendix A). |
+| TS runtime parses `candidate.comment`; `TypeDuckContext` lacks context-level `comments`/`highlighted_candidate_index` | **Confirmed; web adapter resolved in M9** | Web-only adapter key-name mismatch; no Windows C ABI work required. |
 | `config_list_append_string` (+ siblings) absent from RimeApi table | **Confirmed absent** (`abi.rs:324-336`, `api_table.rs:124-134`, `config_api.rs`) | Cleanest first feature slice → **Item 2**. |
 | Real item-#2 gap is fork comment **semantics** (`"; "` join, reverse-code+comment, schema-in-prompt) | **Confirmed** (`filter/mod.rs:541` & `translator/mod.rs:~585` join with `" "`; no schema-in-prompt anywhere) | Needs a v1.1.2 **oracle** before coding → **Items 3 + 4**. |
 | Windows test fragility around timestamps/line-endings | **Timestamps: confirmed & baseline-breaking. Line-endings: not substantiated.** | **Item 1 is a hard blocker — fix first.** |
@@ -443,24 +443,18 @@ the `librime → Yune` swap behind the RIME C ABI is a contained change.
 
 ---
 
-## Appendix A — Web-path adapter mismatches  *(DEFERRED — web only, not the Windows contract)*
+## Appendix A — Web-path adapter mismatches  *(RESOLVED IN M9 — web only, not the Windows contract)*
 
 The Windows frontend is C++ (weasel) talking to the RIME C ABI directly; it does
 **not** use the TypeScript bridge. These are recorded so they aren't re-discovered,
-but they are **out of scope** for the Windows contract and lower priority (the web
-path closed NO-GO on tooling, not design):
+but they are **out of scope** for the Windows contract. They were resolved in the
+TypeDuck-Web adapter during M9 by mapping the runtime-owned response shape:
 
-- `third_party/typeduck-web/yune-integration/adapter.ts:177` sets `text: candidate`
-  (the whole `{text, comment}` object) instead of `candidate.text`.
-- `adapter.ts:178` reads `response.context.comments?.[index]` — a context-level
-  array that is never emitted; the per-candidate `candidate.comment` *is* available.
-- `adapter.ts:184` reads `response.context.highlighted_candidate_index` — but the
-  runtime emits the highlight under the key **`highlighted`**
-  (`packages/yune-typeduck-runtime/src/response.ts:12,112`; `typeduck_web.rs:421`),
-  so it degrades to `0`.
+- candidate text comes from `candidate.text`
+- candidate comments come from per-candidate `candidate.comment`
+- highlight comes from `context.highlighted`
 
-Fix later by aligning the adapter to the existing runtime shape (cheap; no engine
-change), once/if the web path is revived.
+No engine or Windows C ABI change was required.
 
 ---
 

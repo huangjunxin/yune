@@ -134,7 +134,12 @@ export async function syncTypeDuckFilesystem(
 }
 
 export async function syncFromPersistenceBeforeInit(fs: TypeDuckFilesystem): Promise<void> {
+  const marker = "syncFromPersistenceBeforeInit";
+  performance?.mark?.(`${marker}:start`);
   await syncTypeDuckFilesystem(fs, "fromPersistence");
+  performance?.mark?.(`${marker}:end`);
+  performance?.measure?.(marker, `${marker}:start`, `${marker}:end`);
+  console.info(`${marker}: PASS`);
 }
 
 export async function syncToPersistenceAfterMutation(fs: TypeDuckFilesystem): Promise<void> {

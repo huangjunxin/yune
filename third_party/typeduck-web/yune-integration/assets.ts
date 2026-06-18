@@ -35,7 +35,7 @@ export interface ExplicitTypeDuckAssets {
  *
  * @throws Error if asset is absent or loading fails
  */
-async function loadAssetContent(source: AssetSource): Promise<string | Uint8Array> {
+export async function loadAssetContent(source: AssetSource): Promise<string | Uint8Array> {
   switch (source.type) {
     case "content":
       return source.content;
@@ -48,13 +48,13 @@ async function loadAssetContent(source: AssetSource): Promise<string | Uint8Arra
           `Provide asset content explicitly or implement loader in patched worker.`,
       );
 
-    case "url":
-      // Note: URL fetch requires browser environment
-      // Implementation deferred to patch/application stage
-      throw new Error(
-        `Asset URL fetch not implemented: ${source.url}. ` +
-          `Provide asset content explicitly or implement fetch in patched worker.`,
-      );
+    case "url": {
+      const response = await fetch(source.url);
+      if (!response.ok) {
+        throw new Error(`Asset URL loading failed: ${source.url} (${response.status})`);
+      }
+      return response.text();
+    }
 
     default:
       throw new Error(`Invalid asset source type: ${source}`);
@@ -92,6 +92,10 @@ export function validateNoFallbackAssets(content: string | Uint8Array, assetName
   if (typeof content !== "string") {
     // Binary content, skip string validation
     return;
+  }
+
+  if (content.trim().length === 0) {
+    throw new Error(`TypeDuck-Web asset ${assetName} is empty. Provide explicit app-owned YAML per D-06.`);
   }
 
   const forbiddenPatterns = [
