@@ -1,31 +1,35 @@
-TypeDuck-Web real-browser WI-4 run
+TypeDuck-Web real-assets browser smoke (HR-1b)
 Date: 2026-06-18
-URL: http://127.0.0.1:5173/web/?debug
+URL: http://127.0.0.1:5173/web/?debug&realAssets=1
 Browser: Codex in-app browser using TypeDuck-Web dev server on 127.0.0.1:5173
-Artifacts: yune-typeduck.js + yune-typeduck.wasm copied to source/public; worker bundled with esbuild
+Schema/assets: real TypeDuck v1.1.2 jyut6ping3_mobile schema + jyut6ping3 dictionary preloaded into browser FS
 
-Flow results:
-PASS composition: console shows processKey {b}/{a} returning isComposing=true, inputBuffer.before=b/ba, candidate text/comment b echo then ba echo.
-PASS candidate list: DOM snapshot shows candidate panel row "1. ba echo" and disabled page buttons.
-FAIL candidate paging: Page_Down is accepted after adapter normalization, but response stays page=0, isLastPage=true, one ba echo candidate, and both page buttons are disabled.
-PASS candidate selection: pressing 1 sends processKey {1}; final state after selection has textarea value "ba" and no candidate rows.
-FAIL candidate deletion: Delete sends processKey {Delete}; response remains composing ba with same ba echo candidate, so no delete mutation was observed.
-PASS backspace mutation: earlier same-session console shows BackSpace path after composing ba; engine response shortened the composition to b.
-PASS commit output: final state textareaValue is "ba" after candidate selection.
-FAIL deploy: init/settings path sends deploy and receives success result=false.
-PASS customize: init/settings path sends customize(pageSize=6...) and receives success result=true.
-FAIL persistence sync: no syncFromPersistenceBeforeInit/syncToPersistenceAfterMutation markers are visible in browser console evidence, and deploy returns false.
-FAIL persistence reload: reinitialization/persistence survival is not proven; attempted browser reload did not produce fresh init evidence in the wrapper and deploy/sync evidence failed.
-FAIL dictionary-panel comment rendering: UI renders the adapter candidate.comment string (echo), but no v1.1.2 oracle dictionary comment bytes appear in the browser flow.
+Result: PASS real-assets candidate rendering gate.
 
-Final DOM state after selection:
-{
-  "bodyText": "",
-  "buttons": [],
-  "candidateRows": [],
-  "href": "about:blank",
-  "textareaValue": null,
-  "title": ""
-}
+Evidence:
+- Fresh reload at 2026-06-18T15:12:45.945Z; listener emitted initialized=true.
+- Focused the app textarea and sent real keypresses: {n}, {e}, {i}.
+- Worker console received processKey success for inputBuffer.before="nei".
+- DOM candidate panel rendered real Chinese candidates, not echo placeholders.
+- Screenshot captured after the candidate panel became visible: screenshot-real-assets-nei.png.
 
-Important console excerpts are in browser-console.json; the candidate-panel DOM snapshot is in dom-snapshot-candidates.txt.
+First visible candidates for "nei":
+- 1.你\fnei5
+- 1.你\fnei5
+- 2.呢\fnei1
+- 2.呢\fnei1
+- 3.尼\fnei4
+- 3.尼\fnei4
+- 4.你哋\fnei5dei6
+- 4.你哋\fnei5dei6
+- 5.你們\fnei5mun4
+- 5.你們\fnei5mun4
+
+Candidate panel excerpt:
+nei‹›1.你\fnei52.呢\fnei13.尼\fnei44.你哋\fnei5dei65.你們\fnei5mun46.妮\fnei47.彌\fnei48.呢樣\fnei1joeng69.你係\fnei5hai60.妳\fnei51.你都\fnei5dou12.您\fnei53.你呢\fnei5ne14.你有\fnei5jau55.你個\fnei5go36.你講\fnei5gong27.膩\fnei68.你睇\fnei5tai29.你要\fnei5jiu30.你話\fnei5waa61.你又\fnei5jau62.彌補\fnei4bou23.你自己\fnei5zi6gei24.你想\fnei5soeng25.你班\fnei5baan16.你好\fnei5hou27.你會\fnei5wui58.你可以\fnei5ho2ji59.你做\fnei5zou60.你覺得\fnei5gok3dak11.你知\fnei5zi12.你咪\fnei5mai63.你係咪\fnei5hai6mai64.你去\fnei5heoi35.你估\fnei5gu26.尼泊爾\fnei4pok3ji57.你仲\fnei5zung68.你嘅\fnei5ge39.你真係\fnei5zan1hai60.你的\fnei5dik11.尼日利亞\fnei4jat6lei6aa32.你用\fnei5jung63.你唔係\fnei5m4hai64.你唔好\fnei5m4hou25.你啦\fnei5laa16.你買\fnei5maai57.你不\fnei5bat18.呢篇\fnei1pin19.你冇\fnei5mou50.你啲\fnei5di1
+
+Still open after this smoke:
+- setOption still shows option error toasts and is handled by HR-2.
+- deploy=true, live persistence, paging/deletion, and dictionary-panel oracle comment bytes remain HR-3 through HR-5.
+
+Supersedes the prior WI-4 echo-backed browser-run.log. That old run is no longer evidence for the real-assets gate.

@@ -1,93 +1,130 @@
-- banner:
-  - link "TypeDuck Logo":
-    - /url: /
-    - img "TypeDuck Logo"
-  - heading "TypeDuck 網頁版" [level=1]
-  - checkbox "Theme Switcher"
-  - generic: Theme Switcher
-- main:
-  - text: 中文／英文字母 Chinese / Alphabet
-  - button "中"
-  - text: 繁體字／簡體字 Traditional / Simplified
-  - button "繁"
-  - text: 半形／全形字母及符號 Halfwidth / Fullwidth Letters & Symbols
-  - button "半"
-  - text: 半形／全形標點符號 Halfwidth / Fullwidth Punctuations
-  - button "。"
+TypeDuck-Web HR-1b real-assets DOM snapshot
+Date: 2026-06-18
+URL: http://127.0.0.1:5173/web/?debug&realAssets=1
+Input: nei
+Screenshot: screenshot-real-assets-nei.png
+
+Candidate panel excerpt:
+nei‹›1.你\fnei52.呢\fnei13.尼\fnei44.你哋\fnei5dei65.你們\fnei5mun46.妮\fnei47.彌\fnei48.呢樣\fnei1joeng69.你係\fnei5hai60.妳\fnei51.你都\fnei5dou12.您\fnei53.你呢\fnei5ne14.你有\fnei5jau55.你個\fnei5go36.你講\fnei5gong27.膩\fnei68.你睇\fnei5tai29.你要\fnei5jiu30.你話\fnei5waa61.你又\fnei5jau62.彌補\fnei4bou23.你自己\fnei5zi6gei24.你想\fnei5soeng25.你班\fnei5baan16.你好\fnei5hou27.你會\fnei5wui58.你可以\fnei5ho2ji59.你做\fnei5zou60.你覺得\fnei5gok3dak11.你知\fnei5zi12.你咪\fnei5mai63.你係咪\fnei5hai6mai64.你去\fnei5heoi35.你估\fnei5gu26.尼泊爾\fnei4pok3ji57.你仲\fnei5zung68.你嘅\fnei5ge39.你真係\fnei5zan1hai60.你的\fnei5dik11.尼日利亞\fnei4jat6lei6aa32.你用\fnei5jung63.你唔係\fnei5m4hai64.你唔好\fnei5m4hou25.你啦\fnei5laa16.你買\fnei5maai57.你不\fnei5bat18.呢篇\fnei1pin19.你冇\fnei5mou50.你啲\fnei5di1
+
+DOM snapshot excerpt containing candidate panel:
   - textbox [active]
-  - generic: ba
   - button "‹" [disabled]:
     - generic: ‹
-  - button "›" [disabled]:
+  - button "›":
     - generic: ›
-  - table:
-    - rowgroup:
-      - button "1. ba echo":
-        - row "1. ba echo":
-          - cell "1."
-          - cell "ba"
-          - cell "echo"
-  - heading "輸入法設定 IME Settings" [level=3]
-  - list:
-    - group "顯示語言 Display Languages":
-      - generic: 顯示語言 Display Languages
-      - radio [checked]
-      - generic: 英語 English
-      - checkbox "英語 English" [checked]
-      - radio
-      - generic: 印地語 Hindi
-      - checkbox "印地語 Hindi"
-      - radio
-      - generic: 印尼語 Indonesian
-      - checkbox "印尼語 Indonesian"
-      - radio
-      - generic: 尼泊爾語 Nepali
-      - checkbox "尼泊爾語 Nepali"
-      - radio
-      - generic: 烏爾都語 Urdu
-      - checkbox "烏爾都語 Urdu"
-      - generic: ⬑ 主要語言 Main Language
-    - generic: 每頁候選詞數量 No. of Candidates Per Page
-    - slider: "6"
-    - generic: "| 4"
-    - generic: "| 5"
-    - generic: "| 6"
-    - generic: "| 7"
-    - generic: "| 8"
-    - generic: "| 9"
-    - generic: "| 10"
-    - generic: 中文字體 Chinese Typeface
-    - radio "宋體 Sung" [checked]
-    - text: 宋體 Sung
-    - radio "黑體 Hei"
-    - text: 黑體 Hei
-    - group "候選詞粵拼 Candidates Jyutping":
-      - generic: 候選詞粵拼 Candidates Jyutping
-      - radio "顯示 Always Show" [checked]
-      - generic: 顯示 Always Show
-      - radio "僅反查 Only in Reverse Lookup"
-      - generic: 僅反查 Only in Reverse Lookup
-      - radio "隱藏 Hide"
-      - generic: 隱藏 Hide
-    - generic: 自動完成 Auto-completion
-    - checkbox "自動完成 Auto-completion" [checked]
-    - generic: 自動校正 Auto-correction
-    - checkbox "自動校正 Auto-correction"
-    - generic: 自動組詞 Auto-composition
-    - checkbox "自動組詞 Auto-composition" [checked]
-    - generic: 輸入記憶 Input Memory
-    - checkbox "輸入記憶 Input Memory" [checked]
-  - heading "反查設定 Reverse Lookup Settings" [level=3]
-  - list:
-    - generic: 顯示完整輸入碼 Show Full Input Code
-    - checkbox "顯示完整輸入碼 Show Full Input Code" [checked]
-    - generic: 倉頡版本 Cangjie Version
-    - radio "三代 Version 3"
-    - text: 三代 Version 3
-    - radio "五代 Version 5" [checked]
-    - text: 五代 Version 5
-- contentinfo:
-  - complementary:
-    - text: © Copyright 2024 TypeDuck Team. All rights reserved.
-    - link "Source Code":
-      - /url: https://github.com/TypeDuck-HK/TypeDuck-Web
+      - button "1. 你 \\fnei5":
+        - row "1. 你 \\fnei5":
+          - cell "你"
+      - button "2. 呢 \\fnei1":
+        - row "2. 呢 \\fnei1":
+          - cell "呢"
+      - button "3. 尼 \\fnei4":
+        - row "3. 尼 \\fnei4":
+          - cell "尼"
+      - button "4. 你哋 \\fnei5dei6":
+        - row "4. 你哋 \\fnei5dei6":
+          - cell "你哋"
+      - button "5. 你們 \\fnei5mun4":
+        - row "5. 你們 \\fnei5mun4":
+          - cell "你們"
+      - button "8. 呢樣 \\fnei1joeng6":
+        - row "8. 呢樣 \\fnei1joeng6":
+          - cell "呢樣"
+      - button "9. 你係 \\fnei5hai6":
+        - row "9. 你係 \\fnei5hai6":
+          - cell "你係"
+      - button "1. 你都 \\fnei5dou1":
+        - row "1. 你都 \\fnei5dou1":
+          - cell "你都"
+      - button "3. 你呢 \\fnei5ne1":
+        - row "3. 你呢 \\fnei5ne1":
+          - cell "你呢"
+      - button "4. 你有 \\fnei5jau5":
+        - row "4. 你有 \\fnei5jau5":
+          - cell "你有"
+      - button "5. 你個 \\fnei5go3":
+        - row "5. 你個 \\fnei5go3":
+          - cell "你個"
+      - button "6. 你講 \\fnei5gong2":
+        - row "6. 你講 \\fnei5gong2":
+          - cell "你講"
+      - button "8. 你睇 \\fnei5tai2":
+        - row "8. 你睇 \\fnei5tai2":
+          - cell "你睇"
+      - button "9. 你要 \\fnei5jiu3":
+        - row "9. 你要 \\fnei5jiu3":
+          - cell "你要"
+      - button "0. 你話 \\fnei5waa6":
+        - row "0. 你話 \\fnei5waa6":
+          - cell "你話"
+      - button "1. 你又 \\fnei5jau6":
+        - row "1. 你又 \\fnei5jau6":
+          - cell "你又"
+      - button "3. 你自己 \\fnei5zi6gei2":
+        - row "3. 你自己 \\fnei5zi6gei2":
+          - cell "你自己"
+      - button "4. 你想 \\fnei5soeng2":
+        - row "4. 你想 \\fnei5soeng2":
+          - cell "你想"
+      - button "5. 你班 \\fnei5baan1":
+        - row "5. 你班 \\fnei5baan1":
+          - cell "你班"
+      - button "6. 你好 \\fnei5hou2":
+        - row "6. 你好 \\fnei5hou2":
+          - cell "你好"
+      - button "7. 你會 \\fnei5wui5":
+        - row "7. 你會 \\fnei5wui5":
+          - cell "你會"
+      - button "8. 你可以 \\fnei5ho2ji5":
+        - row "8. 你可以 \\fnei5ho2ji5":
+          - cell "你可以"
+      - button "9. 你做 \\fnei5zou6":
+        - row "9. 你做 \\fnei5zou6":
+          - cell "你做"
+      - button "0. 你覺得 \\fnei5gok3dak1":
+        - row "0. 你覺得 \\fnei5gok3dak1":
+          - cell "你覺得"
+      - button "1. 你知 \\fnei5zi1":
+        - row "1. 你知 \\fnei5zi1":
+          - cell "你知"
+      - button "2. 你咪 \\fnei5mai6":
+        - row "2. 你咪 \\fnei5mai6":
+          - cell "你咪"
+      - button "3. 你係咪 \\fnei5hai6mai6":
+        - row "3. 你係咪 \\fnei5hai6mai6":
+          - cell "你係咪"
+      - button "4. 你去 \\fnei5heoi3":
+        - row "4. 你去 \\fnei5heoi3":
+          - cell "你去"
+      - button "5. 你估 \\fnei5gu2":
+        - row "5. 你估 \\fnei5gu2":
+          - cell "你估"
+      - button "6. 尼泊爾 \\fnei4pok3ji5":
+        - row "6. 尼泊爾 \\fnei4pok3ji5":
+          - cell "尼泊爾"
+      - button "7. 你仲 \\fnei5zung6":
+        - row "7. 你仲 \\fnei5zung6":
+          - cell "你仲"
+      - button "8. 你嘅 \\fnei5ge3":
+        - row "8. 你嘅 \\fnei5ge3":
+          - cell "你嘅"
+      - button "9. 你真係 \\fnei5zan1hai6":
+        - row "9. 你真係 \\fnei5zan1hai6":
+          - cell "你真係"
+      - button "0. 你的 \\fnei5dik1":
+        - row "0. 你的 \\fnei5dik1":
+          - cell "你的"
+      - button "1. 尼日利亞 \\fnei4jat6lei6aa3":
+        - row "1. 尼日利亞 \\fnei4jat6lei6aa3":
+          - cell "尼日利亞"
+      - button "2. 你用 \\fnei5jung6":
+        - row "2. 你用 \\fnei5jung6":
+          - cell "你用"
+      - button "3. 你唔係 \\fnei5m4hai6":
+        - row "3. 你唔係 \\fnei5m4hai6":
+          - cell "你唔係"
+      - button "4. 你唔好 \\fnei5m4hou2":
+        - row "4. 你唔好 \\fnei5m4hou2":
+          - cell "你唔好"
+      - button "5. 你啦 \\fnei5laa1":

@@ -46,6 +46,11 @@ evidence still need real-assets evidence.
 - Browser logs record `initialized: true` and a `{i}` `processKey` success with
   `isComposing: true`, `inputBuffer.before: "nei"`, and candidates beginning
   `你`, `呢`, `尼`.
+- HR-1b committed the browser proof under
+  `third_party/typeduck-web/e2e/results/`: `browser-run.log`,
+  `browser-console.json`, `dom-snapshot-candidates.txt`, `blocker.md`, and
+  `screenshot-real-assets-nei.png`. These artifacts supersede the old
+  echo-backed WI-4 results for the real-assets candidate gate.
 
 **Still open after HR-1**:
 - `setOption` still throws from the adapter stub and is HR-2.
@@ -805,13 +810,13 @@ Created `third_party/typeduck-web/e2e/` with explicit asset/result instructions:
 | Candidate list | Visible after composition | PASS | `e2e/results/dom-snapshot-candidates.txt` |
 | Candidate paging | PageDown -> page change | FAIL | PageDown accepted but page remains `0`, `isLastPage: true`; paging buttons disabled |
 | Candidate selection | Selection key -> commit text | PASS | `browser-run.log`; pressing `1` commits `ba` |
-| Deletion | Delete key -> candidate/composition change | FAIL | Delete leaves same `ba echo` candidate |
+| Deletion | Delete key -> candidate/composition change | FAIL | Historical echo-backed run left the same placeholder candidate; HR-5 must rerun this with real assets |
 | Backspace mutation | Backspace -> composition shorter/changed | PASS | `browser-run.log`; same-session console shows `ba` -> `b` |
 | Deploy | Deploy action -> visible success/error | FAIL | `browser-console.json`; deploy returns `false` |
 | Customize | Customize action -> visible success/error | PASS | `browser-console.json`; customize returns `true` |
 | Persistence sync | sync-after-mutation marker | FAIL | `persistence-sync.log`; no browser-visible sync markers and deploy fails |
 | Persistence reload | sync-before-init + reload/reinitialize | FAIL | `persistence-sync.log`; reload survival not proven |
-| Dictionary-panel comment rendering | v1.1.2 candidate comment bytes render | FAIL | Browser shows adapter `candidate.comment` as `echo`, not oracle dictionary bytes |
+| Dictionary-panel comment rendering | v1.1.2 candidate comment bytes render | FAIL | HR-1b shows raw code-style comments such as `\fnei5`; HR-5 must assert dictionary-panel oracle bytes |
 
 **Note**: WI-4 moved the flow matrix from blocked/pending to evidence-backed
 PASS/FAIL. Screenshots were not available from the Codex browser wrapper; the
@@ -1047,6 +1052,7 @@ not appear in the browser flow yet.
 - `third_party/typeduck-web/e2e/results/browser-run.log`
 - `third_party/typeduck-web/e2e/results/browser-console.json`
 - `third_party/typeduck-web/e2e/results/dom-snapshot-candidates.txt`
+- `third_party/typeduck-web/e2e/results/screenshot-real-assets-nei.png`
 - `third_party/typeduck-web/e2e/results/persistence-sync.log`
 - `third_party/typeduck-web/e2e/results/blocker.md`
 
@@ -1084,14 +1090,14 @@ observed behavioral failures.
 
 | Blocker | Status | Evidence | Affected Requirement | Blocks AI-native frontend? |
 |---------|--------|----------|----------------------|---------------------------|
-| Browser screenshot capture unavailable | accepted | Codex browser wrapper returned no screenshot persistence API | WI-4 evidence | NO — console JSON and DOM snapshots captured the flows |
+| Full-matrix screenshot coverage pending | open | HR-1b captured `screenshot-real-assets-nei.png`; HR-5 still needs screenshots/evidence for the remaining flows | WI-4/HR-5 evidence | NO for HR-1b, YES for full E2E completeness |
 
 **Explanation**: Cargo, rustup, Emscripten, and the loadable WASM/JS artifact are
 available locally. The browser run executed; remaining blockers are behavioral.
 
 ---
 
-**Total current blockers**: 7 (2 TypeDuck-Web app/source, 4 Yune adapter/runtime, 1 evidence tooling)
+**Total current blockers**: 7 (2 TypeDuck-Web app/source, 4 Yune adapter/runtime, 1 evidence-completeness gap)
 
 **Blocking AI-native frontend exposure**: core composition/candidate/commit is
 browser-proven, but deploy, persistence, settings-option parity, paging/deletion,

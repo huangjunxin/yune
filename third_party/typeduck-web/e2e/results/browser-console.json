@@ -1,602 +1,241 @@
-[
-  {
-    "level": "error",
-    "message": "Warning: validateDOMNesting(...): %s cannot appear as a child of <%s>.%s%s%s <tr> button   \n    at tr\n    at button\n    at tbody\n    at Candidate (http://127.0.0.1:5173/web/src/Candidate.tsx:25:37)\n    at table\n    at div\n    at div\n    at CaretFollower (http://127.0.0.1:5173/web/src/CaretFollower.tsx:24:84)\n    at CandidatePanel (http://127.0.0.1:5173/web/src/CandidatePanel.tsx?t=1781756784362:30:42)\n    at main\n    at App (http://127.0.0.1:5173/web/src/App.tsx?t=1781756784362:34:37)",
-    "timestamp": "2026-06-18T06:55:04.757Z",
-    "url": "http://127.0.0.1:5173/web/node_modules/.vite/deps/react-dom_client.js?v=583a38c7"
-  },
-  {
-    "level": "error",
-    "message": "Warning: validateDOMNesting(...): %s cannot appear as a child of <%s>.%s%s%s <button> tbody   \n    at button\n    at tbody\n    at Candidate (http://127.0.0.1:5173/web/src/Candidate.tsx:25:37)\n    at table\n    at div\n    at div\n    at CaretFollower (http://127.0.0.1:5173/web/src/CaretFollower.tsx:24:84)\n    at CandidatePanel (http://127.0.0.1:5173/web/src/CandidatePanel.tsx?t=1781756784362:30:42)\n    at main\n    at App (http://127.0.0.1:5173/web/src/App.tsx?t=1781756784362:34:37)",
-    "timestamp": "2026-06-18T06:55:04.757Z",
-    "url": "http://127.0.0.1:5173/web/node_modules/.vite/deps/react-dom_client.js?v=583a38c7"
-  },
-  {
-    "level": "log",
-    "message": "post {\"name\":\"processKey\",\"args\":[\"{Release+b}\"]}",
-    "timestamp": "2026-06-18T06:55:04.762Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":true,\"inputBuffer\":{\"before\":\"b\",\"active\":\"\",\"after\":\"\"},\"page\":0,\"isLastPage\":true,\"highlightedIndex\":0,\"candidates\":[{\"text\":\"b\",\"comment\":\"echo\"}],\"success\":true}}",
-    "timestamp": "2026-06-18T06:55:04.762Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "post {\"name\":\"processKey\",\"args\":[\"{a}\"]}",
-    "timestamp": "2026-06-18T06:55:04.786Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":true,\"inputBuffer\":{\"before\":\"ba\",\"active\":\"\",\"after\":\"\"},\"page\":0,\"isLastPage\":true,\"highlightedIndex\":0,\"candidates\":[{\"text\":\"ba\",\"comment\":\"echo\"}],\"success\":true}}",
-    "timestamp": "2026-06-18T06:55:04.786Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "post {\"name\":\"processKey\",\"args\":[\"{Release+a}\"]}",
-    "timestamp": "2026-06-18T06:55:04.791Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":true,\"inputBuffer\":{\"before\":\"ba\",\"active\":\"\",\"after\":\"\"},\"page\":0,\"isLastPage\":true,\"highlightedIndex\":0,\"candidates\":[{\"text\":\"ba\",\"comment\":\"echo\"}],\"success\":true}}",
-    "timestamp": "2026-06-18T06:55:04.791Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "post {\"name\":\"processKey\",\"args\":[\"{1}\"]}",
-    "timestamp": "2026-06-18T06:55:53.709Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":false,\"success\":true,\"committed\":\"ba\"}}",
-    "timestamp": "2026-06-18T06:55:53.709Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "post {\"name\":\"processKey\",\"args\":[\"{b}\"]}",
-    "timestamp": "2026-06-18T06:56:09.191Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":true,\"inputBuffer\":{\"before\":\"b\",\"active\":\"\",\"after\":\"\"},\"page\":0,\"isLastPage\":true,\"highlightedIndex\":0,\"candidates\":[{\"text\":\"b\",\"comment\":\"echo\"}],\"success\":true}}",
-    "timestamp": "2026-06-18T06:56:09.191Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "post {\"name\":\"processKey\",\"args\":[\"{Release+b}\"]}",
-    "timestamp": "2026-06-18T06:56:09.196Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":true,\"inputBuffer\":{\"before\":\"b\",\"active\":\"\",\"after\":\"\"},\"page\":0,\"isLastPage\":true,\"highlightedIndex\":0,\"candidates\":[{\"text\":\"b\",\"comment\":\"echo\"}],\"success\":true}}",
-    "timestamp": "2026-06-18T06:56:09.196Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "post {\"name\":\"processKey\",\"args\":[\"{a}\"]}",
-    "timestamp": "2026-06-18T06:56:09.218Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":true,\"inputBuffer\":{\"before\":\"ba\",\"active\":\"\",\"after\":\"\"},\"page\":0,\"isLastPage\":true,\"highlightedIndex\":0,\"candidates\":[{\"text\":\"ba\",\"comment\":\"echo\"}],\"success\":true}}",
-    "timestamp": "2026-06-18T06:56:09.218Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "post {\"name\":\"processKey\",\"args\":[\"{Release+a}\"]}",
-    "timestamp": "2026-06-18T06:56:09.223Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":true,\"inputBuffer\":{\"before\":\"ba\",\"active\":\"\",\"after\":\"\"},\"page\":0,\"isLastPage\":true,\"highlightedIndex\":0,\"candidates\":[{\"text\":\"ba\",\"comment\":\"echo\"}],\"success\":true}}",
-    "timestamp": "2026-06-18T06:56:09.223Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "post {\"name\":\"processKey\",\"args\":[\"{Page_Down}\"]}",
-    "timestamp": "2026-06-18T06:56:09.752Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "receive {\"type\":\"error\",\"error\":{}}",
-    "timestamp": "2026-06-18T06:56:09.752Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "post {\"name\":\"processKey\",\"args\":[\"{Release+Page_Down}\"]}",
-    "timestamp": "2026-06-18T06:56:09.758Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":true,\"inputBuffer\":{\"before\":\"ba\",\"active\":\"\",\"after\":\"\"},\"page\":0,\"isLastPage\":true,\"highlightedIndex\":0,\"candidates\":[{\"text\":\"ba\",\"comment\":\"echo\"}],\"success\":true}}",
-    "timestamp": "2026-06-18T06:56:09.758Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "post {\"name\":\"processKey\",\"args\":[\"{BackSpace}\"]}",
-    "timestamp": "2026-06-18T06:56:10.113Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":true,\"inputBuffer\":{\"before\":\"b\",\"active\":\"\",\"after\":\"\"},\"page\":0,\"isLastPage\":true,\"highlightedIndex\":0,\"candidates\":[{\"text\":\"b\",\"comment\":\"echo\"}],\"success\":true}}",
-    "timestamp": "2026-06-18T06:56:10.113Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "post {\"name\":\"processKey\",\"args\":[\"{Release+BackSpace}\"]}",
-    "timestamp": "2026-06-18T06:56:10.118Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":true,\"inputBuffer\":{\"before\":\"b\",\"active\":\"\",\"after\":\"\"},\"page\":0,\"isLastPage\":true,\"highlightedIndex\":0,\"candidates\":[{\"text\":\"b\",\"comment\":\"echo\"}],\"success\":true}}",
-    "timestamp": "2026-06-18T06:56:10.118Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "debug",
-    "message": "[vite] connecting...",
-    "timestamp": "2026-06-18T06:56:52.898Z",
-    "url": "http://127.0.0.1:5173/web/@vite/client"
-  },
-  {
-    "level": "debug",
-    "message": "[vite] connected.",
-    "timestamp": "2026-06-18T06:56:52.900Z",
-    "url": "http://127.0.0.1:5173/web/@vite/client"
-  },
-  {
-    "level": "info",
-    "message": "%cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold",
-    "timestamp": "2026-06-18T06:56:52.910Z",
-    "url": "http://127.0.0.1:5173/web/node_modules/.vite/deps/react-dom_client.js?v=583a38c7"
-  },
-  {
-    "level": "log",
-    "message": "post {\"name\":\"setOption\",\"args\":[\"soft_cursor\",true]}",
-    "timestamp": "2026-06-18T06:56:52.919Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "receive {\"type\":\"listener\",\"name\":\"initialized\",\"args\":[true]}",
-    "timestamp": "2026-06-18T06:56:53.071Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "receive {\"type\":\"error\",\"error\":{}}",
-    "timestamp": "2026-06-18T06:56:53.071Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "post {\"name\":\"setOption\",\"args\":[\"ascii_mode\",false]}",
-    "timestamp": "2026-06-18T06:56:53.071Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "receive {\"type\":\"error\",\"error\":{}}",
-    "timestamp": "2026-06-18T06:56:53.073Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "post {\"name\":\"setOption\",\"args\":[\"simplification\",false]}",
-    "timestamp": "2026-06-18T06:56:53.073Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "receive {\"type\":\"error\",\"error\":{}}",
-    "timestamp": "2026-06-18T06:56:53.073Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "post {\"name\":\"setOption\",\"args\":[\"full_shape\",false]}",
-    "timestamp": "2026-06-18T06:56:53.073Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "receive {\"type\":\"error\",\"error\":{}}",
-    "timestamp": "2026-06-18T06:56:53.074Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "post {\"name\":\"setOption\",\"args\":[\"ascii_punct\",false]}",
-    "timestamp": "2026-06-18T06:56:53.074Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "receive {\"type\":\"error\",\"error\":{}}",
-    "timestamp": "2026-06-18T06:56:53.074Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "post {\"name\":\"customize\",\"args\":[{\"pageSize\":6,\"enableCompletion\":true,\"enableCorrection\":false,\"enableSentence\":true,\"enableLearning\":true,\"isCangjie5\":true}]}",
-    "timestamp": "2026-06-18T06:56:53.074Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "receive {\"type\":\"success\",\"result\":true}",
-    "timestamp": "2026-06-18T06:56:53.079Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "post {\"name\":\"deploy\",\"args\":[]}",
-    "timestamp": "2026-06-18T06:56:53.079Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "receive {\"type\":\"success\",\"result\":false}",
-    "timestamp": "2026-06-18T06:56:53.097Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "post {\"name\":\"setOption\",\"args\":[\"soft_cursor\",true]}",
-    "timestamp": "2026-06-18T06:56:53.099Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "receive {\"type\":\"error\",\"error\":{}}",
-    "timestamp": "2026-06-18T06:56:53.101Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "post {\"name\":\"setOption\",\"args\":[\"ascii_mode\",false]}",
-    "timestamp": "2026-06-18T06:56:53.101Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "receive {\"type\":\"error\",\"error\":{}}",
-    "timestamp": "2026-06-18T06:56:53.101Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "post {\"name\":\"setOption\",\"args\":[\"simplification\",false]}",
-    "timestamp": "2026-06-18T06:56:53.101Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "receive {\"type\":\"error\",\"error\":{}}",
-    "timestamp": "2026-06-18T06:56:53.102Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "post {\"name\":\"setOption\",\"args\":[\"full_shape\",false]}",
-    "timestamp": "2026-06-18T06:56:53.102Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "receive {\"type\":\"error\",\"error\":{}}",
-    "timestamp": "2026-06-18T06:56:53.103Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "post {\"name\":\"setOption\",\"args\":[\"ascii_punct\",false]}",
-    "timestamp": "2026-06-18T06:56:53.103Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "receive {\"type\":\"error\",\"error\":{}}",
-    "timestamp": "2026-06-18T06:56:53.103Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "debug",
-    "message": "[vite] connecting...",
-    "timestamp": "2026-06-18T06:57:05.677Z",
-    "url": "http://127.0.0.1:5173/web/@vite/client"
-  },
-  {
-    "level": "debug",
-    "message": "[vite] connected.",
-    "timestamp": "2026-06-18T06:57:05.679Z",
-    "url": "http://127.0.0.1:5173/web/@vite/client"
-  },
-  {
-    "level": "info",
-    "message": "%cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold",
-    "timestamp": "2026-06-18T06:57:05.693Z",
-    "url": "http://127.0.0.1:5173/web/node_modules/.vite/deps/react-dom_client.js?v=583a38c7"
-  },
-  {
-    "level": "log",
-    "message": "post {\"name\":\"setOption\",\"args\":[\"soft_cursor\",true]}",
-    "timestamp": "2026-06-18T06:57:05.702Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "receive {\"type\":\"listener\",\"name\":\"initialized\",\"args\":[true]}",
-    "timestamp": "2026-06-18T06:57:05.853Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "receive {\"type\":\"error\",\"error\":{}}",
-    "timestamp": "2026-06-18T06:57:05.854Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "post {\"name\":\"setOption\",\"args\":[\"ascii_mode\",false]}",
-    "timestamp": "2026-06-18T06:57:05.854Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "receive {\"type\":\"error\",\"error\":{}}",
-    "timestamp": "2026-06-18T06:57:05.854Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "post {\"name\":\"setOption\",\"args\":[\"simplification\",false]}",
-    "timestamp": "2026-06-18T06:57:05.854Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "receive {\"type\":\"error\",\"error\":{}}",
-    "timestamp": "2026-06-18T06:57:05.855Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "post {\"name\":\"setOption\",\"args\":[\"full_shape\",false]}",
-    "timestamp": "2026-06-18T06:57:05.855Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "receive {\"type\":\"error\",\"error\":{}}",
-    "timestamp": "2026-06-18T06:57:05.856Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "post {\"name\":\"setOption\",\"args\":[\"ascii_punct\",false]}",
-    "timestamp": "2026-06-18T06:57:05.856Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "receive {\"type\":\"error\",\"error\":{}}",
-    "timestamp": "2026-06-18T06:57:05.857Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "post {\"name\":\"customize\",\"args\":[{\"pageSize\":6,\"enableCompletion\":true,\"enableCorrection\":false,\"enableSentence\":true,\"enableLearning\":true,\"isCangjie5\":true}]}",
-    "timestamp": "2026-06-18T06:57:05.857Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "receive {\"type\":\"success\",\"result\":true}",
-    "timestamp": "2026-06-18T06:57:05.862Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "post {\"name\":\"deploy\",\"args\":[]}",
-    "timestamp": "2026-06-18T06:57:05.862Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "receive {\"type\":\"success\",\"result\":false}",
-    "timestamp": "2026-06-18T06:57:05.880Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "post {\"name\":\"setOption\",\"args\":[\"soft_cursor\",true]}",
-    "timestamp": "2026-06-18T06:57:05.882Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "receive {\"type\":\"error\",\"error\":{}}",
-    "timestamp": "2026-06-18T06:57:05.883Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "post {\"name\":\"setOption\",\"args\":[\"ascii_mode\",false]}",
-    "timestamp": "2026-06-18T06:57:05.883Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "receive {\"type\":\"error\",\"error\":{}}",
-    "timestamp": "2026-06-18T06:57:05.884Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "post {\"name\":\"setOption\",\"args\":[\"simplification\",false]}",
-    "timestamp": "2026-06-18T06:57:05.884Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "receive {\"type\":\"error\",\"error\":{}}",
-    "timestamp": "2026-06-18T06:57:05.885Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "post {\"name\":\"setOption\",\"args\":[\"full_shape\",false]}",
-    "timestamp": "2026-06-18T06:57:05.885Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "receive {\"type\":\"error\",\"error\":{}}",
-    "timestamp": "2026-06-18T06:57:05.886Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "post {\"name\":\"setOption\",\"args\":[\"ascii_punct\",false]}",
-    "timestamp": "2026-06-18T06:57:05.886Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "receive {\"type\":\"error\",\"error\":{}}",
-    "timestamp": "2026-06-18T06:57:05.887Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "post {\"name\":\"processKey\",\"args\":[\"{b}\"]}",
-    "timestamp": "2026-06-18T06:57:07.543Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":true,\"inputBuffer\":{\"before\":\"b\",\"active\":\"\",\"after\":\"\"},\"page\":0,\"isLastPage\":true,\"highlightedIndex\":0,\"candidates\":[{\"text\":\"b\",\"comment\":\"echo\"}],\"success\":true}}",
-    "timestamp": "2026-06-18T06:57:07.551Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "error",
-    "message": "Warning: validateDOMNesting(...): %s cannot appear as a child of <%s>.%s%s%s <tr> button   \n    at tr\n    at button\n    at tbody\n    at Candidate (http://127.0.0.1:5173/web/src/Candidate.tsx:25:37)\n    at table\n    at div\n    at div\n    at CaretFollower (http://127.0.0.1:5173/web/src/CaretFollower.tsx:24:84)\n    at CandidatePanel (http://127.0.0.1:5173/web/src/CandidatePanel.tsx?t=1781756784362:30:42)\n    at main\n    at App (http://127.0.0.1:5173/web/src/App.tsx?t=1781756784362:34:37)",
-    "timestamp": "2026-06-18T06:57:07.551Z",
-    "url": "http://127.0.0.1:5173/web/node_modules/.vite/deps/react-dom_client.js?v=583a38c7"
-  },
-  {
-    "level": "error",
-    "message": "Warning: validateDOMNesting(...): %s cannot appear as a child of <%s>.%s%s%s <button> tbody   \n    at button\n    at tbody\n    at Candidate (http://127.0.0.1:5173/web/src/Candidate.tsx:25:37)\n    at table\n    at div\n    at div\n    at CaretFollower (http://127.0.0.1:5173/web/src/CaretFollower.tsx:24:84)\n    at CandidatePanel (http://127.0.0.1:5173/web/src/CandidatePanel.tsx?t=1781756784362:30:42)\n    at main\n    at App (http://127.0.0.1:5173/web/src/App.tsx?t=1781756784362:34:37)",
-    "timestamp": "2026-06-18T06:57:07.551Z",
-    "url": "http://127.0.0.1:5173/web/node_modules/.vite/deps/react-dom_client.js?v=583a38c7"
-  },
-  {
-    "level": "log",
-    "message": "post {\"name\":\"processKey\",\"args\":[\"{a}\"]}",
-    "timestamp": "2026-06-18T06:57:07.575Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":true,\"inputBuffer\":{\"before\":\"ba\",\"active\":\"\",\"after\":\"\"},\"page\":0,\"isLastPage\":true,\"highlightedIndex\":0,\"candidates\":[{\"text\":\"ba\",\"comment\":\"echo\"}],\"success\":true}}",
-    "timestamp": "2026-06-18T06:57:07.575Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "post {\"name\":\"processKey\",\"args\":[\"{Release+a}\"]}",
-    "timestamp": "2026-06-18T06:57:07.580Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":true,\"inputBuffer\":{\"before\":\"ba\",\"active\":\"\",\"after\":\"\"},\"page\":0,\"isLastPage\":true,\"highlightedIndex\":0,\"candidates\":[{\"text\":\"ba\",\"comment\":\"echo\"}],\"success\":true}}",
-    "timestamp": "2026-06-18T06:57:07.581Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "post {\"name\":\"processKey\",\"args\":[\"{Page_Down}\"]}",
-    "timestamp": "2026-06-18T06:57:08.105Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":true,\"inputBuffer\":{\"before\":\"ba\",\"active\":\"\",\"after\":\"\"},\"page\":0,\"isLastPage\":true,\"highlightedIndex\":0,\"candidates\":[{\"text\":\"ba\",\"comment\":\"echo\"}],\"success\":true}}",
-    "timestamp": "2026-06-18T06:57:08.105Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "post {\"name\":\"processKey\",\"args\":[\"{Release+Page_Down}\"]}",
-    "timestamp": "2026-06-18T06:57:08.110Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":true,\"inputBuffer\":{\"before\":\"ba\",\"active\":\"\",\"after\":\"\"},\"page\":0,\"isLastPage\":true,\"highlightedIndex\":0,\"candidates\":[{\"text\":\"ba\",\"comment\":\"echo\"}],\"success\":true}}",
-    "timestamp": "2026-06-18T06:57:08.111Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "post {\"name\":\"processKey\",\"args\":[\"{Delete}\"]}",
-    "timestamp": "2026-06-18T06:57:17.319Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":true,\"inputBuffer\":{\"before\":\"ba\",\"active\":\"\",\"after\":\"\"},\"page\":0,\"isLastPage\":true,\"highlightedIndex\":0,\"candidates\":[{\"text\":\"ba\",\"comment\":\"echo\"}],\"success\":true}}",
-    "timestamp": "2026-06-18T06:57:17.319Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "post {\"name\":\"processKey\",\"args\":[\"{Release+Delete}\"]}",
-    "timestamp": "2026-06-18T06:57:17.325Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":true,\"inputBuffer\":{\"before\":\"ba\",\"active\":\"\",\"after\":\"\"},\"page\":0,\"isLastPage\":true,\"highlightedIndex\":0,\"candidates\":[{\"text\":\"ba\",\"comment\":\"echo\"}],\"success\":true}}",
-    "timestamp": "2026-06-18T06:57:17.325Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "post {\"name\":\"processKey\",\"args\":[\"{1}\"]}",
-    "timestamp": "2026-06-18T07:00:50.564Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  },
-  {
-    "level": "log",
-    "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":false,\"success\":true,\"committed\":\"ba\"}}",
-    "timestamp": "2026-06-18T07:00:50.566Z",
-    "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362"
-  }
-]
+{
+  "run": "HR-1b real-assets browser smoke",
+  "date": "2026-06-18T15:12:51.644Z",
+  "startedAt": "2026-06-18T15:12:45.945Z",
+  "url": "http://127.0.0.1:5173/web/?debug&realAssets=1",
+  "schema": "jyut6ping3_mobile",
+  "input": "nei",
+  "proof": {
+    "initialized": true,
+    "processKeySequence": [
+      "{n}",
+      "{e}",
+      "{i}"
+    ],
+    "hasProcessKeyLogs": [
+      "post {\"name\":\"processKey\",\"args\":[\"{n}\"]}",
+      "post {\"name\":\"processKey\",\"args\":[\"{e}\"]}",
+      "post {\"name\":\"processKey\",\"args\":[\"{i}\"]}",
+      "post {\"name\":\"processKey\",\"args\":[\"{Release+i}\"]}"
+    ],
+    "domContains": {
+      "ni": true,
+      "ne": true,
+      "ni4": true
+    },
+    "firstCandidateRows": [
+      "1.你\\fnei5",
+      "1.你\\fnei5",
+      "2.呢\\fnei1",
+      "2.呢\\fnei1",
+      "3.尼\\fnei4",
+      "3.尼\\fnei4",
+      "4.你哋\\fnei5dei6",
+      "4.你哋\\fnei5dei6",
+      "5.你們\\fnei5mun4",
+      "5.你們\\fnei5mun4"
+    ],
+    "candidatePanelText": "nei‹›1.你\\fnei52.呢\\fnei13.尼\\fnei44.你哋\\fnei5dei65.你們\\fnei5mun46.妮\\fnei47.彌\\fnei48.呢樣\\fnei1joeng69.你係\\fnei5hai60.妳\\fnei51.你都\\fnei5dou12.您\\fnei53.你呢\\fnei5ne14.你有\\fnei5jau55.你個\\fnei5go36.你講\\fnei5gong27.膩\\fnei68.你睇\\fnei5tai29.你要\\fnei5jiu30.你話\\fnei5waa61.你又\\fnei5jau62.彌補\\fnei4bou23.你自己\\fnei5zi6gei24.你想\\fnei5soeng25.你班\\fnei5baan16.你好\\fnei5hou27.你會\\fnei5wui58.你可以\\fnei5ho2ji59.你做\\fnei5zou60.你覺得\\fnei5gok3dak11.你知\\fnei5zi12.你咪\\fnei5mai63.你係咪\\fnei5hai6mai64.你去\\fnei5heoi35.你估\\fnei5gu26.尼泊爾\\fnei4pok3ji57.你仲\\fnei5zung68.你嘅\\fnei5ge39.你真係\\fnei5zan1hai60.你的\\fnei5dik11.尼日利亞\\fnei4jat6lei6aa32.你用\\fnei5jung63.你唔係\\fnei5m4hai64.你唔好\\fnei5m4hou25.你啦\\fnei5laa16.你買\\fnei5maai57.你不\\fnei5bat18.呢篇\\fnei1pin19.你冇\\fnei5mou50.你啲\\fnei5di1",
+    "screenshot": "screenshot-real-assets-nei.png",
+    "note": "Candidate comments are still raw code comments (e.g. \\fnei5); dictionary-panel oracle byte validation remains HR-5/HR-6 work."
+  },
+  "openGapsObserved": [
+    "setOption posts still produce option error toasts before HR-2",
+    "deploy is still part of HR-3/HR-5 validation",
+    "full paging/deletion/persistence/comment matrix remains HR-5"
+  ],
+  "console": [
+    {
+      "timestamp": "2026-06-18T15:10:32.844Z",
+      "level": "log",
+      "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"soft_cursor\",true]}"
+    },
+    {
+      "timestamp": "2026-06-18T15:10:32.844Z",
+      "level": "log",
+      "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362",
+      "message": "receive {\"type\":\"listener\",\"name\":\"initialized\",\"args\":[true]}"
+    },
+    {
+      "timestamp": "2026-06-18T15:10:32.844Z",
+      "level": "log",
+      "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"ascii_mode\",false]}"
+    },
+    {
+      "timestamp": "2026-06-18T15:10:32.844Z",
+      "level": "log",
+      "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"simplification\",false]}"
+    },
+    {
+      "timestamp": "2026-06-18T15:10:32.844Z",
+      "level": "log",
+      "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"full_shape\",false]}"
+    },
+    {
+      "timestamp": "2026-06-18T15:10:32.844Z",
+      "level": "log",
+      "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"ascii_punct\",false]}"
+    },
+    {
+      "timestamp": "2026-06-18T15:10:32.845Z",
+      "level": "log",
+      "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362",
+      "message": "post {\"name\":\"deploy\",\"args\":[]}"
+    },
+    {
+      "timestamp": "2026-06-18T15:10:32.845Z",
+      "level": "log",
+      "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"soft_cursor\",true]}"
+    },
+    {
+      "timestamp": "2026-06-18T15:10:32.845Z",
+      "level": "log",
+      "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"ascii_mode\",false]}"
+    },
+    {
+      "timestamp": "2026-06-18T15:10:32.845Z",
+      "level": "log",
+      "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"simplification\",false]}"
+    },
+    {
+      "timestamp": "2026-06-18T15:10:32.845Z",
+      "level": "log",
+      "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"full_shape\",false]}"
+    },
+    {
+      "timestamp": "2026-06-18T15:10:32.845Z",
+      "level": "log",
+      "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"ascii_punct\",false]}"
+    },
+    {
+      "timestamp": "2026-06-18T15:12:46.031Z",
+      "level": "log",
+      "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"soft_cursor\",true]}"
+    },
+    {
+      "timestamp": "2026-06-18T15:12:47.266Z",
+      "level": "log",
+      "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362",
+      "message": "receive {\"type\":\"listener\",\"name\":\"initialized\",\"args\":[true]}"
+    },
+    {
+      "timestamp": "2026-06-18T15:12:47.266Z",
+      "level": "log",
+      "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"ascii_mode\",false]}"
+    },
+    {
+      "timestamp": "2026-06-18T15:12:47.267Z",
+      "level": "log",
+      "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"simplification\",false]}"
+    },
+    {
+      "timestamp": "2026-06-18T15:12:47.268Z",
+      "level": "log",
+      "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"full_shape\",false]}"
+    },
+    {
+      "timestamp": "2026-06-18T15:12:47.268Z",
+      "level": "log",
+      "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"ascii_punct\",false]}"
+    },
+    {
+      "timestamp": "2026-06-18T15:12:47.274Z",
+      "level": "log",
+      "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362",
+      "message": "post {\"name\":\"deploy\",\"args\":[]}"
+    },
+    {
+      "timestamp": "2026-06-18T15:12:47.292Z",
+      "level": "log",
+      "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"soft_cursor\",true]}"
+    },
+    {
+      "timestamp": "2026-06-18T15:12:47.293Z",
+      "level": "log",
+      "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"ascii_mode\",false]}"
+    },
+    {
+      "timestamp": "2026-06-18T15:12:47.294Z",
+      "level": "log",
+      "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"simplification\",false]}"
+    },
+    {
+      "timestamp": "2026-06-18T15:12:47.294Z",
+      "level": "log",
+      "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"full_shape\",false]}"
+    },
+    {
+      "timestamp": "2026-06-18T15:12:47.295Z",
+      "level": "log",
+      "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"ascii_punct\",false]}"
+    },
+    {
+      "timestamp": "2026-06-18T15:12:49.884Z",
+      "level": "log",
+      "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362",
+      "message": "post {\"name\":\"processKey\",\"args\":[\"{n}\"]}"
+    },
+    {
+      "timestamp": "2026-06-18T15:12:49.921Z",
+      "level": "log",
+      "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362",
+      "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":true,\"inputBuffer\":{\"before\":\"n\",\"active\":\"\",\"after\":\"\"},\"page\":0,\"isLastPage\":false,\"highlightedIndex\":0,\"candidates\":[{\"text\":\"我\",\"comment\":\"\\\\fngo5\"},{\"text\":\"你\",\"comment\":\"\\\\fnei5\"},{\"text\":\"外\",\"comment\":\"\\\\fngoi6\"},{\"text\":\"能\",\"comment\":\"\\\\fnang4\"},{\"text\":\"內\",\"comment\":\"\\\\fnoi6\"},{\"text\":\"呢\",\"comment\":\"\\\\fne1\"},{\"text\":\"呢\",\"comment\":\"\\\\fnei1\"},{\"text\":\"呢\",\"comment\":\"\\\\fni1\"},{\"text\":\"男\",\"comment\":\"\\\\fnaam4\"},{\"text\":\"女\",\"comment\":\"\\\\fneoi5\"},{\"text\":\"女\",\"comment\":\"\\\\fneoi2\"},{\"text\":\"眼\",\"comment\":\"\\\\fngaan5\"},{\"text\":\"五\",\"comment\":\"\\\\fng5\"},{\"text\":\"那\",\"comment\":\"\\\\fnaa5\"},{\"text\":\"銀\",\"comment\":\"\\\\fngan4\"},{\"text\":\"年\",\"comment\":\"\\\\fnin4\"},{\"text\":\"南\",\"comment\":\"\\\\fnaam4\"},{\"text\":\"諗\",\"comment\":\"\\\\fnam2\"},{\"text\":\"難\",\"comment\":\"\\\\fnaan4\"},{\"text\":\"難\",\"comment\":\"\\\\fnaan6\"},{\"text\":\"呢個\",\"comment\":\"\\\\fni1go3\"},{\"text\":\"牛\",\"comment\":\"\\\\fngau4\"},{\"text\":\"拿\",\"comment\":\"\\\\fnaa4\"},{\"text\":\"牙\",\"comment\":\"\\\\fngaa4\"},{\"text\":\"尼\",\"comment\":\"\\\\fnei4\"},{\"text\":\"腦\",\"comment\":\"\\\\fnou5\"},{\"text\":\"我們\",\"comment\":\"\\\\fngo5mun4\"},{\"text\":\"念\",\"comment\":\"\\\\fnim6\"},{\"text\":\"奶\",\"comment\":\"\\\\fnaai5\"},{\"text\":\"啱\",\"comment\":\"\\\\fngaam1\"},{\"text\":\"硬\",\"comment\":\"\\\\fngaang6\"},{\"text\":\"銀行\",\"comment\":\"\\\\fngan4hong4\"},{\"text\":\"午\",\"comment\":\"\\\\fng5\"},{\"text\":\"耐\",\"comment\":\"\\\\fnoi6\"},{\"text\":\"內地\",\"comment\":\"\\\\fnoi6dei6\"},{\"text\":\"額\",\"comment\":\"\\\\fngaak6\"},{\"text\":\"危\",\"comment\":\"\\\\fngai4\"},{\"text\":\"藝\",\"comment\":\"\\\\fngai6\"},{\"text\":\"我哋\",\"comment\":\"\\\\fngo5dei6\"},{\"text\":\"奴\",\"comment\":\"\\\\fnou4\"},{\"text\":\"納\",\"comment\":\"\\\\fnaap6\"},{\"text\":\"能力\",\"comment\":\"\\\\fnang4lik6\"},{\"text\":\"誤\",\"comment\":\"\\\\fng6\"},{\"text\":\"外國\",\"comment\":\"\\\\fngoi6gwok3\"},{\"text\":\"呢啲\",\"comment\":\"\\\\fni1di1\"},{\"text\":\"女人\",\"comment\":\"\\\\fneoi5jan2\"},{\"text\":\"男人\",\"comment\":\"\\\\fnaam4jan2\"},{\"text\":\"岩\",\"comment\":\"\\\\fngaam4\"},{\"text\":\"艾\",\"comment\":\"\\\\fngaai6\"},{\"text\":\"努\",\"comment\":\"\\\\fnou5\"}],\"success\":true}}"
+    },
+    {
+      "timestamp": "2026-06-18T15:12:49.921Z",
+      "level": "log",
+      "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362",
+      "message": "post {\"name\":\"processKey\",\"args\":[\"{e}\"]}"
+    },
+    {
+      "timestamp": "2026-06-18T15:12:49.957Z",
+      "level": "log",
+      "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362",
+      "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":true,\"inputBuffer\":{\"before\":\"ne\",\"active\":\"\",\"after\":\"\"},\"page\":0,\"isLastPage\":false,\"highlightedIndex\":0,\"candidates\":[{\"text\":\"你\",\"comment\":\"\\\\fnei5\"},{\"text\":\"呢\",\"comment\":\"\\\\fne1\"},{\"text\":\"呢\",\"comment\":\"\\\\fnei1\"},{\"text\":\"女\",\"comment\":\"\\\\fneoi5\"},{\"text\":\"女\",\"comment\":\"\\\\fneoi2\"},{\"text\":\"尼\",\"comment\":\"\\\\fnei4\"},{\"text\":\"女人\",\"comment\":\"\\\\fneoi5jan2\"},{\"text\":\"女友\",\"comment\":\"\\\\fneoi5jau5\"},{\"text\":\"女仔\",\"comment\":\"\\\\fneoi5zai2\"},{\"text\":\"女子\",\"comment\":\"\\\\fneoi5zi2\"},{\"text\":\"女性\",\"comment\":\"\\\\fneoi5sing3\"},{\"text\":\"女兒\",\"comment\":\"\\\\fneoi5ji4\"},{\"text\":\"你哋\",\"comment\":\"\\\\fnei5dei6\"},{\"text\":\"你們\",\"comment\":\"\\\\fnei5mun4\"},{\"text\":\"妮\",\"comment\":\"\\\\fnei4\"},{\"text\":\"女朋友\",\"comment\":\"\\\\fneoi5pang4jau5\"},{\"text\":\"女神\",\"comment\":\"\\\\fneoi5san4\"},{\"text\":\"女生\",\"comment\":\"\\\\fneoi5sang1\"},{\"text\":\"女士\",\"comment\":\"\\\\fneoi5si6\"},{\"text\":\"彌\",\"comment\":\"\\\\fnei4\"},{\"text\":\"囡囡\",\"comment\":\"\\\\fneoi4neoi1\"},{\"text\":\"呢樣\",\"comment\":\"\\\\fnei1joeng6\"},{\"text\":\"女星\",\"comment\":\"\\\\fneoi5sing1\"},{\"text\":\"女孩\",\"comment\":\"\\\\fneoi5haai4\"},{\"text\":\"女童\",\"comment\":\"\\\\fneoi5tung4\"},{\"text\":\"你係\",\"comment\":\"\\\\fnei5hai6\"},{\"text\":\"妳\",\"comment\":\"\\\\fnei5\"},{\"text\":\"你都\",\"comment\":\"\\\\fnei5dou1\"},{\"text\":\"女方\",\"comment\":\"\\\\fneoi5fong1\"},{\"text\":\"您\",\"comment\":\"\\\\fnei5\"},{\"text\":\"女團\",\"comment\":\"\\\\fneoi5tyun4\"},{\"text\":\"你呢\",\"comment\":\"\\\\fnei5ne1\"},{\"text\":\"你有\",\"comment\":\"\\\\fnei5jau5\"},{\"text\":\"你個\",\"comment\":\"\\\\fnei5go3\"},{\"text\":\"女王\",\"comment\":\"\\\\fneoi5wong4\"},{\"text\":\"你講\",\"comment\":\"\\\\fnei5gong2\"},{\"text\":\"膩\",\"comment\":\"\\\\fnei6\"},{\"text\":\"你睇\",\"comment\":\"\\\\fnei5tai2\"},{\"text\":\"你要\",\"comment\":\"\\\\fnei5jiu3\"},{\"text\":\"你話\",\"comment\":\"\\\\fnei5waa6\"},{\"text\":\"你又\",\"comment\":\"\\\\fnei5jau6\"},{\"text\":\"女皇\",\"comment\":\"\\\\fneoi5wong4\"},{\"text\":\"彌補\",\"comment\":\"\\\\fnei4bou2\"},{\"text\":\"你自己\",\"comment\":\"\\\\fnei5zi6gei2\"},{\"text\":\"你想\",\"comment\":\"\\\\fnei5soeng2\"},{\"text\":\"女權\",\"comment\":\"\\\\fneoi5kyun4\"},{\"text\":\"你班\",\"comment\":\"\\\\fnei5baan1\"},{\"text\":\"你好\",\"comment\":\"\\\\fnei5hou2\"},{\"text\":\"女裝\",\"comment\":\"\\\\fneoi5zong1\"},{\"text\":\"你會\",\"comment\":\"\\\\fnei5wui5\"}],\"success\":true}}"
+    },
+    {
+      "timestamp": "2026-06-18T15:12:49.966Z",
+      "level": "log",
+      "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362",
+      "message": "post {\"name\":\"processKey\",\"args\":[\"{i}\"]}"
+    },
+    {
+      "timestamp": "2026-06-18T15:12:49.981Z",
+      "level": "log",
+      "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362",
+      "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":true,\"inputBuffer\":{\"before\":\"nei\",\"active\":\"\",\"after\":\"\"},\"page\":0,\"isLastPage\":false,\"highlightedIndex\":0,\"candidates\":[{\"text\":\"你\",\"comment\":\"\\\\fnei5\"},{\"text\":\"呢\",\"comment\":\"\\\\fnei1\"},{\"text\":\"尼\",\"comment\":\"\\\\fnei4\"},{\"text\":\"你哋\",\"comment\":\"\\\\fnei5dei6\"},{\"text\":\"你們\",\"comment\":\"\\\\fnei5mun4\"},{\"text\":\"妮\",\"comment\":\"\\\\fnei4\"},{\"text\":\"彌\",\"comment\":\"\\\\fnei4\"},{\"text\":\"呢樣\",\"comment\":\"\\\\fnei1joeng6\"},{\"text\":\"你係\",\"comment\":\"\\\\fnei5hai6\"},{\"text\":\"妳\",\"comment\":\"\\\\fnei5\"},{\"text\":\"你都\",\"comment\":\"\\\\fnei5dou1\"},{\"text\":\"您\",\"comment\":\"\\\\fnei5\"},{\"text\":\"你呢\",\"comment\":\"\\\\fnei5ne1\"},{\"text\":\"你有\",\"comment\":\"\\\\fnei5jau5\"},{\"text\":\"你個\",\"comment\":\"\\\\fnei5go3\"},{\"text\":\"你講\",\"comment\":\"\\\\fnei5gong2\"},{\"text\":\"膩\",\"comment\":\"\\\\fnei6\"},{\"text\":\"你睇\",\"comment\":\"\\\\fnei5tai2\"},{\"text\":\"你要\",\"comment\":\"\\\\fnei5jiu3\"},{\"text\":\"你話\",\"comment\":\"\\\\fnei5waa6\"},{\"text\":\"你又\",\"comment\":\"\\\\fnei5jau6\"},{\"text\":\"彌補\",\"comment\":\"\\\\fnei4bou2\"},{\"text\":\"你自己\",\"comment\":\"\\\\fnei5zi6gei2\"},{\"text\":\"你想\",\"comment\":\"\\\\fnei5soeng2\"},{\"text\":\"你班\",\"comment\":\"\\\\fnei5baan1\"},{\"text\":\"你好\",\"comment\":\"\\\\fnei5hou2\"},{\"text\":\"你會\",\"comment\":\"\\\\fnei5wui5\"},{\"text\":\"你可以\",\"comment\":\"\\\\fnei5ho2ji5\"},{\"text\":\"你做\",\"comment\":\"\\\\fnei5zou6\"},{\"text\":\"你覺得\",\"comment\":\"\\\\fnei5gok3dak1\"},{\"text\":\"你知\",\"comment\":\"\\\\fnei5zi1\"},{\"text\":\"你咪\",\"comment\":\"\\\\fnei5mai6\"},{\"text\":\"你係咪\",\"comment\":\"\\\\fnei5hai6mai6\"},{\"text\":\"你去\",\"comment\":\"\\\\fnei5heoi3\"},{\"text\":\"你估\",\"comment\":\"\\\\fnei5gu2\"},{\"text\":\"尼泊爾\",\"comment\":\"\\\\fnei4pok3ji5\"},{\"text\":\"你仲\",\"comment\":\"\\\\fnei5zung6\"},{\"text\":\"你嘅\",\"comment\":\"\\\\fnei5ge3\"},{\"text\":\"你真係\",\"comment\":\"\\\\fnei5zan1hai6\"},{\"text\":\"你的\",\"comment\":\"\\\\fnei5dik1\"},{\"text\":\"尼日利亞\",\"comment\":\"\\\\fnei4jat6lei6aa3\"},{\"text\":\"你用\",\"comment\":\"\\\\fnei5jung6\"},{\"text\":\"你唔係\",\"comment\":\"\\\\fnei5m4hai6\"},{\"text\":\"你唔好\",\"comment\":\"\\\\fnei5m4hou2\"},{\"text\":\"你啦\",\"comment\":\"\\\\fnei5laa1\"},{\"text\":\"你買\",\"comment\":\"\\\\fnei5maai5\"},{\"text\":\"你不\",\"comment\":\"\\\\fnei5bat1\"},{\"text\":\"呢篇\",\"comment\":\"\\\\fnei1pin1\"},{\"text\":\"你冇\",\"comment\":\"\\\\fnei5mou5\"},{\"text\":\"你啲\",\"comment\":\"\\\\fnei5di1\"}],\"success\":true}}"
+    },
+    {
+      "timestamp": "2026-06-18T15:12:49.981Z",
+      "level": "log",
+      "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362",
+      "message": "post {\"name\":\"processKey\",\"args\":[\"{Release+i}\"]}"
+    },
+    {
+      "timestamp": "2026-06-18T15:12:49.981Z",
+      "level": "log",
+      "url": "http://127.0.0.1:5173/web/src/rime.ts?t=1781756784362",
+      "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":true,\"inputBuffer\":{\"before\":\"nei\",\"active\":\"\",\"after\":\"\"},\"page\":0,\"isLastPage\":false,\"highlightedIndex\":0,\"candidates\":[{\"text\":\"你\",\"comment\":\"\\\\fnei5\"},{\"text\":\"呢\",\"comment\":\"\\\\fnei1\"},{\"text\":\"尼\",\"comment\":\"\\\\fnei4\"},{\"text\":\"你哋\",\"comment\":\"\\\\fnei5dei6\"},{\"text\":\"你們\",\"comment\":\"\\\\fnei5mun4\"},{\"text\":\"妮\",\"comment\":\"\\\\fnei4\"},{\"text\":\"彌\",\"comment\":\"\\\\fnei4\"},{\"text\":\"呢樣\",\"comment\":\"\\\\fnei1joeng6\"},{\"text\":\"你係\",\"comment\":\"\\\\fnei5hai6\"},{\"text\":\"妳\",\"comment\":\"\\\\fnei5\"},{\"text\":\"你都\",\"comment\":\"\\\\fnei5dou1\"},{\"text\":\"您\",\"comment\":\"\\\\fnei5\"},{\"text\":\"你呢\",\"comment\":\"\\\\fnei5ne1\"},{\"text\":\"你有\",\"comment\":\"\\\\fnei5jau5\"},{\"text\":\"你個\",\"comment\":\"\\\\fnei5go3\"},{\"text\":\"你講\",\"comment\":\"\\\\fnei5gong2\"},{\"text\":\"膩\",\"comment\":\"\\\\fnei6\"},{\"text\":\"你睇\",\"comment\":\"\\\\fnei5tai2\"},{\"text\":\"你要\",\"comment\":\"\\\\fnei5jiu3\"},{\"text\":\"你話\",\"comment\":\"\\\\fnei5waa6\"},{\"text\":\"你又\",\"comment\":\"\\\\fnei5jau6\"},{\"text\":\"彌補\",\"comment\":\"\\\\fnei4bou2\"},{\"text\":\"你自己\",\"comment\":\"\\\\fnei5zi6gei2\"},{\"text\":\"你想\",\"comment\":\"\\\\fnei5soeng2\"},{\"text\":\"你班\",\"comment\":\"\\\\fnei5baan1\"},{\"text\":\"你好\",\"comment\":\"\\\\fnei5hou2\"},{\"text\":\"你會\",\"comment\":\"\\\\fnei5wui5\"},{\"text\":\"你可以\",\"comment\":\"\\\\fnei5ho2ji5\"},{\"text\":\"你做\",\"comment\":\"\\\\fnei5zou6\"},{\"text\":\"你覺得\",\"comment\":\"\\\\fnei5gok3dak1\"},{\"text\":\"你知\",\"comment\":\"\\\\fnei5zi1\"},{\"text\":\"你咪\",\"comment\":\"\\\\fnei5mai6\"},{\"text\":\"你係咪\",\"comment\":\"\\\\fnei5hai6mai6\"},{\"text\":\"你去\",\"comment\":\"\\\\fnei5heoi3\"},{\"text\":\"你估\",\"comment\":\"\\\\fnei5gu2\"},{\"text\":\"尼泊爾\",\"comment\":\"\\\\fnei4pok3ji5\"},{\"text\":\"你仲\",\"comment\":\"\\\\fnei5zung6\"},{\"text\":\"你嘅\",\"comment\":\"\\\\fnei5ge3\"},{\"text\":\"你真係\",\"comment\":\"\\\\fnei5zan1hai6\"},{\"text\":\"你的\",\"comment\":\"\\\\fnei5dik1\"},{\"text\":\"尼日利亞\",\"comment\":\"\\\\fnei4jat6lei6aa3\"},{\"text\":\"你用\",\"comment\":\"\\\\fnei5jung6\"},{\"text\":\"你唔係\",\"comment\":\"\\\\fnei5m4hai6\"},{\"text\":\"你唔好\",\"comment\":\"\\\\fnei5m4hou2\"},{\"text\":\"你啦\",\"comment\":\"\\\\fnei5laa1\"},{\"text\":\"你買\",\"comment\":\"\\\\fnei5maai5\"},{\"text\":\"你不\",\"comment\":\"\\\\fnei5bat1\"},{\"text\":\"呢篇\",\"comment\":\"\\\\fnei1pin1\"},{\"text\":\"你冇\",\"comment\":\"\\\\fnei5mou5\"},{\"text\":\"你啲\",\"comment\":\"\\\\fnei5di1\"}],\"success\":true}}"
+    }
+  ]
+}
