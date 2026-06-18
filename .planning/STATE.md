@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: typeduck-windows-native-contract
 milestone_name: TypeDuck-Windows Native IME Contract
 status: execution
-stopped_at: Completed 13-01; ready to execute 14-01 Candidate Comment Semantics
+stopped_at: Completed 14-01; ready to execute 15-01 Native Windows Artifact
 last_updated: "2026-06-18T00:00:00.000Z"
 last_activity: 2026-06-18
 progress:
   total_phases: 16
-  completed_phases: 13
+  completed_phases: 14
   total_plans: 37
-  completed_plans: 35
-  percent: 95
+  completed_plans: 36
+  percent: 97
 ---
 
 # Project State
@@ -21,23 +21,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-28)
 
 **Core value:** Existing RIME schemas and frontends should behave predictably through Yune's Rust implementation, with every compatibility difference measurable against librime before it is accepted.
-**Current focus:** Phase 14 — candidate comment semantics against the TypeDuck v1.1.2 oracle
+**Current focus:** Phase 15 — native Windows artifact for TypeDuck-Windows
 
 ## Current Position
 
-Phase: 14
-Plan: 14-01 — Candidate Comment Semantics
-Next phase: 15 — Native Windows Artifact
+Phase: 15
+Plan: 15-01 — Native Windows Artifact
+Next phase: 16 — Cantonese/Jyutping Parity Suite
 Status: Ready to execute
 Last activity: 2026-06-18
 
-Progress: [██████████] 95%
+Progress: [██████████] 97%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 34
+- Total plans completed: 36
 - Planned Phase 06 plans: 4
 - Average duration: -
 - Total execution time: -
@@ -73,6 +73,7 @@ Progress: [██████████] 95%
 | Phase 11 P01 | - | completed | 8 files |
 | Phase 12 P01 | - | completed | 8 files |
 | Phase 13 P01 | - | completed | 2 files |
+| Phase 14 P01 | - | completed | 9 files |
 
 ## Accumulated Context
 
@@ -131,10 +132,11 @@ Recent decisions affecting current work:
 - D-17/WIN-ORACLE-01: Comment semantics and Cantonese/Jyutping parity must be driven by TypeDuck-HK/librime v1.1.2 goldens or documented blockers.
 - D-18/WIN-ABI-01: TypeDuck fork list append fields are inserted after `config_list_size` and before `config_begin_list`, matching the fork `RimeApi` order; scalar append values follow the existing string-backed `RimeConfigSet*` representation.
 - D-19/WIN-ORACLE-01: The v1.1.2 oracle uses `TypeDuck-HK/librime` commit `74cb52b78fb2411137a7643f6c8bc6517acfde69`, `rime-dictionary-lookup-filter` commit `3e4605c4fae99f068df2edb85aaeab5a97752795`, and `TypeDuck-HK/schema` commit `1bed1ae6a0ab48055f073774d7dfd152a171c548`.
+- D-20/WIN-COMMENT-01: Candidate comments for TypeDuck-Windows are represented as source-row dictionary lookup payloads (`\f\r1,...\r0,...`) through `dictionary_lookup_filter`; normal reverse lookup joins use `"; "`, while schema identity remains in existing status/menu fields.
 
 ### Pending Todos
 
-- Phase 14 — Candidate Comment Semantics — use the TypeDuck v1.1.2 fixture to drive comment and prompt changes.
+- Phase 15 — Native Windows Artifact — produce or document the native `rime.dll`/`.lib`/headers package.
 
 ### Blockers/Concerns
 
@@ -157,10 +159,10 @@ Items acknowledged and carried forward from previous milestone close:
 ## Session Continuity
 
 Last session: 2026-06-18T00:00:00.000Z
-Stopped at: Completed 13-01; ready to execute 14-01 Candidate Comment Semantics
+Stopped at: Completed 14-01; ready to execute 15-01 Native Windows Artifact
 Resume file: None
 
-**Completed Phase:** 13 (TypeDuck v1.1.2 Oracle) — 1 plan — 2026-06-18
-**Next Phase:** 14 (Candidate Comment Semantics) — 1 plan — ready to execute
+**Completed Phase:** 14 (Candidate Comment Semantics) — 1 plan — 2026-06-18
+**Next Phase:** 15 (Native Windows Artifact) — 1 plan — ready to execute
 
 **Planned Milestone:** TypeDuck-Windows Native IME Contract — 6 phases — tracked in ROADMAP.md and REQUIREMENTS.md

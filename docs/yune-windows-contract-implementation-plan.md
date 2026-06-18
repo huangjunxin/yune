@@ -298,32 +298,39 @@ is tested. The gap is *what the comment string contains*. Drive every change fro
 the Item 3 goldens; the separators/wrapping below are the *current* Yune behavior,
 not assumptions about the fork.
 
-### Known gaps (current Yune behavior → fork target)
-1. **Multiple reverse-lookup pronunciations** are joined with a single space:
-   - [`crates/yune-core/src/filter/mod.rs:541`](../crates/yune-core/src/filter/mod.rs) — `comments.join(" ")`
-   - [`crates/yune-core/src/translator/mod.rs:~585`](../crates/yune-core/src/translator/mod.rs) — `comments.join(" ")`
-   Fork joins with `"; "`. Change **both** sites (grep `comments.join(" ")` to
-   confirm the exact two), but only to the *exact* separator the goldens show.
-2. **Reverse-code + original-comment co-display** is opt-in with a space separator
-   ([`filter/mod.rs:542-546`](../crates/yune-core/src/filter/mod.rs), `format!("{} {reverse_comment}", candidate.comment)`).
-   Match the fork's default behavior and separator.
-3. **Schema-name-in-prompt**: not emitted anywhere. Today `schema_name` only
-   reaches the status object ([`typeduck_web.rs:474-484`](../crates/yune-rime-api/src/typeduck_web.rs)) and the switch menu.
-   The only prompt set is the chord-composer prompt
-   ([`context_api.rs:68-99`](../crates/yune-rime-api/src/context_api.rs)). Add schema-name-in-prompt emission to match
-   the fork (confirm the exact prompt text + when it shows from goldens).
+### Verified target from Item 3
+The v1.1.2 fixture showed that TypeDuck-Windows' dictionary panel is powered by
+the fork module `dictionary_lookup_filter`, not by a plain context-level comment
+array. Its `RimeCandidate.comment` payload is a raw dictionary-panel record:
 
-### Steps
-1. Add golden-parity tests in the owning test modules (`filter`, `translator`,
-   and an ABI-level test in `yune-rime-api`) that assert against the Item 3 fixtures
-   **before** changing behavior (they should fail red).
-2. Make the minimal edits at the sites above to turn the goldens green.
-3. Keep each behavior (`"; "` join / reverse-code co-display / schema prompt) a
-   separate commit if practical, each with its golden test.
+- comment starts with form-feed `\f`;
+- each record starts with carriage-return + primary marker: `\r1,` for the
+  candidate's own pronunciation and `\r0,` for alternate pronunciations;
+- the rest of each record is the source dictionary row fields joined with commas.
+
+The fixture also preserves `schema_id`, `schema_name`, and
+`highlighted_candidate_index` through existing status/menu fields. No separate
+schema prompt byte string was captured for the Windows C ABI, so this item should
+not invent one.
+
+### Implemented behavior
+1. Preserve raw source dictionary row fields as `DictionaryLookupRecord`s on
+   `TableDictionary`.
+2. Add `DictionaryLookupFilter`, which emits the TypeDuck `\f\r1,...\r0,...`
+   comment payload for table/completion/sentence candidates.
+3. Wire `engine/filters: - dictionary_lookup_filter` in `schema_install.rs`,
+   loading its dictionary from source YAML so the raw row columns are available
+   even when normal translators keep preferring compiled table/prism/reverse data.
+4. Change normal `reverse_lookup_filter` and `reverse_lookup_translator`
+   multi-pronunciation joins from `" "` to the fork-compatible `"; "`.
+5. Cover the behavior with core filter/translator tests and an ABI-level
+   schema-selection test that reads `RimeCandidate.comment`.
 
 ### Acceptance (Item 4)
 ```sh
-cargo test -p yune-core --  filter:: translator::      # golden parity green
+cargo test -p yune-core dictionary_lookup_filter
+cargo test -p yune-core reverse_lookup_translator_uses_target_dictionary_comments
+cargo test -p yune-rime-api select_schema_loads_typeduck_dictionary_lookup_filter
 cargo test --workspace
 ```
 
@@ -445,7 +452,7 @@ change), once/if the web path is revived.
 - [x] **Item 1** — Windows test baseline green (`librime_signature_modified_time` shape + poison-tolerant lock)
 - [x] **Item 2** — `config_list_append_{string,bool,int,double}` on struct + table + impl + tests *(Contract #1)*
 - [x] **Item 3** — v1.1.2 goldens captured (or reproducible blocker) *(prereq)*
-- [ ] **Item 4** — comment semantics: `"; "` join, reverse-code co-display, schema-in-prompt, golden-tested *(Contract #2)*
+- [x] **Item 4** — comment semantics: TypeDuck dictionary lookup payload + `"; "` reverse-lookup joins, golden-tested *(Contract #2)*
 - [ ] **Item 5** — native `rime.dll`/`.lib`/headers build documented + produced *(Contract #4)*
 - [ ] **Item 6** — Cantonese/Jyutping parity suite green *(Contract #3)*
 - [x] **Item 0** — untracked files committed, EOL policy recorded, planning state reconciled, Windows milestone tracked

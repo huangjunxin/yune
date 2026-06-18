@@ -155,7 +155,7 @@ then the TypeDuck-Windows contract continues with Phases 11 -> 16.
 | 11. Windows Test Baseline | 1/1 | Complete | 2026-06-18 |
 | 12. Fork Config List Append ABI | 1/1 | Complete | 2026-06-18 |
 | 13. TypeDuck v1.1.2 Oracle | 1/1 | Complete | 2026-06-18 |
-| 14. Candidate Comment Semantics | 0/1 | Planned | - |
+| 14. Candidate Comment Semantics | 1/1 | Complete | 2026-06-18 |
 | 15. Native Windows Artifact | 0/1 | Planned | - |
 | 16. Cantonese/Jyutping Parity Suite | 0/1 | Planned | - |
 
@@ -291,7 +291,7 @@ Plans:
 **Requirements**: WIN-ORACLE-01
 **Success Criteria** (what must be TRUE):
   1. The TypeDuck-HK/librime v1.1.2 binary and pinned schema are captured with exact provenance.
-  2. Golden fixtures cover candidate comments, prompt text, highlighted index, and Cantonese/Jyutping behavior inputs.
+  2. Golden fixtures cover candidate comments, schema identity, highlighted index, and Cantonese/Jyutping behavior inputs.
   3. If the binary/schema cannot be obtained locally, the blocker is documented reproducibly.
 **Plans**: 1 plan
 
@@ -305,12 +305,12 @@ Plans:
 **Requirements**: WIN-COMMENT-01
 **Success Criteria** (what must be TRUE):
   1. Multiple reverse-lookup pronunciations use the oracle-confirmed joiner.
-  2. Reverse-code and original comments co-display with the oracle-confirmed separator.
-  3. Schema prompt text matches the oracle where TypeDuck expects it.
+  2. TypeDuck dictionary lookup records emit the oracle-confirmed `\f\r1,...\r0,...` payload.
+  3. Schema identity remains available through the existing status/menu fields captured by the oracle.
 **Plans**: 1 plan
 
 Plans:
-- [ ] 14-01: Implement golden-driven candidate comment and prompt semantics.
+- [x] 14-01: Implement golden-driven candidate comment semantics.
 
 ### Phase 15: Native Windows Artifact
 

@@ -48,10 +48,12 @@ custom struct. Yune must emit comments **byte-compatible with the librime fork v
 - multiple reverse-lookup pronunciations joined by `"; "`;
 - schema name shown in the prompt.
 
-**Current gap:** the C ABI transport already has `RimeCandidate.comment`; the remaining engine
-work is comment *semantics* (exact joining, reverse-code/original-comment co-display, and
-schema prompt shaping). The older TypeDuck-Web adapter mismatch around context-level `comments` and
-`highlighted_candidate_index` is web-only and does not change the Windows C ABI contract.
+**Implemented in Yune:** the C ABI transport already had `RimeCandidate.comment`; Yune now also
+emits the TypeDuck dictionary-panel payload through `dictionary_lookup_filter`: `\f` followed by
+`\r1,` for the candidate's own source row and `\r0,` for alternate pronunciations. Normal reverse
+lookup joins now use `"; "`. The older TypeDuck-Web adapter mismatch around context-level
+`comments` and `highlighted_candidate_index` is web-only and does not change the Windows C ABI
+contract.
 
 ### 3. Cantonese / Jyutping engine behaviors carried by the librime fork
 These are the genuinely fork-only behaviors (everything else has converged with upstream librime):
@@ -80,7 +82,7 @@ The web path is Emscripten/WASM. Windows needs a **native** engine artifact:
 ## Status checklist (update as Yune progresses)
 
 - [x] (1) `config_list_append_string` (+ siblings) on the RIME C ABI
-- [ ] (2) `RimeCandidate.comment` emitted with TypeDuck shaping
+- [x] (2) `RimeCandidate.comment` emitted with TypeDuck shaping
 - [ ] (3) Cantonese behavior parity vs v1.1.2 (regression suite green)
 - [ ] (4) Native Windows engine artifact (`rime.dll`/`.lib`/headers) + deployment APIs
 
