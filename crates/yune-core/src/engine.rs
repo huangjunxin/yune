@@ -6,8 +6,8 @@ use crate::AiContext;
 use crate::{
     parse_key_sequence, AiDecision, AiResult, Candidate, CandidateFilter, CandidateRanker,
     CandidateSource, CommitRecord, Composition, Context, EchoTranslator, KeyCode, KeyEvent,
-    KeyModifiers, KeySequenceParseError, RerankResult, Snapshot, StagedAiCandidates, Status,
-    Translator, UserDb, UserDbCommitMetadata, UserDbLookupRequest,
+    KeyModifiers, KeySequenceParseError, MemoryStore, RerankResult, Snapshot, StagedAiCandidates,
+    Status, Translator, UserDb, UserDbCommitMetadata, UserDbLookupRequest,
 };
 
 pub struct Engine {
@@ -19,6 +19,7 @@ pub struct Engine {
     filters: Vec<Box<dyn CandidateFilter>>,
     rankers: Vec<Box<dyn CandidateRanker>>,
     staged_ai_result: Option<StagedAiCandidates>,
+    ai_memory: MemoryStore,
     userdb: UserDb,
     pending_userdb_learning: Option<UserDbCommitMetadata>,
     commit_tick: u64,
@@ -64,6 +65,7 @@ impl Default for Engine {
             filters: Vec::new(),
             rankers: Vec::new(),
             staged_ai_result: None,
+            ai_memory: MemoryStore::default(),
             userdb: UserDb::default(),
             pending_userdb_learning: None,
             commit_tick: 0,
@@ -175,6 +177,23 @@ impl Engine {
 
     pub fn take_pending_userdb_learning(&mut self) -> Option<UserDbCommitMetadata> {
         self.pending_userdb_learning.take()
+    }
+
+    #[must_use]
+    pub fn ai_memory(&self) -> &MemoryStore {
+        &self.ai_memory
+    }
+
+    pub fn set_ai_memory(&mut self, memory_store: MemoryStore) {
+        self.ai_memory = memory_store;
+    }
+
+    pub fn set_ai_memory_enabled(&mut self, enabled: bool) {
+        self.ai_memory.set_enabled(enabled);
+    }
+
+    pub fn clear_ai_memory(&mut self) {
+        self.ai_memory.clear();
     }
 
     pub fn set_option(&mut self, option: impl Into<String>, value: bool) {
@@ -832,6 +851,7 @@ impl Engine {
         );
         if candidate_source.is_ai() {
             self.pending_userdb_learning = None;
+            self.ai_memory.record_commit(&self.context, &learning);
         } else {
             self.pending_userdb_learning = Some(learning.clone());
         }

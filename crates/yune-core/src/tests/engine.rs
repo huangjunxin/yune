@@ -1,6 +1,6 @@
 use crate::{
-    AiConfidence, AiOffReason, AiResult, Candidate, CandidateRanker, CandidateSource, Context,
-    Engine, MockAiRanker, RerankResult, StaticTableTranslator, Translator,
+    AiConfidence, AiContext, AiOffReason, AiResult, Candidate, CandidateRanker, CandidateSource,
+    Context, Engine, MockAiRanker, RerankResult, StaticTableTranslator, Translator,
 };
 
 struct CommentTranslator;
@@ -1200,6 +1200,7 @@ fn explicit_ai_commit_skips_librime_userdb_learning_but_classic_commit_still_sta
     assert_eq!(engine.select_candidate(ai_index).as_deref(), Some("吧呀"));
     assert!(engine.userdb().entries().is_empty());
     assert_eq!(engine.take_pending_userdb_learning(), None);
+    assert!(engine.ai_memory().entries().is_empty());
     assert_eq!(engine.context().last_commit.as_deref(), Some("吧呀"));
     assert_eq!(
         engine
@@ -1221,6 +1222,97 @@ fn explicit_ai_commit_skips_librime_userdb_learning_but_classic_commit_still_sta
         .expect("classic commit should stage userdb learning");
     assert_eq!(event.candidate_source, CandidateSource::Table);
     assert_eq!(event.candidate_type, "table");
+}
+
+#[test]
+fn explicit_ai_commit_records_memory_for_standard_context() {
+    let mut engine = Engine::new();
+    engine.set_ai_context(
+        AiContext::standard()
+            .with_app_id("sample_cli")
+            .with_field_id("message")
+            .with_preceding_text("hello"),
+    );
+    engine.add_translator(StaticTableTranslator::new([("ba", "\u{628a}")]));
+    engine.set_input("ba");
+    engine.stage_ai_result(AiResult::Ready {
+        for_input: "ba".to_owned(),
+        candidates: vec![ai_candidate_with_confidence("\u{5427}\u{5440}", 0.62)],
+    });
+    let ai_index = engine.context().candidates.len() - 1;
+
+    assert_eq!(
+        engine.select_candidate(ai_index).as_deref(),
+        Some("\u{5427}\u{5440}")
+    );
+
+    assert_eq!(engine.take_pending_userdb_learning(), None);
+    assert!(engine.userdb().entries().is_empty());
+    let entries = engine.ai_memory().entries();
+    assert_eq!(entries.len(), 1);
+    assert_eq!(entries[0].input, "ba");
+    assert_eq!(entries[0].selected_text, "\u{5427}\u{5440}");
+    assert_eq!(entries[0].provider, "mock");
+    assert_eq!(entries[0].confidence, AiConfidence::from_score(0.62));
+    assert_eq!(entries[0].app_id.as_deref(), Some("sample_cli"));
+    assert_eq!(entries[0].field_id.as_deref(), Some("message"));
+    assert_eq!(entries[0].preceding_text.as_deref(), Some("hello"));
+}
+
+#[test]
+fn sensitive_ai_commit_does_not_write_memory_or_userdb() {
+    let mut engine = Engine::new();
+    engine.add_translator(StaticTableTranslator::new([("ba", "\u{628a}")]));
+    engine.set_input("ba");
+    engine.stage_ai_result(AiResult::Ready {
+        for_input: "ba".to_owned(),
+        candidates: vec![ai_candidate("\u{5427}\u{5440}")],
+    });
+    let ai_index = engine.context().candidates.len() - 1;
+
+    assert_eq!(
+        engine.select_candidate(ai_index).as_deref(),
+        Some("\u{5427}\u{5440}")
+    );
+
+    assert_eq!(engine.take_pending_userdb_learning(), None);
+    assert!(engine.userdb().entries().is_empty());
+    assert!(engine.ai_memory().entries().is_empty());
+}
+
+#[test]
+fn disabled_ai_memory_skips_standard_context_ai_commits() {
+    let mut engine = Engine::new();
+    engine.set_ai_context(AiContext::standard());
+    engine.set_ai_memory_enabled(false);
+    engine.add_translator(StaticTableTranslator::new([("ba", "\u{628a}")]));
+    engine.set_input("ba");
+    engine.stage_ai_result(AiResult::Ready {
+        for_input: "ba".to_owned(),
+        candidates: vec![ai_candidate("\u{5427}\u{5440}")],
+    });
+    let ai_index = engine.context().candidates.len() - 1;
+
+    assert_eq!(
+        engine.select_candidate(ai_index).as_deref(),
+        Some("\u{5427}\u{5440}")
+    );
+
+    assert!(engine.ai_memory().entries().is_empty());
+    engine.set_ai_memory_enabled(true);
+    engine.set_input("ba");
+    engine.stage_ai_result(AiResult::Ready {
+        for_input: "ba".to_owned(),
+        candidates: vec![ai_candidate("\u{5427}\u{5440}")],
+    });
+    let ai_index = engine.context().candidates.len() - 1;
+    assert_eq!(
+        engine.select_candidate(ai_index).as_deref(),
+        Some("\u{5427}\u{5440}")
+    );
+    assert_eq!(engine.ai_memory().entries().len(), 1);
+    engine.clear_ai_memory();
+    assert!(engine.ai_memory().entries().is_empty());
 }
 
 #[test]

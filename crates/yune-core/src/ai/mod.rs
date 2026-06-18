@@ -1,3 +1,5 @@
+mod memory;
+
 use std::{
     sync::mpsc::{self, Receiver, RecvTimeoutError, Sender, TryRecvError},
     thread::{self, JoinHandle},
@@ -5,6 +7,12 @@ use std::{
 };
 
 use crate::{AiConfidence, Candidate, CandidateSource, Context, PrivacyClass, Status};
+
+pub use memory::{
+    memory_store_file_name, memory_store_snapshot_file_name, validate_memory_store_id,
+    AiMemoryEntry, AiMemoryRecordResult, AiMemorySkipReason, AiMemorySnapshotError, MemoryStore,
+    MEMORY_STORE_FILE_SUFFIX, MEMORY_STORE_SNAPSHOT_SUFFIX,
+};
 
 pub trait AiCandidateProvider {
     fn name(&self) -> &'static str;

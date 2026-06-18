@@ -138,7 +138,7 @@ Windows.
 The v1.1.2 oracle fixture used for items 2–3 is **genuine captured fork output**
 (`crates/yune-core/tests/fixtures/typeduck-v1.1.2/`).
 
-### M11: AI-native input layer *(S1-S3 CLI/core slices complete; remaining gates pending)*
+### M11: AI-native input layer *(S1-S4 CLI/core slices complete; remaining gates pending)*
 
 The first AI-native slice is implemented only in `crates/yune-core` and the
 direct `yune-cli run` path, keeping M9/M10 frontend surfaces unchanged. The core
@@ -156,8 +156,11 @@ different input, and the direct CLI transcript records a deterministic
 `ai_decision` when the mock path is enabled. Focused `yune-core`/`yune-cli`
 tests are green. S3 adds explicit AI context snapshots and a default-sensitive
 privacy policy that blocks remote providers before invocation and exposes the
-future memory-learning gate. Local-model providers, AI memory persistence, and
-real frontend exposure remain later M11 gates.
+future memory-learning gate. S4 adds an inspectable, clearable, disable-able
+`MemoryStore` for explicit AI selections, suppresses writes in sensitive
+contexts, and gives persistence hosts `.ai-memory` names instead of librime
+`*.userdb` names. Local-model providers and real frontend exposure remain later
+M11 gates.
 
 ---
 
@@ -168,14 +171,14 @@ Concrete, in priority order (**web first, then Windows, then other platforms**):
 1. **Keep the M9 web gates green on merge.** Preserve the reproducible Emscripten build, TypeScript runtime tests/build, TypeDuck-Web worker build, real-assets browser evidence, and native `typeduck_web` fallback.
 2. **Capture the remaining shared Cantonese goldens.** Five fork-specific cases remain explicit ignored blockers pending TypeDuck v1.1.2 oracle captures: option-combination behavior, completion/prediction, correction, schema-menu hiding, and per-entry userdb pronunciations.
 3. **Resume Windows, then other platforms.** Verify the native `rime.dll`/`.lib`/headers build on an MSVC host, including `rime_get_api`/`config_list_append_string` smoke and header field-order parity, then run the real TypeDuck-Windows E2E per the fork's `INTEGRATION_PLAN.md`. Other native frontends follow the same engine.
-4. **Continue M11 beyond the S1-S3 CLI/core slices.** The M9 verdict permits real-frontend exposure only with AI default-off until the remaining local-model and memory gates are proven.
+4. **Continue M11 beyond the S1-S4 CLI/core slices.** The M9 verdict permits real-frontend exposure only with AI default-off until the remaining local-model gate is proven.
 
 ---
 
 ## Deferred / future
 
 - **librime C++ plugin ABI** (Lua, octagram, predict, proto): deferred until a concrete frontend or distribution requires it; prefer Yune-native extension points first.
-- **AI-native input layer (M11 later slices)** — after the completed S1-S3 CLI/core mock/provider, worker/confidence, and context/privacy slices, remaining work covers local-model providers, AI memory persistence, and eventual real-frontend exposure behind explicit defaults. The architecture remains in [`plans/ai-native-design.md`](./plans/ai-native-design.md); S1 evidence and checklist live in [`plans/ai-native-cli-slice-plan.md`](./plans/ai-native-cli-slice-plan.md).
+- **AI-native input layer (M11 later slices)** — after the completed S1-S4 CLI/core mock/provider, worker/confidence, context/privacy, and memory slices, remaining work covers local-model providers and eventual real-frontend exposure behind explicit defaults. The architecture remains in [`plans/ai-native-design.md`](./plans/ai-native-design.md); S1 evidence and checklist live in [`plans/ai-native-cli-slice-plan.md`](./plans/ai-native-cli-slice-plan.md).
 
 ## Principles (carried forward)
 

@@ -65,10 +65,20 @@ mock/local providers; it also exposes the learning gate S4 will use for
 `MemoryStore`.
 
 ### 4.4 Memory & personalization (AI-05)
-`MemoryStore` in `crates/yune-core/src/ai/` — vocab/phrase/style, inspectable/clearable/disable-able, **separate type** from `UserDb`. **Enforcement point (implemented in S1):** gate `pending_userdb_learning` on source in `commit_candidate` — when `candidate.source.is_ai()`, do **not** stage librime userdb learning (route to `MemoryStore` in S4). `MemoryStore` persistence (when added) uses its **own file namespace**, never the `*.userdb`/`*.userdb.txt` paths compatibility tests measure.
+S4 adds `MemoryStore` in `crates/yune-core/src/ai/`, a separate type from
+`UserDb` that records explicit AI selections as inspectable `AiMemoryEntry`
+rows. The store can be cleared or disabled, aggregates repeated selections, and
+exports/imports a stable text snapshot for a future host to persist. The engine
+routes committed `Ai` candidates to `MemoryStore` only when `AiPrivacyPolicy`
+allows learning; sensitive contexts and disabled memory keep the commit itself
+working while suppressing memory writes. `pending_userdb_learning` remains empty
+for AI commits, so librime `*.userdb` compatibility is untouched. Persistence
+hosts must use `memory_store_file_name` / `memory_store_snapshot_file_name`,
+which produce `.ai-memory` / `.ai-memory.txt` names and reject logical ids that
+look like `*.userdb` resources.
 
 ### 4.5 Provider backends
-`mock` (deterministic; tests + CLI demos) → `local-model` (on-device) → optional `remote`. Backend-agnostic trait; baseline ships mock+local.
+`mock` (deterministic; tests + CLI demos) -> `local-model` (on-device) -> optional `remote`. Backend-agnostic trait; baseline currently ships mock; local-model is S5.
 
 ## 5. Observability & CLI playground (AI-07)
 CLI flags on the direct core runner enable a mock provider per run (`yune-cli run --ai-provider mock|none`, default `none`; local provider remains S5). The ABI-backed `frontend` command remains AI-free so M9/M10 validation surfaces do not change. The transcript records AI source labels and the **discrete `ai_decision` (`ready|pending|off`)** (§2.5) — observable and diffable in the CLI before any native frontend depends on it.
@@ -77,7 +87,7 @@ CLI flags on the direct core runner enable a mock provider per run (`yune-cli ru
 - **S1 — provider interface + mock in direct CLI `run`** (AI-01/03/07) **implemented 2026-06-18**, including the three cheap, safety-critical enforcement fixes promoted from later slices: (a) source-gate userdb learning on `Ai` at the commit boundary; (b) commit intent that blocks `Ai` default auto-commit while allowing explicit selection; (c) the single deterministic merge function pinning the top classic candidate. Mock is pure/synchronous (no thread, no clock) and is called outside `Engine::refresh_candidates`. *(See the slice plan.)*
 - **S2 — async budget worker + input-keyed results + merge policy that consumes confidence** (AI-02) **implemented 2026-06-18**: `AiWorker`, keyed pending/ready results, fixed-point `AiConfidence`, and confidence-ordered AI rows after classic candidates.
 - **S3 — `ContextProvider` + privacy classifier** (AI-04/06) **implemented 2026-06-18**: `AiContext`, `PrivacyClass`, `EngineAiContextProvider`, `AiProviderKind`, and `AiPrivacyPolicy` default to sensitive, block remote calls in sensitive contexts, and expose the future memory-learning gate.
-- **S4 — `MemoryStore`** (AI-05), provably outside the userdb namespace.
+- **S4 — `MemoryStore`** (AI-05/06) **implemented 2026-06-18**: explicit AI selections can be learned into an inspectable, clearable, disable-able store; sensitive contexts suppress memory writes; snapshot helpers use `.ai-memory` names outside the userdb namespace.
 - **S5 — local-model backend**; remote stays optional/later.
 
 ## 6.1 Implementation Evidence
@@ -94,15 +104,19 @@ CLI flags on the direct core runner enable a mock provider per run (`yune-cli ru
   default-sensitive privacy, remote-provider blocking without invoking
   `provide()`, standard-context remote allowance, the learning policy gate, and
   clearing staged AI rows when privacy returns `ai_decision: "off"`.
+- **S4 evidence:** `cargo test -p yune-core` covers `MemoryStore` recording,
+  repeated-selection aggregation, clear/disable controls, sensitive-context
+  write suppression, snapshot round-trip, `.ai-memory` namespace helpers, and
+  the live `Engine::commit_candidate` path routing standard-context AI commits
+  to memory while keeping `take_pending_userdb_learning()` empty.
 
 ## 7. Risks / open questions
 - **A non-conforming provider can still block its host/orchestrator** — S1 keeps provider calls out of `Engine::refresh_candidates`; later hosts must preserve that boundary. The engine-side contract is only "consume staged input-keyed results".
 - **Worker lifecycle on a single-shot CLI run** can make transcripts vary; S1's pure-synchronous mock avoids this (no worker yet).
 - **Stale-result correctness depends on keying by the FULL input** (+ ideally caret/segment); a coarse session key would let a stale result apply.
 - **Tail-appended AI rows interact with filters that run after the append and with paging** (`DEFAULT_PAGE_SIZE`); a filter could drop/reorder them — validate.
-- **Privacy false-negatives remain the highest-severity S4+ risk** — S3 defaults to sensitive and blocks remote calls, but memory writes still need the S4 `MemoryStore` integration.
+- **Privacy false-negatives remain the highest-severity future-provider risk** — S3 defaults to sensitive and blocks remote calls, and S4 applies the same gate to memory writes; future frontend/local-model wiring must preserve that default.
 - **The commit-boundary source gate touches the hot path shared with classic input** — guard it so classic learning is unaffected (test both paths).
-- **`MemoryStore` persistence format/location is unspecified** — must provably never use the `*.userdb` namespace.
 
 ## 8. Safety invariants the test suite must enforce
 - AI-off (or `pending`/failed) yields **byte-identical** classic output to today.
@@ -110,7 +124,7 @@ CLI flags on the direct core runner enable a mock provider per run (`yune-cli ru
 - No `Ai` candidate auto-commits; `CommitIntent::DefaultConfirm` rejects AI candidates and the default/space-committed candidate is always classic.
 - The merge function pins the top classic candidate at index 0 (no AI preemption unless explicitly configured).
 - The recorded `ai_decision` is derived from current input, not wall-clock.
-- A provider exceeding its budget never delays a key event; sensitive context ⇒ no remote call, no memory write (S3 asserts remote-call blocking; S4 must assert memory writes).
+- A provider exceeding its budget never delays a key event; sensitive context ⇒ no remote call, no memory write.
 - `MemoryStore` writes never touch `*.userdb` files.
 
 ---

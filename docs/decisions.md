@@ -569,6 +569,17 @@ providers under sensitive context but blocks remote providers before
 Privacy }`. The policy also exposes the learning gate that S4 must apply to
 `MemoryStore` writes. Real frontend AI exposure remains disabled by default.
 
+**D-M11-4 — S4 routes AI learning into a separate memory store, never librime
+userdb.** `crates/yune-core/src/ai/memory.rs` owns `MemoryStore`, an inspectable,
+clearable, disable-able ledger for explicit AI selections. `Engine::commit_candidate`
+continues to keep `pending_userdb_learning` empty for `CandidateSource::Ai`, but
+now records standard-context AI commits into `MemoryStore`; sensitive contexts
+and disabled memory keep the commit path working while suppressing memory writes.
+The store exports/imports a stable text snapshot for future hosts and exposes
+`memory_store_file_name` / `memory_store_snapshot_file_name`, which produce
+`.ai-memory` / `.ai-memory.txt` resources and reject path-like or `*.userdb`
+logical ids. M9/M10 frontends still do not expose AI.
+
 ### Initialization notes (process decisions)
 
 **D-INIT-1 — Existing `docs/analysis.md`, `docs/roadmap.md`,
@@ -601,4 +612,4 @@ this is why the placeholder-echo WI-4 matrix was reopened (D-P10-9) and why HR-1
 committed the real-assets browser run rather than only describing it.
 
 ---
-*Last updated: 2026-06-18 — added the M11 S3 context/privacy decision (D-M11-3) and updated shared comment-oracle/web-first status.*
+*Last updated: 2026-06-18 — added the M11 S4 memory-store decision (D-M11-4) and updated shared comment-oracle/web-first status.*
