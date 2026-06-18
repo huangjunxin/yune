@@ -4,6 +4,14 @@
 
 This document records findings from integrating Yune with the upstream TypeDuck-Web browser application.
 
+## WI-5 Recommendation
+
+**Recommendation: NO-GO** — do not expose AI-native behavior through TypeDuck-Web
+or real frontends yet. WI-4 proves the browser can load Yune and run the core
+composition -> candidate -> commit path, but paging, deletion, deploy,
+persistence sync/reload, settings-option parity, and v1.1.2 dictionary-comment
+evidence still fail.
+
 > **Historical scope.** The Phase 10 blocker tables below describe the
 > 2026-05-05 validation attempt, before WI-1b produced a loadable
 > Emscripten JS/WASM module. The current WI-4 browser evidence is the

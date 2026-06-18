@@ -88,7 +88,8 @@ schema assets from `public/schema`, and the WI-4 browser run executed. Core
 composition, candidate rendering, selection, commit output, backspace mutation,
 and customize pass; candidate paging, deletion, deploy, persistence sync/reload,
 and v1.1.2 dictionary-comment evidence fail. **TYPEDUCK-E2E-03** is complete as
-a validation run, with follow-up failures tracked in the findings matrix.
+a validation run, and **TYPEDUCK-E2E-04** records an evidence-based **NO-GO**
+for AI-native frontend exposure until those failures are fixed.
 
 ### WASM Build And Export Contract
 
@@ -115,7 +116,7 @@ a validation run, with follow-up failures tracked in the findings matrix.
 - [x] **TYPEDUCK-E2E-01**: The upstream TypeDuck-Web repository is cloned or vendored in a reproducible test location, and its current librime/WASM bridge seam is identified.
 - [x] **TYPEDUCK-E2E-02**: TypeDuck-Web is patched or configured so its input-engine binding calls the Yune TypeScript bridge instead of the original librime bridge, with candidate text/comment/highlight mapped from the runtime response shape.
 - [x] **TYPEDUCK-E2E-03**: Real TypeDuck-Web browser validation covers composition, candidate paging, selection, deletion, commit output, deploy, customize, and persistence smoke flows, with PASS/FAIL evidence recorded.
-- [x] **TYPEDUCK-E2E-04**: Integration findings end with a go/no-go recommendation for exposing AI-native behavior through real frontends.
+- [x] **TYPEDUCK-E2E-04**: Integration findings end with a go/no-go recommendation for exposing AI-native behavior through real frontends; current result is NO-GO from WI-4 browser evidence.
 
 ## TypeDuck-Windows Native IME Contract Requirements
 
@@ -220,7 +221,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TYPEDUCK-E2E-01 | Phase 10 | Complete |
 | TYPEDUCK-E2E-02 | Phase 10 | Complete |
 | TYPEDUCK-E2E-03 | Phase 10 / 17 | Complete — browser E2E executed; failures remain for paging/deletion/deploy/persistence/dictionary comments |
-| TYPEDUCK-E2E-04 | Phase 10 | Complete |
+| TYPEDUCK-E2E-04 | Phase 10 / 17 | Complete — WI-5 records NO-GO from browser evidence |
 | WIN-TEST-01 | Phase 11 | Complete |
 | WIN-ABI-01 | Phase 12 | Complete |
 | WIN-ORACLE-01 | Phase 13 | Complete |

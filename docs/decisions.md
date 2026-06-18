@@ -404,6 +404,12 @@ candidate deletion, deploy, persistence sync/reload proof, and v1.1.2
 dictionary-comment rendering fail and must be tracked as behavior/runtime gaps,
 not as missing-tooling blockers.
 
+**D-P10-7 — M9 remains NO-GO for AI-native frontend exposure after WI-5.** The
+recommendation is now evidence-based rather than tooling-based: Yune can load
+and type through TypeDuck-Web, but real frontends must not be treated as ready
+until paging/deletion, deploy, persistence/reload proof, `setOption`, and
+v1.1.2 dictionary-comment bytes pass in-browser.
+
 **D-12 / TYPEDUCK-E2E-04 — Final findings separate three blocker classes.**
 TypeDuck-Web app/source blockers, Yune adapter/runtime mismatches, and
 environment/tooling blockers are reported separately.

@@ -61,8 +61,9 @@ Detail: [`plans/archive/real-frontend-validation-plan.md`](./plans/archive/real-
 > **web browser before** expanding to Windows and other native platforms. The
 > M9 *NO-GO* was a *tooling* block, not a behavioral one. WI-4 has now produced
 > the first real browser evidence: the core TypeDuck-Web typing path works, while
-> paging/deletion/deploy/persistence/dictionary-comment parity still fail. Writing
-> the evidence-based WI-5 recommendation is the current priority. Much of
+> paging/deletion/deploy/persistence/dictionary-comment parity still fail. WI-5
+> records the evidence-based result as **NO-GO** for AI-native frontend exposure
+> until those browser-observed failures are fixed. Much of
 > the Windows work already done is **shared engine work** (comment shaping,
 > Cantonese goldens, the cross-platform baseline fix) and stays; only the
 > Windows-*platform*-specific pieces wait their turn.
@@ -82,8 +83,9 @@ fetches real `public/schema` assets before init, and participates in the real
 browser run. **Browser result:** composition, candidate rendering, selection,
 commit output, backspace mutation, and customize pass; candidate paging,
 candidate deletion, deploy, persistence sync/reload, and v1.1.2
-dictionary-comment evidence fail. The WI-5 GO/NO-GO update will supersede the
-old tooling-blocked Phase 10 recommendation.
+dictionary-comment evidence fail. The WI-5 GO/NO-GO update supersedes the old
+tooling-blocked Phase 10 recommendation with a behavioral **NO-GO**:
+Yune loads and types in-browser, but the full frontend contract is not ready.
 
 **Plan:** [`plans/typeduck-web-validation-plan.md`](./plans/typeduck-web-validation-plan.md) — the M9 execution plan.
 Detail: [`plans/typeduck-web-adapter.md`](./plans/typeduck-web-adapter.md), [`plans/typeduck-web-integration-findings.md`](./plans/typeduck-web-integration-findings.md), [`plans/archive/ai-native-frontend-readiness.md`](./plans/archive/ai-native-frontend-readiness.md) (superseded NO-GO).
@@ -120,12 +122,11 @@ The v1.1.2 oracle fixture used for items 2–3 is **genuine captured fork output
 
 Concrete, in priority order (**web first, then Windows, then other platforms**):
 
-1. **Record the WI-5 GO/NO-GO from the browser evidence** — the matrix is no longer blocked; it has concrete passes and failures.
-2. **Fix the browser-observed failures before production exposure** — paging/deletion behavior, deploy false, browser-visible persistence sync/reload proof, `setOption`, and v1.1.2 dictionary-comment bytes.
-3. **Keep the loadable WASM artifact, adapter mapper, and app filesystem gates green.** The documented build now produces `yune-typeduck.js`/`.wasm` and smokes `cwrap`/`FS`; preserve that gate plus the candidate/comment/highlight and app init-order smokes.
-4. **Land the remaining shared engine parity** (benefits web *and* Windows): the dictionary-panel comment byte-parity is now proven non-circularly from authored source rows — extend it with the `"; "` reverse-lookup joiner and schema-name-in-prompt oracle cases (and, ideally, real `.dict.yaml` rows), and capture the remaining Cantonese goldens to activate the 5 ignored tests.
-5. **Keep tracking honest.** (Done on main: the future-dated "verified" claim was removed and the circular parity test reworked; the roll-up is set to partial.) Keep statuses evidence-based as Phase 17 proceeds.
-6. **Then Windows, then other platforms.** Once the browser path is validated: verify the native `rime.dll`/`.lib`/headers build on an MSVC host (incl. the `rime_get_api`/`config_list_append_string` smoke check and header field-order parity), then run the real TypeDuck-Windows E2E per the fork's `INTEGRATION_PLAN.md`. Other native frontends (Squirrel/macOS, ibus/fcitx Linux) follow the same engine.
+1. **Fix the browser-observed failures before production exposure** — paging/deletion behavior, deploy false, browser-visible persistence sync/reload proof, `setOption`, and v1.1.2 dictionary-comment bytes.
+2. **Keep the loadable WASM artifact, adapter mapper, and app filesystem gates green.** The documented build now produces `yune-typeduck.js`/`.wasm` and smokes `cwrap`/`FS`; preserve that gate plus the candidate/comment/highlight and app init-order smokes.
+3. **Land the remaining shared engine parity** (benefits web *and* Windows): the dictionary-panel comment byte-parity is now proven non-circularly from authored source rows — extend it with the `"; "` reverse-lookup joiner and schema-name-in-prompt oracle cases (and, ideally, real `.dict.yaml` rows), and capture the remaining Cantonese goldens to activate the 5 ignored tests.
+4. **Keep tracking honest.** (Done on main: the future-dated "verified" claim was removed and the circular parity test reworked; the roll-up is set to partial.) Keep statuses evidence-based as Phase 17 proceeds.
+5. **Then Windows, then other platforms.** Once the browser path is validated: verify the native `rime.dll`/`.lib`/headers build on an MSVC host (incl. the `rime_get_api`/`config_list_append_string` smoke check and header field-order parity), then run the real TypeDuck-Windows E2E per the fork's `INTEGRATION_PLAN.md`. Other native frontends (Squirrel/macOS, ibus/fcitx Linux) follow the same engine.
 
 ---
 
