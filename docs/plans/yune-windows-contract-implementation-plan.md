@@ -73,7 +73,7 @@ oracle work (Item 3) is pulled forward and shared. Item 5 is independent build w
   remote records the same step boundary as the local history.
 - **Update tracking** at the end of each item: tick the box in
   `docs/typeduck-windows-backend-requirements.md` §"Status checklist" and the
-  relevant row in `.planning/REQUIREMENTS.md` / `.planning/ROADMAP.md`.
+  relevant row in [`../requirements.md`](../requirements.md) / [`../roadmap.md`](../roadmap.md).
 
 ---
 
@@ -436,14 +436,9 @@ the `librime → Yune` swap behind the RIME C ABI is a contained change.
    and staging them would create the large meaningless diff this plan is meant
    to avoid. If a full tracked-file renormalization is ever needed, make it a
    separate audited PR/commit after previewing the exact file list.
-2. **Reconcile stale planning state:**
-   - `.planning/STATE.md` still says *"Phase 10 — Ready to plan"* / 100% but all
-     Phase 7–10 SUMMARY files are `COMPLETE`. Mark Phases 7–10 complete.
-   - `.planning/ROADMAP.md` checkbox list for Phases 8 and 10 is unticked though
-     the progress table says Complete — tick them.
-   - Add the TypeDuck-Windows contract as a **new tracked milestone/phases**
-     mirroring Items 1–6 here, with requirement IDs (e.g. `WIN-ABI-01` for
-     `config_list_append`, `WIN-COMMENT-01` for comment semantics, etc.).
+2. **Tracking lives in `docs/`** — the GSD `.planning/` system has been retired.
+   Update [`../roadmap.md`](../roadmap.md), [`../requirements.md`](../requirements.md),
+   and [`../decisions.md`](../decisions.md) as work lands.
 3. No source changes; pure docs/tracking. Commit separately.
 
 ---

@@ -3,10 +3,15 @@
 **Defined:** 2026-04-28
 **Core Value:** Yune should preserve predictable classic RIME input while making AI/LLM assistance a first-class, local-first, non-blocking source of candidates, ranking, context, and memory.
 
+> **Note (2026-06-17):** The GSD `.planning/` system has been retired. This requirement
+> list and its statuses are preserved here; the **Phase** references (e.g. in the
+> Traceability table) are historical GSD labels — now only in git history — kept for
+> context. The live roadmap is [`roadmap.md`](./roadmap.md); decisions are in
+> [`decisions.md`](./decisions.md); conventions in [`CONVENTIONS.md`](./CONVENTIONS.md).
+
 ## v1 Requirements
 
-Requirements for the current compatibility milestone. Each requirement maps to
-exactly one roadmap phase.
+Requirements for the compatibility milestone (historically GSD phases 1–5).
 
 ### CLI Frontend Surrogate
 

@@ -1,0 +1,462 @@
+# Yune Decision Log
+
+This is the consolidated decision log for Yune. The GSD planning system that
+previously lived under `.planning/` has been **retired**; this file preserves the
+durable decisions and their rationale so that future work does not lose the
+reasoning behind the current architecture.
+
+It harvests decisions from the retired `.planning/PROJECT.md` "Key Decisions"
+table and Context/Constraints prose, the `.planning/STATE.md` "Accumulated
+Context > Decisions" list, and the `decisions:` / `D-NN` entries in the phase
+`PLAN`/`SUMMARY`/`RESEARCH`/`CONTEXT` documents.
+
+A note on IDs: the per-phase `D-NN` identifiers used inside `.planning/phases/*`
+were **phase-local** (Phase 2, Phase 3, Phase 7, and Phase 10 each restarted at
+`D-01`). The numbered `D-12`..`D-23` IDs in this log are the **project-wide**
+IDs from `STATE.md` and are preserved verbatim. Earlier, unnumbered project-wide
+decisions are assigned `D-01`..`D-11` here in rough chronological order. Phase-local
+decisions are folded into the relevant project-wide entry or captured as the
+`D-P<phase>-<n>` entries below; they are not renumbered against the project-wide
+sequence.
+
+## Standing principles
+
+Cross-cutting decisions that govern all current and future work:
+
+- **librime is the compatibility oracle, not an architecture template.** librime
+  defines the externally observable contract (schema semantics, config behavior,
+  candidate output, C ABI expectations, deployed-data compatibility, frontend
+  integration). The implementation is free to be idiomatic, typed Rust internally
+  as long as the boundary contract is preserved. Preserve librime-*observable
+  behavior*, not librime's internal C++ complexity.
+
+- **AI-native input is a separate, local-first, non-blocking, source-labeled
+  layer.** LLM assistance is layered as optional candidate providers, rankers,
+  context providers, and memory stores with timeout/fallback policy. AI results
+  must be source-labeled, optional, and safe to discard, and they must never block
+  or slow classic input. Classic input stays predictable and low-latency without
+  network access; remote model calls can never be required for baseline input.
+  Context/memory collection must be opt-in, inspectable, clearable, and disabled
+  for sensitive contexts.
+
+- **Build compatibility fixtures and ABI tests before replacing modules.**
+  Behavior must be measurable against librime before any difference can be
+  classified as an improvement or a regression. Each new behavior slice names its
+  owning implementation module, owning test module, and librime comparison target
+  before code changes; new failing comparisons/fixtures come before dispatch or
+  state-mutation changes.
+
+- **Module and test ownership per slice; `lib.rs`/`main.rs` stay facades.** Each
+  compatibility slice owns its implementation module and test module. `lib.rs`
+  (and `main.rs`) remain thin facades plus facade-owned tests; cross-cutting
+  behavior tests live under per-crate `tests/` modules. Mechanical refactors
+  preserve observable behavior and assertions; they do not rewrite working slices.
+
+- **Plugin ABI compatibility is deferred.** Full C++ librime plugin ABI
+  compatibility (Lua, octagram, predict, proto, etc.) is expensive and not yet
+  required by a concrete frontend or schema-migration path. Deferred until a real
+  distribution requirement makes it necessary.
+
+- **Web-first sequencing.** Validate TypeDuck-Web in a real browser before
+  resuming TypeDuck-Windows native work. Shared engine slices (comment shaping,
+  Cantonese goldens, baseline fixes) are reused by the web path; Windows-specific
+  native packaging stays parked until browser validation succeeds.
+
+## Decision log
+
+### Foundational decisions (from PROJECT.md Key Decisions and Context/Constraints)
+
+**D-01 — Use librime as the compatibility oracle, not an architecture template.**
+Existing schemas and frontends depend on librime contracts, but Rust can model the
+internals more cleanly. Prefer typed, idiomatic Rust modules over cloning librime's
+C++ structure when the boundary contract is preserved. *Outcome: Good.*
+
+**D-02 — Build compatibility fixtures and ABI tests before replacing deeper engine
+modules.** Behavior must be measurable before differences can be classified as
+improvements or regressions. *Outcome: Good.*
+
+**D-03 — Keep AI ranking optional and local-first.** Classic input must remain
+predictable and low-latency without network access. *Outcome: Pending.*
+
+**D-04 — Treat AI-native input as a separate product layer above compatibility.**
+librime cannot guide LLM-native behavior, so Yune needs explicit provider, context,
+memory, fallback, and privacy contracts. *Outcome: Pending.*
+
+**D-05 — Treat the module/test refactor as a structural rule for future feature
+work.** Large single-file accumulation slowed review, search, focused testing, and
+extraction; module/test ownership per slice with `lib.rs`/`main.rs` as facades is
+now the rule. *Outcome: Pending.*
+
+**D-06 — Keep plugin ABI compatibility deferred.** Plugin compatibility is
+expensive and not yet required by a concrete frontend or schema-migration path.
+*Outcome: Pending.*
+
+**D-07 — Treat runtime resource identifiers as logical IDs, not arbitrary
+filesystem paths.** Schema-controlled dictionary/import/pack/vocabulary IDs are
+validated (rejecting drive prefixes, backslashes, traversal) before any runtime
+data path is constructed; explicit user-supplied import/export/restore file paths
+remain arbitrary paths, but the derived logical names joined into runtime roots are
+validated. Boundaries fail closed (FALSE, -1, None, Value::Null).
+
+**D-08 — Source `.dict.yaml` support is not sufficient for production-scale
+compatibility.** Compiled `.table.bin`, `.prism.bin`, and `.reverse.bin` payload
+consumption and rebuild execution remain a required direction.
+
+**D-09 — The CLI frontend is a validation surrogate, not native UI.** It drives
+`yune-rime-api` to validate the ABI; it is not proof that Squirrel, Weasel,
+ibus-rime, fcitx-rime, or fcitx5-rime integration is complete, and it is not a new
+graphical end-user frontend.
+
+**D-10 — Cloud inference is never a required runtime dependency.** Classic input and
+the first AI-native layer must remain local-first and low-latency; remote LLM use is
+an optional enhancement only.
+
+**D-11 — Privacy boundaries for context and memory.** Context and memory collection
+must be opt-in, inspectable, clearable, and disabled for sensitive contexts; remote
+model calls cannot be required for baseline input.
+
+### Phase 1 — CLI frontend surrogate
+
+**D-P1-1 — Keep existing core-backed `run`/`check` commands; add separate
+ABI-backed `frontend`/`frontend-check` commands.** The CLI gains an ABI-driven path
+without disturbing the existing core-backed commands.
+
+**D-P1-2 — Localize unsafe RIME ABI handling to `rime_frontend.rs`.** All ABI
+functions are acquired through `rime_get_api()`/`RimeApi`; each populated
+commit/context/status read is paired with its matching free function; an RAII
+cleanup guard runs `destroy_session`/`cleanup_all_sessions`/`finalize` on success
+and error paths.
+
+**D-P1-3 — Move deterministic transcript serialization to `transcript.rs`.**
+`FrontendRun::to_json` becomes a compatibility delegation; owned
+`FrontendEvent`/`FrontendContext` carry keycode, mask, page metadata, and select
+keys/labels so serializers never read raw ABI pointers. Native frontend validation
+is marked Phase 2 scope.
+
+### Phase 2 — Native ABI validation and runtime safety
+
+**D-P2-1 — Validate the Cargo-built cdylib through a dynamic loader.** A
+`libloading` Cargo integration test resolves `rime_get_api` and drives the returned
+`RimeApi` function table against the real `yune-rime-api` cdylib; `cargo build -p
+yune-rime-api` is required before the loader gate because `cargo test` alone does
+not guarantee the artifact exists. The `Library` value is kept alive for the whole
+symbol/table scope; the loader fails closed with distinct messages for missing
+artifact, load error, missing symbol, null table, null function pointer, and runtime
+failure.
+
+**D-P2-2 — Keep runtime implementation unchanged where lifecycle regressions pass.**
+The absence of loader-exposed concurrency defects is recorded as an explicit
+lifecycle-safety assertion rather than broadening into multi-threaded frontend
+behavior. Notification ordering is asserted with full context/session/type/value
+tuples.
+
+**D-P2-3 — Limit Phase 2 fixes to ABI/runtime boundaries.** Schema semantics,
+compiled-dictionary behavior, and userdb storage compatibility stay deferred to
+later phases and are recorded only as structured findings.
+
+### Phase 3 — Schema pipeline depth
+
+**D-P3-1 — Model non-auto previous-match splitting in `processors/speller.rs`
+without `lib.rs` dispatch changes.** The remaining input is preserved without
+emitting an unread commit; the splitting stays bounded to one appended spelling-key
+path.
+
+**D-P3-2 — Lock existing editor/navigator/selector and chord/punctuation/fallback
+behavior with schema-loaded ABI fixtures.** Coverage is added as ABI-facing
+regression fixtures where existing owned behavior already matched the focused
+visible state.
+
+**D-P3-3 — Make unmodeled gears explicit deferrals, not silent no-ops.** `memory`
+defers to Phase 5 (userdb learning); `poet`/`grammar`, `contextual_translation`,
+and `unity_table_encoder` defer to Phase 4 (compiled payloads). Each is recorded as
+a `RemainingGearDeferral` (gear, observed librime role, current Yune behavior, scope
+decision, target phase) during schema installation — a deterministic no-op, not an
+ABI-exposed compatibility claim.
+
+**D-P3-4 — Compare against real librime schemas (`luna_pinyin`, `cangjie5`) and
+record out-of-phase gaps as structured findings.** Distribution comparisons assert
+focused categories (component order, segment tags, generated spellings, OpenCC/filter
+behavior, punctuation/fallback, candidate differences); converted differences stay in
+the comparison module with owner comments rather than changing production code.
+
+**D-P3-5 — Use schema-loaded ABI fixtures for spelling algebra, correction/tolerance
+ranking, and OpenCC filter-chain behavior.** OpenCC assertions cover filter-chain tag
+gating and limited built-in maps only; no full OpenCC conversion-data parity is
+claimed, and no compiled-payload/LevelDB/plugin/AI-native code is added.
+
+### Phase 4 — Compiled dictionary data
+
+**D-P4-1 — Keep compiled binary layout parsing in `yune-core` byte-slice readers;
+`schema_install.rs` only does validated resource selection.** Valid source-only
+dictionaries are normal runtime behavior; stale/invalid/unsupported compiled
+artifacts record fallback diagnostics. Unsupported MARISA/Darts sections fail closed
+with structured `UnsupportedSection` errors.
+
+**D-P4-2 — Compute deployment freshness from source/schema/pack checksums, not
+mtimes.** `RimeDictRebuildExecutionReport` statuses for table/prism/reverse artifacts
+let deployment tests assert partial rebuild/reuse; rebuild execution stays entirely
+in Rust by emitting the local compiled formats the readers accept; generated schema
+build metadata is normalized out of prism signatures.
+
+**D-P4-3 (project-wide, dated 04-03) — Represent advanced source and compiled
+dictionary data on `TableDictionary`, not parallel runtime-specific structs.** Use
+bounded local Yune fixture markers for advanced compiled-payload parity while
+rejecting unsupported librime sections structurally; carry compiled reverse
+`dict_settings` into runtime table dictionaries so `ReverseLookupTranslator` observes
+source and compiled settings through the same API. LevelDB/userdb learning,
+predictive updates, plugin translators, and AI-native ranking stay out of scope.
+
+**D-P4-4 (project-wide, dated 04-04) — Represent correction/tolerance data as
+normalized `TableDictionary` metadata merged through compiled/source paths.** Lookup
+expansion preserves original input first, then correction canonicalization, then
+tolerance candidates. Correction/tolerance parser counts are capped before allocation;
+malformed compiled sections fall back with structured diagnostics
+(`YUNE-CORR`/`YUNE-TOL` fixture markers with checked offsets, lengths, UTF-8, count
+caps). Tests use local Rust-generated fixture bytes only; no librime compiler is
+invoked.
+
+### Phase 5 — UserDB and scaling hardening
+
+**D-P5-1 — Use file snapshots and atomic rename semantics instead of a LevelDB
+dependency.** Exported `RimeLevers*UserDict*` functions stay in `userdb.rs` with
+storage behavior behind internal userdb modules; legacy plain-text userdb import
+compatibility is preserved while committing typed c/d/t records.
+
+**D-P5-2 — Classic learning stays commit-driven.** `Engine` emits typed pending
+userdb events (`take_pending_userdb_learning`) before clearing composition; session
+persistence consumes them only through normal commit paths. Core userdb is
+storage-neutral; `yune-rime-api` bridges core events to the store and validates
+logical dictionary names before storage selection. Schema-selected userdb loading is
+keyed by the table/script-translator dictionary, not the schema-id fallback, so
+unrelated schema tests do not inherit persisted learning. `HistoryTranslator`,
+`CandidateRanker`, `MockAiRanker`, and AI memory are not substitutes for classic
+userdb learning; userdb candidates enter before optional rankers.
+
+**D-P5-3 — Test splits follow behavior ownership and stay separate from semantic
+changes.** Levers user-dictionary iterator/file-operation tests move to
+`yune-rime-api/src/tests/userdb.rs` (owner: userdb lifecycle); engine/translator/
+filter behavior tests move out of `lib.rs`; key/dictionary/facade-specific and
+already-owned tests stay put until their owning modules are targeted. `yune-core/
+src/lib.rs` stays a facade plus facade-owned tests.
+
+### Phase 6 — Real frontend validation and benchmark
+
+**D-P6-1 — Anchor native frontend validation at the cdylib `RimeApi` boundary with
+sanitized deterministic traces.** `FrontendHostTrace` captures ordered calls,
+notifications, free-pairs, stale sessions, and mismatches using logical resource IDs
+and deterministic event names (no paths, timestamps, PIDs, or pointer addresses);
+missing required function pointers are represented as blocker-capable mismatch records
+before any unchecked call.
+
+**D-P6-2 — Model TypeDuck-Web as a minimized browser/WASM call sequence through
+Yune-owned `RimeApi` calls, without vendoring source.** Emscripten worker lifecycle,
+IDBFS persistence, and unavailable native dynamic loading are classified as
+`browser_wasm_limit` observations rather than Yune ABI failures; the observation is a
+sanitized fixture with mismatch classification "match" (no Yune ABI/runtime mismatch
+found). The 06-01 host-trace schema is reused rather than inventing target-specific
+formats.
+
+**D-P6-3 (project-wide, dated 06-03) — Represent Squirrel/macOS validation as a
+source-modeled `RimeApi` lifecycle fixture plus a documented direct-run blocker**,
+rather than a mandatory app bundle or input-method registration step. Linux
+ibus-rime/fcitx-rime validation remains follow-up documentation with safe ABI
+source-model markers in `native_frontends.rs`, not a required daemon dependency for
+`cargo test`. Native frontend mismatch capture reuses the Phase 6 host-trace schema
+and sanitized fixture rules.
+
+**D-P6-4 (project-wide, benchmark/readiness notes) — Use a dependency-free Cargo
+bench target instead of Criterion** to preserve MSRV safety and avoid unnecessary
+benchmark infrastructure. BENCH-01/BENCH-02 measurements stay at the `rime_get_api` /
+`RimeApi` function-table boundary rather than direct `yune-core` calls. AI-native
+readiness is recorded as **GO WITH CONDITIONS**, based on Phase 6 validation and
+benchmarks, while keeping providers, rankers, context policy, memory policy, and
+privacy controls out of scope.
+
+### Phase 7 — WASM build and export contract
+
+**D-P7-1 — Treat `wasm32-unknown-emscripten` as the browser build target, not
+`wasm-bindgen`.** TypeDuck-Web-style integration needs Emscripten C ABI exports and
+filesystem/runtime hooks. Document `EXPORTED_FUNCTIONS`/`EXPORTED_RUNTIME_METHODS`
+as the browser build contract without changing `lib.rs` facade wiring.
+
+**D-P7-2 — The browser export surface is the seeded `yune_typeduck_*` adapter API.**
+init, process-key, select-candidate, delete-candidate, flip-page, deploy, customize,
+cleanup, response-json, response-handled, free-response. `scripts/typeduck-exports.txt`
+is the canonical non-prefixed export list (one symbol per line, no `RimeApi` symbols).
+
+**D-P7-3 — Keep the Rust adapter inside `crates/yune-rime-api`; do not create a
+separate adapter crate** unless planning proves the contract cannot be expressed
+safely from the existing cdylib.
+
+**D-P7-4 — Add deterministic native + Emscripten export verification that must not
+mutate the `RimeApi` table.** A POSIX shell script verifies native exports (`nm -g`
+against the export list, accepting macOS leading underscores) before browser
+prerequisite detection; missing `wasm32-unknown-emscripten`/`emcc`/`emar` are
+deterministic, actionable blockers only when `cargo test -p yune-rime-api --test
+typeduck_web` passes. Native adapter contract tests in
+`crates/yune-rime-api/tests/typeduck_web.rs` are the authoritative fallback.
+
+**D-P7-5 — Document the one-active-process-global-service constraint and host
+filesystem assumptions.** `yune_typeduck_cleanup` finalizes the process-global RIME
+service; multiple simultaneous TypeDuck states with different dirs are unsupported by
+this first contract. Treat missing browser schema/dictionary assets as an init-time
+failure before starting the service. Phase 7 is a handoff contract: one active
+process-global service, host-owned MEMFS/IDBFS layout and sync, and deterministic
+verified-or-blocked build output. Upstream clone/replace testing is Phase 10.
+
+### Phase 8 — TypeScript bridge and runtime package
+
+**D-P8-1 — Keep TypeScript tooling package-local under
+`packages/yune-typeduck-runtime`.** No root JS app scaffolding. Bind only the
+canonical 11 `yune_typeduck_*` exports through an injected Emscripten Module
+interface.
+
+**D-P8-2 — Centralize response-pointer ownership.** `readTypeDuckResponse` frees
+non-null responses in a `finally` block; `TypeDuckRuntime` keeps `statePtr` private,
+zeros it on cleanup, and rejects operations after cleanup; keyboard mapping is
+DOM-free (`keyEventToRimeKey` maps `event.key` to explicit RIME constants, bans
+`keyCode`).
+
+**D-P8-3 — Make native handled state authoritative and normalize malformed JSON.**
+`yune_typeduck_response_handled` can override the JSON envelope; malformed JSON
+becomes a deterministic `TypeDuckResponseError`.
+
+**D-P8-4 — Document `@yune-ime/typeduck-runtime` as repository-owned bridge code,
+not a TypeDuck-Web app scaffold.** Keep the low-level C/WASM export contract
+alongside wrapper guidance so non-wrapper hosts can follow raw pointer ownership
+rules; wrapper callers receive parsed `TypeDuckResponse` objects while raw callers
+copy JSON before `yune_typeduck_free_response`.
+
+### Phase 9 — Browser filesystem and persistence
+
+**D-P9-1 — Keep filesystem behind a narrow `TypeDuckFilesystem` interface and require
+explicit assets.** Require explicit `dictionaryId` and asset contents rather than
+parsing YAML or fabricating fallback assets; mirror all five native preflight paths
+before `TypeDuckRuntime.init` (shared default/schema/dict plus build default/schema).
+Browser helper code stays DOM-free, network-free, package-local under Vitest fake-fs
+tests; logical IDs must match `[A-Za-z0-9_-]+` before virtual-path construction.
+
+**D-P9-2 — Keep persistence orchestration as standalone helpers in `filesystem.ts`.**
+Do not modify `TypeDuckRuntime` or native exports. Use
+`syncFromPersistenceBeforeInit` before init and `syncToPersistenceAfterMutation`
+after deploy/customize/cleanup/userdb boundaries; expose sync direction as
+`fromPersistence`/`toPersistence` strings that lock the Emscripten `syncfs` populate
+boolean.
+
+**D-P9-3 — Userdb persistence is an explicit host sync boundary
+(`syncAfterUserDataChange`).** Current native exports do not expose userdb mutation
+notifications, so the host owns the sync boundary. Stale deployed-config recovery is
+a deterministic test fixture over existing helpers, not a metadata heuristic; recovery
+documentation stays local-first and caller-owned (explicit assets, explicit sync
+boundaries, no browser app/network/cache policy).
+
+### Phase 10 — TypeDuck-Web app integration and E2E
+
+**D-P10-1 — Clone upstream TypeDuck-Web to `third_party/typeduck-web/source`
+(gitignored), treated as the app under test.** Use a reproducible, auditable checkout
+(pinned `https://github.com/TypeDuck-HK/TypeDuck-Web` URL + full commit SHA + setup
+command in a lock JSON and README). Inspect and document the existing librime/WASM
+seam before any patching, so app-source changes stay distinguishable from Yune adapter
+changes.
+
+**D-P10-2 — Keep TypeDuck-Web source changes minimal; route engine calls through the
+Phase 8/9 package surface.** Prefer a patch/configuration layer over UI rewrites; the
+seam calls `TypeDuckRuntime`, `keyEventToRimeKey`, filesystem preparation, and
+persistence sync helpers from `@yune-ime/typeduck-runtime` rather than raw
+`yune_typeduck_*` exports. Preserve one active runtime per Emscripten Module with
+deterministic cleanup; do not promise multi-instance browser isolation.
+
+**D-P10-3 — Use explicit TypeDuck-Web-owned assets; never fabricate fallback
+schema/dictionary data.** Missing or mismatched `default.yaml`/schema/dictionary YAML
+remain visible integration failures (grep-gated against fallback/dummy/placeholder
+wording).
+
+**D-P10-4 — Record adapter mismatches before widening Yune.** Map missing
+`TypeDuckContext` properties to defaults (comments, `highlighted_candidate_index`);
+document the `setOption` gap as an error rather than implementing a workaround; widen
+the Yune adapter only for the smallest proven blocker, documented first.
+
+**D-P10-5 — Real browser validation is required and never silently skipped.** Use a
+standalone Playwright spec (upstream has no browser test framework) covering
+composition, candidate paging, selection, deletion, commit output, deploy, customize,
+and persistence smoke; persistence follows the Phase 9 explicit sync contract
+(populate before init, flush after mutation, reload/reinitialize to prove survival).
+Missing browser/local tooling is recorded reproducibly (command, missing dependency,
+fallback evidence). Asset configuration was recorded as an E2E blocker, not a build
+blocker.
+
+**D-12 / TYPEDUCK-E2E-04 — Final findings separate three blocker classes.**
+TypeDuck-Web app/source blockers, Yune adapter/runtime mismatches, and
+environment/tooling blockers are reported separately.
+
+**D-13 / TYPEDUCK-E2E-04 — Phase 10 ends with a NO-GO recommendation for AI-native
+frontend exposure** due to browser-validation blockers. Strict rubric: lack of
+browser evidence prevents GO / GO WITH CONDITIONS. Blockers are bounded
+(cargo/rustup/emcc have install paths), not a fundamental seam incompatibility; the
+seam patch is structurally sound and the adapter handles mismatches — environment
+setup is the gating requirement.
+
+**D-14 — AI-native scope remains deferred.** AI-native provider calls, candidate
+generation, ranking, context, memory, privacy controls, and a new first-party Yune
+frontend remain out of scope.
+
+### TypeDuck-Windows milestone (project-wide D-15..D-22)
+
+**D-15 / WIN-TEST-01 — TypeDuck-Windows native IME is the next tracked milestone;
+first unblock Windows test trust before feature work.**
+
+**D-16 / WIN-ABI-01 — Fork-only config list-append APIs are the first feature
+slice** after the Windows baseline, because they need no external oracle.
+
+**D-17 / WIN-ORACLE-01 — Comment semantics and Cantonese/Jyutping parity must be
+driven by TypeDuck-HK/librime v1.1.2 goldens or documented blockers.**
+
+**D-18 / WIN-ABI-01 — TypeDuck fork list-append fields are inserted after
+`config_list_size` and before `config_begin_list`,** matching the fork `RimeApi`
+order; scalar append values follow the existing string-backed `RimeConfigSet*`
+representation.
+
+**D-19 / WIN-ORACLE-01 — Pin the v1.1.2 oracle commits.** `TypeDuck-HK/librime`
+commit `74cb52b78fb2411137a7643f6c8bc6517acfde69`, `rime-dictionary-lookup-filter`
+commit `3e4605c4fae99f068df2edb85aaeab5a97752795`, and `TypeDuck-HK/schema` commit
+`1bed1ae6a0ab48055f073774d7dfd152a171c548`.
+
+**D-20 / WIN-COMMENT-01 — Represent TypeDuck-Windows candidate comments as source-row
+dictionary lookup payloads (`\f\r1,...\r0,...`) through `dictionary_lookup_filter`.**
+Captured source rows assert byte output against the v1.1.2 fixture. Normal reverse
+lookup joins use `"; "`, but that join and schema-name prompt parity still need
+dedicated oracle coverage.
+
+**D-21 / WIN-BUILD-01 — The native Windows package is produced by
+`scripts/package-typeduck-windows.ps1`.** It builds `yune-rime-api` for
+`x86_64-pc-windows-msvc`, renames the DLL/import library to `rime.dll`/`rime.lib`,
+copies TypeDuck fork headers, and smoke-checks `rime_get_api` plus the
+`config_list_append_string` slot.
+
+**D-22 / WIN-PARITY-01 — The Cantonese/Jyutping parity suite locks captured v1.1.2
+schema/menu/comment behavior** and keeps uncaptured option, completion, correction,
+schema-menu, and userdb-pronunciation behaviors as explicit ignored tests until
+dedicated oracle fixtures are captured.
+
+### Web-first re-sequencing (project-wide D-23)
+
+**D-23 / SEQUENCING — Re-sequence to web-first.** Validate Yune in a real web browser
+(reopened as Phase 17) before resuming TypeDuck-Windows platform work. Phase 10's
+NO-GO reflected absent browser evidence (the WASM artifact was never built), not a
+failed seam. Shared engine slices (comment shaping, Cantonese goldens, baseline fix)
+are reused by the web path; Windows-specific native packaging (Phases 11–16) is parked
+until browser validation succeeds.
+
+### Initialization notes (process decisions)
+
+**D-INIT-1 — Existing `docs/analysis.md`, `docs/roadmap.md`,
+`docs/plans/refactor-plan.md`, and `.planning/codebase/` are the source context** for
+the (now retired) GSD project; external research was skipped at setup because scope
+was driven by existing docs and direct librime comparison.
+
+**D-INIT-2 — Future compatibility slices must choose module ownership, test
+ownership, and the librime comparison target before implementation.** (Captured as a
+standing principle; see "Standing principles" and D-05.)
+
+---
+*Last updated: 2026-06-17 — consolidated from the retired GSD .planning/ (PROJECT.md, STATE.md, phase summaries).*

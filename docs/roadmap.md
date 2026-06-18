@@ -16,9 +16,13 @@ AI-native behavior on top as a separate product milestone.
 **Document map**
 - This file — high-level roadmap (what's done, what's next).
 - [`analysis.md`](./analysis.md) — founding architecture decisions.
+- [`CONVENTIONS.md`](./CONVENTIONS.md) — architecture, stack, structure, coding/testing conventions, integrations, and current risks (one consolidated reference).
+- [`decisions.md`](./decisions.md) — the consolidated decision log (standing principles + `D-*` entries).
+- [`requirements.md`](./requirements.md) — requirement IDs and their status.
 - [`typeduck-windows-backend-requirements.md`](./typeduck-windows-backend-requirements.md) — the parked Windows engine contract to resume after web validation.
-- [`plans/`](./plans/) — per-stage implementation plans, findings, build notes, and validation artifacts.
-- `.planning/` — the detailed phase-by-phase execution record (GSD): `ROADMAP.md`, `REQUIREMENTS.md`, `STATE.md`, and per-phase `SUMMARY` files.
+- [`plans/`](./plans/) — per-stage implementation plans, findings, build notes, and validation artifacts (finished ones under `plans/archive/`).
+
+> The GSD planning system (`.planning/`) has been retired; its durable content now lives in `decisions.md`, `requirements.md`, and `CONVENTIONS.md`.
 
 ---
 
@@ -39,7 +43,7 @@ AI-native behavior on top as a separate product milestone.
 - Compiled `.table.bin`/`.prism.bin`/`.reverse.bin` payload consumption and rebuild execution; correction/tolerance data in the compiled path.
 - UserDB compatibility beyond the plain-text shim: storage, snapshot/restore/recovery/sync, transaction rollback, learning, frequency updates, predictive lookup.
 
-Detail: [`plans/archive/compat-foundation-summary.md`](./plans/archive/compat-foundation-summary.md), [`plans/refactor-plan.md`](./plans/refactor-plan.md) (module/test ownership rules), and `.planning/phases/01–05`.
+Detail: [`plans/archive/compat-foundation-summary.md`](./plans/archive/compat-foundation-summary.md), [`plans/refactor-plan.md`](./plans/refactor-plan.md) (module/test ownership rules), and the [`decisions.md`](./decisions.md) log.
 
 ### M8: Real frontend validation & benchmarks
 - Host-shaped native loader validates the full `rime_get_api` → setup → deploy → schema select → session → key process → context/status → commit → teardown lifecycle.

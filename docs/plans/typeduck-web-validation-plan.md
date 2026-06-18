@@ -157,8 +157,7 @@ acceptable fallback). Move every row of the findings matrix from **BLOCKED** to
 2. Write the recommendation that **supersedes** the Phase-10 NO-GO in
    [`archive/ai-native-frontend-readiness.md`](./archive/ai-native-frontend-readiness.md):
    exactly one `GO` / `GO WITH CONDITIONS` / `NO-GO` line, grounded in browser evidence.
-3. Update [`../roadmap.md`](../roadmap.md) (M9), `.planning/ROADMAP.md` (Phase 17),
-   `.planning/STATE.md`, and `.planning/REQUIREMENTS.md` (`TYPEDUCK-E2E-03`).
+3. Update [`../roadmap.md`](../roadmap.md) (M9), [`../requirements.md`](../requirements.md) (`TYPEDUCK-E2E-03`), and [`../decisions.md`](../decisions.md).
 
 ### Acceptance
 - One recommendation line, evidence-referenced; tracking docs reflect the real result.
