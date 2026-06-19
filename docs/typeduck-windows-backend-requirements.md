@@ -3,20 +3,39 @@
 > **Purpose.** This records what the **TypeDuck-Windows** native IME frontend needs from the
 > engine, so Yune development can target it deliberately. It complements
 > [`typeduck-web-integration-findings.md`](./plans/archive/typeduck-web-integration-findings.md), which covers the
-> *web* frontend. As of 2026-06-17 the TypeDuck-Windows modernization is **intentionally parked**
-> pending Yune reaching the contract below; the engine is on the critical path, the Windows
-> frontend is the downstream consumer.
+> *web* frontend. This M10 contract is parked as a TypeDuck compatibility
+> profile after M12 made upstream `rime/librime 1.17.0` the default core oracle.
+> The Windows frontend remains the downstream consumer when this profile is
+> explicitly resumed behind a named TypeDuck profile ABI surface.
 >
-> **Source of truth.** The detailed analysis lives in the `TypeDuck-Windows` repo:
-> `LIBRIME_INTEGRATION_PLAN.md` (the irreducible engine surface) and `INTEGRATION_PLAN.md`
-> (the frontend modernization). This file is the engine-side summary of the same contract.
+> **Source of truth.** The local execution notes are
+> [`plans/yune-windows-contract-implementation-plan.md`](./plans/yune-windows-contract-implementation-plan.md)
+> and [`plans/yune-windows-native-build.md`](./plans/yune-windows-native-build.md). Earlier
+> downstream analysis referenced `LIBRIME_INTEGRATION_PLAN.md` and `INTEGRATION_PLAN.md`
+> in the external `TypeDuck-Windows` repo (<https://github.com/TypeDuck-HK/TypeDuck-Windows>),
+> but the 2026-06-19 pinned checkout at
+> `f3ffcfe3b6a3018b1c3c9d256a6f0d587a2d2e27` did not contain those files. Treat the
+> external fork as reference-only until a pinned E2E harness or current equivalent docs are
+> identified; this file is the engine-side contract summary.
+>
+> **Oracle URLs.** Core Yune behavior is checked against upstream librime
+> (<https://github.com/rime/librime>, target `1.17.0`, commit
+> `33e78140250125871856cdc5b42ddc6a5fcd3cd4`). This TypeDuck profile is checked
+> against the TypeDuck fork (<https://github.com/TypeDuck-HK/librime>, tag
+> `v1.1.2`, commit `74cb52b78fb2411137a7643f6c8bc6517acfde69`). The committed
+> v1.1.2 fixture also records
+> `TypeDuck-HK/schema` (<https://github.com/TypeDuck-HK/schema>, commit
+> `1bed1ae6a0ab48055f073774d7dfd152a171c548`) and
+> `TypeDuck-HK/rime-dictionary-lookup-filter`
+> (<https://github.com/TypeDuck-HK/rime-dictionary-lookup-filter>, commit
+> `3e4605c4fae99f068df2edb85aaeab5a97752795`).
 
 ## Architecture (why this is clean)
 
 TypeDuck is RIME-shaped: `weasel frontend  ↔  RIME C ABI  ↔  engine`.
 
-- **Today:** `TypeDuck-Windows (weasel fork) → RIME C ABI → librime fork (TypeDuck-HK/librime @ v1.1.2)`.
-- **Target:** `TypeDuck-Windows → RIME C ABI → Yune`.
+- **Today:** `TypeDuck-Windows` weasel fork (<https://github.com/TypeDuck-HK/TypeDuck-Windows>) -> RIME C ABI -> librime fork (`TypeDuck-HK/librime @ v1.1.2`).
+- **Future target:** `TypeDuck-Windows -> named TypeDuck profile RIME C ABI -> Yune`.
 
 Because the frontend only ever talks to the **RIME C ABI**, swapping librime→Yune is a *contained*
 change **iff** Yune presents the same ABI surface and emits the same candidate data. The four
@@ -51,14 +70,15 @@ custom struct. Yune must emit comments **byte-compatible with the librime fork v
 **Implemented in Yune:** the C ABI transport already had `RimeCandidate.comment`; Yune now also
 emits the TypeDuck dictionary-panel payload through `dictionary_lookup_filter`: `\f` followed by
 `\r1,` for the candidate's own source row and `\r0,` for alternate pronunciations. Captured
-`jyut6ping3_mobile` source rows now assert byte output against the v1.1.2 fixture. Normal reverse
-lookup joins currently use `"; "`, but that joiner still needs a dedicated v1.1.2 oracle case.
-Schema-name-in-prompt parity is also still blocked on a captured oracle case. The older TypeDuck-Web
-adapter mismatch around context-level `comments` and `highlighted_candidate_index` was web-only, is
-resolved in the TypeDuck-Web adapter, and does not change the Windows C ABI contract.
+`jyut6ping3_mobile` source rows now assert byte output against the v1.1.2 fixture. HR-6 also locks
+normal reverse-lookup joins to `"; "` and captures schema-name prompt/preedit bytes against the
+same v1.1.2 oracle. The older TypeDuck-Web adapter mismatch around context-level `comments` and
+`highlighted_candidate_index` was web-only, is resolved in the TypeDuck-Web adapter, and does not
+change the Windows C ABI contract.
 
 ### 3. Cantonese / Jyutping engine behaviors carried by the librime fork
-These are the genuinely fork-only behaviors (everything else has converged with upstream librime):
+These are the genuinely fork-only behaviors and should not be treated as core
+Yune behavior unless upstream `rime/librime 1.17.0` also matches them:
 
 - options: `combine_candidates`, `show_full_code`, `enable_sentence` (disable toggle);
 - completion + prediction (freq-threshold tuned) and the **`enable_completion`** option — note
@@ -88,13 +108,20 @@ The web path is Emscripten/WASM. Windows needs a **native** engine artifact:
 
 ## Status checklist (update as Yune progresses)
 
-- [x] (1) `config_list_append_string` (+ siblings) on the RIME C ABI
-- [ ] (2) `RimeCandidate.comment` emitted with full TypeDuck shaping
+- [x] (1) `config_list_append_string` (+ siblings) as parked TypeDuck-profile helper behavior; not exposed by default upstream `rime_get_api()`
+- [x] (2) `RimeCandidate.comment` emitted with current TypeDuck shaping
   - [x] dictionary lookup payload bytes from captured source rows
-  - [ ] reverse-lookup joiner and schema-name prompt parity captured against v1.1.2
+  - [x] reverse-lookup joiner and schema-name prompt parity captured against v1.1.2
 - [ ] (3) Cantonese behavior parity vs v1.1.2 (regression suite added; full parity still has documented ignored oracle gaps)
-- [ ] (4) Native Windows engine artifact (`rime.dll`/`.lib`/headers) + deployment APIs (packaging script added; MSVC-host smoke verification pending)
+- [x] (4) Native Windows engine artifact (`rime.dll`/`.lib`/headers) archived pre-M12 package smoke; current packaging fails fast until a named TypeDuck profile ABI surface exists
 
-When all four are met (and real E2E passes), revisit `TypeDuck-Windows/INTEGRATION_PLAN.md`: the
-engine swap behind the RIME C ABI is then a contained change, and the (engine-agnostic) frontend
-modernization can proceed independently in the meantime.
+The real TypeDuck-Windows frontend E2E is still **not** green: a pinned checkout
+was captured under `target/typeduck-windows-e2e/TypeDuck-Windows`, but the
+referenced integration-plan files were absent and the local shell did not expose
+`msbuild.exe`, `devenv.exe`, `cmake.exe`, `nuget.exe`, or `nmake.exe`.
+
+When all four contract items are met through a named TypeDuck profile ABI and
+real E2E passes, revisit the current TypeDuck-Windows frontend lifecycle docs or
+harness: the engine swap behind that profile ABI is then a contained change, and
+the engine-agnostic frontend modernization can proceed independently in the
+meantime.

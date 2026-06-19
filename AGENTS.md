@@ -7,17 +7,17 @@
 ## Canonical docs — read these
 
 - **[docs/CONVENTIONS.md](docs/CONVENTIONS.md) — start here.** The single reference for architecture, stack, repo structure, coding & testing conventions, C ABI rules, integrations, and current risks.
-- [docs/roadmap.md](docs/roadmap.md) — milestones and what's next (current direction: **web-first**).
+- [docs/roadmap.md](docs/roadmap.md) - milestones and what's next (current baseline: **upstream-first after M12 closeout**).
 - [docs/decisions.md](docs/decisions.md) — the decision log (standing principles + `D-*` entries).
 - [docs/requirements.md](docs/requirements.md) — requirement IDs and their status.
 - [docs/plans/](docs/plans/) — per-stage execution plans (active at the top, finished ones under `plans/archive/`).
 
 ## Key constraints
 
-- **Compatibility oracle:** upstream <https://github.com/rime/librime>, plus the TypeDuck fork <https://github.com/TypeDuck-HK/librime> @ `v1.1.2` for Windows-specific behavior. It is *not* a local checkout path.
+- **Compatibility oracle:** upstream <https://github.com/rime/librime> latest stable is the default core oracle. The current pinned upstream target is `1.17.0` @ `33e78140250125871856cdc5b42ddc6a5fcd3cd4`. The TypeDuck fork <https://github.com/TypeDuck-HK/librime> @ `v1.1.2` / `74cb52b78fb2411137a7643f6c8bc6517acfde69` is profile-only for TypeDuck compatibility. These are referenced upstream/fork repositories, not local checkout paths.
 - **Idiomatic Rust over a C++ clone:** preserve librime-*observable* behavior at the ABI boundary; keep internals clean, typed Rust.
 - **Own each slice:** new behavior gets an owning module *and* owning tests; keep `lib.rs`/`main.rs` as facades.
-- **C ABI:** `RimeApi` field order *is* the ABI — append new function-table entries at the exact position they occupy in the fork's `rime_api.h`, never mid-struct.
+- **C ABI:** `RimeApi` field order *is* the ABI - match upstream `rime_api.h` for core fields, and match the TypeDuck fork header only for explicit TypeDuck-profile fork-only slots. Never insert function-table entries mid-struct without oracle/header evidence.
 - **Tests are oracle-driven and non-circular:** capture expected bytes from the oracle, run the real path, never derive the expected value from Yune itself. Uncaptured cases use `#[ignore = "blocked: …"]` with a `panic!()` body — no silent gaps.
 - **Security:** runtime resource identifiers are logical IDs, not arbitrary filesystem paths.
 

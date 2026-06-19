@@ -30,9 +30,10 @@ TypeDuck `v1.1.2` remains a compatibility-profile oracle only:
 - Commit: `74cb52b78fb2411137a7643f6c8bc6517acfde69`
 
 The first concrete M12 parity slice is the standard upstream C ABI table. This
-is deliberate: the current Yune table contains TypeDuck fork-only fields
-(`start_quick`, `config_list_append_*`) in the default `RimeApi`, while upstream
-`1.17.0` does not.
+is deliberate: the pre-M12 Yune table contained TypeDuck fork-only
+`config_list_append_*` fields in the default `RimeApi`, while upstream `1.17.0`
+does not. `start_quick` is also absent from upstream `1.17.0` and was not a
+pre-M12 default `RimeApi` function-table field.
 
 ## Non-Goals
 
@@ -69,8 +70,10 @@ is deliberate: the current Yune table contains TypeDuck fork-only fields
 - Read: `docs/CONVENTIONS.md`
 - Read: `docs/decisions.md`
 - Read: `docs/plans/upstream-oracle-refresh.md`
-- Read: `C:\Users\laubonghaudoi\Documents\GitHub\librime\src\rime_api.h`
-- Read: `C:\Users\laubonghaudoi\Documents\GitHub\librime\src\rime_levers_api.h`
+- Read: pinned upstream header via
+  `git -C C:\Users\laubonghaudoi\Documents\GitHub\librime show 33e78140250125871856cdc5b42ddc6a5fcd3cd4:src/rime_api.h`
+- Read: pinned upstream levers header via
+  `git -C C:\Users\laubonghaudoi\Documents\GitHub\librime show 33e78140250125871856cdc5b42ddc6a5fcd3cd4:src/rime_levers_api.h`
 
 - [ ] **Step 1: Record the current Yune worktree**
 
@@ -107,7 +110,7 @@ tag: 1.17.0
 chore(release): 1.17.0 :tada:
 ```
 
-- [ ] **Step 3: Verify the current default ABI conflict**
+- [ ] **Step 3: Verify the pre-M12 default ABI conflict**
 
 Run:
 
@@ -115,9 +118,11 @@ Run:
 rg -n "start_quick|config_list_append|config_begin_list|get_prebuilt_data_dir|get_staging_dir" crates\yune-rime-api\src\abi.rs crates\yune-rime-api\src\api_table.rs crates\yune-rime-api\src\tests\abi.rs
 ```
 
-Expected: matches in Yune's default `RimeApi` and ABI layout test. This confirms
-M12 must address the TypeDuck fork-only fields before core upstream ABI parity
-can be claimed.
+Pre-M12 expected: matches for `config_list_append_*` in Yune's default
+`RimeApi` and ABI layout test. `start_quick` should not appear as a default
+function-table field; if it appears in docs or exports, treat it as stale
+TypeDuck-profile/default-surface drift. This confirms M12 must address
+TypeDuck fork-only fields before core upstream ABI parity can be claimed.
 
 - [ ] **Step 4: Commit no changes in this task**
 
@@ -412,19 +417,19 @@ Upstream source: `rime/librime` tag `1.17.0`, commit
 | Field | Upstream 1.17.0 slot | Current Yune slot before M12 | M12 classification | Action |
 |---|---:|---:|---|---|
 | `start_maintenance` | 4 | 4 | upstream core | keep |
-| `start_quick` | absent | 5 | TypeDuck profile | remove from default `RimeApi`; keep implementation only as parked profile code |
-| `is_maintenance_mode` | 5 | 6 | upstream core | move to upstream slot 5 |
-| `config_begin_map` | 44 | 46 | upstream core | move to upstream slot 44 |
-| `config_begin_list` | 68 | 45 | upstream core | move to upstream slot 68 |
-| `config_list_append_bool` | absent | 72 | TypeDuck profile | remove from default `RimeApi`; keep direct helper tests |
-| `config_list_append_int` | absent | 73 | TypeDuck profile | remove from default `RimeApi`; keep direct helper tests |
-| `config_list_append_double` | absent | 74 | TypeDuck profile | remove from default `RimeApi`; keep direct helper tests |
-| `config_list_append_string` | absent | 75 | TypeDuck profile | remove from default `RimeApi`; keep direct helper tests |
-| `get_input` | 69 | 76 | upstream core | move to upstream slot 69 |
-| `get_prebuilt_data_dir` | 80 | 55 | upstream core | move to upstream slot 80 |
-| `get_staging_dir` | 81 | 56 | upstream core | move to upstream slot 81 |
-| `change_page` | 97 | 102 | upstream core | move to upstream slot 97 |
-| function slot count | 98 | 103 | upstream core | default `RimeApi` exposes 98 function slots |
+| `start_quick` | absent | absent | TypeDuck profile | keep absent from default `RimeApi`; any future support must remain profile-only |
+| `is_maintenance_mode` | 5 | 5 | upstream core | keep |
+| `config_begin_map` | 44 | 44 | upstream core | keep |
+| `config_list_append_bool` | absent | 68 | TypeDuck profile | remove from default `RimeApi`; keep direct helper tests |
+| `config_list_append_int` | absent | 69 | TypeDuck profile | remove from default `RimeApi`; keep direct helper tests |
+| `config_list_append_double` | absent | 70 | TypeDuck profile | remove from default `RimeApi`; keep direct helper tests |
+| `config_list_append_string` | absent | 71 | TypeDuck profile | remove from default `RimeApi`; keep direct helper tests |
+| `config_begin_list` | 68 | 72 | upstream core | move to upstream slot 68 |
+| `get_input` | 69 | 73 | upstream core | move to upstream slot 69 |
+| `get_prebuilt_data_dir` | 80 | 84 | upstream core | move to upstream slot 80 |
+| `get_staging_dir` | 81 | 85 | upstream core | move to upstream slot 81 |
+| `change_page` | 97 | 101 | upstream core | move to upstream slot 97 |
+| function slot count | 98 | 102 | upstream core | default `RimeApi` exposes 98 function slots |
 ```
 
 - [ ] **Step 2: Write the failing upstream ABI test**
@@ -549,13 +554,16 @@ Run:
 cargo test -p yune-rime-api abi::rime_api_function_table_layout_matches_librime_header
 ```
 
-Expected: FAIL because the current default table still contains TypeDuck slots.
+Pre-M12 expected: FAIL because the default table still contains TypeDuck
+`config_list_append_*` slots. Post-M12 expected: PASS with those fork-only slots
+absent from default `RimeApi`.
 
 - [ ] **Step 4: Update `RimeApi` and `api_table.rs` to upstream order**
 
 Implement the minimum change:
 
-- Remove `start_quick` from default `RimeApi`.
+- Keep `start_quick` absent from default `RimeApi`. It is absent from upstream
+  `1.17.0` and was not present as a pre-M12 default function-table field.
 - Remove `config_list_append_bool`, `config_list_append_int`,
   `config_list_append_double`, and `config_list_append_string` from default
   `RimeApi`.
@@ -564,10 +572,11 @@ Implement the minimum change:
 - Place `config_begin_list` immediately after `config_list_size`.
 - Place `get_prebuilt_data_dir` and `get_staging_dir` after
   `candidate_list_from_index`, matching upstream `1.17.0`.
-- Keep the exported helper implementations `RimeStartQuick` and
-  `RimeConfigListAppend*` in their existing modules only if they still compile
-  and are covered by direct tests; they are parked TypeDuck-profile code, not
-  default upstream API fields.
+- Keep the exported helper implementations `RimeConfigListAppend*` in their
+  existing modules only if they still compile and are covered by direct tests;
+  they are parked TypeDuck-profile code, not default upstream API fields. Do
+  not expose `RimeStartQuick` as part of the default upstream surface; any future
+  quick-start support needs a named TypeDuck profile and fresh fork evidence.
 
 - [ ] **Step 5: Update config append tests**
 

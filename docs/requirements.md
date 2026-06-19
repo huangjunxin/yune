@@ -126,21 +126,33 @@ M9 with **GO WITH CONDITIONS** for gated AI-native frontend exposure.
 - [x] **TYPEDUCK-E2E-03**: Real TypeDuck-Web browser validation covers composition, candidate paging, selection, deletion, commit output, deploy, customize, persistence smoke flows, and dictionary-panel rendering, with PASS evidence recorded from the HR-5 real-assets matrix. Rich dictionary-comment byte parity is committed in `cantonese_parity`; the browser-shaped native rich-comment test is explicitly skipped unless local v1.1.2 oracle build assets are present.
 - [x] **TYPEDUCK-E2E-04**: Integration findings end with a go/no-go recommendation for exposing AI-native behavior through real frontends; HR-7 records **GO WITH CONDITIONS**.
 
+## M12 Upstream Oracle Refresh Requirements
+
+**Status: complete.** Upstream `rime/librime 1.17.0` is the default core
+oracle target. TypeDuck `v1.1.2` remains a compatibility-profile oracle for
+TypeDuck-Web/Windows only.
+
+- [x] **UPSTREAM-ORACLE-01**: Upstream `rime/librime 1.17.0` and commit `33e78140250125871856cdc5b42ddc6a5fcd3cd4` are pinned as the default core oracle in docs and fixture provenance.
+- [x] **UPSTREAM-ORACLE-02**: Oracle fixture/golden naming distinguishes upstream core fixtures from TypeDuck profile fixtures, e.g. `upstream-1.17.0/` vs `typeduck-v1.1.2/`.
+- [x] **UPSTREAM-AUDIT-01**: Existing compatibility coverage is audited for TypeDuck-only assumptions that should not define core Yune behavior.
+- [x] **TYPEDUCK-PROFILE-01**: TypeDuck-specific ABI, comment, and Cantonese/Jyutping behavior remains documented as profile-only and parked until explicitly resumed.
+
 ## TypeDuck-Windows Native IME Contract Requirements
 
-**Status: ready to resume after M9.** A first pass landed (Phases 11–16), and
-M9 web validation is now complete. The shared comment requirement is covered for
-the current v1.1.2 oracle slices; remaining Cantonese parity captures stay
-explicit blockers. The next platform-specific work is native Windows package
-verification and a real TypeDuck-Windows E2E. These requirements target the
-native TypeDuck-Windows/weasel path, which consumes Yune through the RIME C ABI
-rather than the web TypeScript bridge.
+**Status: parked as a TypeDuck compatibility profile.** A first pass landed
+(Phases 11-16), M9 web validation is complete, and the native Windows package
+smoke verified before M12. That smoke is now archived profile evidence, not an
+active package gate against the default upstream `rime_get_api()`. The shared
+comment requirement is covered for the current v1.1.2 oracle slices; remaining
+Cantonese parity captures and a real TypeDuck-Windows frontend E2E stay explicit
+blockers. These requirements target the native TypeDuck-Windows/weasel path and
+no longer define Yune's active core oracle milestone.
 
 - [x] **WIN-TEST-01**: Windows `cargo test --workspace` has a trustworthy green baseline, including portable signature timestamp shape and test-only poison-lock recovery.
-- [x] **WIN-ABI-01**: `config_list_append_{string,bool,int,double}` is implemented on the RIME C ABI function table with tests that call through `rime_get_api()`.
+- [x] **WIN-ABI-01**: `config_list_append_{string,bool,int,double}` helper behavior is implemented and covered as parked TypeDuck-profile implementation code; the default upstream `rime_get_api()` no longer exposes these fork-only slots.
 - [x] **WIN-ORACLE-01**: The TypeDuck-HK/librime v1.1.2 binary and pinned schema are captured as a reproducible oracle, or a precise blocker is documented.
 - [x] **WIN-COMMENT-01**: Candidate comment semantics match the v1.1.2 oracle for dictionary lookup payloads, reverse lookup joins, and prompt/schema identity. Dictionary lookup payload bytes, schema-prompt bytes, and reverse-lookup joiner coverage are oracle-backed.
-- [x] **WIN-BUILD-01**: Yune can produce or document the blocker for a native Windows `rime.dll`, import `.lib`, and compatible header package. Packaging is scripted; artifact smoke verification remains host-dependent.
+- [x] **WIN-BUILD-01**: Yune had a pre-M12 native Windows `rime.dll`, import `.lib`, and compatible header package smoke; current packaging is parked and fails fast until a named TypeDuck profile ABI surface exists.
 - [ ] **WIN-PARITY-01**: Cantonese/Jyutping parity regression coverage locks captured v1.1.2 behavior and records explicit ignored blockers for uncaptured fork-only cases. Full parity remains blocked by missing goldens.
 
 ## Future Requirements
@@ -234,11 +246,15 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TYPEDUCK-E2E-03 | Phase 10 / 17 | Complete - HR-5 real-assets browser matrix passes; rich comment byte parity is committed in `cantonese_parity` |
 | TYPEDUCK-E2E-04 | Phase 10 / 17 | Complete - HR-7 records GO WITH CONDITIONS |
 | WIN-TEST-01 | Phase 11 | Complete |
-| WIN-ABI-01 | Phase 12 | Complete |
+| WIN-ABI-01 | Phase 12 | Complete - direct helper coverage retained as parked TypeDuck-profile implementation; not exposed by default upstream `rime_get_api()` |
 | WIN-ORACLE-01 | Phase 13 | Complete |
 | WIN-COMMENT-01 | Phase 14 / 17 | Complete - dictionary payload, schema prompt, and joiner oracle covered |
-| WIN-BUILD-01 | Phase 15 | Complete as scripted; smoke verification pending on MSVC host |
+| WIN-BUILD-01 | Phase 15 | Complete - archived pre-M12 package smoke; current script is parked until a named TypeDuck profile ABI exists |
 | WIN-PARITY-01 | Phase 16 | Partial - ignored oracle cases still blocked |
+| UPSTREAM-ORACLE-01 | M12 | Complete - upstream `1.17.0` provenance pinned as default core oracle |
+| UPSTREAM-ORACLE-02 | M12 | Complete - fixture naming separates `upstream-1.17.0` and `typeduck-v1.1.2` goldens |
+| UPSTREAM-AUDIT-01 | M12 | Complete - coverage audit captured in `docs/plans/m12-coverage-audit.md` |
+| TYPEDUCK-PROFILE-01 | M12 | Complete - TypeDuck-specific coverage remains profile-only and parked until explicitly resumed |
 | AI-01 | M11 S1 | Complete - staged provider interface in `yune-core` |
 | AI-02 | M11 S2/S5 | Complete - worker/fallback/confidence merge plus local rule-backed provider |
 | AI-03 | M11 S1/S5 | Complete - source-labeled contextual/local completions with no default AI auto-commit |
@@ -252,9 +268,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 - v2 validation requirements: 7 total
 - TypeDuck-Web integration requirements: 15 total
 - TypeDuck-Windows native IME requirements: 6 total
-- Mapped to phases: 60
+- M12 upstream oracle requirements: 4 total, 4 complete
+- Mapped to phases: 64
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-28*
-*Last updated: 2026-06-18 — M11 S1-S5 direct CLI/core AI-native layer complete; M9 TypeDuck-Web validation complete with GO WITH CONDITIONS; TypeDuck-Windows ready to resume*
+*Last updated: 2026-06-19 - M12 upstream oracle refresh complete; M10 TypeDuck-Windows remains parked as a TypeDuck compatibility profile until a named profile ABI surface exists*

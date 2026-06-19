@@ -8,6 +8,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+throw "TypeDuck-Windows packaging is parked during M12: default RimeApi follows upstream rime/librime 1.17.0 and does not expose TypeDuck fork-only config_list_append_* slots. Re-enable this script only after a named TypeDuck profile ABI surface is implemented and its slot smoke is re-derived from TypeDuck-HK/librime v1.1.2 rime_api.h."
 
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RepoRoot = Resolve-Path (Join-Path $ScriptDir "..")
@@ -102,11 +103,6 @@ public static class YuneRimeSmoke {
         int dataSize = Marshal.ReadInt32(api);
         if (dataSize <= 0) {
             throw new InvalidOperationException("RimeApi data_size is not positive");
-        }
-        int tableStart = IntPtr.Size == 8 ? 8 : 4;
-        IntPtr appendString = Marshal.ReadIntPtr(api, tableStart + 71 * IntPtr.Size);
-        if (appendString == IntPtr.Zero) {
-            throw new InvalidOperationException("config_list_append_string slot is null");
         }
     }
 }

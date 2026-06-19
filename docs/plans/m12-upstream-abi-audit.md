@@ -1,6 +1,6 @@
 # M12 Upstream ABI Audit
 
-> **Status:** Active - **Milestone:** M12 (Upstream Oracle Refresh) - **Updated:** 2026-06-19 - **Type:** reference
+> **Status:** Done - M12 closeout reference - **Milestone:** M12 (Upstream Oracle Refresh) - **Updated:** 2026-06-19 - **Type:** reference
 
 Upstream source: `rime/librime` tag `1.17.0`, commit
 `33e78140250125871856cdc5b42ddc6a5fcd3cd4`, file `src/rime_api.h`.

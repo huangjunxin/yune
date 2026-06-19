@@ -57,10 +57,11 @@ Cross-cutting decisions that govern all current and future work:
   required by a concrete frontend or schema-migration path. Deferred until a real
   distribution requirement makes it necessary.
 
-- **Web-first sequencing.** Validate TypeDuck-Web in a real browser before
-  resuming TypeDuck-Windows native work. Shared engine slices (comment shaping,
-  Cantonese goldens, baseline fixes) are reused by the web path; Windows-specific
-  native packaging stays parked until browser validation succeeds.
+- **Upstream-first oracle sequencing.** Upstream `rime/librime 1.17.0` is the
+  default core compatibility oracle. TypeDuck-HK/librime `v1.1.2` is retained as
+  a TypeDuck-Web/Windows compatibility-profile oracle only. If upstream and
+  TypeDuck behavior disagree, upstream wins for core Yune; TypeDuck behavior must
+  stay behind a named profile test, fixture, adapter, or ABI note.
 
 ## Decision log
 
@@ -494,10 +495,12 @@ real-assets browser and oracle evidence.
 generation, ranking, context, memory, privacy controls, and a new first-party Yune
 frontend remain out of scope.
 
-### TypeDuck-Windows milestone (project-wide D-15..D-22)
+### TypeDuck-Windows milestone (project-wide D-15..D-22; parked by D-24)
 
-**D-15 / WIN-TEST-01 — TypeDuck-Windows native IME is the next tracked milestone;
-first unblock Windows test trust before feature work.**
+**D-15 / WIN-TEST-01 - TypeDuck-Windows native IME was the next tracked
+milestone at the time; first unblock Windows test trust before feature work.**
+D-24 now parks this milestone behind an explicit TypeDuck profile surface while
+preserving the completed package and helper evidence as TypeDuck-profile work.
 
 **D-16 / WIN-ABI-01 — Fork-only config list-append APIs are the first feature
 slice** after the Windows baseline, because they need no external oracle.
@@ -506,8 +509,9 @@ slice** after the Windows baseline, because they need no external oracle.
 driven by TypeDuck-HK/librime v1.1.2 goldens or documented blockers.**
 
 **D-18 / WIN-ABI-01 — TypeDuck fork list-append fields are inserted after
-`config_list_size` and before `config_begin_list`,** matching the fork `RimeApi`
-order; scalar append values follow the existing string-backed `RimeConfigSet*`
+`config_list_size` and before `get_input`,** matching the fork `RimeApi` order;
+`config_begin_list` stays in its earlier v1.1.2 slot next to `config_begin_map`.
+Scalar append values follow the existing string-backed `RimeConfigSet*`
 representation.
 
 **D-19 / WIN-ORACLE-01 — Pin the v1.1.2 oracle commits.** `TypeDuck-HK/librime`
@@ -525,7 +529,11 @@ join plus schema-prompt preedit bytes.
 `scripts/package-typeduck-windows.ps1`.** It builds `yune-rime-api` for
 `x86_64-pc-windows-msvc`, renames the DLL/import library to `rime.dll`/`rime.lib`,
 copies TypeDuck fork headers, and smoke-checks `rime_get_api` plus the
-`config_list_append_string` slot.
+`config_list_append_string` slot. The 2026-06-19 run completed without
+`-NoBuild` or `-SkipSmoke`, proving a pre-M12 package smoke but not the full
+TypeDuck-Windows frontend lifecycle. After M12, the default `RimeApi` no longer
+exposes TypeDuck fork-only slots, so this script is parked and fails fast until a
+named TypeDuck profile ABI surface exists and the slot smoke is re-derived.
 
 **D-22 / WIN-PARITY-01 — The Cantonese/Jyutping parity suite locks captured v1.1.2
 schema/menu/comment behavior** and keeps uncaptured option, completion, correction,
@@ -538,9 +546,26 @@ dedicated oracle fixtures are captured.
 (reopened as Phase 17) before resuming TypeDuck-Windows platform work. Phase 10's
 NO-GO reflected absent browser evidence (the WASM artifact was never built), not a
 failed seam. HR-7 closes that browser gate as GO WITH CONDITIONS. Shared engine
-slices (comment shaping, Cantonese goldens, baseline fix) are reused by the web
-path; Windows-specific native packaging and E2E validation can resume under the
-TypeDuck-Windows milestone.
+slices (comment shaping, Cantonese goldens, baseline fix) were reused by the web
+path. D-24 supersedes the post-M9 priority order by parking TypeDuck-Windows
+behind the upstream oracle refresh.
+
+### Upstream oracle refresh (project-wide D-24)
+
+**D-24 / ORACLE-PRECEDENCE - Upstream latest stable is Yune's default core
+oracle; TypeDuck v1.1.2 is a compatibility profile.** M12 targets upstream
+`rime/librime 1.17.0` at commit `33e78140250125871856cdc5b42ddc6a5fcd3cd4`.
+TypeDuck-HK/librime `v1.1.2` at
+`74cb52b78fb2411137a7643f6c8bc6517acfde69` remains the oracle only for
+TypeDuck-Web/Windows profile behavior such as fork-only ABI slots and
+dictionary-panel/Cantonese fork behavior. When upstream and TypeDuck disagree,
+core Yune follows upstream; TypeDuck differences must be isolated behind named
+profile fixtures, tests, adapters, or ABI notes. M12 pinned upstream fixture
+provenance, added the TypeDuck coverage audit, and refreshed default `RimeApi`
+parity to the pinned `rime/librime 1.17.0` target. `start_quick` remains absent
+from the default table. M12 removed the `config_list_append_*` fork-only slots
+from the default upstream table. M10 is therefore parked until a named TypeDuck
+profile ABI surface is implemented.
 
 ### AI-native milestone (M11)
 
@@ -603,10 +628,11 @@ the same `ai_decision` field used by the mock provider; the ABI-backed
 
 ### Initialization notes (process decisions)
 
-**D-INIT-1 — Existing `docs/analysis.md`, `docs/roadmap.md`,
-`docs/plans/archive/refactor-plan.md`, and `.planning/codebase/` are the source context** for
-the (now retired) GSD project; external research was skipped at setup because scope
-was driven by existing docs and direct librime comparison.
+**D-INIT-1 - Existing `docs/analysis.md`, `docs/roadmap.md`, and
+`docs/plans/archive/refactor-plan.md` are the retained source context** for the
+now-retired GSD project. Historical `.planning/codebase/` notes were folded into
+the retained docs before `.planning/` was removed. External research was skipped
+at setup because scope was driven by existing docs and direct librime comparison.
 
 **D-INIT-2 — Future compatibility slices must choose module ownership, test
 ownership, and the librime comparison target before implementation.** (Captured as a
@@ -616,7 +642,7 @@ standing principle; see "Standing principles" and D-05.)
 was abandoned/rug-pulled, so `.planning/` was removed and its durable content
 consolidated under `docs/`: `decisions.md` (this log), `requirements.md` (requirement
 tracker), `CONVENTIONS.md` (architecture/stack/conventions/testing reference), and
-`roadmap.md` (milestone map M0–M10). No code change — the engine never depended on
+`roadmap.md` (milestone map through M12). No code change - the engine never depended on
 `.planning/`. Rationale: the planning content is durable and worth keeping, but the
 tool itself is dead and unsafe to keep installed. Outcome: Good.
 
@@ -633,4 +659,4 @@ this is why the placeholder-echo WI-4 matrix was reopened (D-P10-9) and why HR-1
 committed the real-assets browser run rather than only describing it.
 
 ---
-*Last updated: 2026-06-18 — added D-P10-14 for the M9 post-review evidence closeout and retained the M11 S5 local-provider decision.*
+*Last updated: 2026-06-19 - D-24 now records M12 closeout, upstream default RimeApi parity, and parked TypeDuck-Windows profile ABI/package work.*

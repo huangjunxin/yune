@@ -1,20 +1,43 @@
 # Yune → TypeDuck-Windows: Concrete Implementation Plan
 
-> **Status:** Parked · **Milestone:** M10 (TypeDuck-Windows native backend; deferred behind M9) · **Updated:** 2026-06-17 · **Type:** execution plan
+> **Status:** Parked - **Milestone:** M10 (TypeDuck-Windows compatibility profile) - **Updated:** 2026-06-19 - **Type:** reference
 
 > **Audience.** An autonomous coding agent (e.g. GPT) executing directly in the
 > `yune` repo. Every work item is independently committable, names exact files,
 > and ends with copy-pasteable verification commands.
 >
-> **Goal.** Make Yune satisfy the four-item *graduation contract* in
+> **Goal.** Record the four-item TypeDuck compatibility-profile contract in
 > [`typeduck-windows-backend-requirements.md`](../typeduck-windows-backend-requirements.md)
-> so the parked `TypeDuck-Windows` (weasel fork) can swap `librime → Yune` behind
-> the RIME C ABI.
+> so TypeDuck-Windows can later swap `librime -> Yune` behind the RIME C ABI
+> after M12 refreshed core Yune against upstream `rime/librime 1.17.0` and a
+> named TypeDuck profile ABI surface exists.
 >
 > **Line anchors** in this doc are accurate as of 2026-06-17 but *will drift* —
 > re-`grep` the named symbol before editing. Trust symbol names over line numbers.
 
 ---
+
+## Remaining / Not Yet Verified
+
+The roadmap now treats M10 as parked profile work. Older `[x]` entries in this
+plan mean the code or documentation was authored; they do not by themselves
+prove target verification. The remaining TypeDuck-profile work is:
+
+| Area | Authored | Verified-on-target | Current honest state |
+|---|---:|---:|---|
+| Item 4 comment shaping | [x] | [ ] | Current v1.1.2 fixture slices are byte-covered, including dictionary payloads, `"; "` joins, and schema prompt/preedit bytes; the real TypeDuck-Windows E2E has not run. |
+| Item 5 native package | [x] | archived | `scripts/package-typeduck-windows.ps1` ran on 2026-06-19 without `-NoBuild` or `-SkipSmoke`, but that was pre-M12 TypeDuck-slot smoke. Current packaging is parked and fails fast until a named TypeDuck profile ABI surface exists. |
+| Item 6 Cantonese parity suite | [x] | [ ] | Four active golden-locked tests pass when verified; five fork-specific cases remain `#[ignore]`d pending genuine v1.1.2 goldens. |
+| TypeDuck-Windows E2E | [ ] | [ ] | Pinned checkout `f3ffcfe3b6a3018b1c3c9d256a6f0d587a2d2e27` exists under `target/`, but referenced integration-plan files were absent and native frontend build tools were missing from PATH. |
+
+Do not mark E2E or missing oracle cases verified by pointing at authored scripts,
+by running `package-typeduck-windows.ps1` with `-SkipSmoke` or `-NoBuild`, or by
+deriving new expected bytes from Yune itself.
+
+M12 note: older steps below that add `config_list_append_*` to the default
+`RimeApi` table are historical. After M12, the default table follows upstream
+`rime/librime 1.17.0`; TypeDuck fork-only slots require a named TypeDuck profile
+ABI surface and fresh fork-header slot evidence.
 
 ## 0. What was verified before writing this plan
 
@@ -216,9 +239,12 @@ Adjacent primitives already exist to build on: `RimeConfigCreateList`
    Add one private helper `unsafe fn config_list_append(config, key, item: Value) -> Bool`
    that does the load-or-create-sequence-and-push, so the four entry points stay thin.
 
-2. **Add struct fields** to the `RimeApi` table in
-   [`crates/yune-rime-api/src/abi.rs`](../../crates/yune-rime-api/src/abi.rs), immediately after `config_list_size`
-   and before `config_begin_list`. Define fn-pointer type aliases consistent with the existing
+2. **Historical TypeDuck profile ABI step:** add struct fields to a named
+   TypeDuck profile `RimeApi` table, not to the default upstream table. In the
+   TypeDuck v1.1.2 header order these fields are immediately after
+   `config_list_size` and before `get_input`; `config_begin_list` is earlier in
+   the table next to `config_begin_map`. Define fn-pointer type aliases
+   consistent with the existing
    `ConfigSet*Fn` aliases, e.g.:
    ```rust
    pub config_list_append_bool:   Option<ConfigListAppendBoolFn>,
@@ -230,7 +256,7 @@ Adjacent primitives already exist to build on: `RimeConfigCreateList`
    > the position librime's real `RimeApi` places them (check the fork's
    > `rime_api.h` field order). Field order *is* the ABI for struct-pointer access.
 
-3. **Wire the table** in [`crates/yune-rime-api/src/api_table.rs`](../../crates/yune-rime-api/src/api_table.rs) after
+3. **Wire the named TypeDuck profile table** after
    `config_list_size: Some(RimeConfigListSize),`:
    ```rust
    config_list_append_bool:   Some(RimeConfigListAppendBool),
@@ -247,15 +273,16 @@ Adjacent primitives already exist to build on: `RimeConfigCreateList`
    - null `config`/`key`/`value` → `FALSE`, no panic;
    - a **deployer-shaped** test: build a display-language list + a few toggle
      entries the way `TypeDuckSettings.cpp` does, then read them back.
-   - call through `rime_get_api()`’s table (not the raw fn) in at least one test,
-     to prove the field is wired.
+   - call through the named TypeDuck profile API table in at least one test, to
+     prove the profile field is wired. Do not require the default upstream
+     `rime_get_api()` table to expose fork-only slots.
 
 ### Acceptance (Item 2)
 ```sh
 cargo test -p yune-rime-api config_list_append
 cargo clippy --workspace --all-targets -- -D warnings
 ```
-Grep proves wiring on all three layers:
+For a future named profile ABI, grep proves wiring on all three profile layers:
 ```sh
 grep -n "config_list_append" crates/yune-rime-api/src/abi.rs \
   crates/yune-rime-api/src/api_table.rs crates/yune-rime-api/src/config_api.rs
@@ -367,20 +394,37 @@ list-append) APIs the deployer drives — including Item 2's new append function
    reproducible blocker (Phase 7 pattern) and keep the native adapter contract
    tests as the fallback validation path.
 
-### Implemented result
+### Archived pre-M12 result (package smoke)
 
-`scripts/package-typeduck-windows.ps1` builds `yune-rime-api` for
-`x86_64-pc-windows-msvc`, copies the Cargo output into the TypeDuck/weasel
-layout as `dist/lib/rime.dll` and `dist/lib/rime.lib`, copies
-`rime_api.h`/`rime_levers_api.h` from the v1.1.2 oracle headers, and smoke-checks
-that the packaged DLL exports `rime_get_api` with a non-null
-`config_list_append_string` table slot. The reproducible steps are documented in
+Before M12, `scripts/package-typeduck-windows.ps1` built `yune-rime-api` for
+`x86_64-pc-windows-msvc`, copied the Cargo output into the TypeDuck/weasel
+layout as `dist/lib/rime.dll` and `dist/lib/rime.lib`, copied
+`rime_api.h`/`rime_levers_api.h` from the v1.1.2 oracle headers, and
+smoke-checked that the packaged DLL exported `rime_get_api` with a non-null
+`config_list_append_string` table slot. The archived steps are documented in
 [`yune-windows-native-build.md`](./yune-windows-native-build.md).
 
+This was verified on 2026-06-19 by running the script without `-SkipSmoke` and
+without `-NoBuild`; the script built the MSVC-target artifact, loaded the
+packaged DLL, resolved `rime_get_api`, and checked the TypeDuck fork-only
+function-table slot. It is archived profile evidence only. After M12 the default
+upstream `rime_get_api()` table does not expose the fork-only slot, and the
+script fails fast until a named TypeDuck profile ABI surface exists.
+
+Artifacts after the run:
+
+- `target/typeduck-windows-native/x86_64-pc-windows-msvc/dist/lib/rime.dll`
+  - 3,609,088 bytes
+  - `LastWriteTimeUtc = 2026-06-19T01:05:51.1300648Z`
+- `target/typeduck-windows-native/x86_64-pc-windows-msvc/dist/lib/rime.lib`
+  - 37,262 bytes
+  - `LastWriteTimeUtc = 2026-06-19T01:05:51.0830635Z`
+
 ### Acceptance (Item 5)
-A documented, reproducible build producing `rime.dll`/`.lib`/headers (or a
-documented blocker). A smoke check that `rime_get_api()` from the built DLL
-returns a table whose `config_list_append_string` slot is non-null.
+A documented, reproducible build producing `rime.dll`/`.lib`/headers from a
+named TypeDuck profile ABI surface (or a documented blocker). A smoke check must
+use that named profile API and a slot offset re-derived from TypeDuck-HK/librime
+`v1.1.2` `rime_api.h`, not the default upstream `rime_get_api()` table.
 
 ---
 
@@ -420,8 +464,27 @@ and per-entry userdb pronunciations.
 ```sh
 cargo test -p yune-core --test cantonese_parity   # all green (or documented ignores)
 ```
-Then revisit `TypeDuck-Windows/INTEGRATION_PLAN.md`: with #1–#4 met and E2E green,
-the `librime → Yune` swap behind the RIME C ABI is a contained change.
+Then locate the current TypeDuck-Windows lifecycle harness: with #1-#4 met
+through a named TypeDuck profile ABI and E2E green, the `librime -> Yune` swap
+behind that profile ABI is a contained change.
+
+### Current TypeDuck-Windows E2E blocker (2026-06-19)
+
+A pinned checkout was cloned at
+`target/typeduck-windows-e2e/TypeDuck-Windows`:
+
+```text
+f3ffcfe3b6a3018b1c3c9d256a6f0d587a2d2e27
+```
+
+The previously referenced `INTEGRATION_PLAN.md` and
+`LIBRIME_INTEGRATION_PLAN.md` files were not present in that checkout. The local
+shell also did not expose `msbuild.exe`, `devenv.exe`, `cmake.exe`,
+`nuget.exe`, or `nmake.exe`, so the real frontend build and lifecycle E2E were
+not run. Resume by installing the fork prerequisites from `README.md` /
+`INSTALL.md`, replacing the fork's `include`/`lib`/`output` librime payload with
+the smoke-verified Yune package, and running the current fork build/lifecycle
+harness from a Visual Studio developer shell.
 
 ---
 
@@ -461,9 +524,9 @@ No engine or Windows C ABI change was required.
 ## Summary checklist
 
 - [x] **Item 1** — Windows test baseline green (`librime_signature_modified_time` shape + poison-tolerant lock)
-- [x] **Item 2** — `config_list_append_{string,bool,int,double}` on struct + table + impl + tests *(Contract #1)*
+- [x] **Item 2** - `config_list_append_{string,bool,int,double}` helper impl + direct tests retained as parked TypeDuck-profile work *(Contract #1)*
 - [x] **Item 3** — v1.1.2 goldens captured (or reproducible blocker) *(prereq)*
-- [x] **Item 4** — comment semantics: TypeDuck dictionary lookup payload + `"; "` reverse-lookup joins, golden-tested *(Contract #2)*
-- [x] **Item 5** — native `rime.dll`/`.lib`/headers build documented + produced *(Contract #4)*
-- [x] **Item 6** — Cantonese/Jyutping parity suite added with documented ignored oracle gaps *(Contract #3 regression path)*
+- **Item 4** - authored [x] / verified-on-target [ ]: comment semantics for current v1.1.2 fixture slices are golden-tested, but the real TypeDuck-Windows E2E has not run.
+- **Item 5** - authored [x] / archived [x]: native `rime.dll`/`.lib`/headers packaging and package smoke passed pre-M12 on 2026-06-19; current script is parked until a named TypeDuck profile ABI exists.
+- **Item 6** - authored [x] / verified-on-target [ ]: Cantonese/Jyutping parity suite exists with documented ignored oracle gaps; full parity remains blocked by missing goldens.
 - [x] **Item 0** — untracked files committed, EOL policy recorded, planning state reconciled, Windows milestone tracked

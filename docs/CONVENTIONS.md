@@ -73,35 +73,34 @@ none reach into `yune-core` directly):
    TypeScript package (`packages/yune-typeduck-runtime/`) wraps the module; the
    upstream app integrates through the tracked seam
    `third_party/typeduck-web/yune-integration/adapter.ts`.
-3. **TypeDuck-Windows** — the same cdylib ships as a drop-in `rime.dll` (packaged by
-   `scripts/package-typeduck-windows.ps1`). Requires two deliberate divergences from
-   upstream librime: the fork-only `config_list_append_*` slots and the comment-panel
-   filter (see [§5](#5-c-abi-rules)).
+3. **TypeDuck-Windows** - parked TypeDuck compatibility-profile work. The default
+   `rime_get_api()` table follows upstream librime 1.17.0 and does not expose the
+   fork-only `config_list_append_*` slots. A drop-in `rime.dll` package requires
+   a named TypeDuck profile ABI surface first (see [section 5](#5-c-abi-rules)).
 
-**Direction is web-first.** The active milestone (**M9, TypeDuck-Web**) validates
-Yune in a real browser through the WASM adapter before resuming the **parked**
-native milestone (**M10, TypeDuck-Windows**). M10 had a first pass land early (the
-fork-only ABI slots + comment-panel filter); **M9 browser validation is now
-complete (GO WITH CONDITIONS)**, so the previously deferred Windows platform
-packaging can resume. See `docs/roadmap.md` and
-`docs/plans/archive/typeduck-web-validation-plan.md`.
+**Direction is upstream-oracle-first.** M9 browser validation is complete,
+M11's core/CLI AI layer is complete, and M12 closed the upstream oracle refresh.
+The current baseline is upstream `rime/librime 1.17.0` for default core behavior.
+M10 TypeDuck-Windows is parked as a TypeDuck compatibility profile until an
+explicit profile surface exists. See `docs/roadmap.md` and
+`docs/plans/upstream-oracle-refresh.md`.
 
-**Behavior oracle.** The compatibility oracle is **upstream librime**
-(`https://github.com/rime/librime`) plus the **TypeDuck fork**
-(`https://github.com/TypeDuck-HK/librime`, tag `v1.1.2`, commit
-`74cb52b78fb2411137a7643f6c8bc6517acfde69`) — a referenced upstream/fork, **NOT a
-local checkout path**. librime is never linked or called at runtime; it is the
-source of truth that behavior, schema semantics, and ABI contracts are validated
-against. (Legacy `/Users/trenton/Projects/librime` mentions in `AGENTS.md` and
-`tests/distribution_schema_comparison.rs` are stale — treat them as legacy.)
+**Behavior oracle.** The default compatibility oracle is upstream
+`rime/librime 1.17.0` (`33e78140250125871856cdc5b42ddc6a5fcd3cd4`). The
+TypeDuck fork (`https://github.com/TypeDuck-HK/librime`, tag `v1.1.2`, commit
+`74cb52b78fb2411137a7643f6c8bc6517acfde69`) is a TypeDuck compatibility-profile
+oracle only. If upstream and TypeDuck disagree, upstream wins for core Yune;
+TypeDuck behavior must be isolated behind a named TypeDuck-profile test,
+fixture, adapter, or ABI note. These are referenced repositories, **NOT local
+checkout paths**. librime is never linked or called at runtime.
 
 **AI-native input is an explicitly separate M11 layer** above librime
-compatibility — not part of M9 or M10. The current implementation is still
+compatibility - not part of M9, M12, or the parked TypeDuck profile. The current implementation is still
 core/CLI-only: `crates/yune-core/src/ai/` owns `AiCandidateProvider`,
 `MockAiProvider`, `LocalModelProvider`, `AiWorker`, staged input-keyed results,
 `AiContext` snapshots, `AiPrivacyPolicy`, and `MemoryStore`; the direct
 `yune-cli run` path can opt into `--ai-provider mock` or `--ai-provider local`.
-ABI, TypeDuck-Web, and Windows frontends keep AI off. AI context defaults to
+ABI, TypeDuck-Web, and parked TypeDuck-Windows frontends keep AI off. AI context defaults to
 sensitive, remote providers are blocked before invocation under sensitive
 context, and AI memory writes are suppressed under the same policy. AI memory
 uses `.ai-memory` / `.ai-memory.txt` namespace helpers rather than librime
@@ -170,13 +169,13 @@ class), `response.ts` (JSON decode), `keys.ts` (DOM `KeyboardEvent` → RIME key
 The exported-symbol contract is `scripts/typeduck-exports.txt` (the 11 `yune_typeduck_*`
 names — see [§4](#4-coding-conventions)).
 
-**Native packaging** — `scripts/package-typeduck-windows.ps1` runs
-`cargo build -p yune-rime-api --release --target x86_64-pc-windows-msvc`, copies
-`yune_rime_api.dll`/`.dll.lib`/`.pdb` into `dist/lib` as `rime.dll`/`rime.lib`/`rime.pdb`,
-copies `rime_api.h` + `rime_levers_api.h` into `dist/include` (headers sourced from the
-v1.1.2 oracle extract), then runs a C# `Add-Type` smoke test that `LoadLibraryW`s the DLL,
-resolves `rime_get_api`, and checks the `config_list_append_string` slot is non-null.
-Params: `-Target`, `-Profile`, `-OutputDir`, `-HeaderSource`, `-NoBuild`, `-SkipSmoke`.
+**Native packaging** - `scripts/package-typeduck-windows.ps1` is parked during
+M12 closeout and fails fast. The default `RimeApi` follows upstream
+`rime/librime 1.17.0`, so the previous TypeDuck fork-only
+`config_list_append_string` slot smoke is not valid against default
+`rime_get_api()`. Re-enable the script only after a named TypeDuck profile ABI
+surface exists and its slot smoke is re-derived from TypeDuck-HK/librime
+`v1.1.2` `rime_api.h`.
 
 **Web integration seam** — the upstream TypeDuck-Web app is vendored at
 `third_party/typeduck-web/source`; the Yune seam is
@@ -342,18 +341,23 @@ local (`crate::`/`super::`); no custom path aliases.
 
 **`RimeApi` field order IS the ABI.** The `#[repr(C)]` function table in
 `crates/yune-rime-api/src/abi.rs` is accessed by struct-pointer offset, so the order of its
-fields is the actual C contract. New function-table entries must be **appended at the exact
-position they occupy in the TypeDuck fork's `rime_api.h`** — never inserted mid-struct. A
+fields is the actual C contract. Core ABI fields follow upstream `rime/librime`
+headers; explicit TypeDuck-profile fork-only fields follow the TypeDuck fork's
+`rime_api.h`. Never insert mid-struct without matching oracle/header evidence. A
 misplaced field silently breaks every native frontend.
 
-- **Fork-only slots:** `config_list_append_bool` / `_int` / `_double` / `_string` do not
-  exist in upstream librime; they match the TypeDuck fork's `rime_api.h`. Declared in
-  `abi.rs`, wired to `RimeConfigListAppend*` in `api_table.rs`, implemented in
-  `config_api.rs`. They were appended right after `config_list_size`.
-- **Locks:** slot positions are locked by `assert_api_slot!` tests in
-  `crates/yune-rime-api/src/tests/abi.rs`. Never reorder/insert without updating these locks
-  and confirming against the fork header. Rationale lives in
-  `docs/plans/yune-windows-native-build.md` and `yune-windows-contract-implementation-plan.md`.
+- **Fork-only slots:** `config_list_append_bool` / `_int` / `_double` / `_string`
+  do not exist in upstream librime and are not exposed by default
+  `rime_get_api()`. Their helper implementations remain in `config_api.rs` with
+  direct TypeDuck-profile tests. If a named TypeDuck profile ABI surface is
+  added later, its slot order must be re-derived from the TypeDuck fork's
+  `rime_api.h`.
+- **Locks:** default slot positions are locked by `assert_api_slot!` tests in
+  `crates/yune-rime-api/src/tests/abi.rs` against upstream `1.17.0`. Never
+  reorder/insert without updating these locks and confirming against the
+  relevant upstream or explicit TypeDuck profile header. Historical TypeDuck
+  slot rationale lives in `docs/plans/yune-windows-native-build.md` and
+  `yune-windows-contract-implementation-plan.md`.
 - **Comment panel:** `yune-core` ships `DictionaryLookupFilter` (filter name
   `"dictionary_lookup_filter"`, `filter/mod.rs`) emitting the TypeDuck comment-panel bytes —
   a leading `\u{000c}` form-feed, per-row `\r` markers, a `1`/`0` primary flag, and
@@ -448,9 +452,10 @@ same surface a real frontend uses. `dynamic_loader.rs` `dlopen`s the built cdyli
 typeduck_web` so the WASM adapter contract is still validated without browser tooling.
 Real-browser M9 validation is the web-first goal beyond this fallback.
 
-**Fork-only ABI contract test.** `tests/config_api.rs` guards the fork-only list-append
-surface (`config_list_append_*` round-trips, plus `rime_api_exposes_config_list_append_contract`
-which `.expect()`s the four slots are populated, tying them to the TypeDuck-Windows requirement).
+**Fork-only ABI helper tests.** `tests/config_api.rs` guards the parked
+TypeDuck-profile list-append helper behavior (`config_list_append_*`
+round-trips). The default `rime_get_api()` table no longer exposes those
+fork-only slots; its config-list contract is upstream `1.17.0`.
 
 No coverage tooling/threshold is configured. Browser-level E2E for TypeDuck-Web is the M9 goal;
 until then the `typeduck_web` ABI tests + native fallback + Vitest suite are the safety net.
@@ -459,10 +464,12 @@ until then the `typeduck_web` ABI tests + native fallback + Vitest suite are the
 
 ## 8. Integrations
 
-**librime oracle (validation-only, no runtime dependency).** Upstream
-`github.com/rime/librime` + TypeDuck fork `github.com/TypeDuck-HK/librime @ v1.1.2`. Goldens
-under `crates/yune-core/tests/fixtures/typeduck-v1.1.2/`; asserted non-circularly by
-`cantonese_parity.rs`. Never linked or called at runtime.
+**librime oracle (validation-only, no runtime dependency).** Core Yune targets
+upstream `github.com/rime/librime @ 1.17.0`. TypeDuck-Web/Windows profile tests
+may target `github.com/TypeDuck-HK/librime @ v1.1.2`. Golden fixture
+directories must name the oracle, e.g. `upstream-1.17.0/` or
+`typeduck-v1.1.2/`. Never derive expected bytes from Yune, and never link or
+call librime at runtime.
 
 **TypeDuck-Web / Emscripten / IDBFS.** The `yune_typeduck_*` adapter (`typeduck_web.rs`)
 exports 11 functions over the `rime_get_api()`/`rime_levers_get_api()` tables. The TS runtime
@@ -476,9 +483,11 @@ Emscripten **IDBFS** mount over a virtual data dir, flushed with `FS.syncfs`:
 upstream `RimeResult` shape and parses key strings (`a`, `{BackSpace}`, `{Release+Enter}`) via
 `keyEventToRimeKey`; patch scope is intentionally minimal.
 
-**weasel / TypeDuck-Windows native.** The same cdylib packaged as `rime.dll`/`rime.lib` +
-headers by `scripts/package-typeduck-windows.ps1`. Depends on the fork-only
-`config_list_append_*` slots (see [§5](#5-c-abi-rules)). Frontend-host integration tests:
+**weasel / TypeDuck-Windows native.** Parked TypeDuck-profile work. The old
+package path is retained as reference material, but `scripts/package-typeduck-windows.ps1`
+now fails fast because default `rime_get_api()` follows upstream `1.17.0`.
+Native packaging can resume only after a named TypeDuck profile ABI surface
+exists (see [section 5](#5-c-abi-rules)). Frontend-host integration tests:
 `tests/frontend_hosts/{native,native_frontends}.rs`.
 
 **OpenCC.** `SimplifierFilter` (`filter/mod.rs`) honors a *limited subset* of librime OpenCC
@@ -509,11 +518,19 @@ browser evidence on every merge. Files: `typeduck_web.rs`,
 `packages/yune-typeduck-runtime/`, `scripts/typeduck-wasm-build.sh`,
 `docs/plans/archive/typeduck-web-validation-plan.md`.
 
-**Native Windows artifact is unverified on an MSVC host (parked).**
-`scripts/package-typeduck-windows.ps1` has **not** been run on a real MSVC host, so the
-`rime.dll`/`rime.lib` artifact and the `rime_get_api` + `config_list_append_string` smoke check
-are unproven; the MSVC target may be unavailable in the current workspace. **M9 GO is now achieved
-(HR-7), so this is cleared to resume** once an MSVC host is available.
+**Upstream latest-stable oracle refresh is complete.** Default core behavior and
+default `RimeApi` follow upstream `rime/librime 1.17.0`. TypeDuck-derived
+fixtures remain profile-only unless separate upstream goldens prove the same
+behavior.
+
+**TypeDuck-Windows ABI/package work is parked and not yet proven as a current
+profile.** A pre-M12 package smoke built `rime.dll`/`rime.lib`/headers and
+checked a TypeDuck fork-only slot, but that smoke is archived evidence only and
+is not valid against the default upstream `rime_get_api()` table. The script now
+fails fast until a named TypeDuck profile ABI surface exists. The real
+TypeDuck-Windows/weasel frontend E2E also remains blocked: the pinned fork
+checkout lacked the referenced integration-plan files, and local frontend build
+tools (`msbuild.exe`, `cmake.exe`, etc.) were not on PATH.
 
 **Comment-parity oracle gaps (narrowed).** HR-6 added oracle coverage for the reverse-lookup
 `"; "` joiner (`comments.join("; ")` in `filter/mod.rs`) and schema-name-in-prompt parity, so
@@ -557,4 +574,4 @@ Planning, decisions, and conventions live under `docs/` — there is no external
 
 ---
 
-*Last reviewed: 2026-06-18 — consolidated from the former .planning/codebase/ maps; added the §10 planning-docs banner convention (milestone is a required field); current direction is web-first.*
+*Last reviewed: 2026-06-19 - M12 upstream oracle refresh complete; default RimeApi follows upstream 1.17.0 and TypeDuck-Windows ABI/package work is parked pending a named profile surface.*

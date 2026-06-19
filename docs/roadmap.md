@@ -6,10 +6,14 @@ The strategy: make existing RIME schemas and frontends behave predictably throug
 Yune, measuring every difference against librime before accepting it, then layer
 AI-native behavior on top as a separate product milestone.
 
-> **Compatibility oracle.** Upstream librime is the behavior reference for
-> user-visible behavior, schema semantics, ABI contracts, and migration:
-> <https://github.com/rime/librime>. Windows-specific behavior is referenced
-> against the TypeDuck fork (tag `v1.1.2`):
+> **Compatibility oracle.** Upstream librime latest stable is the default core
+> behavior reference for user-visible behavior, schema semantics, standard ABI
+> contracts, deployed data, and migration. The current pinned upstream target is
+> `rime/librime 1.17.0`
+> (`33e78140250125871856cdc5b42ddc6a5fcd3cd4`):
+> <https://github.com/rime/librime>. TypeDuck-specific behavior is referenced
+> only as a compatibility profile against the TypeDuck fork (tag `v1.1.2`,
+> commit `74cb52b78fb2411137a7643f6c8bc6517acfde69`):
 > <https://github.com/TypeDuck-HK/librime>. (Earlier docs referenced a local
 > checkout path; treat the GitHub sources above as canonical.)
 
@@ -19,7 +23,7 @@ AI-native behavior on top as a separate product milestone.
 - [`CONVENTIONS.md`](./CONVENTIONS.md) — architecture, stack, structure, coding/testing conventions, integrations, and current risks (one consolidated reference).
 - [`decisions.md`](./decisions.md) — the consolidated decision log (standing principles + `D-*` entries).
 - [`requirements.md`](./requirements.md) — requirement IDs and their status.
-- [`typeduck-windows-backend-requirements.md`](./typeduck-windows-backend-requirements.md) — the parked Windows engine contract to resume after web validation.
+- [`typeduck-windows-backend-requirements.md`](./typeduck-windows-backend-requirements.md) - the parked TypeDuck-Windows compatibility-profile contract.
 - [`plans/`](./plans/) — per-stage implementation plans, findings, build notes, and validation artifacts (finished ones under `plans/archive/`).
 
 > The GSD planning system (`.planning/`) has been retired; its durable content now lives in `decisions.md`, `requirements.md`, and `CONVENTIONS.md`.
@@ -81,7 +85,7 @@ Detail: [`plans/archive/typeduck-web-validation-plan.md`](./plans/archive/typedu
 ### M11: AI-native input layer — S1–S5 CLI/core complete *(2026-06-18; frontend exposure deferred)*
 
 The AI-native layer (M11) is implemented in `crates/yune-core` and the direct
-`yune-cli run` path only, leaving the M9/M10 frontend surfaces unchanged. The
+`yune-cli run` path only, leaving the TypeDuck-Web and TypeDuck-Windows frontend surfaces unchanged. The
 core exposes an `AiCandidateProvider` interface, deterministic `MockAiProvider`,
 and an `AiWorker` (provider execution is CLI-orchestrated outside
 `Engine::refresh_candidates`; the engine consumes only staged, input-keyed
@@ -100,49 +104,58 @@ Detail: [`plans/ai-native-design.md`](./plans/ai-native-design.md) (living archi
 
 ---
 
-## Next up — M10: TypeDuck-Windows native backend
+## Current baseline - M12: Upstream Oracle Refresh complete
 
-Web-first is now satisfied (M9 complete), so the previously **parked Windows
-platform work can resume.** TypeDuck-Windows (a weasel fork) talks only to the
-RIME C ABI, so swapping `librime → Yune` is contained **iff** Yune presents the
-same ABI surface and emits the same candidate data. The contract is in
-[`typeduck-windows-backend-requirements.md`](./typeduck-windows-backend-requirements.md);
-the implementation plan and its execution notes are in
-[`plans/yune-windows-contract-implementation-plan.md`](./plans/yune-windows-contract-implementation-plan.md).
-A first pass already landed; the shared engine work (comment shaping, Cantonese
-goldens, the cross-platform baseline) benefits both web and Windows. What remains
-is the platform-specific native package and the real TypeDuck-Windows E2E.
+Yune's core engine now tracks upstream `rime/librime 1.17.0` as the default
+oracle target. M12 turned TypeDuck behavior into an explicit compatibility
+profile instead of the default engine truth.
 
-**Status** (workspace tests green and clippy clean, independently verified):
+Detail: [`plans/upstream-oracle-refresh.md`](./plans/upstream-oracle-refresh.md).
 
-| # | Contract item | State | Notes |
+**Status**:
+
+| # | Work item | State | Notes |
 |---|---|---|---|
-| 0 | Windows test baseline | ✅ Done | Was 233 failing (timestamp-shape mismatch poisoning a shared test lock); fixed with a cross-platform ctime formatter + poison-tolerant lock. |
-| 1 | `config_list_append_{string,bool,int,double}` C ABI | ✅ Done | Implemented with create-on-missing semantics, wired into the `RimeApi` table; field order **verified to match the fork's `rime_api.h`** (right after `config_list_size`). |
-| 2 | `RimeCandidate.comment` fork shaping | ✅ Covered for current v1.1.2 slices | `dictionary_lookup_filter` emits the `\f\r1,…\r0,…` panel format; `cantonese_parity` byte-asserts rich dictionary comments against the committed v1.1.2 fixture, the HR-5 browser-shaped native test byte-asserts the full real-assets path when local oracle build assets are present, and HR-6 locks the `"; "` reverse-lookup join plus schema-name prompt/preedit bytes against a dedicated v1.1.2 oracle fixture. |
-| 3 | Cantonese/Jyutping parity suite vs v1.1.2 | 🟡 Partial | 4 active golden-locked tests; 5 behaviors (`combine_candidates`/`show_full_code`/`enable_sentence`, completion/prediction, correction, schema-menu hiding, userdb pronunciations) are honestly `#[ignore]`d pending captured goldens. |
-| 4 | Native `rime.dll` + `.lib` + headers | 🟡 Scripted, unverified | `scripts/package-typeduck-windows.ps1` + [`plans/yune-windows-native-build.md`](./plans/yune-windows-native-build.md) build/package/smoke-check the artifact, but the build has not been independently verified on an MSVC host. |
-
-The v1.1.2 oracle fixture used for items 2–3 is **genuine captured fork output**
-(`crates/yune-core/tests/fixtures/typeduck-v1.1.2/`).
+| 0 | Pin upstream oracle | Done | Upstream `1.17.0` commit `33e78140250125871856cdc5b42ddc6a5fcd3cd4` is the default core target; upstream provenance and the runtime byte-capture build blocker are documented. |
+| 1 | Fixture naming policy | Done | Fixture manifests and the provenance guard test distinguish `upstream-1.17.0` from `typeduck-v1.1.2`. |
+| 2 | TypeDuck assumption audit | Done | Existing TypeDuck-derived behavior is classified in `docs/plans/m12-coverage-audit.md`. |
+| 3 | First upstream parity slice | Done | Default `RimeApi` ABI parity was refreshed to `rime/librime 1.17.0`; fork-only `start_quick` and `config_list_append_*` slots are excluded from the core table. |
 
 ---
 
+## Parked - M10: TypeDuck-Windows native backend
+
+TypeDuck-Windows remains valuable, but it is no longer the active core-engine
+priority. Its work is parked as a TypeDuck compatibility profile until Yune has
+a named TypeDuck profile ABI surface.
+
+Archived pre-M12 M10 evidence is preserved: Windows test trust, fork-only
+`config_list_append_*` helper behavior, current TypeDuck comment shaping
+fixtures, and a historical native `rime.dll`/`.lib`/headers package smoke. That
+package smoke is not an active or valid gate for the default upstream
+`rime_get_api()` table after M12. Remaining TypeDuck work is still blocked by
+five uncaptured v1.1.2 Cantonese/Jyutping goldens and the real TypeDuck-Windows
+frontend E2E.
+
+Detail: [`typeduck-windows-backend-requirements.md`](./typeduck-windows-backend-requirements.md),
+[`plans/yune-windows-contract-implementation-plan.md`](./plans/yune-windows-contract-implementation-plan.md),
+and [`plans/yune-windows-native-build.md`](./plans/yune-windows-native-build.md).
+
 ## Concrete next steps
 
-In priority order (**web first, then Windows, then other platforms**):
+In priority order:
 
-1. **Keep the M9 web gates green on merge.** Preserve the reproducible Emscripten build, TypeScript runtime tests/build, TypeDuck-Web worker build, real-assets browser evidence, and native `typeduck_web` fallback.
-2. **Capture the remaining shared Cantonese goldens.** Five fork-specific cases remain explicit ignored blockers pending TypeDuck v1.1.2 oracle captures: option-combination behavior, completion/prediction, correction, schema-menu hiding, and per-entry userdb pronunciations.
-3. **Resume Windows, then other platforms.** Verify the native `rime.dll`/`.lib`/headers build on an MSVC host, including `rime_get_api`/`config_list_append_string` smoke and header field-order parity, then run the real TypeDuck-Windows E2E per the fork's `INTEGRATION_PLAN.md`. Other native frontends follow the same engine.
-4. **Keep AI frontend exposure separate and default-off.** M11's CLI/core layer is complete; any future TypeDuck-Web, Windows, or other frontend exposure needs a new explicit plan and must preserve M9/M10 compatibility gates.
+1. **Preserve the upstream-first baseline.** Keep default `RimeApi` and core behavior aligned to upstream `1.17.0`; add new TypeDuck fork-only behavior only behind an explicit profile surface.
+2. **Keep M9 web gates green on merge.** Preserve the reproducible Emscripten build, TypeScript runtime tests/build, TypeDuck-Web worker build, real-assets browser evidence, and native `typeduck_web` fallback.
+3. **Keep AI frontend exposure separate and default-off.** M11's CLI/core layer is complete; any future TypeDuck-Web, Windows, or other frontend exposure needs a new explicit plan and must preserve compatibility gates.
+4. **Resume TypeDuck profile work only with a named surface.** Return to TypeDuck-Windows packaging after the profile ABI is defined and fork-header slot smoke is re-derived.
 
 ---
 
 ## Deferred / future
 
 - **librime C++ plugin ABI** (Lua, octagram, predict, proto): deferred until a concrete frontend or distribution requires it; prefer Yune-native extension points first.
-- **AI-native input layer (future frontend exposure)** — after the completed S1-S5 CLI/core mock/provider, worker/confidence, context/privacy, memory, and local-model slices, remaining AI-native work is product integration: exposing AI behind explicit defaults in real frontends without changing M9/M10 compatibility behavior. The architecture remains in [`plans/ai-native-design.md`](./plans/ai-native-design.md); S1 evidence and checklist live in [`plans/archive/ai-native-cli-slice-plan.md`](./plans/archive/ai-native-cli-slice-plan.md).
+- **AI-native input layer (future frontend exposure)** - after the completed S1-S5 CLI/core mock/provider, worker/confidence, context/privacy, memory, and local-model slices, remaining AI-native work is product integration: exposing AI behind explicit defaults in real frontends without changing upstream-core, TypeDuck-Web, or parked TypeDuck-Windows compatibility behavior. The architecture remains in [`plans/ai-native-design.md`](./plans/ai-native-design.md); S1 evidence and checklist live in [`plans/archive/ai-native-cli-slice-plan.md`](./plans/archive/ai-native-cli-slice-plan.md).
 
 ## Principles (carried forward)
 
