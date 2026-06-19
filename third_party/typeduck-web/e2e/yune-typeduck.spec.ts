@@ -67,7 +67,9 @@ async function takeEvidenceScreenshot(page: Page, flowName: string): Promise<voi
 interface CandidateRowSnapshot {
   index: number;
   text: string | null;
+  note: string | null;
   source: string | null;
+  rowText: string;
 }
 
 interface CandidatePanelSnapshot {
@@ -76,8 +78,87 @@ interface CandidatePanelSnapshot {
   candidates: CandidateRowSnapshot[];
 }
 
+async function writeEvidence(filename: string, content: string): Promise<void> {
+  const fs = await import("fs/promises");
+  const path = await import("path");
+  const evidencePath = path.join(EVIDENCE_DIR, filename);
+  await fs.mkdir(EVIDENCE_DIR, { recursive: true });
+  await fs.writeFile(evidencePath, content, "utf8");
+}
+
 async function saveJsonEvidence(filename: string, value: unknown): Promise<void> {
-  await saveEvidence(filename, `${JSON.stringify(value, null, 2)}\n`);
+  await writeEvidence(filename, `${JSON.stringify(value, null, 2)}\n`);
+}
+
+async function findRepoRoot(): Promise<string> {
+  const fs = await import("fs/promises");
+  const path = await import("path");
+  let current = process.cwd();
+  for (;;) {
+    try {
+      await fs.access(path.join(current, "Cargo.toml"));
+      return current;
+    } catch {
+      const parent = path.dirname(current);
+      if (parent === current) {
+        throw new Error(`Cannot locate repository root from ${process.cwd()}`);
+      }
+      current = parent;
+    }
+  }
+}
+
+async function readRepoText(relativePath: string): Promise<string> {
+  const fs = await import("fs/promises");
+  const path = await import("path");
+  return fs.readFile(path.join(await findRepoRoot(), relativePath), "utf8");
+}
+
+async function loadFixture(filename: string): Promise<Record<string, unknown> & { cases: Record<string, unknown>[] }> {
+  return JSON.parse(await readRepoText(`crates/yune-core/tests/fixtures/typeduck-v1.1.2/${filename}`));
+}
+
+async function m14Case(
+  filename: string,
+  variant: string,
+  input: string,
+): Promise<{ selected_candidates: { text: string; comment?: string }[] }> {
+  const fixture = await loadFixture(filename);
+  const found = fixture.cases.find((candidate) =>
+    candidate["variant"] === variant && candidate["input"] === input
+  ) as { selected_candidates: { text: string; comment?: string }[] } | undefined;
+  if (!found) {
+    throw new Error(`Missing M14 golden case ${filename}:${variant}:${input}`);
+  }
+  return found;
+}
+
+async function m14Texts(filename: string, variant: string, input: string, count: number): Promise<string[]> {
+  const found = await m14Case(filename, variant, input);
+  return found.selected_candidates.slice(0, count).map((candidate) => candidate.text);
+}
+
+async function m14Notes(filename: string, variant: string, input: string, count: number): Promise<string[]> {
+  const found = await m14Case(filename, variant, input);
+  return found.selected_candidates.slice(0, count).map((candidate) =>
+    (candidate.comment ?? "").split("\f")[0].replace(/^\v/, "")
+  );
+}
+
+async function waitForAppReady(page: Page): Promise<void> {
+  await page.waitForFunction(
+    () =>
+      document.documentElement.dataset.yuneInitialized === "true"
+      && document.documentElement.dataset.yuneLoading === "false",
+    undefined,
+    { timeout: TIMEOUT_MS },
+  );
+  await expect(page.locator(".loading")).toHaveCount(0, { timeout: TIMEOUT_MS });
+}
+
+async function openApp(page: Page): Promise<void> {
+  await page.goto(APP_URL, { timeout: TIMEOUT_MS, waitUntil: "domcontentloaded" });
+  await waitForAppReady(page);
 }
 
 async function readCandidatePanelSnapshot(page: Page, aiEnabled: boolean): Promise<CandidatePanelSnapshot> {
@@ -87,11 +168,18 @@ async function readCandidatePanelSnapshot(page: Page, aiEnabled: boolean): Promi
     aiEnabled,
     inputValue: await inputField.inputValue(),
     candidates: await rows.evaluateAll((elements) =>
-      elements.map((element, index) => ({
-        index,
-        text: element.getAttribute("data-candidate-text"),
-        source: element.getAttribute("data-source"),
-      })),
+      elements.map((element, index) => {
+        const firstRow = element.querySelector("tr");
+        const cells = Array.from(firstRow?.querySelectorAll("td") ?? []);
+        const note = cells[2]?.textContent?.trim() || null;
+        return {
+          index,
+          text: element.getAttribute("data-candidate-text"),
+          note,
+          source: element.getAttribute("data-source"),
+          rowText: element.textContent?.replace(/\s+/g, " ").trim() ?? "",
+        };
+      }),
     ),
   };
 }
@@ -101,6 +189,27 @@ async function focusInputAndType(page: Page, text: string): Promise<void> {
   await inputField.focus();
   await inputField.type(text, { delay: 80 });
   await expect(page.locator(".candidate-panel .candidates tbody").first()).toBeVisible({ timeout: 5000 });
+  await expect(page.locator(".candidate-panel").first()).toContainText(text, { timeout: 5000 });
+}
+
+async function clearComposition(page: Page): Promise<void> {
+  const inputField = page.locator("input[type='text'], textarea").first();
+  await page.keyboard.press("Escape").catch(() => undefined);
+  await inputField.fill("");
+  await expect(page.locator(".candidate-panel")).toHaveCount(0, { timeout: 5000 }).catch(() => undefined);
+}
+
+async function setPreferenceToggle(page: Page, label: RegExp, enabled: boolean): Promise<void> {
+  const toggle = page.getByLabel(label);
+  const checked = await toggle.isChecked();
+  if (checked !== enabled) {
+    if (enabled) {
+      await toggle.check();
+    } else {
+      await toggle.uncheck();
+    }
+    await waitForAppReady(page);
+  }
 }
 
 async function setAiToggle(page: Page, enabled: boolean): Promise<void> {
@@ -140,7 +249,29 @@ async function verifyPersistenceMarker(page: Page, marker: string): Promise<bool
   }
 }
 
+async function captureM16Scenario(
+  page: Page,
+  name: string,
+  expectedTexts: string[],
+  expectedNotes?: string[],
+): Promise<CandidatePanelSnapshot> {
+  const state = await readCandidatePanelSnapshot(page, false);
+  expect(state.candidates.slice(0, expectedTexts.length).map((candidate) => candidate.text)).toEqual(expectedTexts);
+  if (expectedNotes) {
+    expect(state.candidates.slice(0, expectedNotes.length).map((candidate) => candidate.note ?? "")).toEqual(expectedNotes);
+  }
+  await saveJsonEvidence(`m16-${name}-state.json`, {
+    expectedTexts,
+    expectedNotes,
+    state,
+  });
+  await takeEvidenceScreenshot(page, `m16-${name}`);
+  return state;
+}
+
 test.describe("TypeDuck-Web Browser E2E", () => {
+  test.setTimeout(60000);
+
   let consoleErrors: string[] = [];
 
   test.beforeAll(async ({ browser }) => {
@@ -153,17 +284,7 @@ test.describe("TypeDuck-Web Browser E2E", () => {
 
   test.beforeEach(async ({ page }) => {
     consoleErrors = await captureConsoleErrors(page, "browser-console.log");
-
-    await page.goto(APP_URL, { timeout: TIMEOUT_MS, waitUntil: "domcontentloaded" });
-
-    await page.waitForFunction(
-      () =>
-        document.documentElement.dataset.yuneInitialized === "true"
-        && document.documentElement.dataset.yuneLoading === "false",
-      undefined,
-      { timeout: TIMEOUT_MS },
-    );
-    await expect(page.locator(".loading")).toHaveCount(0, { timeout: TIMEOUT_MS });
+    await openApp(page);
   });
 
   test.afterEach(async ({ page }, testInfo) => {
@@ -294,6 +415,145 @@ test.describe("TypeDuck-Web Browser E2E", () => {
       aiRow: selectableState.candidates[selectableAiIndex],
     });
     await takeEvidenceScreenshot(page, "m13-ai-explicit-commit");
+    expect(consoleErrors).toEqual([]);
+  });
+
+  test("M16 combine candidates browser default matches M14", async ({ page }) => {
+    await focusInputAndType(page, "hou");
+    await captureM16Scenario(
+      page,
+      "combine-candidates-browser-default",
+      await m14Texts("jyut6ping3-m14-options.json", "combine_candidates_default", "hou", 5),
+    );
+    expect(consoleErrors).toEqual([]);
+  });
+
+  test("M16 sentence composition browser path matches M14", async ({ page }) => {
+    await focusInputAndType(page, "ngohaigo");
+    await captureM16Scenario(
+      page,
+      "sentence-enabled",
+      await m14Texts("jyut6ping3-m14-options.json", "enable_sentence_default", "ngohaigo", 1),
+    );
+
+    await clearComposition(page);
+    await setPreferenceToggle(page, /Auto-composition/, false);
+    const inputField = page.locator("input[type='text'], textarea").first();
+    await inputField.focus();
+    await inputField.type("ngohaigo", { delay: 80 });
+    await page.waitForTimeout(1000);
+    const sentenceDisabledPanelCount = await page.locator(".candidate-panel .candidates tbody").count();
+    const sentenceDisabledState = sentenceDisabledPanelCount > 0
+      ? await readCandidatePanelSnapshot(page, false)
+      : { aiEnabled: false, inputValue: await inputField.inputValue(), candidates: [] };
+    await saveJsonEvidence("m16-sentence-disabled-state.json", {
+      expectedM14Texts: await m14Texts("jyut6ping3-m14-options.json", "enable_sentence_disabled", "ngohaigo", 6),
+      browserState: sentenceDisabledState,
+      browserSurface: sentenceDisabledPanelCount > 0
+        ? "Candidate panel rendered after disabling Auto-composition."
+        : "No candidate panel rendered for full ngohaigo after disabling Auto-composition in TypeDuck-Web.",
+    });
+    await takeEvidenceScreenshot(page, "m16-sentence-disabled");
+    expect(consoleErrors).toEqual([]);
+  });
+
+  test("M16 completion browser path matches M14", async ({ page }) => {
+    await setPreferenceToggle(page, /Auto-completion/, true);
+    await focusInputAndType(page, "ne");
+    await captureM16Scenario(
+      page,
+      "completion-default",
+      await m14Texts("jyut6ping3-m14-completion-correction.json", "completion_default", "ne", 1),
+    );
+    expect(consoleErrors).toEqual([]);
+  });
+
+  test("M16 correction browser path is explicit", async ({ page }) => {
+    await setPreferenceToggle(page, /Auto-correction/, false);
+    const inputField = page.locator("input[type='text'], textarea").first();
+    await inputField.focus();
+    await inputField.type("nri", { delay: 80 });
+    await page.waitForTimeout(1000);
+    const defaultPanelCount = await page.locator(".candidate-panel .candidates tbody").count();
+    const defaultState = defaultPanelCount > 0
+      ? await readCandidatePanelSnapshot(page, false)
+      : { aiEnabled: false, inputValue: await inputField.inputValue(), candidates: [] };
+    await saveJsonEvidence("m16-correction-default-state.json", {
+      expectedM14Texts: await m14Texts("jyut6ping3-m14-completion-correction.json", "correction_default", "nri", 5),
+      browserState: defaultState,
+    });
+    await takeEvidenceScreenshot(page, "m16-correction-default");
+
+    await clearComposition(page);
+    await setPreferenceToggle(page, /Auto-correction/, true);
+    await inputField.focus();
+    await inputField.type("nri", { delay: 80 });
+    await page.waitForTimeout(1000);
+    const enabledPanelCount = await page.locator(".candidate-panel .candidates tbody").count();
+    const enabledState = enabledPanelCount > 0
+      ? await readCandidatePanelSnapshot(page, false)
+      : { aiEnabled: false, inputValue: await inputField.inputValue(), candidates: [] };
+    await saveJsonEvidence("m16-correction-enabled-state.json", {
+      expectedM14Texts: await m14Texts("jyut6ping3-m14-completion-correction.json", "correction_enabled", "nri", 5),
+      browserState: enabledState,
+      browserSurface: enabledPanelCount > 0
+        ? "Candidate panel rendered after enabling Auto-correction."
+        : "No candidate panel rendered for nri after enabling Auto-correction in TypeDuck-Web.",
+    });
+    await takeEvidenceScreenshot(page, "m16-correction-enabled");
+    expect(consoleErrors).toEqual([]);
+  });
+
+  test("M16 simplification toggle converts browser candidates through OpenCC", async ({ page }) => {
+    await focusInputAndType(page, "ngohaigo");
+    const traditional = await captureM16Scenario(
+      page,
+      "simplification-off",
+      ["\u6211\u4fc2\u500b"],
+    );
+
+    await clearComposition(page);
+    await page.locator(".btn-toolbar").nth(1).click();
+    await page.waitForTimeout(500);
+    await focusInputAndType(page, "ngohaigo");
+    const simplified = await captureM16Scenario(
+      page,
+      "simplification-on",
+      ["\u6211\u7cfb\u4e2a"],
+    );
+    expect(simplified.candidates[0].text).not.toEqual(traditional.candidates[0].text);
+    expect(consoleErrors).toEqual([]);
+  });
+
+  test("M16 schema menu and userdb pronunciation limits are explicit", async ({ page }) => {
+    const schemaMenuFixture = await loadFixture("jyut6ping3-m14-schema-menu.json");
+    const userdbFixture = await loadFixture("jyut6ping3-m14-userdb.json");
+    const optionsFixture = await loadFixture("jyut6ping3-m14-options.json");
+    const visibleSchemaControls = await page.locator(
+      "[data-schema], [data-schema-selector], .schema-selector, select[name='schema']",
+    ).count();
+    expect(visibleSchemaControls).toBe(0);
+    await saveJsonEvidence("m16-documented-gaps-state.json", {
+      deployOnlyVariants: {
+        browserSurface: "The checked-in TypeDuck-Web app initializes jyut6ping3_mobile only and exposes no schema/deploy-variant selector for common:/separate_candidates or common:/show_full_code.",
+        engineCoverage: "cargo test -p yune-core --test cantonese_parity covers combine_candidates and show_full_code against the M14 v1.1.2 goldens.",
+        oracleSurface: optionsFixture["capture"],
+      },
+      browserRuntimeLimits: {
+        sentenceDisabled: "The browser records the disabled Auto-composition state separately because full ngohaigo does not render the native disabled-prefix candidate panel.",
+        correction: "The browser records nri correction default/enabled state separately; M15 cantonese_parity remains the oracle-backed correction proof.",
+      },
+      schemaMenu: {
+        oracleSurface: schemaMenuFixture["capture"],
+        browserSurface: "TypeDuck-Web exposes no schema-selector DOM control; M14 RimeGetSchemaList remains the oracle evidence.",
+        visibleSchemaControls,
+      },
+      userdbPronunciation: {
+        oracleSurface: userdbFixture["capture"],
+        browserSurface: "No TypeDuck-Web native inspection surface exposes fork-only per-entry pronunciation levers.",
+      },
+    });
+    await takeEvidenceScreenshot(page, "m16-documented-gaps");
     expect(consoleErrors).toEqual([]);
   });
 

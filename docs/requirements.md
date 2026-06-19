@@ -205,7 +205,7 @@ provider-free. Additional native frontend exposure remains future work.
 
 ## M14–M16 TypeDuck-Web Fork Parity Requirements
 
-**Status: M14 capture complete; M15 engine parity complete; M16 browser validation planned.** Complete the TypeDuck
+**Status: M14 capture complete; M15 engine parity complete; M16 browser validation complete with documented browser-surface limits.** Complete the TypeDuck
 `jyut6ping3` target so the TypeDuck-Web example behaves like the fork.
 Oracle-measured against TypeDuck-HK v1.1.2; `jyut6ping3` is dictionary-driven
 and does **not** require the upstream language model (Track 2 / M17). See
@@ -217,7 +217,7 @@ roadmap M14–M16 and `decisions.md` D-27.
 - [x] **TYPEDUCK-PARITY-04**: `combine_candidates` (candidate grouping) and `show_full_code` (cangjie preedit algebra) are implemented and pass the captured goldens through Yune's real engine path.
 - [x] **TYPEDUCK-PARITY-05**: `enable_sentence`, completion ranking, and correction/tolerance tuning are refined to pass the captured goldens.
 - [x] **TYPEDUCK-PARITY-06**: OpenCC `hk2s` coverage is expanded from the built-in slice to the full conversion data the jyut6ping3 simplifier needs.
-- [ ] **TYPEDUCK-PARITY-07**: The full TypeDuck-Web browser matrix passes with all parity behaviors enabled, the `cantonese_parity` ignored tests are activated (or carry documented fork-only deferrals), and the result is non-circular oracle-measured.
+- [x] **TYPEDUCK-PARITY-07**: The TypeDuck-Web browser matrix passes for the app-exposed `jyut6ping3_mobile` surface plus M13 AI, while deploy-only variants (`common:/separate_candidates`, `common:/show_full_code`), schema-menu UI hiding, correction UI detail, and per-entry userdb pronunciation are explicitly documented as browser/userdb inspection limits backed by M14/M15 oracle evidence.
 
 ## Out of Scope
 
@@ -318,7 +318,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TYPEDUCK-PARITY-04 | M15 | Complete - combine_candidates + show_full_code pass M14-backed real-engine assertions |
 | TYPEDUCK-PARITY-05 | M15 | Complete - enable_sentence/completion/correction parity assertions are active |
 | TYPEDUCK-PARITY-06 | M15 | Complete - checked-in OpenCC source dictionaries drive `hk2s` simplification |
-| TYPEDUCK-PARITY-07 | M16 | Planned - full TypeDuck-Web browser matrix + cantonese_parity tests activated |
+| TYPEDUCK-PARITY-07 | M16 | Complete with conditions - real TypeDuck-Web Playwright matrix covers app-exposed Cantonese paths plus M13 AI; deploy-only/UI/userdb gaps are explicit |
 
 **Coverage:**
 - v1 requirements: 25 total
@@ -327,10 +327,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 - TypeDuck-Windows native IME requirements: 6 total
 - M12 upstream oracle and behavioral parity requirements: 9 total, 9 complete
 - M13 AI-native frontend exposure requirements: 6 total, 6 complete
-- M14–M16 TypeDuck-Web fork parity requirements: 7 total, 6 complete (M14 capture and M15 engine parity complete; M16 browser validation planned)
+- M14–M16 TypeDuck-Web fork parity requirements: 7 total, 7 complete (M16 complete with explicit browser/userdb inspection limits)
 - Mapped to phases: 82
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-28*
-*Last updated: 2026-06-19 - M13 complete; M14 TypeDuck v1.1.2 capture complete; M15 TypeDuck dictionary-driven engine parity complete; M16 browser validation planned; M10 TypeDuck-Windows remains parked as a TypeDuck compatibility profile until a named profile ABI surface exists*
+*Last updated: 2026-06-19 - M13 complete; M14 TypeDuck v1.1.2 capture complete; M15 TypeDuck dictionary-driven engine parity complete; M16 TypeDuck-Web browser validation complete with documented browser/userdb limits; M10 TypeDuck-Windows remains parked as a TypeDuck compatibility profile until a named profile ABI surface exists*

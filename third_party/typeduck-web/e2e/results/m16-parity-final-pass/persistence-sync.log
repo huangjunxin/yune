@@ -1,0 +1,6 @@
+[2026-06-19T17:41:37.808Z] syncToPersistenceAfterMutation: FAIL (marker not logged)
+[2026-06-19T17:41:59.367Z] Reload: syncFromPersistenceBeforeInit FAIL (marker not logged)
+[2026-06-19T17:41:59.367Z] Reload: App reinitialized
+[2026-06-19T17:51:01.062Z] syncToPersistenceAfterMutation: FAIL (marker not logged)
+[2026-06-19T17:51:23.152Z] Reload: syncFromPersistenceBeforeInit FAIL (marker not logged)
+[2026-06-19T17:51:23.152Z] Reload: App reinitialized

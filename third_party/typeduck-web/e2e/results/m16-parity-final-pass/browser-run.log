@@ -1,0 +1,54 @@
+[2026-06-19T17:37:47.688Z] Browser E2E started
+URL: http://127.0.0.1:5173/web/
+[2026-06-19T17:38:00.560Z] Composition: input="nei" candidates=5
+[2026-06-19T17:38:00.562Z] Test: Composition after typing schema-valid keys - passed (12864ms)
+[2026-06-19T17:38:12.914Z] Candidates: 5 visible
+[2026-06-19T17:38:12.915Z] Test: Candidate list visible - passed (12341ms)
+[2026-06-19T17:38:25.510Z] Test: M13 AI-off identity and AI-on second-pass source labels - passed (12584ms)
+[2026-06-19T17:38:38.343Z] Test: M13 AI commit safety - passed (12823ms)
+[2026-06-19T17:38:50.543Z] Test: M16 combine candidates browser default matches M14 - passed (12191ms)
+[2026-06-19T17:39:05.107Z] Test: M16 sentence composition browser path matches M14 - passed (14551ms)
+[2026-06-19T17:39:17.158Z] Test: M16 completion browser path matches M14 - passed (12039ms)
+[2026-06-19T17:39:31.842Z] Test: M16 correction browser path is explicit - passed (14671ms)
+[2026-06-19T17:39:46.090Z] Test: M16 simplification toggle converts browser candidates through OpenCC - passed (14239ms)
+[2026-06-19T17:39:58.722Z] Test: M16 schema menu and userdb pronunciation limits are explicit - passed (12622ms)
+[2026-06-19T17:40:11.940Z] Candidate paging: PageDown pressed, panel count=1
+[2026-06-19T17:40:11.941Z] Test: Candidate paging - passed (13210ms)
+[2026-06-19T17:40:25.223Z] Candidate selection: committed="你"
+[2026-06-19T17:40:25.224Z] Test: Candidate selection → commit output - passed (13275ms)
+[2026-06-19T17:40:38.406Z] Deletion: input=""
+[2026-06-19T17:40:38.406Z] Test: Deletion removes candidate or triggers delete path - passed (13173ms)
+[2026-06-19T17:40:51.437Z] Backspace: before="" after=""
+[2026-06-19T17:40:51.438Z] Test: Backspace mutates composition - passed (13024ms)
+[2026-06-19T17:41:06.768Z] Deploy: triggered (no visible notification)
+[2026-06-19T17:41:06.769Z] Test: Deploy returns visible success/error evidence - passed (15322ms)
+[2026-06-19T17:41:19.552Z] Test: Customize returns visible success/error evidence - passed (12775ms)
+[2026-06-19T17:41:37.810Z] Test: Persistence sync after deploy/customize mutations - passed (18249ms)
+[2026-06-19T17:41:59.373Z] Test: Reload/reinitialize preserves persisted state - passed (21553ms)
+[2026-06-19T17:47:11.722Z] Browser E2E started
+URL: http://127.0.0.1:5173/web/
+[2026-06-19T17:47:24.222Z] Composition: input="nei" candidates=5
+[2026-06-19T17:47:24.223Z] Test: Composition after typing schema-valid keys - passed (12493ms)
+[2026-06-19T17:47:36.741Z] Candidates: 5 visible
+[2026-06-19T17:47:36.742Z] Test: Candidate list visible - passed (12505ms)
+[2026-06-19T17:47:49.370Z] Test: M13 AI-off identity and AI-on second-pass source labels - passed (12618ms)
+[2026-06-19T17:48:02.369Z] Test: M13 AI commit safety - passed (12989ms)
+[2026-06-19T17:48:14.887Z] Test: M16 combine candidates browser default matches M14 - passed (12507ms)
+[2026-06-19T17:48:29.570Z] Test: M16 sentence composition browser path matches M14 - passed (14670ms)
+[2026-06-19T17:48:42.003Z] Test: M16 completion browser path matches M14 - passed (12419ms)
+[2026-06-19T17:48:57.168Z] Test: M16 correction browser path is explicit - passed (15156ms)
+[2026-06-19T17:49:11.516Z] Test: M16 simplification toggle converts browser candidates through OpenCC - passed (14339ms)
+[2026-06-19T17:49:23.616Z] Test: M16 schema menu and userdb pronunciation limits are explicit - passed (12091ms)
+[2026-06-19T17:49:36.367Z] Candidate paging: PageDown pressed, panel count=1
+[2026-06-19T17:49:36.368Z] Test: Candidate paging - passed (12745ms)
+[2026-06-19T17:49:49.282Z] Candidate selection: committed="你"
+[2026-06-19T17:49:49.283Z] Test: Candidate selection → commit output - passed (12907ms)
+[2026-06-19T17:50:02.583Z] Deletion: input=""
+[2026-06-19T17:50:02.584Z] Test: Deletion removes candidate or triggers delete path - passed (13293ms)
+[2026-06-19T17:50:15.564Z] Backspace: before="" after=""
+[2026-06-19T17:50:15.565Z] Test: Backspace mutates composition - passed (12972ms)
+[2026-06-19T17:50:30.745Z] Deploy: triggered (no visible notification)
+[2026-06-19T17:50:30.746Z] Test: Deploy returns visible success/error evidence - passed (15173ms)
+[2026-06-19T17:50:42.993Z] Test: Customize returns visible success/error evidence - passed (12239ms)
+[2026-06-19T17:51:01.064Z] Test: Persistence sync after deploy/customize mutations - passed (18063ms)
+[2026-06-19T17:51:23.158Z] Test: Reload/reinitialize preserves persisted state - passed (22086ms)

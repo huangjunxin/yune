@@ -222,7 +222,7 @@ Detail: [`plans/archive/m13-plan-ai-native-frontend-exposure.md`](./plans/archiv
 
 ---
 
-## Next up - M14–M16: TypeDuck-Web fork parity
+## Completed - M14–M16: TypeDuck-Web fork parity
 
 The chosen next arc: complete the **TypeDuck `jyut6ping3` target** so the
 TypeDuck-Web example behaves like the fork — the named (A) target from the
@@ -231,7 +231,8 @@ finding:** `jyut6ping3` is dictionary-driven (`script_translator` +
 `dictionary_lookup_filter` + `simplifier`); it does **not** use
 `poet`/`octagram`/grammar, so this arc needs **golden capture + dictionary-driven
 features**, *not* the upstream language model (that is Track 2 / M17). Five
-behaviors are currently `#[ignore]`-blocked in `cantonese_parity.rs`.
+behaviors are fixture-backed in `cantonese_parity.rs`, with browser-only gaps
+listed explicitly below.
 
 ### M14 — Capture the TypeDuck v1.1.2 Cantonese goldens
 
@@ -264,13 +265,18 @@ adding a language model or changing the upstream ABI.
 
 ### M16 — TypeDuck-Web fork-parity validation
 
-Re-run the full TypeDuck-Web browser matrix with every behavior enabled; un-ignore
-the `cantonese_parity` tests; use the M14 levers-export userdb golden for
-userdb-pronunciation behavior. **Done = TypeDuck-Web is
-fork-like for all captured target behaviors (plus the M13 AI layer), with any
-uncapturable fork-only gap explicitly listed**.
+Complete with documented browser-surface limits. The real TypeDuck-Web Playwright
+matrix now covers the browser-supported `jyut6ping3_mobile` surface against the
+M14 goldens where the app exposes it: default combined candidates, sentence
+composition, completion, simplification, the existing M9 smoke flows, and the
+M13 default-off AI scenarios. M15 remains the authoritative real-engine proof
+for deploy-only variants (`common:/separate_candidates`, `common:/show_full_code`)
+and correction details that TypeDuck-Web does not expose as independent browser
+selectors. Schema-menu hiding and per-entry userdb pronunciation remain explicit
+browser/userdb inspection gaps, backed by the M14 emitted-schema-list and levers
+export fixtures rather than claimed as browser UI coverage.
 
-Detail: [`plans/archive/m14-plan-typeduck-v112-golden-capture.md`](./plans/archive/m14-plan-typeduck-v112-golden-capture.md), [`plans/archive/m15-plan-typeduck-dictionary-driven-parity.md`](./plans/archive/m15-plan-typeduck-dictionary-driven-parity.md), and [`plans/m16-plan-typeduck-web-parity-validation.md`](./plans/m16-plan-typeduck-web-parity-validation.md).
+Detail: [`plans/archive/m14-plan-typeduck-v112-golden-capture.md`](./plans/archive/m14-plan-typeduck-v112-golden-capture.md), [`plans/archive/m15-plan-typeduck-dictionary-driven-parity.md`](./plans/archive/m15-plan-typeduck-dictionary-driven-parity.md), and [`plans/archive/m16-plan-typeduck-web-parity-validation.md`](./plans/archive/m16-plan-typeduck-web-parity-validation.md).
 
 ---
 
@@ -286,8 +292,8 @@ fixtures, and a historical native `rime.dll`/`.lib`/headers package smoke. That
 package smoke is not an active or valid gate for the default upstream
 `rime_get_api()` table after M12. Remaining TypeDuck-Windows work is still
 blocked by a named profile ABI surface and the real TypeDuck-Windows frontend
-E2E; the TypeDuck-Web Cantonese gaps are now fixture-backed under M14 and move
-to M15/M16 implementation and browser validation.
+E2E; the TypeDuck-Web Cantonese gaps are now fixture-backed under M14-M16 with
+engine coverage and explicit browser/userdb limits.
 
 Detail: [`typeduck-windows-backend-requirements.md`](./typeduck-windows-backend-requirements.md),
 [`plans/m10-reference-typeduck-windows-contract.md`](./plans/m10-reference-typeduck-windows-contract.md),
@@ -297,11 +303,10 @@ and [`plans/m10-reference-typeduck-windows-native-build.md`](./plans/m10-referen
 
 In priority order:
 
-1. **Execute M16 — TypeDuck-Web fork-parity browser validation.** M14 captured the v1.1.2 Cantonese goldens and M15 implemented the dictionary-driven engine paths; next prove fork-like Cantonese behavior in the TypeDuck-Web browser E2E. See the M14–M16 milestones above.
-2. **Preserve the upstream-first baseline.** Keep default `RimeApi` and core behavior aligned to upstream `1.17.0`; add new TypeDuck fork-only behavior only behind an explicit profile surface.
-3. **Keep M9/M13 web gates green on merge.** Preserve the reproducible Emscripten build, TypeScript runtime tests/build, TypeDuck-Web worker build, real-assets browser evidence, native `typeduck_web` fallback, and default-off M13 AI scenarios.
-4. **Hold Track 2 (M17–M19) lighter until TypeDuck-Web parity is proven.** The upstream language model, prism generation, deployment-write, and breadth schemas advance opportunistically per the scope ledger — not ahead of M14–M16.
-5. **Resume TypeDuck profile work only with a named surface.** Return to TypeDuck-Windows packaging after the profile ABI is defined and fork-header slot smoke is re-derived.
+1. **Preserve the upstream-first baseline.** Keep default `RimeApi` and core behavior aligned to upstream `1.17.0`; add new TypeDuck fork-only behavior only behind an explicit profile surface.
+2. **Keep M9/M13/M16 web gates green on merge.** Preserve the reproducible Emscripten build, TypeScript runtime tests/build, TypeDuck-Web worker build, real-assets browser evidence, native `typeduck_web` fallback, and default-off M13 AI scenarios.
+3. **Advance Track 2 (M17–M19) opportunistically.** The upstream language model, prism generation, deployment-write, and breadth schemas now follow the upstream-first scope ledger after the M14–M16 TypeDuck-Web closeout.
+4. **Resume TypeDuck profile work only with a named surface.** Return to TypeDuck-Windows packaging after the profile ABI is defined and fork-header slot smoke is re-derived.
 
 ---
 

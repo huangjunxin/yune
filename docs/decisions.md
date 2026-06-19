@@ -697,16 +697,19 @@ behavior" is scheduled as **M14** (complete: captured the v1.1.2 Cantonese
 goldens by parameterizing the scenario-capable upstream probe's oracle identity
 and adding a thin v1.1.2 wrapper), **M15** (complete: implemented the dictionary-driven
 behaviors: `combine_candidates`, `show_full_code`, `enable_sentence`, completion,
-correction, checked-in `hk2s` OpenCC source-data path), and **M16** (prove it in the TypeDuck-Web browser
-E2E and un-ignore the `cantonese_parity` tests). **Gap-map finding:** `jyut6ping3`
+correction, checked-in `hk2s` OpenCC source-data path), and **M16** (complete: real
+TypeDuck-Web Playwright evidence covers the app-exposed `jyut6ping3_mobile` surface
+plus M13 AI, with deploy-only/UI/userdb inspection limits explicitly listed).
+**Gap-map finding:** `jyut6ping3`
 uses `script_translator` + `dictionary_lookup_filter` + `simplifier`, not
 `poet`/`octagram`/grammar — so the upstream statistical language model is **Track 2
 / M17**, not on the TypeDuck-parity critical path. Per-entry userdb pronunciations
 are not exposed by the standard RIME C ABI, but M14 proved the levers user-dict
 export hook can capture learned per-entry `(code, freq)` rows from seeded state.
 Track 2 (M17 upstream LM, M18 deployment/processor depth, M19
-breadth) stays lighter until TypeDuck-Web parity is proven. Extends D-24 (oracle
-precedence) and D-25 (target-driven scope). *Outcome: M14 and M15 complete; M16 pending.*
+breadth) resumes opportunistically after the TypeDuck-Web closeout. Extends D-24 (oracle
+precedence) and D-25 (target-driven scope). *Outcome: M14-M16 complete with explicit
+browser/userdb inspection limits.*
 
 ### Initialization notes (process decisions)
 
@@ -741,4 +744,4 @@ this is why the placeholder-echo WI-4 matrix was reopened (D-P10-9) and why HR-1
 committed the real-assets browser run rather than only describing it.
 
 ---
-*Last updated: 2026-06-19 - D-26 records M13 default-off two-pass TypeDuck-Web AI exposure; D-27 records M15 dictionary-driven TypeDuck engine parity complete; M10 TypeDuck-Windows remains parked pending a named profile surface.*
+*Last updated: 2026-06-19 - D-26 records M13 default-off two-pass TypeDuck-Web AI exposure; D-27 records M14-M16 TypeDuck-Web fork-parity closeout with explicit browser/userdb limits; M10 TypeDuck-Windows remains parked pending a named profile surface.*

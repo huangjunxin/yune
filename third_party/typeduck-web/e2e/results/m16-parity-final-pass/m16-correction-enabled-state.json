@@ -1,0 +1,51 @@
+{
+  "expectedM14Texts": [
+    "你",
+    "呢",
+    "尼",
+    "妮",
+    "彌"
+  ],
+  "browserState": {
+    "aiEnabled": false,
+    "inputValue": "",
+    "candidates": [
+      {
+        "index": 0,
+        "text": "那",
+        "note": null,
+        "source": null,
+        "rowText": "1.naa5那thatⓘ"
+      },
+      {
+        "index": 1,
+        "text": "拿",
+        "note": null,
+        "source": null,
+        "rowText": "2.naa4拿take; captureⓘ"
+      },
+      {
+        "index": 2,
+        "text": "娜",
+        "note": null,
+        "source": null,
+        "rowText": "3.naa4娜ⓘ"
+      },
+      {
+        "index": 3,
+        "text": "哪",
+        "note": null,
+        "source": null,
+        "rowText": "4.naa5哪whereⓘ"
+      },
+      {
+        "index": 4,
+        "text": "嗱",
+        "note": null,
+        "source": null,
+        "rowText": "5.naa4嗱used for confirmationⓘ"
+      }
+    ]
+  },
+  "browserSurface": "Candidate panel rendered after enabling Auto-correction."
+}
