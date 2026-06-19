@@ -22,3 +22,12 @@ from the TypeDuck fork. Use them for core Yune compatibility behavior.
   engine, tag, commit, capture date, capture command, schema, and input sequence.
 - If a case cannot be captured, keep the Yune test ignored with a `panic!()` body
   and document the exact command that would unblock it.
+
+## Local Build Blocker
+
+- Blocked command: `.\build.bat deps`
+- Blocking diagnostic: `Error: Boost not found! Please set BOOST_ROOT in env.bat.`
+- Reproduction path: run the blocked command from a Visual Studio developer shell
+  in a checkout of `rime/librime` tag `1.17.0`.
+- M12 impact: runtime byte capture is blocked, but header-based ABI parity can
+  continue from `src/rime_api.h` at commit `33e78140250125871856cdc5b42ddc6a5fcd3cd4`.
