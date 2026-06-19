@@ -169,7 +169,9 @@
   },
   "screenshots": [
     "screenshot-hr5-dictionary-panel.png",
-    "screenshot-hr5-after-delete.png"
+    "screenshot-hr5-after-delete.png",
+    "hr5-final-ngohaig-before-space.png",
+    "hr5-final-ngohaig-after-space.png"
   ],
   "postReviewCloseout": {
     "runtimeErrorBanner": {
@@ -190,6 +192,24 @@
       "backspace": {
         "afterHasRuntimeErrorBanner": false,
         "compositionMutatedToNg": true
+      }
+    },
+    "partialFinalSentenceCompletion": {
+      "status": "RESOLVED",
+      "rootCause": "Yune sentence composition required every segment to be an exact dictionary code, so ngohaig could not combine exact ngohai -> 我係 with final-prefix g -> 個 the way TypeDuck v1.1.2 does.",
+      "fix": "StaticTableTranslator now allows prefix completion only for the final sentence segment when both completion and sentence mode are enabled.",
+      "evidence": [
+        "hr5-final-ngohaig-state.json",
+        "hr5-final-ngohaig-before-space.png",
+        "hr5-final-ngohaig-after-space.png"
+      ],
+      "beforeSpace": {
+        "panelShowsExpectedFirstCandidate": true,
+        "expectedFirstCandidate": "1. 我係個"
+      },
+      "afterSpace": {
+        "committed": "我係個",
+        "hasRuntimeErrorBanner": false
       }
     },
     "dictionaryCommentByteParity": {

@@ -1,0 +1,570 @@
+{
+  "note": "M9 post-review regression evidence for TypeDuck sentence completion with a partial final segment. Real-assets browser run waited for startup readiness, typed ngohaig, candidate 0 rendered 我係個, and Space committed 我係個 without a runtime-error banner.",
+  "timestamp": "2026-06-19T00:06:24.965Z",
+  "beforeSpace": {
+    "hasRuntimeErrorBanner": false,
+    "label": "before-space",
+    "mainExcerpt": "中\n繁\n半\n。\nngohaig\n‹\n›\n1.\t我係個\t☯\n2.\t我係個\t\n3.\tngohaig\techo\n輸入法設定 IME Settings\n顯示語言 Display Languages\n英語 English\n印地語 Hindi\n印尼語 Indonesian\n尼泊爾語 Nepali\n烏爾都語 Urdu\n⬑ 主要語言 Main Language\n每頁候選詞數量 No. of Candidates Per Page\n|\n|\n|\n|\n|\n|\n|\n中文字體 Chinese Typeface\n宋體 Sung\n黑體 Hei\n候選詞粵拼 Candidates Jyutping\n顯示 Always Show\n僅反查 Only in Reverse Lookup\n隱藏 Hide\n自動完成 Auto-completion\n自動校正 Auto-correction\n自動組詞 Auto-composition\n輸入記憶 Input Memory\n反查設定 Reverse Lookup Settings\n顯示完整輸入碼 Show Full Input Code\n倉頡版本 Cangjie Version\n三代 Version 3\n五代 Version 5",
+    "panelText": "ngohaig ‹ › 1. 我係個 ☯ 2. 我係個 3. ngohaig echo",
+    "textarea": "",
+    "url": "http://127.0.0.1:5179/web/?debug&realAssets=1&ngohaigFixFinal=1781827531344",
+    "visibleCandidateLines": [
+      "1.\t我係個\t☯",
+      "2.\t我係個",
+      "3.\tngohaig\techo"
+    ]
+  },
+  "afterSpace": {
+    "hasRuntimeErrorBanner": false,
+    "label": "after-space",
+    "mainExcerpt": "中\n繁\n半\n。\n輸入法設定 IME Settings\n顯示語言 Display Languages\n英語 English\n印地語 Hindi\n印尼語 Indonesian\n尼泊爾語 Nepali\n烏爾都語 Urdu\n⬑ 主要語言 Main Language\n每頁候選詞數量 No. of Candidates Per Page\n|\n|\n|\n|\n|\n|\n|\n中文字體 Chinese Typeface\n宋體 Sung\n黑體 Hei\n候選詞粵拼 Candidates Jyutping\n顯示 Always Show\n僅反查 Only in Reverse Lookup\n隱藏 Hide\n自動完成 Auto-completion\n自動校正 Auto-correction\n自動組詞 Auto-composition\n輸入記憶 Input Memory\n反查設定 Reverse Lookup Settings\n顯示完整輸入碼 Show Full Input Code\n倉頡版本 Cangjie Version\n三代 Version 3\n五代 Version 5",
+    "panelText": null,
+    "textarea": "我係個",
+    "url": "http://127.0.0.1:5179/web/?debug&realAssets=1&ngohaigFixFinal=1781827531344",
+    "visibleCandidateLines": []
+  },
+  "assertions": {
+    "panelBeforeSpace": "ngohaig ‹ › 1. 我係個 ☯ 2. 我係個 3. ngohaig echo",
+    "panelShowsExpectedFirstCandidate": true,
+    "afterSpaceTextarea": "我係個",
+    "afterSpaceCommittedExpectedPhrase": true,
+    "hasRuntimeErrorBannerBefore": false,
+    "hasRuntimeErrorBannerAfter": false,
+    "warningOrErrorCount": 0,
+    "warningOrErrors": []
+  },
+  "console": [
+    {
+      "level": "log",
+      "message": "post {\"name\":\"processKey\",\"args\":[\"{space}\"]}",
+      "timestamp": "2026-06-19T00:04:04.995Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":false,\"success\":true,\"committed\":\"我係個\"}}",
+      "timestamp": "2026-06-19T00:04:05.002Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"processKey\",\"args\":[\"{Release+space}\"]}",
+      "timestamp": "2026-06-19T00:04:05.002Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":false,\"success\":true}}",
+      "timestamp": "2026-06-19T00:04:05.002Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"soft_cursor\",true]}",
+      "timestamp": "2026-06-19T00:04:24.345Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"listener\",\"name\":\"initialized\",\"args\":[true]}",
+      "timestamp": "2026-06-19T00:04:29.892Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\"}",
+      "timestamp": "2026-06-19T00:04:29.893Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"ascii_mode\",false]}",
+      "timestamp": "2026-06-19T00:04:29.893Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\"}",
+      "timestamp": "2026-06-19T00:04:29.893Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"simplification\",false]}",
+      "timestamp": "2026-06-19T00:04:29.893Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\"}",
+      "timestamp": "2026-06-19T00:04:29.894Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"full_shape\",false]}",
+      "timestamp": "2026-06-19T00:04:29.894Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\"}",
+      "timestamp": "2026-06-19T00:04:29.894Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"ascii_punct\",false]}",
+      "timestamp": "2026-06-19T00:04:29.894Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\"}",
+      "timestamp": "2026-06-19T00:04:29.894Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"customize\",\"args\":[{\"pageSize\":6,\"enableCompletion\":true,\"enableCorrection\":false,\"enableSentence\":true,\"enableLearning\":true,\"isCangjie5\":true}]}",
+      "timestamp": "2026-06-19T00:04:29.894Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\",\"result\":true}",
+      "timestamp": "2026-06-19T00:04:29.901Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"processKey\",\"args\":[\"{n}\"]}",
+      "timestamp": "2026-06-19T00:04:29.901Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":true,\"inputBuffer\":{\"before\":\"n\",\"active\":\"\",\"after\":\"\"},\"page\":0,\"isLastPage\":false,\"highlightedIndex\":0,\"candidates\":[{\"text\":\"那\",\"comment\":\"\\f\\r1,那,naa5,1,0,,adv oth,,,,,,,that,وہ,त्यो,वह,bahwa\"},{\"text\":\"拿\",\"comment\":\"\\f\\r1,拿,naa4,1,0,,v,wri,,,,攞，拎(ling1),,take; capture,لے لینا,लिनु,लेना,mengambil\"},{\"text\":\"娜\",\"comment\":\"\\f\\r1,娜,naa4,1,0,,n,,name,,,,,,,,,\\r0,娜,no5,2,0,,morph,,,,,,婀娜多姿,婀娜多姿: graceful,,,,\"},{\"text\":\"哪\",\"comment\":\"\\f\\r1,哪,naa5,1,0,,oth,wri,,,,邊度，邊個,,where,کہاں,कहाँ,कहाँ,dimana\"},{\"text\":\"嗱\",\"comment\":\"\\f\\r1,嗱,naa4,1,0,,part,ver,,,噍,,,used for confirmation,پکڑو۔,यो समात्नुहोस,पकड़ो,memegang\"},{\"text\":\"乸\",\"comment\":\"\\f\\r1,乸,naa2,1,0,,morph,ver,,,母,,雞乸，牛乸,female,,,,\"},{\"text\":\"那把\",\"comment\":\"\\f\\r1,那把,naa5baa2,1,0,,,wri,,,,,,that bundle,,,,\"},{\"text\":\"那班\",\"comment\":\"\\f\\r1,那班,naa5baan1,1,0,,,wri,,,,,,that group,,,,\"},{\"text\":\"那不是\",\"comment\":\"\\f\\r1,那不是,naa5bat1si6,1,0,,oth,wri,,,,,,that is not,,,,\"},{\"text\":\"那邊\",\"comment\":\"\\f\\r1,那邊,naa5bin1,1,0,,oth,,,,,,,that side,,,,\"},{\"text\":\"那部\",\"comment\":\"\\f\\r1,那部,naa5bou6,1,0,,,wri,,,,,,that (machine),,,,\"},{\"text\":\"那本\",\"comment\":\"\\f\\r1,那本,naa5bun2,1,0,,,wri,,,,,,that (book),,,,\"},{\"text\":\"拿出\",\"comment\":\"\\f\\r1,拿出,naa4ceot1,1,0,,v,,,,,,,bring out; take out,,,,\"},{\"text\":\"拿出手\",\"comment\":\"\\f\\r1,拿出手,naa4ceot1sau2,1,0,,oth,,,,,,,show,دکھائیں,प्रस्तुत गर्नु,प्रदर्शित करना,pertunjukan\"},{\"text\":\"那次\",\"comment\":\"\\f\\r1,那次,naa5ci3,1,0,,,wri,,,,,,that time,,,,\"},{\"text\":\"那場\",\"comment\":\"\\f\\r1,那場,naa5coeng4,1,0,,,wri,,,,,,that (rainstorm/disease/event),,,,\"},{\"text\":\"那對\",\"comment\":\"\\f\\r1,那對,naa5deoi3,1,0,,,wri,,,,,,that pair,,,,\"},{\"text\":\"那隊\",\"comment\":\"\\f\\r1,那隊,naa5deoi6,1,0,,,wri,,,,,,that group,,,,\"},{\"text\":\"那點\",\"comment\":\"\\f\\r1,那點,naa5dim2,1,0,,,wri,,,,,,that bit; dot,,,,\"},{\"text\":\"拿到\",\"comment\":\"\\f\\r1,拿到,naa4dou3,1,0,,v,,,,,,,get,,,,\"},{\"text\":\"那道\",\"comment\":\"\\f\\r1,那道,naa5dou6,1,0,,,wri,,,,,,that (bridge/door),,,,\"},{\"text\":\"那段\",\"comment\":\"\\f\\r1,那段,naa5dyun6,1,0,,,wri,,,,,,that part,,,,\"},{\"text\":\"那塊\",\"comment\":\"\\f\\r1,那塊,naa5faai3,1,0,,,wri,,,,,,that piece,,,,\"},{\"text\":\"那發\",\"comment\":\"\\f\\r1,那發,naa5faat3,1,0,,,wri,,,,,,that (bullet),,,,\"},{\"text\":\"那份\",\"comment\":\"\\f\\r1,那份,naa5fan6,1,0,,,wri,,,,,,that share,,,,\"},{\"text\":\"那方\",\"comment\":\"\\f\\r1,那方,naa5fong1,1,0,,,wri,,,,,,that piece,,,,\"},{\"text\":\"那間\",\"comment\":\"\\f\\r1,那間,naa5gaan1,1,0,,,wri,,,,,,that (room/shop),,,,\"},{\"text\":\"那根\",\"comment\":\"\\f\\r1,那根,naa5gan1,1,0,,,wri,,,,,,that stick,,,,\"},{\"text\":\"那狗\",\"comment\":\"\\f\\r1,那狗,naa5gau2,1,0,,n,wri,,,,,,that dog,,,,\"},{\"text\":\"那句\",\"comment\":\"\\f\\r1,那句,naa5geoi3,1,0,,,wri,,,,,,that sentence,,,,\"},{\"text\":\"那件\",\"comment\":\"\\f\\r1,那件,naa5gin6,1,0,,,wri,,,,,,that piece,,,,\"},{\"text\":\"那個\",\"comment\":\"\\f\\r1,那個,naa5go3,1,0,,oth adj,wri,,,,嗰個,,that,کہ,त्यो,वो वाला,Yang itu\"},{\"text\":\"哪個\",\"comment\":\"\\f\\r1,哪個,naa5go3,1,0,,oth,,,,,,,which one,کونسا,कुन,कौन सा,yang mana\"},{\"text\":\"那股\",\"comment\":\"\\f\\r1,那股,naa5gu2,1,0,,,wri,,,,,,that (smell/strength),,,,\"},{\"text\":\"拿下\",\"comment\":\"\\f\\r1,拿下,naa4haa6,1,0,,v,,,,,,,take,,,,\"},{\"text\":\"拿去\",\"comment\":\"\\f\\r1,拿去,naa4heoi3,1,0,,v,wri,,,,,,take,,,,\"},{\"text\":\"奶\",\"comment\":\"\\f\\r1,奶,naai5,1,0,,n,,,,,,,milk,دودھ,दूध,दूध,susu\"},{\"text\":\"乃\",\"comment\":\"\\f\\r1,乃,naai5,1,0,,v,,,,,,,so,,,,\"},{\"text\":\"迺\",\"comment\":\"\\f\\r1,迺,naai5,1,0,,morph,,,,,,甘迺迪,,,,,\"},{\"text\":\"奶茶\",\"comment\":\"\\f\\r1,奶茶,naai5caa4,1,0,,n,,,,,,,milky tea,دودھ کی چائے,दुधको चिया,दूध वाली चाय,Teh susu\"},{\"text\":\"奶粉\",\"comment\":\"\\f\\r1,奶粉,naai5fan2,1,0,,n,,,,,,,milk formula,پاؤڈر والا دودھ,पाउडर दुध,दूध का पाउडर,susu bubuk\"},{\"text\":\"奶粉錢\",\"comment\":\"\\f\\r1,奶粉錢,naai5fan2cin2,1,0,,n,,,,,,,money for raising a child,,,,\"},{\"text\":\"乃係\",\"comment\":\"\\f\\r1,乃係,naai5hai6,1,0,,v,,,,,,,be; be indeed,,,,\"},{\"text\":\"奶油\",\"comment\":\"\\f\\r1,奶油,naai5jau4,1,0,,n,,,,,,,cream,کریم,क्रीम,मलाई,krim\"},{\"text\":\"奶媽\",\"comment\":\"\\f\\r1,奶媽,naai5maa1,1,0,,n,,,,,,,nanny,,,,Pengurus rumah\"},{\"text\":\"奶奶\",\"comment\":\"\\f\\r1,奶奶,naai4naai2,1,0,,n,,,,,,,mother-in-law,دادی,हजुरआमा,दादी,nenek\"},{\"text\":\"奶水\",\"comment\":\"\\f\\r1,奶水,naai5seoi2,1,0,,n,,,,,,,milk,دودھ,दूध,दूध,Susu\"},{\"text\":\"奶昔\",\"comment\":\"\\f\\r1,奶昔,naai5sik1,1,0,,n,,,,,,,milkshake,,,,\"},{\"text\":\"奶奶\",\"comment\":\"\\f\\r1,奶奶,naai4naai2,1,0,,n,,,,,,,mother-in-law,دادی,हजुरआमा,दादी,nenek\"},{\"text\":\"奶黃包\",\"comment\":\"\\f\\r1,奶黃包,naai5wong4baau1,1,0,,n,,,,,,,sweet custard bun,,,,\"}],\"success\":true}}",
+      "timestamp": "2026-06-19T00:04:29.953Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"processKey\",\"args\":[\"{g}\"]}",
+      "timestamp": "2026-06-19T00:04:29.953Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":true,\"inputBuffer\":{\"before\":\"ng\",\"active\":\"\",\"after\":\"\"},\"page\":0,\"isLastPage\":false,\"highlightedIndex\":0,\"candidates\":[{\"text\":\"五\",\"comment\":\"\\f\\r1,五,ng5,1,0,,n,,,,,,,five,پانچ,पाँच,पांच,lima\"},{\"text\":\"午\",\"comment\":\"\\f\\r1,午,ng5,1,0,,morph,,,,,,正午，午前，午後,noon,,,,\"},{\"text\":\"誤\",\"comment\":\"\\f\\r1,誤,ng6,1,0,,morph,,,,,,誤會，誤解,wrong,غلطی,त्रुटि,गलती,kesalahan\"},{\"text\":\"吳\",\"comment\":\"\\f\\r1,吳,ng4,1,0,,n,,surname,,,,,surname [Ng],,,,nama keluarga (Wu)\"},{\"text\":\"伍\",\"comment\":\"\\f\\r1,伍,ng5,1,0,,n,,surname,,,,,five; surname [Ng],,,,\"},{\"text\":\"吾\",\"comment\":\"\\f\\r1,吾,ng4,1,0,,n,,,,,,,I,,,,saya\"},{\"text\":\"悟\",\"comment\":\"\\f\\r1,悟,ng6,1,0,,v,,,,,,,apprehend; realize,,,,menyadari\"},{\"text\":\"晤\",\"comment\":\"\\f\\r1,晤,ng6,1,0,,morph,,,,,,會晤，晤面,meet with,,,,\"},{\"text\":\"嗯\",\"comment\":\"\\f\\r1,嗯,ng6,1,0,,oth,,,,,,,hum,,,,\"},{\"text\":\"蜈\",\"comment\":\"\\f\\r1,蜈,ng4,1,0,,x,,,,,,蜈蚣,蜈蚣: centepede,,,,\"},{\"text\":\"捂\",\"comment\":\"\\f\\r1,捂,ng6,1,0,,v,wri,,,,揞,,cover,,,,\"},{\"text\":\"忤\",\"comment\":\"\\f\\r1,忤,ng5,1,0,,x,,,,,,,,,,,\\r0,忤,ng6,2,0,,x,,,,,,,,,,,\"},{\"text\":\"忤\",\"comment\":\"\\f\\r1,忤,ng5,1,0,,x,,,,,,,,,,,\\r0,忤,ng6,2,0,,x,,,,,,,,,,,\"},{\"text\":\"梧\",\"comment\":\"\\f\\r1,梧,ng4,1,0,,morph,,,,,,梧桐,梧桐,,,,\\r0,梧,ng6,2,0,,morph,,,,,,魁梧,魁梧: burly,,,,\"},{\"text\":\"梧\",\"comment\":\"\\f\\r1,梧,ng4,1,0,,morph,,,,,,梧桐,梧桐,,,,\\r0,梧,ng6,2,0,,morph,,,,,,魁梧,魁梧: burly,,,,\"},{\"text\":\"牙\",\"comment\":\"\\f\\r1,牙,ngaa4,1,0,,n,,,,,,,tooth,دانت,दाँत,दांत,gigi\"},{\"text\":\"雅\",\"comment\":\"\\f\\r1,雅,ngaa5,1,0,,morph,,,,,,優雅,elegant,,,,anggun\"},{\"text\":\"瓦\",\"comment\":\"\\f\\r1,瓦,ngaa5,1,0,,morph,,,,,,瓦盆，瓦罐，瓦片,tile,ٹائل,टायल लगाउनु,खपरैल,ubin\"},{\"text\":\"訝\",\"comment\":\"\\f\\r1,訝,ngaa6,1,0,,morph,,,,,,驚訝，訝異,surprised,,,,terkejut\"},{\"text\":\"芽\",\"comment\":\"\\f\\r1,芽,ngaa4,1,0,,morph,,,,,,萌芽，發芽,sprout,شگوفہ,अंकुर,कोंपल,tunas\"},{\"text\":\"衙\",\"comment\":\"\\f\\r1,衙,ngaa4,1,0,,n,,,,,,衙門,government office in feudal china,,,,\"},{\"text\":\"禡\",\"comment\":\"\\f\\r1,禡,maa6,1,0,,x,,,,,,,,,,,\\r0,禡,ngaa4,2,0,,x,,,,,,,,,,,\"},{\"text\":\"牙刷\",\"comment\":\"\\f\\r1,牙刷,ngaa4caat2,1,1,,n,,,,,,,toothbrush,ٹوٹھ برش,टूथब्रश,टूथब्रश,sikat gigi\"},{\"text\":\"牙擦\",\"comment\":\"\\f\\r1,牙擦,ngaa4caat3,1,0,,n,ver,,,趾高氣揚,,,cocky,,,,\"},{\"text\":\"牙擦擦\",\"comment\":\"\\f\\r1,牙擦擦,ngaa4caat3caat3,1,0,,adj,ver,,,驕傲,,,boastful,,,,\"},{\"text\":\"牙齒\",\"comment\":\"\\f\\r1,牙齒,ngaa4ci2,1,0,,n,,,,,,,tooth,دانت,दाँत,दांत,gigi\"},{\"text\":\"牙齒印\",\"comment\":\"\\f\\r1,牙齒印,ngaa4ci2jan3,1,0,,n,,,,,,,old quarrel,,,,\"},{\"text\":\"牙籤\",\"comment\":\"\\f\\r1,牙籤,ngaa4cim1,1,0,,n,,,,,,,toothpicks,,,,\"},{\"text\":\"芽菜\",\"comment\":\"\\f\\r1,芽菜,ngaa4coi3,1,0,,n,,,,,,,sprouts,,,,\"},{\"text\":\"瓦特\",\"comment\":\"\\f\\r1,瓦特,ngaa5dak6,1,0,,mw,,,,,,,watt,,,,\"},{\"text\":\"雅典\",\"comment\":\"\\f\\r1,雅典,ngaa5din2,1,0,,n,,,,,,,Athens,,,,\"},{\"text\":\"牙科\",\"comment\":\"\\f\\r1,牙科,ngaa4fo1,1,0,,n,,,,,,,dentistry,,,,Kedokteran gigi\"},{\"text\":\"牙縫\",\"comment\":\"\\f\\r1,牙縫,ngaa4fung4,1,0,,n,,,,,,,teeth gap,,,,\"},{\"text\":\"雅加達\",\"comment\":\"\\f\\r1,雅加達,ngaa5gaa1daat6,1,0,,n,,,,,,,Jakarta,,,,\"},{\"text\":\"瓦解\",\"comment\":\"\\f\\r1,瓦解,ngaa5gaai2,1,0,,v,,,,,,,disintegrate,,,,runtuh\"},{\"text\":\"牙骹\",\"comment\":\"\\f\\r1,牙骹,ngaa4gaau3,1,0,,n,ver,,,頜關節,,,jaw joint,,,,\"},{\"text\":\"牙根\",\"comment\":\"\\f\\r1,牙根,ngaa4gan1,1,0,,n,,,,,,,tooth root,,,,\"},{\"text\":\"牙膏\",\"comment\":\"\\f\\r1,牙膏,ngaa4gou1,1,0,,n,,,,,,,toothpaste,ٹوتھ پيسٹ,टुथपेस्ट,टूथपेस्ट,pasta gigi\"},{\"text\":\"牙關\",\"comment\":\"\\f\\r1,牙關,ngaa4gwaan1,1,0,,n,,,,,,,jaws,,,,\"},{\"text\":\"牙血\",\"comment\":\"\\f\\r1,牙血,ngaa4hyut3,1,0,,n,,,,,,,bleeding gums,,,,\"},{\"text\":\"艾\",\"comment\":\"\\f\\r1,艾,ngaai6,1,0,,n,,surname,,,,,surname [Ngai],,,,nama keluarga (Ai)\"},{\"text\":\"捱\",\"comment\":\"\\f\\r1,捱,ngaai4,1,0,,v,,,,,,,endure,برداشت,कष्ट,भुगतना,menderita\"},{\"text\":\"涯\",\"comment\":\"\\f\\r1,涯,ngaai4,1,0,,morph,,,,,,天涯海角，無邊無涯，學海無涯,\\\"margin, limit\\\",,,,pantai\"},{\"text\":\"崖\",\"comment\":\"\\f\\r1,崖,ngaai4,1,0,,n adj,,,,,,,cliff; proud,,,,\"},{\"text\":\"挨\",\"comment\":\"\\f\\r1,挨,aai1,2,0,,v,,,,,,,get close to,,,,\\r0,挨,ngaai4,2,0,,v,,,,,,,suffer,,,,menderita\"},{\"text\":\"刈\",\"comment\":\"\\f\\r1,刈,ngaai6,1,0,,morph,,,,,,刈包,刈包: pork belly bun,,,,\"},{\"text\":\"乂\",\"comment\":\"\\f\\r1,乂,ngaai6,1,0,,,,rare,,,,,,,,,\"},{\"text\":\"艾草\",\"comment\":\"\\f\\r1,艾草,ngaai6cou2,1,0,,n,,,,,,,wormwood; mugwood,,,,\"},{\"text\":\"捱打\",\"comment\":\"\\f\\r1,捱打,ngaai4daa2,1,0,,v,,,,,,,take a beating,,,,dipukuli\"},{\"text\":\"捱到\",\"comment\":\"\\f\\r1,捱到,ngaai4dou2,1,0,,,,,,,,,can withstand,,,,\\r0,捱到,ngaai4dou3,1,0,,oth,,,,,,,withstand until,,,,\"}],\"success\":true}}",
+      "timestamp": "2026-06-19T00:04:29.981Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"processKey\",\"args\":[\"{o}\"]}",
+      "timestamp": "2026-06-19T00:04:29.981Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":true,\"inputBuffer\":{\"before\":\"ngo\",\"active\":\"\",\"after\":\"\"},\"page\":0,\"isLastPage\":false,\"highlightedIndex\":0,\"candidates\":[{\"text\":\"我\",\"comment\":\"\\f\\r1,我,ngo5,1,0,,n,,,,,,,\\\"I, me\\\",میں,म हो,मैं,saya\"},{\"text\":\"俄\",\"comment\":\"\\f\\r1,俄,ngo4,1,0,,n,,,,,,,Russian,,,,rusia\"},{\"text\":\"餓\",\"comment\":\"\\f\\r1,餓,ngo6,1,0,,v,,,,,,,hungry,بھوکا,भोक,भूखे पेट,lapar\"},{\"text\":\"娥\",\"comment\":\"\\f\\r1,娥,ngo4,1,0,,morph,,,,,,嫦娥，娥眉皓齒，宮娥,嫦娥,,,,\"},{\"text\":\"鵝\",\"comment\":\"\\f\\r1,鵝,ngo4,1,0,,morph,,,,,,天鵝,goose,,,,angsa\\r0,鵝,ngo2,2,1,,n,,,,,,,goose,,,,angsa\"},{\"text\":\"鵝\",\"comment\":\"\\f\\r1,鵝,ngo4,1,0,,morph,,,,,,天鵝,goose,,,,angsa\\r0,鵝,ngo2,2,1,,n,,,,,,,goose,,,,angsa\"},{\"text\":\"卧\",\"comment\":\"\\f\\r1,卧,ngo6,1,0,,v n,,,,,,,lie down,,,,\"},{\"text\":\"訛\",\"comment\":\"\\f\\r1,訛,ngo4,1,0,,morph,,,,,,訛傳，訛詐,rumour; error,,,,\"},{\"text\":\"蛾\",\"comment\":\"\\f\\r1,蛾,ngo4,1,0,,n,,,,,,飛蛾,moth,,,,\"},{\"text\":\"峨\",\"comment\":\"\\f\\r1,峨,ngo4,1,0,,morph,,,,,,巍峨，嵯峨,lofty,,,,\"},{\"text\":\"猗\",\"comment\":\"\\f\\r1,猗,ji1,1,0,,x,,,,,,,,,,,\\r0,猗,ji2,2,0,,x,,,,,,,,,,,\\r0,猗,ngo5,2,0,,x,,,,,,,,,,,\\r0,猗,o2,2,0,,x,,,,,,,,,,,\"},{\"text\":\"我啊\",\"comment\":\"\\f\\r1,我啊,ngo5aa3,1,0,,oth,,,,,,,it's me,,,,\"},{\"text\":\"我俾\",\"comment\":\"\\f\\r1,我俾,ngo5bei2,1,0,,,,,,,,,,,,,\"},{\"text\":\"我必\",\"comment\":\"\\f\\r1,我必,ngo5bit1,1,0,,oth,,,,,,,I must; I will,,,,\"},{\"text\":\"我幫\",\"comment\":\"\\f\\r1,我幫,ngo5bong1,1,0,,oth,,,,,,,I help,,,,\"},{\"text\":\"我本身\",\"comment\":\"\\f\\r1,我本身,ngo5bun2san1,1,0,,oth,,,,,,,me myself,,,,\"},{\"text\":\"卧蠶\",\"comment\":\"\\f\\r1,卧蠶,ngo6caam4,1,0,,n,,,,,,,lying silkworm,,,,\"},{\"text\":\"訛稱\",\"comment\":\"\\f\\r1,訛稱,ngo4cing1,1,0,,v,,,,,,,falsely claim,,,,\"},{\"text\":\"我才\",\"comment\":\"\\f\\r1,我才,ngo5coi4,1,0,,oth,,,,,,,I just,,,,saya hanya\"},{\"text\":\"訛傳\",\"comment\":\"\\f\\r1,訛傳,ngo4cyun4,1,0,,n,,,,,,,false rumors,,,,\"},{\"text\":\"我打\",\"comment\":\"\\f\\r1,我打,ngo5daa2,1,0,,oth,,,,,,,I hit,,,,\"},{\"text\":\"卧底\",\"comment\":\"\\f\\r1,卧底,ngo6dai2,1,0,,n,,,,,,,undercover,,,,\"},{\"text\":\"卧底行動\",\"comment\":\"\\f\\r1,卧底行動,ngo6dai2hang4dung6,1,0,,n,,,,,,,undercover operation,,,,\"},{\"text\":\"我得\",\"comment\":\"\\f\\r1,我得,ngo5dak1,1,0,,,,,,,,,,,,,\"},{\"text\":\"我等\",\"comment\":\"\\f\\r1,我等,ngo5dang2,1,0,,oth,,,,,,,I wait,,,,\"},{\"text\":\"我哋\",\"comment\":\"\\f\\r1,我哋,ngo5dei6,1,0,,n,ver,,,,,,we,ہم,हामी,हम,kita\"},{\"text\":\"我哋都\",\"comment\":\"\\f\\r1,我哋都,ngo5dei6dou1,1,0,,oth,ver,,,,,,,,,,\"},{\"text\":\"我哋係\",\"comment\":\"\\f\\r1,我哋係,ngo5dei6hai6,1,0,,oth,ver,,,,,,we are,,,,\"},{\"text\":\"我哋一\",\"comment\":\"\\f\\r1,我哋一,ngo5dei6jat1,1,0,,oth,ver,,,,,,once we,,,,\"},{\"text\":\"我哋要\",\"comment\":\"\\f\\r1,我哋要,ngo5dei6jiu3,1,0,,oth,ver,,,我們要,,,we have to,,,,\"},{\"text\":\"我哋唔\",\"comment\":\"\\f\\r1,我哋唔,ngo5dei6m4,1,0,,oth,ver,,,,,,we are not,,,,\"},{\"text\":\"我哋就\",\"comment\":\"\\f\\r1,我哋就,ngo5dei6zau6,1,0,,oth,ver,,,我們就,,,then us,,,,\"},{\"text\":\"我對\",\"comment\":\"\\f\\r1,我對,ngo5deoi3,1,0,,oth,,,,,,,my pair of,,,,\"},{\"text\":\"我啲\",\"comment\":\"\\f\\r1,我啲,ngo5di1,1,0,,oth,ver,,,,,,mine,,,,\"},{\"text\":\"我的\",\"comment\":\"\\f\\r1,我的,ngo5dik1,1,0,,oth,,,,,,,mine,,,,\"},{\"text\":\"我屌\",\"comment\":\"\\f\\r1,我屌,ngo5diu2,1,0,,,,vulgar,,,,,,,,,\"},{\"text\":\"我屌你\",\"comment\":\"\\f\\r1,我屌你,ngo5diu2nei5,1,0,,,ver,vulgar,,,,,,,,,\"},{\"text\":\"我當\",\"comment\":\"\\f\\r1,我當,ngo5dong3,1,0,,oth,,,,,,,I assume,,,,\"},{\"text\":\"我都\",\"comment\":\"\\f\\r1,我都,ngo5dou1,1,0,,oth,,,,,,,me too,,,,\"},{\"text\":\"我到\",\"comment\":\"\\f\\r1,我到,ngo5dou3,1,0,,,,,,,,,,,,,\"},{\"text\":\"我都覺\",\"comment\":\"\\f\\r1,我都覺,ngo5dou1gok3,1,0,,oth,,,,,,,I also think that,,,,\"},{\"text\":\"我都覺得\",\"comment\":\"\\f\\r1,我都覺得,ngo5dou1gok3dak1,1,0,,oth,,,,,,,I also think that,,,,\"},{\"text\":\"我都係\",\"comment\":\"\\f\\r1,我都係,ngo5dou1hai6,1,0,,oth,ver,,,,,,me also,,,,\"},{\"text\":\"我都有\",\"comment\":\"\\f\\r1,我都有,ngo5dou1jau5,1,0,,oth,,,,,,,I also have,,,,\"},{\"text\":\"我都唔\",\"comment\":\"\\f\\r1,我都唔,ngo5dou1m4,1,0,,oth,ver,,,我都不,,,I also don't,,,,\"},{\"text\":\"我都冇\",\"comment\":\"\\f\\r1,我都冇,ngo5dou1mou5,1,0,,,ver,,,,,,,,,,\"},{\"text\":\"我都唔知\",\"comment\":\"\\f\\r1,我都唔知,ngo5dou1m4zi1,1,0,,oth,ver,,,,,,I also don't know,,,,\"},{\"text\":\"我都想\",\"comment\":\"\\f\\r1,我都想,ngo5dou1soeng2,1,0,,oth,,,,,,,I also want to,,,,\"},{\"text\":\"我都會\",\"comment\":\"\\f\\r1,我都會,ngo5dou1wui5,1,0,,oth,,,,,,,I also will,,,,\"},{\"text\":\"我返\",\"comment\":\"\\f\\r1,我返,ngo5faan1,1,0,,,,,,,,,,,,,\"}],\"success\":true}}",
+      "timestamp": "2026-06-19T00:04:29.993Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"processKey\",\"args\":[\"{h}\"]}",
+      "timestamp": "2026-06-19T00:04:29.993Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":true,\"inputBuffer\":{\"before\":\"ngoh\",\"active\":\"\",\"after\":\"\"},\"page\":0,\"isLastPage\":true,\"highlightedIndex\":0,\"candidates\":[{\"text\":\"我係\",\"comment\":\"\\f\\r1,我係,ngo5hai6,1,0,,oth,ver,,,我是,,,I am,,,,\"},{\"text\":\"我喺\",\"comment\":\"\\f\\r1,我喺,ngo5hai2,1,0,,oth,ver,,,,,,I am at,,,,\"},{\"text\":\"我係咪\",\"comment\":\"\\f\\r1,我係咪,ngo5hai6mai6,1,0,,oth,ver,,,我是不是,,,am I,,,,\"},{\"text\":\"我去\",\"comment\":\"\\f\\r1,我去,ngo5heoi3,1,0,,oth,,,,,,,I go,,,,\"},{\"text\":\"我可以\",\"comment\":\"\\f\\r1,我可以,ngo5ho2ji5,1,0,,oth,,,,,,,I can,,,,\"},{\"text\":\"我好似\",\"comment\":\"\\f\\r1,我好似,ngo5hou2ci5,1,0,,,,,,,,,,,,,\"},{\"text\":\"餓漢\",\"comment\":\"\\f\\r1,餓漢,ngo6hon3,1,0,,,,,,,,,,,,,\"},{\"text\":\"鵝行鴨步\",\"comment\":\"\\f\\r1,鵝行鴨步,ngo4haang4aap3bou6,1,0,,,,,,,,,,,,,\"},{\"text\":\"蛾喉\",\"comment\":\"\\f\\r1,蛾喉,ngo4hau4,1,0,,,,,,,,,,,,,\"},{\"text\":\"俄克拉何馬\",\"comment\":\"\\f\\r1,俄克拉何馬,ngo4hak1laai1ho4maa5,1,0,,,,,,,,,,,,,\"},{\"text\":\"俄克拉何馬州\",\"comment\":\"\\f\\r1,俄克拉何馬州,ngo4hak1laai1ho4maa5zau1,1,0,,,,,,,,,,,,,\"},{\"text\":\"ngoh\",\"comment\":\"echo\"}],\"success\":true}}",
+      "timestamp": "2026-06-19T00:04:29.998Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"processKey\",\"args\":[\"{a}\"]}",
+      "timestamp": "2026-06-19T00:04:29.999Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":true,\"inputBuffer\":{\"before\":\"ngoha\",\"active\":\"\",\"after\":\"\"},\"page\":0,\"isLastPage\":true,\"highlightedIndex\":0,\"candidates\":[{\"text\":\"我係\",\"comment\":\"\\f\\r1,我係,ngo5hai6,1,0,,oth,ver,,,我是,,,I am,,,,\"},{\"text\":\"我喺\",\"comment\":\"\\f\\r1,我喺,ngo5hai2,1,0,,oth,ver,,,,,,I am at,,,,\"},{\"text\":\"我係咪\",\"comment\":\"\\f\\r1,我係咪,ngo5hai6mai6,1,0,,oth,ver,,,我是不是,,,am I,,,,\"},{\"text\":\"鵝行鴨步\",\"comment\":\"\\f\\r1,鵝行鴨步,ngo4haang4aap3bou6,1,0,,,,,,,,,,,,,\"},{\"text\":\"蛾喉\",\"comment\":\"\\f\\r1,蛾喉,ngo4hau4,1,0,,,,,,,,,,,,,\"},{\"text\":\"俄克拉何馬\",\"comment\":\"\\f\\r1,俄克拉何馬,ngo4hak1laai1ho4maa5,1,0,,,,,,,,,,,,,\"},{\"text\":\"俄克拉何馬州\",\"comment\":\"\\f\\r1,俄克拉何馬州,ngo4hak1laai1ho4maa5zau1,1,0,,,,,,,,,,,,,\"},{\"text\":\"ngoha\",\"comment\":\"echo\"}],\"success\":true}}",
+      "timestamp": "2026-06-19T00:04:30.004Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"processKey\",\"args\":[\"{i}\"]}",
+      "timestamp": "2026-06-19T00:04:30.004Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":true,\"inputBuffer\":{\"before\":\"ngohai\",\"active\":\"\",\"after\":\"\"},\"page\":0,\"isLastPage\":true,\"highlightedIndex\":0,\"candidates\":[{\"text\":\"我係\",\"comment\":\"\\f\\r1,我係,ngo5hai6,1,0,,oth,ver,,,我是,,,I am,,,,\"},{\"text\":\"我喺\",\"comment\":\"\\f\\r1,我喺,ngo5hai2,1,0,,oth,ver,,,,,,I am at,,,,\"},{\"text\":\"我係咪\",\"comment\":\"\\f\\r1,我係咪,ngo5hai6mai6,1,0,,oth,ver,,,我是不是,,,am I,,,,\"},{\"text\":\"ngohai\",\"comment\":\"echo\"}],\"success\":true}}",
+      "timestamp": "2026-06-19T00:04:30.009Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"processKey\",\"args\":[\"{g}\"]}",
+      "timestamp": "2026-06-19T00:04:30.010Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":true,\"inputBuffer\":{\"before\":\"ngohaig\",\"active\":\"\",\"after\":\"\"},\"page\":0,\"isLastPage\":true,\"highlightedIndex\":0,\"candidates\":[{\"text\":\"我係個\",\"comment\":\" ☯ \"},{\"text\":\"我係個\",\"comment\":\"\"},{\"text\":\"ngohaig\",\"comment\":\"echo\"}],\"success\":true}}",
+      "timestamp": "2026-06-19T00:04:30.026Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"deploy\",\"args\":[]}",
+      "timestamp": "2026-06-19T00:04:30.026Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\",\"result\":true}",
+      "timestamp": "2026-06-19T00:04:35.399Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"soft_cursor\",true]}",
+      "timestamp": "2026-06-19T00:04:35.400Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\"}",
+      "timestamp": "2026-06-19T00:04:35.400Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"ascii_mode\",false]}",
+      "timestamp": "2026-06-19T00:04:35.400Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\"}",
+      "timestamp": "2026-06-19T00:04:35.400Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"simplification\",false]}",
+      "timestamp": "2026-06-19T00:04:35.400Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\"}",
+      "timestamp": "2026-06-19T00:04:35.401Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"full_shape\",false]}",
+      "timestamp": "2026-06-19T00:04:35.401Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\"}",
+      "timestamp": "2026-06-19T00:04:35.401Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"ascii_punct\",false]}",
+      "timestamp": "2026-06-19T00:04:35.401Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\"}",
+      "timestamp": "2026-06-19T00:04:35.401Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"processKey\",\"args\":[\"{space}\"]}",
+      "timestamp": "2026-06-19T00:04:42.992Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":false,\"success\":false}}",
+      "timestamp": "2026-06-19T00:04:42.998Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"soft_cursor\",true]}",
+      "timestamp": "2026-06-19T00:05:31.433Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"listener\",\"name\":\"initialized\",\"args\":[true]}",
+      "timestamp": "2026-06-19T00:05:37.228Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\"}",
+      "timestamp": "2026-06-19T00:05:37.229Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"ascii_mode\",false]}",
+      "timestamp": "2026-06-19T00:05:37.229Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\"}",
+      "timestamp": "2026-06-19T00:05:37.229Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"simplification\",false]}",
+      "timestamp": "2026-06-19T00:05:37.229Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\"}",
+      "timestamp": "2026-06-19T00:05:37.230Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"full_shape\",false]}",
+      "timestamp": "2026-06-19T00:05:37.230Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\"}",
+      "timestamp": "2026-06-19T00:05:37.230Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"ascii_punct\",false]}",
+      "timestamp": "2026-06-19T00:05:37.230Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\"}",
+      "timestamp": "2026-06-19T00:05:37.230Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"customize\",\"args\":[{\"pageSize\":6,\"enableCompletion\":true,\"enableCorrection\":false,\"enableSentence\":true,\"enableLearning\":true,\"isCangjie5\":true}]}",
+      "timestamp": "2026-06-19T00:05:37.230Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\",\"result\":true}",
+      "timestamp": "2026-06-19T00:05:37.237Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"deploy\",\"args\":[]}",
+      "timestamp": "2026-06-19T00:05:37.237Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\",\"result\":true}",
+      "timestamp": "2026-06-19T00:05:42.875Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"processKey\",\"args\":[\"{n}\"]}",
+      "timestamp": "2026-06-19T00:05:42.875Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":true,\"inputBuffer\":{\"before\":\"n\",\"active\":\"\",\"after\":\"\"},\"page\":0,\"isLastPage\":false,\"highlightedIndex\":0,\"candidates\":[{\"text\":\"那\",\"comment\":\"\\f\\r1,那,naa5,1,0,,adv oth,,,,,,,that,وہ,त्यो,वह,bahwa\"},{\"text\":\"拿\",\"comment\":\"\\f\\r1,拿,naa4,1,0,,v,wri,,,,攞，拎(ling1),,take; capture,لے لینا,लिनु,लेना,mengambil\"},{\"text\":\"娜\",\"comment\":\"\\f\\r1,娜,naa4,1,0,,n,,name,,,,,,,,,\\r0,娜,no5,2,0,,morph,,,,,,婀娜多姿,婀娜多姿: graceful,,,,\"},{\"text\":\"哪\",\"comment\":\"\\f\\r1,哪,naa5,1,0,,oth,wri,,,,邊度，邊個,,where,کہاں,कहाँ,कहाँ,dimana\"},{\"text\":\"嗱\",\"comment\":\"\\f\\r1,嗱,naa4,1,0,,part,ver,,,噍,,,used for confirmation,پکڑو۔,यो समात्नुहोस,पकड़ो,memegang\"}],\"success\":true}}",
+      "timestamp": "2026-06-19T00:05:42.926Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"processKey\",\"args\":[\"{g}\"]}",
+      "timestamp": "2026-06-19T00:05:42.926Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":true,\"inputBuffer\":{\"before\":\"ng\",\"active\":\"\",\"after\":\"\"},\"page\":0,\"isLastPage\":false,\"highlightedIndex\":0,\"candidates\":[{\"text\":\"五\",\"comment\":\"\\f\\r1,五,ng5,1,0,,n,,,,,,,five,پانچ,पाँच,पांच,lima\"},{\"text\":\"午\",\"comment\":\"\\f\\r1,午,ng5,1,0,,morph,,,,,,正午，午前，午後,noon,,,,\"},{\"text\":\"誤\",\"comment\":\"\\f\\r1,誤,ng6,1,0,,morph,,,,,,誤會，誤解,wrong,غلطی,त्रुटि,गलती,kesalahan\"},{\"text\":\"吳\",\"comment\":\"\\f\\r1,吳,ng4,1,0,,n,,surname,,,,,surname [Ng],,,,nama keluarga (Wu)\"},{\"text\":\"伍\",\"comment\":\"\\f\\r1,伍,ng5,1,0,,n,,surname,,,,,five; surname [Ng],,,,\"}],\"success\":true}}",
+      "timestamp": "2026-06-19T00:05:42.955Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"processKey\",\"args\":[\"{o}\"]}",
+      "timestamp": "2026-06-19T00:05:42.955Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":true,\"inputBuffer\":{\"before\":\"ngo\",\"active\":\"\",\"after\":\"\"},\"page\":0,\"isLastPage\":false,\"highlightedIndex\":0,\"candidates\":[{\"text\":\"我\",\"comment\":\"\\f\\r1,我,ngo5,1,0,,n,,,,,,,\\\"I, me\\\",میں,म हो,मैं,saya\"},{\"text\":\"俄\",\"comment\":\"\\f\\r1,俄,ngo4,1,0,,n,,,,,,,Russian,,,,rusia\"},{\"text\":\"餓\",\"comment\":\"\\f\\r1,餓,ngo6,1,0,,v,,,,,,,hungry,بھوکا,भोक,भूखे पेट,lapar\"},{\"text\":\"娥\",\"comment\":\"\\f\\r1,娥,ngo4,1,0,,morph,,,,,,嫦娥，娥眉皓齒，宮娥,嫦娥,,,,\"},{\"text\":\"鵝\",\"comment\":\"\\f\\r1,鵝,ngo4,1,0,,morph,,,,,,天鵝,goose,,,,angsa\\r0,鵝,ngo2,2,1,,n,,,,,,,goose,,,,angsa\"}],\"success\":true}}",
+      "timestamp": "2026-06-19T00:05:42.968Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"processKey\",\"args\":[\"{h}\"]}",
+      "timestamp": "2026-06-19T00:05:42.968Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":true,\"inputBuffer\":{\"before\":\"ngoh\",\"active\":\"\",\"after\":\"\"},\"page\":0,\"isLastPage\":false,\"highlightedIndex\":0,\"candidates\":[{\"text\":\"我係\",\"comment\":\"\\f\\r1,我係,ngo5hai6,1,0,,oth,ver,,,我是,,,I am,,,,\"},{\"text\":\"我喺\",\"comment\":\"\\f\\r1,我喺,ngo5hai2,1,0,,oth,ver,,,,,,I am at,,,,\"},{\"text\":\"我係咪\",\"comment\":\"\\f\\r1,我係咪,ngo5hai6mai6,1,0,,oth,ver,,,我是不是,,,am I,,,,\"},{\"text\":\"我去\",\"comment\":\"\\f\\r1,我去,ngo5heoi3,1,0,,oth,,,,,,,I go,,,,\"},{\"text\":\"我可以\",\"comment\":\"\\f\\r1,我可以,ngo5ho2ji5,1,0,,oth,,,,,,,I can,,,,\"}],\"success\":true}}",
+      "timestamp": "2026-06-19T00:05:42.973Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"processKey\",\"args\":[\"{a}\"]}",
+      "timestamp": "2026-06-19T00:05:42.973Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":true,\"inputBuffer\":{\"before\":\"ngoha\",\"active\":\"\",\"after\":\"\"},\"page\":0,\"isLastPage\":false,\"highlightedIndex\":0,\"candidates\":[{\"text\":\"我係\",\"comment\":\"\\f\\r1,我係,ngo5hai6,1,0,,oth,ver,,,我是,,,I am,,,,\"},{\"text\":\"我喺\",\"comment\":\"\\f\\r1,我喺,ngo5hai2,1,0,,oth,ver,,,,,,I am at,,,,\"},{\"text\":\"我係咪\",\"comment\":\"\\f\\r1,我係咪,ngo5hai6mai6,1,0,,oth,ver,,,我是不是,,,am I,,,,\"},{\"text\":\"鵝行鴨步\",\"comment\":\"\\f\\r1,鵝行鴨步,ngo4haang4aap3bou6,1,0,,,,,,,,,,,,,\"},{\"text\":\"蛾喉\",\"comment\":\"\\f\\r1,蛾喉,ngo4hau4,1,0,,,,,,,,,,,,,\"}],\"success\":true}}",
+      "timestamp": "2026-06-19T00:05:42.980Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"processKey\",\"args\":[\"{i}\"]}",
+      "timestamp": "2026-06-19T00:05:42.980Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":true,\"inputBuffer\":{\"before\":\"ngohai\",\"active\":\"\",\"after\":\"\"},\"page\":0,\"isLastPage\":true,\"highlightedIndex\":0,\"candidates\":[{\"text\":\"我係\",\"comment\":\"\\f\\r1,我係,ngo5hai6,1,0,,oth,ver,,,我是,,,I am,,,,\"},{\"text\":\"我喺\",\"comment\":\"\\f\\r1,我喺,ngo5hai2,1,0,,oth,ver,,,,,,I am at,,,,\"},{\"text\":\"我係咪\",\"comment\":\"\\f\\r1,我係咪,ngo5hai6mai6,1,0,,oth,ver,,,我是不是,,,am I,,,,\"},{\"text\":\"ngohai\",\"comment\":\"echo\"}],\"success\":true}}",
+      "timestamp": "2026-06-19T00:05:42.986Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"processKey\",\"args\":[\"{g}\"]}",
+      "timestamp": "2026-06-19T00:05:42.987Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":true,\"inputBuffer\":{\"before\":\"ngohaig\",\"active\":\"\",\"after\":\"\"},\"page\":0,\"isLastPage\":true,\"highlightedIndex\":0,\"candidates\":[{\"text\":\"我係個\",\"comment\":\" ☯ \"},{\"text\":\"我係個\",\"comment\":\"\"},{\"text\":\"ngohaig\",\"comment\":\"echo\"}],\"success\":true}}",
+      "timestamp": "2026-06-19T00:05:43.006Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"soft_cursor\",true]}",
+      "timestamp": "2026-06-19T00:05:43.006Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\"}",
+      "timestamp": "2026-06-19T00:05:43.018Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"ascii_mode\",false]}",
+      "timestamp": "2026-06-19T00:05:43.019Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\"}",
+      "timestamp": "2026-06-19T00:05:43.030Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"simplification\",false]}",
+      "timestamp": "2026-06-19T00:05:43.030Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\"}",
+      "timestamp": "2026-06-19T00:05:43.042Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"full_shape\",false]}",
+      "timestamp": "2026-06-19T00:05:43.042Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\"}",
+      "timestamp": "2026-06-19T00:05:43.052Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"setOption\",\"args\":[\"ascii_punct\",false]}",
+      "timestamp": "2026-06-19T00:05:43.053Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\"}",
+      "timestamp": "2026-06-19T00:05:43.064Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"processKey\",\"args\":[\"{space}\"]}",
+      "timestamp": "2026-06-19T00:06:24.352Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":false,\"success\":true,\"committed\":\"我係個\"}}",
+      "timestamp": "2026-06-19T00:06:24.361Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "post {\"name\":\"processKey\",\"args\":[\"{Release+space}\"]}",
+      "timestamp": "2026-06-19T00:06:24.361Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    },
+    {
+      "level": "log",
+      "message": "receive {\"type\":\"success\",\"result\":{\"isComposing\":false,\"success\":true}}",
+      "timestamp": "2026-06-19T00:06:24.361Z",
+      "url": "http://127.0.0.1:5179/web/src/rime.ts"
+    }
+  ],
+  "screenshots": [
+    "hr5-final-ngohaig-before-space.png",
+    "hr5-final-ngohaig-after-space.png"
+  ]
+}

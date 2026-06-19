@@ -370,12 +370,14 @@ impl StaticTableTranslator {
         #[derive(Clone)]
         struct SentencePath {
             quality: f32,
+            raw_quality: f32,
             pieces: Vec<String>,
         }
 
         let mut paths: Vec<Option<SentencePath>> = vec![None; input.len() + 1];
         paths[0] = Some(SentencePath {
             quality: 0.0,
+            raw_quality: 0.0,
             pieces: Vec::new(),
         });
         for pos in input
@@ -393,9 +395,27 @@ impl StaticTableTranslator {
                 .chain(std::iter::once(input.len()))
             {
                 let entry_code = &input[pos..end];
-                let Some(candidates) = self.entries_by_code.get(entry_code) else {
+                let is_final_segment = end == input.len();
+                let mut entry_matches = Vec::new();
+                if let Some(candidates) = self.entries_by_code.get(entry_code) {
+                    entry_matches.push(candidates.as_slice());
+                }
+                if is_final_segment && self.enable_completion && !entry_code.is_empty() {
+                    for (completion_code, completion_candidates) in
+                        self.entries_by_code.range(entry_code.to_owned()..)
+                    {
+                        if !completion_code.starts_with(entry_code) {
+                            break;
+                        }
+                        if completion_code == entry_code {
+                            continue;
+                        }
+                        entry_matches.push(completion_candidates.as_slice());
+                    }
+                }
+                if entry_matches.is_empty() {
                     continue;
-                };
+                }
                 let mut end_pos = pos + entry_code.len();
                 while end_pos < input.len() {
                     let Some(ch) = input[end_pos..].chars().next() else {
@@ -406,21 +426,32 @@ impl StaticTableTranslator {
                     }
                     end_pos += ch.len_utf8();
                 }
-                for candidate in candidates {
-                    if !self.is_dictionary_word_allowed(candidate)
-                        || (filter_by_charset && contains_extended_cjk(&candidate.text))
-                    {
-                        continue;
-                    }
-                    let mut next_path = path.clone();
-                    next_path.quality += candidate.quality.exp();
-                    next_path.pieces.push(candidate.text.clone());
-                    let replace = match paths[end_pos].as_ref() {
-                        Some(existing) => next_path.quality > existing.quality,
-                        None => true,
-                    };
-                    if replace {
-                        paths[end_pos] = Some(next_path);
+                for candidates in entry_matches {
+                    for candidate in candidates {
+                        if !self.is_dictionary_word_allowed(candidate)
+                            || (filter_by_charset && contains_extended_cjk(&candidate.text))
+                        {
+                            continue;
+                        }
+                        let mut next_path = path.clone();
+                        next_path.quality += candidate.quality.exp();
+                        next_path.raw_quality += candidate.quality;
+                        next_path.pieces.push(candidate.text.clone());
+                        let replace = match paths[end_pos].as_ref() {
+                            Some(existing) => match next_path
+                                .quality
+                                .partial_cmp(&existing.quality)
+                                .unwrap_or(Ordering::Equal)
+                            {
+                                Ordering::Greater => true,
+                                Ordering::Equal => next_path.raw_quality > existing.raw_quality,
+                                Ordering::Less => false,
+                            },
+                            None => true,
+                        };
+                        if replace {
+                            paths[end_pos] = Some(next_path);
+                        }
                     }
                 }
             }

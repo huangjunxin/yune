@@ -331,6 +331,25 @@ fn typeduck_adapter_customized_sentence_mode_commits_multisyllable_phrase() {
         Value::Array(vec![Value::String("\u{6211}\u{4fc2}\u{500b}".to_owned())])
     );
 
+    let mut composing = Value::Null;
+    for key in "ngohaig".chars() {
+        composing = response_json(unsafe { yune_typeduck_process_key(state, key as i32, 0) });
+    }
+    assert_eq!(
+        composing["context"]["input"],
+        Value::String("ngohaig".to_owned())
+    );
+    assert_eq!(
+        composing["context"]["candidates"][0]["text"],
+        Value::String("\u{6211}\u{4fc2}\u{500b}".to_owned())
+    );
+
+    let committed = response_json(unsafe { yune_typeduck_process_key(state, ' ' as i32, 0) });
+    assert_eq!(
+        committed["commits"],
+        Value::Array(vec![Value::String("\u{6211}\u{4fc2}\u{500b}".to_owned())])
+    );
+
     unsafe { yune_typeduck_cleanup(state) };
     runtime.remove();
 }
@@ -577,7 +596,7 @@ schema:\n  schema_id: typeduck_luna\n  name: TypeDuck Luna\nmenu:\n  page_size: 
     fn write_cantonese_sentence_dictionary(&self) {
         fs::write(
             self.shared.join("jyut6ping3.dict.yaml"),
-            "---\nname: jyut6ping3\nversion: '1'\nsort: original\n...\n\n\u{6211}\tngo5\t10\n\u{4fc2}\thai6\t9\n\u{500b}\tgo3\t8\n",
+            "---\nname: jyut6ping3\nversion: '1'\nsort: original\n...\n\n\u{6211}\tngo5\t10\n\u{4fc2}\thai6\t9\n\u{500b}\tgo3\t8\n\u{5605}\tge3\t7\n\u{5bb6}\tgaa1\t6\n",
         )
         .expect("dictionary should be written");
     }
@@ -748,6 +767,21 @@ fn typeduck_adapter_real_assets_sentence_mode_commits_multisyllable_phrase() {
 
     let mut composing = Value::Null;
     for key in "ngohaigo".chars() {
+        composing = response_json(unsafe { yune_typeduck_process_key(state, key as i32, 0) });
+    }
+    assert_eq!(
+        composing["context"]["candidates"][0]["text"],
+        Value::String("\u{6211}\u{4fc2}\u{500b}".to_owned())
+    );
+
+    let committed = response_json(unsafe { yune_typeduck_process_key(state, ' ' as i32, 0) });
+    assert_eq!(
+        committed["commits"],
+        Value::Array(vec![Value::String("\u{6211}\u{4fc2}\u{500b}".to_owned())])
+    );
+
+    let mut composing = Value::Null;
+    for key in "ngohaig".chars() {
         composing = response_json(unsafe { yune_typeduck_process_key(state, key as i32, 0) });
     }
     assert_eq!(

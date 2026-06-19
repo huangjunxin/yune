@@ -1,6 +1,6 @@
 # TypeDuck-Web Integration Findings
 
-> **Status:** Complete · **Milestone:** M9 (TypeDuck-Web browser validation) · **Updated:** 2026-06-18 · **Type:** findings / reference
+> **Status:** Complete · **Milestone:** M9 (TypeDuck-Web browser validation) · **Updated:** 2026-06-19 · **Type:** findings / reference
 
 This document records findings from integrating Yune with the upstream TypeDuck-Web browser application.
 
@@ -17,7 +17,10 @@ candidate deletion works, deploy/customize/persistence/reload pass, and
 dictionary-panel comments render from the v1.1.2 oracle-shaped payload. The
 post-review closeout fixed the `{Control_L}` modifier-key banner that appeared
 before `{Control+Delete}` and recaptured delete/backspace evidence with no
-visible runtime-error banner. HR-6 also locks the shared reverse-lookup comment
+visible runtime-error banner. A later post-review regression fixed partial-final
+sentence completion, matching the TypeDuck v1.1.2 oracle for `ngohaig -> 我係個`
+and recapturing clean browser evidence in `hr5-final-ngohaig-state.json`. HR-6
+also locks the shared reverse-lookup comment
 joiner and schema-prompt bytes. Clean-checkout dictionary-comment byte parity is
 guaranteed by the committed `cantonese_parity` fixture; the browser-shaped
 native rich-comment integration test runs its byte assertion only when the local
@@ -1218,8 +1221,9 @@ RIME session → JSON result → Worker parse → Main thread render
 9. Persistence sync after mutation (D-11)
 10. Persistence reload/reinitialize (D-11)
 
-HR-5 also records the phrase-commit regression from the `ngohaigo` browser bug
-as an additional proof row.
+HR-5 also records phrase-commit regressions from the `ngohaigo` browser bug and
+the later `ngohaig` partial-final sentence-completion bug as additional proof
+rows.
 
 **Flow status** (from HR-5 real-assets browser execution, 2026-06-18):
 
@@ -1230,6 +1234,7 @@ as an additional proof row.
 | Candidate paging | PageDown -> page change | PASS | `hr5-final-paging-state.json`, before/after screenshots show `ngo` page advances |
 | Candidate selection | Selection key -> commit text | PASS | `hr5-final-selection-space-state.json` records Space committing the highlighted candidate; number key `1` is not expected for this mobile schema because `alternative_select_keys` is the NUL sentinel |
 | Phrase commit | Multi-syllable input -> phrase output | PASS | `hr5-final-phrase-state.json` records `ngohaigo` + Space committing `我係個` |
+| Partial-final sentence completion | Multi-syllable prefix input -> completed phrase output | PASS | `hr5-final-ngohaig-state.json` records `ngohaig` rendering `1. 我係個` and Space committing `我係個` with no runtime-error banner or warning/error logs |
 | Deletion | Delete key -> candidate/composition change | PASS | `hr5-final-delete-state.json` shows `{Control+Delete}` removes the first `ngo` candidate after the `{Control_L}` banner fix; no runtime-error banner is present |
 | Backspace mutation | Backspace -> composition shorter/changed | PASS | `hr5-final-backspace-state.json`, `hr5-final-backspace.png` show `ngo` mutating to `ng` with no runtime-error banner |
 | Deploy | Deploy action -> visible success/error | PASS | `hr5-final-diagnostics-before-reload.json` records live-worker deploy success diagnostics |

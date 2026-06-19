@@ -518,6 +518,8 @@ sort: original
 我	ngo5	10
 係	hai6	9
 個	go3	8
+嘅	ge3	7
+家	gaa1	6
 "#,
     )
     .expect("dictionary should parse");
@@ -547,6 +549,7 @@ sort: original
     ];
     let translator = StaticTableTranslator::from_dictionary(dictionary)
         .with_spelling_algebra(&formulas)
+        .with_completion(true)
         .with_sentence(true);
     assert_eq!(translator.translate("ngo")[0].text, "我");
     assert_eq!(translator.translate("hai")[0].text, "係");
@@ -559,6 +562,14 @@ sort: original
         .expect("key sequence should parse");
 
     assert_eq!(engine.context().candidates[0].text, "我係個");
+
+    engine.clear_composition();
+    engine
+        .process_key_sequence("ngohaig")
+        .expect("key sequence should parse");
+
+    assert_eq!(engine.context().candidates[0].text, "我係個");
+    assert_eq!(engine.process_char(' ').as_deref(), Some("我係個"));
 }
 
 #[test]

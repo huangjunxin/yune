@@ -38,6 +38,14 @@ through like key releases. `hr5-final-delete-state.json` and
 `hr5-final-backspace-state.json` were recaptured from fresh pages and show no
 runtime-error banner, zero warning/error entries, and functional state changes.
 
+**Post-review partial-final sentence completion**: the `ngohaig` compatibility
+regression is closed. TypeDuck v1.1.2 returns `我係個` for `ngohaig`, treating the
+final `g` as a prefix completion after the exact `ngohai -> 我係` segment. Yune now
+allows sentence completion on the final segment only when completion and sentence
+mode are enabled. `hr5-final-ngohaig-state.json` records a real-assets browser run
+where `ngohaig` renders `1. 我係個` and Space commits `我係個` with no runtime-error
+banner or warning/error entries.
+
 **Post-review dictionary-comment reproducibility**: the browser-shaped native
 rich-comment test now byte-asserts the v1.1.2 `nei` comment only when local
 oracle build assets exist under `target/typeduck-oracle/v1.1.2/rime-user/build`.
