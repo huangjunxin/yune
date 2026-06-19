@@ -75,7 +75,16 @@ fn write_runtime(root: &Path) -> (PathBuf, PathBuf) {
     .expect("default config should be written");
     fs::write(
         shared.join("default.schema.yaml"),
-        "schema:\n  schema_id: default\n  name: Default\nmenu:\n  page_size: 5\n",
+        "\
+schema:
+  schema_id: default
+  name: Default
+menu:
+  page_size: 5
+engine:
+  translators:
+    - echo_translator
+",
     )
     .expect("schema config should be written");
     (shared, user)

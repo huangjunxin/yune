@@ -447,7 +447,14 @@ fn write_minimal_schema(shared: &Path) {
     .expect("frontend host default config should be written");
     fs::write(
         shared.join("dynamic_schema.schema.yaml"),
-        "schema:\n  schema_id: dynamic_schema\n  name: Dynamic Schema\n",
+        "\
+schema:
+  schema_id: dynamic_schema
+  name: Dynamic Schema
+engine:
+  translators:
+    - echo_translator
+",
     )
     .expect("frontend host schema config should be written");
 }

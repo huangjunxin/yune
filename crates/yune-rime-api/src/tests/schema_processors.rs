@@ -4310,6 +4310,7 @@ engine:
     - matcher
   translators:
     - reverse_lookup_translator
+    - echo_translator
 reverse_lookup:
   dictionary: stroke
   prefix: \"`\"
@@ -4427,6 +4428,7 @@ engine:
     - abc_segmentor
   translators:
     - table_translator
+    - echo_translator
 speller:
   alphabet: abc
 translator:

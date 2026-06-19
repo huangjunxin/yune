@@ -324,6 +324,18 @@ fn typeduck_adapter_customized_sentence_mode_commits_multisyllable_phrase() {
         composing["context"]["candidates"][0]["text"],
         Value::String("\u{6211}\u{4fc2}\u{500b}".to_owned())
     );
+    let has_raw_echo_candidate = composing["context"]["candidates"]
+        .as_array()
+        .expect("candidate list should be an array")
+        .iter()
+        .any(|candidate| {
+            candidate["text"] == Value::String("ngohaig".to_owned())
+                && candidate["comment"] == Value::String("echo".to_owned())
+        });
+    assert!(
+        !has_raw_echo_candidate,
+        "schemas without echo_translator must not leak a raw echo candidate for ngohaig"
+    );
 
     let committed = response_json(unsafe { yune_typeduck_process_key(state, ' ' as i32, 0) });
     assert_eq!(
@@ -342,6 +354,18 @@ fn typeduck_adapter_customized_sentence_mode_commits_multisyllable_phrase() {
     assert_eq!(
         composing["context"]["candidates"][0]["text"],
         Value::String("\u{6211}\u{4fc2}\u{500b}".to_owned())
+    );
+    let has_raw_echo_candidate = composing["context"]["candidates"]
+        .as_array()
+        .expect("candidate list should be an array")
+        .iter()
+        .any(|candidate| {
+            candidate["text"] == Value::String("ngohaig".to_owned())
+                && candidate["comment"] == Value::String("echo".to_owned())
+        });
+    assert!(
+        !has_raw_echo_candidate,
+        "TypeDuck real-assets schema does not declare echo_translator, so ngohaig must not leak a raw echo candidate"
     );
 
     let committed = response_json(unsafe { yune_typeduck_process_key(state, ' ' as i32, 0) });

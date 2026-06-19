@@ -2735,6 +2735,7 @@ engine:
     - matcher
   translators:
     - reverse_lookup_translator
+    - echo_translator
 recognizer:
   import_preset: recognizers
   patterns:

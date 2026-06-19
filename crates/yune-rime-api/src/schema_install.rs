@@ -5,7 +5,7 @@ use serde_yaml::{Mapping, Value};
 use yune_core::{
     parse_rime_prism_bin_payload, parse_rime_reverse_bin_dictionary,
     parse_rime_table_bin_dictionary, rime_dict_source_checksum, rime_table_bin_dict_file_checksum,
-    CharsetFilter, DictionaryLookupFilter, HistoryTranslator, ReverseLookupFilter,
+    CharsetFilter, DictionaryLookupFilter, EchoTranslator, HistoryTranslator, ReverseLookupFilter,
     ReverseLookupTranslator, SchemaListTranslator, SimplifierFilter, SingleCharFilter,
     StaticTableTranslator, SwitchTranslator, TableDictionary, TaggedFilter, UniquifierFilter,
 };
@@ -28,6 +28,7 @@ pub(crate) fn install_schema_translator_chain(session: &mut SessionState, schema
         return;
     };
     let mut punctuation_translator_installed = false;
+    let mut echo_translator_installed = false;
 
     for translator in translators.iter().filter_map(Value::as_str) {
         let (component_name, name_space) = schema_component_prescription(translator);
@@ -71,6 +72,10 @@ pub(crate) fn install_schema_translator_chain(session: &mut SessionState, schema
                 session
                     .engine
                     .add_translator(SchemaListTranslator::new(entries));
+            }
+            "echo_translator" if !echo_translator_installed => {
+                session.engine.add_translator(EchoTranslator);
+                echo_translator_installed = true;
             }
             "memory" => record_remaining_gear_deferral(
                 session,

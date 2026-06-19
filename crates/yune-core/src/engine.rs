@@ -94,6 +94,11 @@ impl Engine {
         self.refresh_candidates();
     }
 
+    pub fn clear_translators(&mut self) {
+        self.translators.clear();
+        self.refresh_candidates();
+    }
+
     pub fn add_filter(&mut self, filter: impl CandidateFilter + 'static) {
         self.filters.push(Box::new(filter));
         self.refresh_candidates();

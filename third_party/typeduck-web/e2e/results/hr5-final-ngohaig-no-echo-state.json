@@ -1,0 +1,66 @@
+{
+  "flow": "ngohaig sentence completion without schema-leaked echo candidate",
+  "runId": 1781829667525,
+  "appUrl": "http://127.0.0.1:5179/web/?debug&realAssets=1&echoFixNoRawStable=1781829667525",
+  "keySequence": [
+    "n",
+    "g",
+    "o",
+    "h",
+    "a",
+    "i",
+    "g",
+    "space"
+  ],
+  "beforeSpace": {
+    "candidate0Text": "我係個",
+    "candidates": [
+      {
+        "cells": [
+          "1.",
+          "我係個",
+          "☯"
+        ],
+        "comment": "☯",
+        "label": "1.",
+        "rowText": "1.我係個 ☯",
+        "text": "我係個"
+      },
+      {
+        "cells": [
+          "2.",
+          "我係個"
+        ],
+        "comment": "",
+        "label": "2.",
+        "rowText": "2.我係個",
+        "text": "我係個"
+      }
+    ],
+    "hasErrorBanner": false,
+    "hasLoadingIndicator": false,
+    "hasRawEcho": false,
+    "input": "ngohaig",
+    "panelText": "ngohaig‹›1.我係個 ☯ 2.我係個",
+    "phase": "before-space",
+    "textareaValue": "",
+    "url": "http://127.0.0.1:5179/web/?debug&realAssets=1&echoFixNoRawStable=1781829667525",
+    "workerVersion": "sentence-composition"
+  },
+  "afterSpace": {
+    "bodyTextStart": "TypeDuck 網頁版\nTheme Switcher\n中\n繁\n半\n。\n輸入法設定 IME Settings\n顯示語言 Display Languages\n英語 English\n印地語 Hindi\n印尼語 Indonesian\n尼泊爾語 Nepali\n烏爾都語 Urdu\n⬑ 主要語言 Main Language\n每頁候選詞數量 No. of Candidates Per Page\n|\n|\n|\n|\n|\n|\n|\n中文字體 Chinese Typeface\n宋體 Sung\n黑體 Hei\n候選詞粵拼 Candidates Jyutping\n顯示 Always Show\n僅反查 Only in Reverse Lookup\n隱藏 Hide\n自動完成 Auto-completion\n自動校正 Auto-correction\n自動組詞 Auto-composition\n輸入記憶 Input Memory\n反查設定 Reverse Lookup Settings\n顯示完整輸入碼 Show Full Input Code\n倉頡版本 Cangjie Version\n三代 Version 3\n五代 Version 5\n© Copyright 2024 TypeDuck Team. All rights reserved.\nSource Code",
+    "expectedCommit": "我係個",
+    "hasCandidatePanel": false,
+    "hasErrorBanner": false,
+    "hasLoadingIndicator": false,
+    "phase": "after-space",
+    "textareaValue": "我係個",
+    "url": "http://127.0.0.1:5179/web/?debug&realAssets=1&echoFixNoRawStable=1781829667525",
+    "workerVersion": "sentence-composition"
+  },
+  "screenshots": {
+    "beforeSpace": "hr5-final-ngohaig-no-echo-before-space.png",
+    "afterSpace": "hr5-final-ngohaig-no-echo-after-space.png"
+  },
+  "pass": true
+}

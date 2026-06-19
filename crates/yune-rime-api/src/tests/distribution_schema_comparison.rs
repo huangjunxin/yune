@@ -268,6 +268,7 @@ engine:
   translators:
     - table_translator@translator
     - memory
+    - echo_translator
   filters:
     - uniquifier
 speller:

@@ -1949,7 +1949,7 @@ fn frontend_style_userdb_learning_survives_session_recreation() {
     fs::create_dir_all(&staging).expect("staging dir should be created");
     fs::write(
         staging.join("learn.schema.yaml"),
-        "schema:\n  schema_id: learn\n  name: Learn\nengine:\n  translators:\n    - table_translator\ntranslator:\n  dictionary: learn\n",
+        "schema:\n  schema_id: learn\n  name: Learn\nengine:\n  translators:\n    - table_translator\n    - echo_translator\ntranslator:\n  dictionary: learn\n",
     )
     .expect("schema config should be written");
     fs::write(
@@ -2073,7 +2073,7 @@ fn frontend_style_api_table_can_page_schema_dictionary_candidates() {
     fs::write(
         staging.join("luna.schema.yaml"),
         "\
-schema:\n  schema_id: luna\n  name: Luna\nmenu:\n  page_size: 2\n  alternative_select_keys: AB\n  alternative_select_labels: [Alpha, Beta]\nengine:\n  translators:\n    - table_translator\ntranslator:\n  dictionary: frontend\n",
+schema:\n  schema_id: luna\n  name: Luna\nmenu:\n  page_size: 2\n  alternative_select_keys: AB\n  alternative_select_labels: [Alpha, Beta]\nengine:\n  translators:\n    - table_translator\n    - echo_translator\ntranslator:\n  dictionary: frontend\n",
     )
     .expect("schema config should be written");
     fs::write(
@@ -2185,7 +2185,7 @@ fn frontend_style_schema_dictionary_loads_import_tables() {
     fs::write(
         staging.join("importing.schema.yaml"),
         "\
-schema:\n  schema_id: importing\n  name: Importing\nengine:\n  translators:\n    - table_translator\ntranslator:\n  dictionary: primary\n",
+schema:\n  schema_id: importing\n  name: Importing\nengine:\n  translators:\n    - table_translator\n    - echo_translator\ntranslator:\n  dictionary: primary\n",
     )
     .expect("schema config should be written");
     fs::write(
@@ -2602,7 +2602,7 @@ fn frontend_style_schema_speller_gates_spelling_input() {
     fs::write(
         staging.join("spelling.schema.yaml"),
         "\
-schema:\n  schema_id: spelling\n  name: Spelling\nengine:\n  processors:\n    - speller\n  translators:\n    - table_translator\nspeller:\n  alphabet: ab\n  initials: a\n  finals: b\n  delimiter: \"'\"\n  use_space: true\ntranslator:\n  dictionary: spelling\n",
+schema:\n  schema_id: spelling\n  name: Spelling\nengine:\n  processors:\n    - speller\n  translators:\n    - table_translator\n    - echo_translator\nspeller:\n  alphabet: ab\n  initials: a\n  finals: b\n  delimiter: \"'\"\n  use_space: true\ntranslator:\n  dictionary: spelling\n",
     )
     .expect("schema config should be written");
     fs::write(
@@ -2713,7 +2713,7 @@ fn frontend_style_full_shape_formats_commits_and_unhandled_ascii_keys() {
     fs::write(
         staging.join("shape.schema.yaml"),
         "\
-schema:\n  schema_id: shape\n  name: Shape\nengine:\n  processors:\n    - speller\n  translators:\n    - table_translator\nspeller:\n  alphabet: ab\ntranslator:\n  dictionary: shape\n  enable_completion: false\n  enable_sentence: false\n",
+schema:\n  schema_id: shape\n  name: Shape\nengine:\n  processors:\n    - speller\n  translators:\n    - table_translator\n    - echo_translator\nspeller:\n  alphabet: ab\ntranslator:\n  dictionary: shape\n  enable_completion: false\n  enable_sentence: false\n",
     )
     .expect("schema config should be written");
     fs::write(
@@ -2798,19 +2798,19 @@ fn frontend_style_schema_speller_auto_clear_modes() {
     fs::write(
         staging.join("auto_clear.schema.yaml"),
         "\
-schema:\n  schema_id: auto_clear\n  name: Auto Clear\nengine:\n  processors:\n    - speller\n  translators:\n    - table_translator\nspeller:\n  alphabet: abxy\n  auto_clear: auto\ntranslator:\n  dictionary: auto_clear\n  enable_sentence: false\n",
+schema:\n  schema_id: auto_clear\n  name: Auto Clear\nengine:\n  processors:\n    - speller\n  translators:\n    - table_translator\n    - echo_translator\nspeller:\n  alphabet: abxy\n  auto_clear: auto\ntranslator:\n  dictionary: auto_clear\n  enable_sentence: false\n",
     )
     .expect("auto_clear schema config should be written");
     fs::write(
         staging.join("manual_clear.schema.yaml"),
         "\
-schema:\n  schema_id: manual_clear\n  name: Manual Clear\nengine:\n  processors:\n    - speller\n  translators:\n    - table_translator\nspeller:\n  alphabet: abxy\n  auto_clear: manual\ntranslator:\n  dictionary: auto_clear\n  enable_sentence: false\n",
+schema:\n  schema_id: manual_clear\n  name: Manual Clear\nengine:\n  processors:\n    - speller\n  translators:\n    - table_translator\n    - echo_translator\nspeller:\n  alphabet: abxy\n  auto_clear: manual\ntranslator:\n  dictionary: auto_clear\n  enable_sentence: false\n",
     )
     .expect("manual_clear schema config should be written");
     fs::write(
         staging.join("max_clear.schema.yaml"),
         "\
-schema:\n  schema_id: max_clear\n  name: Max Clear\nengine:\n  processors:\n    - speller\n  translators:\n    - table_translator\nspeller:\n  alphabet: abxy\n  auto_clear: max_length\n  max_code_length: 2\ntranslator:\n  dictionary: auto_clear\n  enable_sentence: false\n",
+schema:\n  schema_id: max_clear\n  name: Max Clear\nengine:\n  processors:\n    - speller\n  translators:\n    - table_translator\n    - echo_translator\nspeller:\n  alphabet: abxy\n  auto_clear: max_length\n  max_code_length: 2\ntranslator:\n  dictionary: auto_clear\n  enable_sentence: false\n",
     )
     .expect("max_clear schema config should be written");
     fs::write(
@@ -2913,7 +2913,7 @@ fn frontend_style_schema_speller_auto_selects_at_max_code_length() {
     fs::write(
         staging.join("auto_select_max.schema.yaml"),
         "\
-schema:\n  schema_id: auto_select_max\n  name: Auto Select Max\nengine:\n  processors:\n    - speller\n  translators:\n    - table_translator\nspeller:\n  alphabet: abc\n  max_code_length: 2\ntranslator:\n  dictionary: auto_select_max\n  enable_sentence: false\n",
+schema:\n  schema_id: auto_select_max\n  name: Auto Select Max\nengine:\n  processors:\n    - speller\n  translators:\n    - table_translator\n    - echo_translator\nspeller:\n  alphabet: abc\n  max_code_length: 2\ntranslator:\n  dictionary: auto_select_max\n  enable_sentence: false\n",
     )
     .expect("schema config should be written");
     fs::write(
@@ -2995,13 +2995,13 @@ fn frontend_style_schema_speller_auto_selects_unique_table_candidate() {
     fs::write(
         staging.join("auto_select_unique.schema.yaml"),
         "\
-schema:\n  schema_id: auto_select_unique\n  name: Auto Select Unique\nengine:\n  processors:\n    - speller\n  translators:\n    - table_translator\nspeller:\n  alphabet: ab\n  auto_select: true\ntranslator:\n  dictionary: auto_select_unique\n  enable_completion: false\n  enable_sentence: false\n",
+schema:\n  schema_id: auto_select_unique\n  name: Auto Select Unique\nengine:\n  processors:\n    - speller\n  translators:\n    - table_translator\n    - echo_translator\nspeller:\n  alphabet: ab\n  auto_select: true\ntranslator:\n  dictionary: auto_select_unique\n  enable_completion: false\n  enable_sentence: false\n",
     )
     .expect("unique schema config should be written");
     fs::write(
         staging.join("auto_select_ambiguous.schema.yaml"),
         "\
-schema:\n  schema_id: auto_select_ambiguous\n  name: Auto Select Ambiguous\nengine:\n  processors:\n    - speller\n  translators:\n    - table_translator\nspeller:\n  alphabet: ab\n  auto_select: true\ntranslator:\n  dictionary: auto_select_ambiguous\n  enable_completion: false\n  enable_sentence: false\n",
+schema:\n  schema_id: auto_select_ambiguous\n  name: Auto Select Ambiguous\nengine:\n  processors:\n    - speller\n  translators:\n    - table_translator\n    - echo_translator\nspeller:\n  alphabet: ab\n  auto_select: true\ntranslator:\n  dictionary: auto_select_ambiguous\n  enable_completion: false\n  enable_sentence: false\n",
     )
     .expect("ambiguous schema config should be written");
     fs::write(
@@ -3124,7 +3124,7 @@ fn frontend_style_schema_speller_auto_select_pattern_gates_unique_candidate() {
     fs::write(
         staging.join("auto_select_pattern.schema.yaml"),
         "\
-schema:\n  schema_id: auto_select_pattern\n  name: Auto Select Pattern\nengine:\n  processors:\n    - speller\n  translators:\n    - table_translator\nspeller:\n  alphabet: abc\n  auto_select: true\n  auto_select_pattern: ab\n  max_code_length: 3\ntranslator:\n  dictionary: auto_select_pattern\n  enable_completion: false\n  enable_sentence: false\n",
+schema:\n  schema_id: auto_select_pattern\n  name: Auto Select Pattern\nengine:\n  processors:\n    - speller\n  translators:\n    - table_translator\n    - echo_translator\nspeller:\n  alphabet: abc\n  auto_select: true\n  auto_select_pattern: ab\n  max_code_length: 3\ntranslator:\n  dictionary: auto_select_pattern\n  enable_completion: false\n  enable_sentence: false\n",
     )
     .expect("pattern schema config should be written");
     fs::write(
@@ -3222,7 +3222,7 @@ fn frontend_style_schema_speller_algebra_expands_table_lookup_spellings() {
     fs::write(
         staging.join("algebra.schema.yaml"),
         "\
-schema:\n  schema_id: algebra\n  name: Algebra\nengine:\n  processors:\n    - speller\n  translators:\n    - table_translator\nspeller:\n  alphabet: abcdegilnopuvxyz\n  algebra:\n    - xlit/zyx/abc/\n    - xform/^lue$/lve/\n    - derive/^nv$/nu/\n    - fuzz/^bing$/pin/\n    - erase/^gone$/\ntranslator:\n  dictionary: algebra\n  enable_completion: false\n  enable_sentence: false\n",
+schema:\n  schema_id: algebra\n  name: Algebra\nengine:\n  processors:\n    - speller\n  translators:\n    - table_translator\n    - echo_translator\nspeller:\n  alphabet: abcdegilnopuvxyz\n  algebra:\n    - xlit/zyx/abc/\n    - xform/^lue$/lve/\n    - derive/^nv$/nu/\n    - fuzz/^bing$/pin/\n    - erase/^gone$/\ntranslator:\n  dictionary: algebra\n  enable_completion: false\n  enable_sentence: false\n",
     )
     .expect("schema config should be written");
     fs::write(
@@ -3416,7 +3416,7 @@ fn frontend_style_schema_speller_auto_selects_previous_match_with_express_editor
     fs::write(
         staging.join("auto_select_previous.schema.yaml"),
         "\
-schema:\n  schema_id: auto_select_previous\n  name: Auto Select Previous\nengine:\n  processors:\n    - speller\n    - express_editor\n  translators:\n    - table_translator\nspeller:\n  alphabet: abc\n  auto_select: true\ntranslator:\n  dictionary: auto_select_previous\n  enable_completion: false\n  enable_sentence: false\n",
+schema:\n  schema_id: auto_select_previous\n  name: Auto Select Previous\nengine:\n  processors:\n    - speller\n    - express_editor\n  translators:\n    - table_translator\n    - echo_translator\nspeller:\n  alphabet: abc\n  auto_select: true\ntranslator:\n  dictionary: auto_select_previous\n  enable_completion: false\n  enable_sentence: false\n",
     )
     .expect("schema config should be written");
     fs::write(

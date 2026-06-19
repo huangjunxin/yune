@@ -1173,6 +1173,7 @@ schema:
 engine:
   translators:
     - table_translator
+    - echo_translator
 translator:
   dictionary: luna
   packs:
@@ -1280,6 +1281,7 @@ schema:
 engine:
   translators:
     - table_translator
+    - echo_translator
 translator:
   dictionary: luna
 ",
@@ -1380,6 +1382,7 @@ schema:
 engine:
   translators:
     - table_translator
+    - echo_translator
 translator:
   dictionary: luna
 ",
@@ -1488,6 +1491,7 @@ schema:
 engine:
   translators:
     - table_translator@custom_table
+    - echo_translator
 translator:
   dictionary: base
 custom_table:
@@ -1593,6 +1597,7 @@ engine:
   translators:
     - script_translator@first_table
     - table_translator@second_table
+    - echo_translator
 first_table:
   dictionary: first
   enable_completion: false
@@ -1681,6 +1686,127 @@ sort: original
 }
 
 #[test]
+fn select_schema_installs_echo_translator_only_when_declared() {
+    let _guard = test_guard();
+    RimeCleanupAllSessions();
+    let root = unique_temp_dir("schema-explicit-echo-translator");
+    let shared = root.join("shared");
+    let user = root.join("user");
+    let staging = user.join("build");
+    fs::create_dir_all(&shared).expect("shared dir should be created");
+    fs::create_dir_all(&staging).expect("staging dir should be created");
+    fs::write(
+        staging.join("table-only.schema.yaml"),
+        "\
+schema:
+  schema_id: table-only
+  name: Table Only
+engine:
+  translators:
+    - table_translator
+translator:
+  dictionary: luna
+  enable_completion: false
+",
+    )
+    .expect("table-only schema config should be written");
+    fs::write(
+        staging.join("table-echo.schema.yaml"),
+        "\
+schema:
+  schema_id: table-echo
+  name: Table Echo
+engine:
+  translators:
+    - table_translator
+    - echo_translator
+translator:
+  dictionary: luna
+  enable_completion: false
+",
+    )
+    .expect("table-echo schema config should be written");
+    fs::write(
+        shared.join("luna.dict.yaml"),
+        "\
+---
+name: luna
+version: '0.1'
+sort: original
+columns: [code, text]
+...
+
+ni\t你
+",
+    )
+    .expect("dictionary should be written");
+
+    let shared_c = CString::new(shared.to_string_lossy().as_ref()).expect("path is valid");
+    let user_c = CString::new(user.to_string_lossy().as_ref()).expect("path is valid");
+    let mut traits = empty_traits();
+    traits.shared_data_dir = shared_c.as_ptr();
+    traits.user_data_dir = user_c.as_ptr();
+    // SAFETY: traits points to valid storage and strings live for the call.
+    unsafe { RimeSetup(&traits) };
+
+    let candidate_texts_and_comments_for = |schema_id: &str| {
+        let session_id = RimeCreateSession();
+        let schema_id = CString::new(schema_id).expect("schema id should be valid");
+        // SAFETY: schema id is a valid NUL-terminated string.
+        assert_eq!(
+            unsafe { RimeSelectSchema(session_id, schema_id.as_ptr()) },
+            TRUE
+        );
+        assert_eq!(RimeProcessKey(session_id, 'x' as c_int, 0), TRUE);
+
+        let mut context = empty_context();
+        // SAFETY: context points to writable storage initialized with positive
+        // `data_size`.
+        assert_eq!(unsafe { RimeGetContext(session_id, &mut context) }, TRUE);
+        let texts_and_comments = if context.menu.num_candidates == 0 {
+            Vec::new()
+        } else {
+            let candidates = unsafe {
+                std::slice::from_raw_parts(
+                    context.menu.candidates,
+                    context.menu.num_candidates as usize,
+                )
+            };
+            candidates
+                .iter()
+                .map(|candidate| {
+                    // SAFETY: candidate string pointers are populated by `RimeGetContext`.
+                    let text = unsafe { CStr::from_ptr(candidate.text) }
+                        .to_str()
+                        .expect("candidate text should be valid UTF-8")
+                        .to_owned();
+                    let comment = unsafe { CStr::from_ptr(candidate.comment) }
+                        .to_str()
+                        .expect("candidate comment should be valid UTF-8")
+                        .to_owned();
+                    (text, comment)
+                })
+                .collect::<Vec<_>>()
+        };
+        // SAFETY: nested pointers were allocated by `RimeGetContext` above.
+        assert_eq!(unsafe { RimeFreeContext(&mut context) }, TRUE);
+        assert_eq!(RimeDestroySession(session_id), TRUE);
+        texts_and_comments
+    };
+
+    assert!(candidate_texts_and_comments_for("table-only").is_empty());
+    assert_eq!(
+        candidate_texts_and_comments_for("table-echo"),
+        [("x".to_owned(), "echo".to_owned())]
+    );
+
+    let reset_traits = empty_traits();
+    // SAFETY: reset traits points to valid storage.
+    unsafe { RimeSetup(&reset_traits) };
+    fs::remove_dir_all(root).expect("temp dirs should be removed");
+}
+
+#[test]
 fn select_schema_preserves_librime_filter_prescription_order() {
     let _guard = test_guard();
     RimeCleanupAllSessions();
@@ -1699,6 +1825,7 @@ schema:
 engine:
   translators:
     - table_translator
+    - echo_translator
   filters:
     - uniquifier
     - simplifier
@@ -1892,6 +2019,7 @@ schema:
 engine:
   translators:
     - table_translator
+    - echo_translator
   filters:
     - single_char_filter
 translator:
@@ -1987,6 +2115,7 @@ schema:
 engine:
   translators:
     - table_translator
+    - echo_translator
   filters:
     - cjk_minifier
 translator:
@@ -2091,6 +2220,7 @@ schema:
 engine:
   translators:
     - table_translator
+    - echo_translator
   filters:
     - cjk_minifier@charset_guard
 translator:
@@ -2186,6 +2316,7 @@ schema:
 engine:
   translators:
     - table_translator
+    - echo_translator
 translator:
   dictionary: luna
   enable_charset_filter: true
@@ -2289,6 +2420,7 @@ schema:
 engine:
   translators:
     - table_translator
+    - echo_translator
 translator:
   dictionary: luna
 ",
@@ -2303,6 +2435,7 @@ schema:
 engine:
   translators:
     - table_translator
+    - echo_translator
 translator:
   dictionary: luna
   enable_completion: false
@@ -2397,6 +2530,7 @@ schema:
 engine:
   translators:
     - table_translator
+    - echo_translator
 translator:
   dictionary: luna
   tag: custom
@@ -2412,6 +2546,7 @@ schema:
 engine:
   translators:
     - table_translator
+    - echo_translator
 translator:
   dictionary: luna
   tag: custom
@@ -2430,6 +2565,7 @@ engine:
     - abc_segmentor
   translators:
     - table_translator
+    - echo_translator
 abc_segmentor:
   extra_tags: [custom]
 translator:
@@ -2527,6 +2663,7 @@ schema:
 engine:
   translators:
     - table_translator
+    - echo_translator
   filters:
     - simplifier@zh_simp
 translator:
@@ -2549,6 +2686,7 @@ engine:
     - abc_segmentor
   translators:
     - table_translator
+    - echo_translator
   filters:
     - simplifier@zh_simp
 abc_segmentor:
@@ -2654,6 +2792,7 @@ schema:
 engine:
   translators:
     - script_translator
+    - echo_translator
 translator:
   dictionary: luna
   enable_completion: false
@@ -2670,6 +2809,7 @@ schema:
 engine:
   translators:
     - r10n_translator
+    - echo_translator
 translator:
   dictionary: luna
   enable_completion: true
@@ -2767,6 +2907,7 @@ engine:
     - table_translator@default_table
     - table_translator@disabled_table
     - table_translator@over_table
+    - echo_translator
 default_table:
   dictionary: default_dict
   enable_completion: false
@@ -2954,6 +3095,7 @@ engine:
   translators:
     - table_translator@low_table
     - table_translator@high_table
+    - echo_translator
 low_table:
   dictionary: low
   enable_completion: false
@@ -3063,6 +3205,7 @@ schema:
 engine:
   translators:
     - r10n_translator
+    - echo_translator
 translator:
   dictionary: luna
   enable_completion: false
@@ -3155,6 +3298,7 @@ engine:
   translators:
     - table_translator
     - history_translator
+    - echo_translator
 translator:
   dictionary: luna
   enable_completion: false
@@ -3257,6 +3401,7 @@ engine:
   translators:
     - table_translator
     - history_translator@translator
+    - echo_translator
 translator:
   dictionary: luna
   enable_completion: false
@@ -3357,6 +3502,7 @@ engine:
   translators:
     - table_translator
     - history_translator
+    - echo_translator
 translator:
   dictionary: luna
   enable_completion: false
@@ -3376,6 +3522,7 @@ engine:
   translators:
     - table_translator
     - history_translator
+    - echo_translator
 translator:
   dictionary: luna
   enable_completion: false
@@ -3479,6 +3626,7 @@ engine:
   translators:
     - table_translator
     - history_translator
+    - echo_translator
 translator:
   dictionary: luna
   enable_completion: false
@@ -3580,6 +3728,7 @@ schema:
 engine:
   translators:
     - table_translator
+    - echo_translator
 translator:
   dictionary: luna
   comment_format:
@@ -3676,6 +3825,7 @@ schema:
 engine:
   translators:
     - table_translator
+    - echo_translator
 translator:
   dictionary: luna
   dictionary_exclude:
@@ -3769,6 +3919,7 @@ schema:
 engine:
   translators:
     - table_translator
+    - echo_translator
 speller:
   delimiter: \"'\"
 translator:
@@ -3868,6 +4019,7 @@ schema:
 engine:
   translators:
     - table_translator
+    - echo_translator
   filters:
     - simplifier@zh_simp
 translator:
@@ -4098,6 +4250,7 @@ schema:
 engine:
   translators:
     - table_translator
+    - echo_translator
   filters:
     - simplifier@zh_tw
 translator:
@@ -4203,6 +4356,7 @@ schema:
 engine:
   translators:
     - table_translator
+    - echo_translator
   filters:
     - simplifier@zh_simp
 translator:
@@ -4323,6 +4477,7 @@ engine:
   translators:
     - reverse_lookup_translator
     - table_translator
+    - echo_translator
 abc_segmentor:
   extra_tags: [reverse_lookup]
 translator:
@@ -4661,6 +4816,7 @@ engine:
   translators:
     - reverse_lookup_translator
     - table_translator
+    - echo_translator
 translator:
   dictionary: luna
 reverse_lookup:
@@ -4800,6 +4956,7 @@ engine:
     - affix_segmentor@reverse_lookup
   translators:
     - reverse_lookup_translator
+    - echo_translator
 reverse_lookup:
   tag: reverse_lookup
   dictionary: stroke
@@ -4896,6 +5053,7 @@ engine:
   translators:
     - reverse_lookup_translator
     - table_translator
+    - echo_translator
 translator:
   dictionary: luna
 reverse_lookup:
@@ -5005,6 +5163,7 @@ engine:
   translators:
     - reverse_lookup_translator
     - table_translator
+    - echo_translator
 translator:
   dictionary: luna
 reverse_lookup:
@@ -5117,6 +5276,7 @@ engine:
   translators:
     - reverse_lookup_translator
     - table_translator
+    - echo_translator
 translator:
   dictionary: luna
 reverse_lookup:
@@ -5230,6 +5390,7 @@ engine:
   translators:
     - reverse_lookup_translator@translator
     - table_translator
+    - echo_translator
 abc_segmentor:
   extra_tags: [reverse_lookup]
 translator:
@@ -5358,6 +5519,7 @@ engine:
     - abc_segmentor
   translators:
     - reverse_lookup_translator
+    - echo_translator
 abc_segmentor:
   extra_tags: [custom_lookup]
 reverse_lookup:
@@ -5470,6 +5632,7 @@ engine:
   translators:
     - reverse_lookup_translator
     - table_translator
+    - echo_translator
 abc_segmentor:
   extra_tags: [reverse_lookup]
 translator:
@@ -5596,6 +5759,7 @@ schema:
 engine:
   translators:
     - table_translator
+    - echo_translator
   filters:
     - reverse_lookup_filter
 translator:
@@ -5834,6 +5998,7 @@ schema:
 engine:
   translators:
     - table_translator
+    - echo_translator
   filters:
     - reverse_lookup_filter@stroke_lookup
 translator:
@@ -6266,6 +6431,7 @@ schema:
 engine:
   translators:
     - table_translator
+    - echo_translator
 speller:
   algebra:
     - xform/^lue$/lve/
@@ -6432,6 +6598,7 @@ schema:
 engine:
   translators:
     - table_translator
+    - echo_translator
 speller:
   algebra:
     - derive/^cuo$/cu/correction
@@ -6579,6 +6746,7 @@ engine:
   translators:
     - table_translator
     - reverse_lookup_translator
+    - echo_translator
   filters:
     - simplifier@zh_simp
 abc_segmentor:
@@ -6764,6 +6932,7 @@ engine:
     - table_translator
     - memory
     - history_translator
+    - echo_translator
 translator:
   dictionary: memory
 history:
@@ -6874,6 +7043,7 @@ schema:
 engine:
   translators:
     - table_translator
+    - echo_translator
   filters:
     - poet
     - grammar
@@ -7001,6 +7171,7 @@ engine:
   translators:
     - table_translator
     - unity_table_encoder
+    - echo_translator
 translator:
   dictionary: unity
 unity_table_encoder:

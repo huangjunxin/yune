@@ -1328,6 +1328,19 @@ fn backspace_rebuilds_candidates() {
 }
 
 #[test]
+fn clear_translators_removes_default_echo_fallback() {
+    let mut engine = Engine::new();
+
+    engine.process_char('x');
+    assert_eq!(engine.context().candidates[0].source, CandidateSource::Echo);
+
+    engine.clear_translators();
+
+    assert_eq!(engine.context().composition.input, "x");
+    assert!(engine.context().candidates.is_empty());
+}
+
+#[test]
 fn sequence_collects_commits_and_snapshot_status() {
     let mut engine = Engine::new();
     engine.set_schema("sample", "Sample");
