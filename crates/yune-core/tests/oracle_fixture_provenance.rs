@@ -60,6 +60,35 @@ fn upstream_luna_pinyin_fixtures_have_non_circular_source_provenance() {
     }
 }
 
+#[test]
+fn typeduck_v112_m14_fixtures_have_non_circular_source_provenance() {
+    let root = fixture_root("typeduck-v1.1.2");
+    let mut fixture_files = fs::read_dir(&root)
+        .unwrap_or_else(|error| panic!("failed to read {}: {error}", root.display()))
+        .map(|entry| {
+            entry
+                .unwrap_or_else(|error| panic!("failed to read fixture entry: {error}"))
+                .path()
+        })
+        .filter(|path| {
+            path.file_name()
+                .and_then(|name| name.to_str())
+                .is_some_and(|name| name.starts_with("jyut6ping3-m14-") && name.ends_with(".json"))
+        })
+        .collect::<Vec<_>>();
+    fixture_files.sort();
+    assert!(
+        !fixture_files.is_empty(),
+        "M14 should check in at least one TypeDuck v1.1.2 fixture"
+    );
+
+    for path in fixture_files {
+        let fixture = read_json(&path);
+        assert_typeduck_m14_fixture_header(&path, &fixture);
+        assert_no_local_absolute_paths(&path, &fixture);
+    }
+}
+
 fn assert_manifest(
     fixture_dir: &str,
     expected_family: &str,
@@ -90,6 +119,96 @@ fn assert_manifest(
             .as_str()
             .is_some_and(|url| url.starts_with("https://github.com/")),
         "{fixture_dir} must identify a canonical GitHub oracle repository"
+    );
+}
+
+fn assert_typeduck_m14_fixture_header(path: &Path, fixture: &Value) {
+    assert_eq!(
+        fixture["oracle"]["engine"], "TypeDuck-HK/librime",
+        "{path:?}"
+    );
+    assert_eq!(fixture["oracle"]["engine_tag"], "v1.1.2", "{path:?}");
+    assert_eq!(
+        fixture["oracle"]["engine_commit"], "74cb52b78fb2411137a7643f6c8bc6517acfde69",
+        "{path:?}"
+    );
+    assert!(
+        fixture["oracle"]["canonical_repository"]
+            .as_str()
+            .is_some_and(|url| url == "https://github.com/TypeDuck-HK/librime"),
+        "{path:?} must identify the TypeDuck fork repository"
+    );
+    assert!(
+        fixture["oracle"]["release_url"]
+            .as_str()
+            .is_some_and(|url| url == "https://github.com/TypeDuck-HK/librime/releases/tag/v1.1.2"),
+        "{path:?} must identify the TypeDuck v1.1.2 release"
+    );
+    assert!(
+        fixture["oracle"]["capture_date"]
+            .as_str()
+            .is_some_and(|date| !date.is_empty()),
+        "{path:?} must include a capture date"
+    );
+    assert!(
+        fixture["oracle"]["capture_command"]
+            .as_str()
+            .is_some_and(|command| command.contains("scripts/capture-typeduck-jyutping.ps1")),
+        "{path:?} must include the TypeDuck capture command"
+    );
+    assert_eq!(
+        fixture["oracle"]["schema"], "TypeDuck-HK/schema",
+        "{path:?}"
+    );
+    assert!(
+        fixture["oracle"]["schema_commit"]
+            .as_str()
+            .is_some_and(|commit| commit.len() == 40),
+        "{path:?} must include the pinned TypeDuck schema commit"
+    );
+    assert!(
+        matches!(
+            fixture["schema"].as_str(),
+            Some("jyut6ping3_mobile" | "jyut6ping3" | "mixed")
+        ),
+        "{path:?} must name a TypeDuck jyut6ping3 schema target"
+    );
+    let modules = fixture["module_list"]
+        .as_array()
+        .unwrap_or_else(|| panic!("{path:?} must include module_list"));
+    assert!(
+        modules.starts_with(&[
+            serde_json::json!("default"),
+            serde_json::json!("dictionary_lookup")
+        ]),
+        "{path:?} must load default + dictionary_lookup first"
+    );
+    assert!(
+        modules.iter().all(|module| matches!(
+            module.as_str(),
+            Some("default" | "dictionary_lookup" | "levers")
+        )),
+        "{path:?} must not load unexpected oracle modules"
+    );
+    assert_eq!(
+        fixture["capture"]["schema_data"], "TypeDuck-HK/schema",
+        "{path:?}"
+    );
+    assert!(
+        fixture["capture"]["schema_data_commit"]
+            .as_str()
+            .is_some_and(|commit| commit.len() == 40),
+        "{path:?} must include the pinned schema data commit"
+    );
+    assert!(
+        fixture["capture"]["source_row_policy"]
+            .as_str()
+            .is_some_and(|policy| !policy.is_empty()),
+        "{path:?} must include a source row policy"
+    );
+    assert!(
+        fixture.get("input_sequence").is_some() || fixture.get("scenarios").is_some(),
+        "{path:?} must include input_sequence or scenarios"
     );
 }
 

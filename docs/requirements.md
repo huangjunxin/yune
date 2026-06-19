@@ -205,14 +205,15 @@ provider-free. Additional native frontend exposure remains future work.
 
 ## M14–M16 TypeDuck-Web Fork Parity Requirements
 
-**Status: planned (next arc).** Complete the TypeDuck `jyut6ping3` target so the
-TypeDuck-Web example behaves like the fork. Oracle-measured against TypeDuck-HK
-v1.1.2; `jyut6ping3` is dictionary-driven and does **not** require the upstream
-language model (Track 2 / M17). See roadmap M14–M16 and `decisions.md` D-27.
+**Status: M14 capture complete; M15/M16 planned.** Complete the TypeDuck
+`jyut6ping3` target so the TypeDuck-Web example behaves like the fork.
+Oracle-measured against TypeDuck-HK v1.1.2; `jyut6ping3` is dictionary-driven
+and does **not** require the upstream language model (Track 2 / M17). See
+roadmap M14–M16 and `decisions.md` D-27.
 
-- [ ] **TYPEDUCK-PARITY-01**: The v1.1.2 capture probe gains scenario / `set_option` / snapshot support (backported from the upstream probe), and Cantonese goldens are captured from the v1.1.2 oracle binary for `combine_candidates`, `show_full_code`, `enable_sentence`, completion/prediction, and correction at multiple input lengths.
-- [ ] **TYPEDUCK-PARITY-02**: The oracle-observable surface for schema-menu hiding (`hide_lone_schema`/`hide_caret`) is identified (config API, schema-list/switcher API, or TypeDuck-Web UI state) and emitted behavior is captured — not static config inspection alone.
-- [ ] **TYPEDUCK-PARITY-03**: A feasibility spike determines whether per-entry userdb pronunciations are capturable via the levers user-dict export/import/seed hooks; if not, the gap is documented as a fork-only deferral with the precise blocker.
+- [x] **TYPEDUCK-PARITY-01**: A v1.1.2 capture path is established by parameterizing the scenario-capable upstream probe's oracle identity (modules/distribution/provenance) — or a thin v1.1.2 wrapper — and Cantonese goldens are captured from the v1.1.2 oracle binary for `combine_candidates`, `show_full_code`, `enable_sentence`, completion/prediction, and correction at multiple input lengths.
+- [x] **TYPEDUCK-PARITY-02**: The oracle-observable surface for schema-menu hiding (`hide_lone_schema`/`hide_caret`) is identified (config API, schema-list/switcher API, or TypeDuck-Web UI state) and emitted behavior is captured — not static config inspection alone.
+- [x] **TYPEDUCK-PARITY-03**: A feasibility spike determines whether per-entry userdb pronunciations are capturable via the levers user-dict export/import/seed hooks; if not, the gap is documented as a fork-only deferral with the precise blocker.
 - [ ] **TYPEDUCK-PARITY-04**: `combine_candidates` (candidate grouping) and `show_full_code` (cangjie preedit algebra) are implemented and pass the captured goldens through Yune's real engine path.
 - [ ] **TYPEDUCK-PARITY-05**: `enable_sentence`, completion ranking, and correction/tolerance tuning are refined to pass the captured goldens.
 - [ ] **TYPEDUCK-PARITY-06**: OpenCC `hk2s` coverage is expanded from the built-in slice to the full conversion data the jyut6ping3 simplifier needs.
@@ -311,9 +312,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | M13-AI-04 | M13 | Complete - browser/default commit remains classic; AI selection is explicit |
 | M13-AI-05 | M13 | Complete - AI commits skip userdb and sensitive default suppresses AI memory learning |
 | M13-AI-06 | M13 | Complete - real TypeDuck-Web M13 Playwright evidence covers the safety scenarios |
-| TYPEDUCK-PARITY-01 | M14 | Planned - v1.1.2 capture wrapper + Cantonese option/completion/correction goldens |
-| TYPEDUCK-PARITY-02 | M14 | Planned - oracle-observable schema-menu hiding surface captured |
-| TYPEDUCK-PARITY-03 | M14 | Planned - userdb-pronunciation capture feasibility spike (defer only if proven uncapturable) |
+| TYPEDUCK-PARITY-01 | M14 | Complete - v1.1.2 wrapper + Cantonese option/completion/correction goldens captured |
+| TYPEDUCK-PARITY-02 | M14 | Complete - emitted schema-list surface captured; UI hiding assertion deferred to M16 |
+| TYPEDUCK-PARITY-03 | M14 | Complete - levers export spike captured a learned `nei5` userdb row |
 | TYPEDUCK-PARITY-04 | M15 | Planned - combine_candidates + show_full_code implemented |
 | TYPEDUCK-PARITY-05 | M15 | Planned - enable_sentence/completion/correction refined to pass goldens |
 | TYPEDUCK-PARITY-06 | M15 | Planned - OpenCC hk2s coverage expanded |
@@ -326,10 +327,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 - TypeDuck-Windows native IME requirements: 6 total
 - M12 upstream oracle and behavioral parity requirements: 9 total, 9 complete
 - M13 AI-native frontend exposure requirements: 6 total, 6 complete
-- M14–M16 TypeDuck-Web fork parity requirements: 7 total, 0 complete (planned)
+- M14–M16 TypeDuck-Web fork parity requirements: 7 total, 3 complete (M14 capture complete; M15/M16 planned)
 - Mapped to phases: 82
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-28*
-*Last updated: 2026-06-19 - M13 complete; M14–M16 TypeDuck-Web fork-parity requirements added (planned); M10 TypeDuck-Windows remains parked as a TypeDuck compatibility profile until a named profile ABI surface exists*
+*Last updated: 2026-06-19 - M13 complete; M14 TypeDuck v1.1.2 capture complete; M15/M16 TypeDuck-Web fork-parity implementation and browser validation planned; M10 TypeDuck-Windows remains parked as a TypeDuck compatibility profile until a named profile ABI surface exists*

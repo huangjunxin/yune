@@ -1,0 +1,67 @@
+{
+    "oracle":  {
+                   "engine":  "TypeDuck-HK/librime",
+                   "engine_tag":  "v1.1.2",
+                   "engine_commit":  "74cb52b78fb2411137a7643f6c8bc6517acfde69",
+                   "canonical_repository":  "https://github.com/TypeDuck-HK/librime",
+                   "release_url":  "https://github.com/TypeDuck-HK/librime/releases/tag/v1.1.2",
+                   "release_asset":  "rime-TypeDuck-v1.1.2-Windows-msvc-x64.7z",
+                   "dependency_asset":  "rime-deps-TypeDuck-v1.1.2-Windows-msvc-x64.7z",
+                   "plugin":  "TypeDuck-HK/rime-dictionary-lookup-filter",
+                   "plugin_commit":  "3e4605c4fae99f068df2edb85aaeab5a97752795",
+                   "schema":  "TypeDuck-HK/schema",
+                   "schema_commit":  "1bed1ae6a0ab48055f073774d7dfd152a171c548",
+                   "capture_date":  "2026-06-19",
+                   "capture_command":  "powershell -ExecutionPolicy Bypass -File scripts/capture-typeduck-jyutping.ps1 -Fixture UserDb",
+                   "host":  "Windows"
+               },
+    "schema":  "jyut6ping3_mobile",
+    "schemas":  [
+                    "jyut6ping3_mobile"
+                ],
+    "module_list":  [
+                        "default",
+                        "dictionary_lookup",
+                        "levers"
+                    ],
+    "scenarios":  [
+                      "per_entry_userdb_pronunciation"
+                  ],
+    "capture":  {
+                    "schema_data":  "TypeDuck-HK/schema",
+                    "schema_data_commit":  "1bed1ae6a0ab48055f073774d7dfd152a171c548",
+                    "dictionary":  "jyut6ping3.dict.yaml",
+                    "source_row_policy":  "typeduck_v112_userdb_levers_export_probe",
+                    "candidate_layout":  "TypeDuck v1.1.2 RimeCandidate includes quality before reserved",
+                    "option_delivery":  "deploy-time common.custom.yaml/default.custom.yaml variants; runtime set_option does not apply these schema __patch hooks",
+                    "modules":  [
+                                    "default",
+                                    "dictionary_lookup",
+                                    "levers"
+                                ],
+                    "feasibility_spike":  "trained one highlighted candidate, called RimeSyncUserData, then tried RimeFindModule(\u0027levers\u0027) and RimeLeversApi.export_user_dict",
+                    "dict_name":  "jyut6ping3"
+                },
+    "cases":  [
+                  {
+                      "variant":  "levers_export_probe",
+                      "schema_id":  "jyut6ping3_mobile",
+                      "training_input":  "nei",
+                      "probe":  {
+                                    "training_input":  "nei",
+                                    "commit_text":  "你",
+                                    "sync_user_data":  true,
+                                    "levers_module_found":  true,
+                                    "levers_module_name":  "levers",
+                                    "levers_api_found":  true,
+                                    "levers_api_data_size":  260,
+                                    "export_function_found":  true,
+                                    "export_attempted":  true,
+                                    "dict_name":  "jyut6ping3",
+                                    "export_return":  1,
+                                    "export_file_exists":  true,
+                                    "export_text":  "# Rime user dictionary export\r\n#@/db_name\tjyut6ping3\r\n#@/db_type\tuserdb\r\n#@/rime_version\t1.1.2\r\n#@/tick\t1\r\n#@/user_id\tunknown\r\n你\tnei5\t1\r\n"
+                                }
+                  }
+              ]
+}

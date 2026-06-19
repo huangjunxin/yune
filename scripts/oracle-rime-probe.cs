@@ -38,6 +38,14 @@ public static class RimeProbe {
   }
 
   [StructLayout(LayoutKind.Sequential)]
+  public struct RimeCandidateWithQuality {
+    public IntPtr text;
+    public IntPtr comment;
+    public double quality;
+    public IntPtr reserved;
+  }
+
+  [StructLayout(LayoutKind.Sequential)]
   public struct RimeMenu {
     public int page_size;
     public int page_no;
@@ -47,6 +55,71 @@ public static class RimeProbe {
     public IntPtr candidates;
     public IntPtr select_keys;
   }
+
+  [StructLayout(LayoutKind.Sequential)]
+  public struct RimeSchemaListItem {
+    public IntPtr schema_id;
+    public IntPtr name;
+    public IntPtr reserved;
+  }
+
+  [StructLayout(LayoutKind.Sequential)]
+  public struct RimeSchemaList {
+    public UIntPtr size;
+    public IntPtr list;
+  }
+
+  [StructLayout(LayoutKind.Sequential)]
+  public struct RimeModule {
+    public int data_size;
+    public IntPtr module_name;
+    public IntPtr initialize;
+    public IntPtr finalize;
+    public IntPtr get_api;
+  }
+
+  [StructLayout(LayoutKind.Sequential)]
+  public struct RimeLeversApi {
+    public int data_size;
+    public IntPtr custom_settings_init;
+    public IntPtr custom_settings_destroy;
+    public IntPtr load_settings;
+    public IntPtr save_settings;
+    public IntPtr customize_bool;
+    public IntPtr customize_int;
+    public IntPtr customize_double;
+    public IntPtr customize_string;
+    public IntPtr is_first_run;
+    public IntPtr settings_is_modified;
+    public IntPtr settings_get_config;
+    public IntPtr switcher_settings_init;
+    public IntPtr get_available_schema_list;
+    public IntPtr get_selected_schema_list;
+    public IntPtr schema_list_destroy;
+    public IntPtr get_schema_id;
+    public IntPtr get_schema_name;
+    public IntPtr get_schema_version;
+    public IntPtr get_schema_author;
+    public IntPtr get_schema_description;
+    public IntPtr get_schema_file_path;
+    public IntPtr select_schemas;
+    public IntPtr get_hotkeys;
+    public IntPtr set_hotkeys;
+    public IntPtr user_dict_iterator_init;
+    public IntPtr user_dict_iterator_destroy;
+    public IntPtr next_user_dict;
+    public IntPtr backup_user_dict;
+    public IntPtr restore_user_dict;
+    public IntPtr export_user_dict;
+    public IntPtr import_user_dict;
+    public IntPtr customize_item;
+  }
+
+  [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+  delegate IntPtr GetCustomApiDelegate();
+
+  [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+  delegate int ExportUserDictDelegate(IntPtr dictName, IntPtr textFile);
 
   [StructLayout(LayoutKind.Sequential)]
   public struct RimeContext {
@@ -92,6 +165,14 @@ public static class RimeProbe {
     public ProbeAction[] actions;
   }
 
+  public class ProbeIdentity {
+    public string distribution_name;
+    public string distribution_code_name;
+    public string distribution_version;
+    public string app_name;
+    public bool candidate_has_quality;
+  }
+
   [DllImport("rime.dll", CallingConvention = CallingConvention.Cdecl)]
   public static extern void RimeSetup(ref RimeTraits traits);
   [DllImport("rime.dll", CallingConvention = CallingConvention.Cdecl)]
@@ -105,6 +186,8 @@ public static class RimeProbe {
   [DllImport("rime.dll", CallingConvention = CallingConvention.Cdecl)]
   public static extern int RimeSelectSchema(UIntPtr session, IntPtr schemaId);
   [DllImport("rime.dll", CallingConvention = CallingConvention.Cdecl)]
+  public static extern int RimeSyncUserData();
+  [DllImport("rime.dll", CallingConvention = CallingConvention.Cdecl)]
   public static extern void RimeSetOption(UIntPtr session, IntPtr option, int value);
   [DllImport("rime.dll", CallingConvention = CallingConvention.Cdecl)]
   public static extern int RimeProcessKey(UIntPtr session, int keycode, int mask);
@@ -114,6 +197,12 @@ public static class RimeProbe {
   public static extern int RimeFreeCommit(ref RimeCommit commit);
   [DllImport("rime.dll", CallingConvention = CallingConvention.Cdecl)]
   public static extern int RimeGetContext(UIntPtr session, ref RimeContext context);
+  [DllImport("rime.dll", CallingConvention = CallingConvention.Cdecl)]
+  public static extern int RimeGetSchemaList(ref RimeSchemaList schemaList);
+  [DllImport("rime.dll", CallingConvention = CallingConvention.Cdecl)]
+  public static extern void RimeFreeSchemaList(ref RimeSchemaList schemaList);
+  [DllImport("rime.dll", CallingConvention = CallingConvention.Cdecl)]
+  public static extern IntPtr RimeFindModule(IntPtr moduleName);
   [DllImport("rime.dll", CallingConvention = CallingConvention.Cdecl)]
   public static extern int RimeFreeContext(ref RimeContext context);
   [DllImport("rime.dll", CallingConvention = CallingConvention.Cdecl)]
@@ -155,24 +244,46 @@ public static class RimeProbe {
     return array;
   }
 
+  public static ProbeIdentity UpstreamIdentity() {
+    return new ProbeIdentity {
+      distribution_name = "Rime",
+      distribution_code_name = "rime",
+      distribution_version = "1.17.0",
+      app_name = "rime.yune_upstream_oracle_probe",
+      candidate_has_quality = false,
+    };
+  }
+
+  public static ProbeIdentity TypeDuckV112Identity() {
+    return new ProbeIdentity {
+      distribution_name = "TypeDuck",
+      distribution_code_name = "TypeDuck",
+      distribution_version = "v1.1.2",
+      app_name = "rime.yune_typeduck_v112_oracle_probe",
+      candidate_has_quality = true,
+    };
+  }
+
   static RimeTraits Traits(
       string shared,
       string user,
       string build,
       string[] modulesInput,
+      ProbeIdentity identity,
       List<IntPtr> ptrs) {
     var modules = new List<IntPtr>();
     foreach (var module in modulesInput) {
       modules.Add(U8(module, ptrs));
     }
+    var resolvedIdentity = identity ?? UpstreamIdentity();
     return new RimeTraits {
       data_size = Marshal.SizeOf(typeof(RimeTraits)) - sizeof(int),
       shared_data_dir = U8(shared, ptrs),
       user_data_dir = U8(user, ptrs),
-      distribution_name = U8("Rime", ptrs),
-      distribution_code_name = U8("rime", ptrs),
-      distribution_version = U8("1.17.0", ptrs),
-      app_name = U8("rime.yune_upstream_oracle_probe", ptrs),
+      distribution_name = U8(resolvedIdentity.distribution_name ?? "Rime", ptrs),
+      distribution_code_name = U8(resolvedIdentity.distribution_code_name ?? "rime", ptrs),
+      distribution_version = U8(resolvedIdentity.distribution_version ?? "1.17.0", ptrs),
+      app_name = U8(resolvedIdentity.app_name ?? "rime.yune_upstream_oracle_probe", ptrs),
       modules = U8Array(modules, ptrs),
       min_log_level = 2,
       log_dir = U8("", ptrs),
@@ -206,11 +317,60 @@ public static class RimeProbe {
     return text;
   }
 
+  static List<Dictionary<string, object>> ReadCandidates(RimeContext ctx, ProbeIdentity identity) {
+    var candidates = new List<Dictionary<string, object>>();
+    var resolvedIdentity = identity ?? UpstreamIdentity();
+    if (resolvedIdentity.candidate_has_quality) {
+      int candSize = Marshal.SizeOf(typeof(RimeCandidateWithQuality));
+      for (int i = 0; i < ctx.menu.num_candidates; i++) {
+        var cand = (RimeCandidateWithQuality)Marshal.PtrToStructure(
+            IntPtr.Add(ctx.menu.candidates, i * candSize),
+            typeof(RimeCandidateWithQuality));
+        var row = new Dictionary<string, object>();
+        row["index"] = i;
+        row["text"] = S(cand.text);
+        row["comment"] = S(cand.comment);
+        row["quality"] = cand.quality;
+        candidates.Add(row);
+      }
+    } else {
+      int candSize = Marshal.SizeOf(typeof(RimeCandidate));
+      for (int i = 0; i < ctx.menu.num_candidates; i++) {
+        var cand = (RimeCandidate)Marshal.PtrToStructure(
+            IntPtr.Add(ctx.menu.candidates, i * candSize),
+            typeof(RimeCandidate));
+        var row = new Dictionary<string, object>();
+        row["index"] = i;
+        row["text"] = S(cand.text);
+        row["comment"] = S(cand.comment);
+        candidates.Add(row);
+      }
+    }
+    return candidates;
+  }
+
+  static List<Dictionary<string, object>> ReadSchemaList(RimeSchemaList list) {
+    var schemas = new List<Dictionary<string, object>>();
+    int itemSize = Marshal.SizeOf(typeof(RimeSchemaListItem));
+    for (ulong i = 0; i < list.size.ToUInt64(); i++) {
+      var item = (RimeSchemaListItem)Marshal.PtrToStructure(
+          IntPtr.Add(list.list, checked((int)(i * (ulong)itemSize))),
+          typeof(RimeSchemaListItem));
+      var row = new Dictionary<string, object>();
+      row["index"] = (long)i;
+      row["schema_id"] = S(item.schema_id);
+      row["name"] = S(item.name);
+      schemas.Add(row);
+    }
+    return schemas;
+  }
+
   static Dictionary<string, object> Snapshot(
       UIntPtr session,
       string scenario,
       string label,
-      string commitText) {
+      string commitText,
+      ProbeIdentity identity) {
     var ctx = new RimeContext { data_size = Marshal.SizeOf(typeof(RimeContext)) - sizeof(int) };
     var status = new RimeStatus { data_size = Marshal.SizeOf(typeof(RimeStatus)) - sizeof(int) };
     if (RimeGetContext(session, ref ctx) == 0) {
@@ -221,18 +381,7 @@ public static class RimeProbe {
       throw new Exception("RimeGetStatus failed for scenario " + scenario + " snapshot " + label);
     }
 
-    var candidates = new List<Dictionary<string, object>>();
-    int candSize = Marshal.SizeOf(typeof(RimeCandidate));
-    for (int i = 0; i < ctx.menu.num_candidates; i++) {
-      var cand = (RimeCandidate)Marshal.PtrToStructure(
-          IntPtr.Add(ctx.menu.candidates, i * candSize),
-          typeof(RimeCandidate));
-      var row = new Dictionary<string, object>();
-      row["index"] = i;
-      row["text"] = S(cand.text);
-      row["comment"] = S(cand.comment);
-      candidates.Add(row);
-    }
+    var candidates = ReadCandidates(ctx, identity);
 
     var result = new Dictionary<string, object>();
     result["schema_id"] = S(status.schema_id);
@@ -267,8 +416,19 @@ public static class RimeProbe {
       string schema,
       string[] modulesInput,
       string[] inputs) {
+    return CaptureWithIdentity(shared, user, build, schema, modulesInput, inputs, UpstreamIdentity());
+  }
+
+  public static List<Dictionary<string, object>> CaptureWithIdentity(
+      string shared,
+      string user,
+      string build,
+      string schema,
+      string[] modulesInput,
+      string[] inputs,
+      ProbeIdentity identity) {
     var ptrs = new List<IntPtr>();
-    var traits = Traits(shared, user, build, modulesInput, ptrs);
+    var traits = Traits(shared, user, build, modulesInput, identity, ptrs);
     var results = new List<Dictionary<string, object>>();
     UIntPtr session = UIntPtr.Zero;
     try {
@@ -283,6 +443,9 @@ public static class RimeProbe {
         throw new Exception("RimeSelectSchema failed: " + schema);
       }
       RimeSetOption(session, U8("ascii_mode", ptrs), 0);
+      RimeSetOption(session, U8("full_shape", ptrs), 0);
+      RimeSetOption(session, U8("ascii_punct", ptrs), 0);
+      RimeSetOption(session, U8("zh_hans", ptrs), 0);
 
       foreach (var input in inputs) {
         RimeClearComposition(session);
@@ -299,18 +462,7 @@ public static class RimeProbe {
           throw new Exception("RimeGetStatus failed for " + input);
         }
 
-        var candidates = new List<Dictionary<string, object>>();
-        int candSize = Marshal.SizeOf(typeof(RimeCandidate));
-        for (int i = 0; i < ctx.menu.num_candidates; i++) {
-          var cand = (RimeCandidate)Marshal.PtrToStructure(
-              IntPtr.Add(ctx.menu.candidates, i * candSize),
-              typeof(RimeCandidate));
-          var row = new Dictionary<string, object>();
-          row["index"] = i;
-          row["text"] = S(cand.text);
-          row["comment"] = S(cand.comment);
-          candidates.Add(row);
-        }
+        var candidates = ReadCandidates(ctx, identity);
 
         var result = new Dictionary<string, object>();
         result["schema_id"] = S(status.schema_id);
@@ -351,6 +503,18 @@ public static class RimeProbe {
       string schema,
       string[] modulesInput,
       ProbeScenario[] scenarios) {
+    return CaptureScenariosWithIdentity(
+        shared, user, build, schema, modulesInput, scenarios, UpstreamIdentity());
+  }
+
+  public static List<Dictionary<string, object>> CaptureScenariosWithIdentity(
+      string shared,
+      string user,
+      string build,
+      string schema,
+      string[] modulesInput,
+      ProbeScenario[] scenarios,
+      ProbeIdentity identity) {
     var results = new List<Dictionary<string, object>>();
     var scenarioRoot = Path.Combine(user, "scenarios");
     if (Directory.Exists(scenarioRoot)) {
@@ -362,7 +526,7 @@ public static class RimeProbe {
       var ptrs = new List<IntPtr>();
       var scenarioUser = Path.Combine(scenarioRoot, SanitizePathSegment(scenario.name));
       Directory.CreateDirectory(scenarioUser);
-      var traits = Traits(shared, scenarioUser, build, modulesInput, ptrs);
+      var traits = Traits(shared, scenarioUser, build, modulesInput, identity, ptrs);
       UIntPtr session = UIntPtr.Zero;
       RimeSetup(ref traits);
       RimeInitialize(ref traits);
@@ -391,7 +555,7 @@ public static class RimeProbe {
                 var label = string.IsNullOrEmpty(action.label)
                     ? "after_input_commit"
                     : action.label;
-                results.Add(Snapshot(session, scenario.name, label, commit));
+                results.Add(Snapshot(session, scenario.name, label, commit, identity));
               }
             }
           } else if (type == "key") {
@@ -401,14 +565,14 @@ public static class RimeProbe {
               var label = string.IsNullOrEmpty(action.label)
                   ? "after_key_" + action.keycode.ToString()
                   : action.label;
-              results.Add(Snapshot(session, scenario.name, label, commit));
+              results.Add(Snapshot(session, scenario.name, label, commit, identity));
             }
           } else if (type == "set_option") {
             RimeSetOption(session, U8(action.option ?? "", ptrs), action.value);
           } else if (type == "clear") {
             RimeClearComposition(session);
           } else if (type == "snapshot") {
-            results.Add(Snapshot(session, scenario.name, action.label ?? "snapshot", null));
+            results.Add(Snapshot(session, scenario.name, action.label ?? "snapshot", null, identity));
           } else {
             throw new Exception("unsupported scenario action type: " + type);
           }
@@ -427,5 +591,201 @@ public static class RimeProbe {
       }
     }
     return results;
+  }
+
+  public static Dictionary<string, object> CaptureSchemaListWithIdentity(
+      string shared,
+      string user,
+      string build,
+      string[] modulesInput,
+      ProbeIdentity identity) {
+    var ptrs = new List<IntPtr>();
+    var traits = Traits(shared, user, build, modulesInput, identity, ptrs);
+    var result = new Dictionary<string, object>();
+    var list = new RimeSchemaList();
+    try {
+      RimeSetup(ref traits);
+      RimeInitialize(ref traits);
+      result["rime_get_schema_list"] = RimeGetSchemaList(ref list) != 0;
+      result["schemas"] = ReadSchemaList(list);
+      return result;
+    } finally {
+      if (list.list != IntPtr.Zero) {
+        RimeFreeSchemaList(ref list);
+      }
+      RimeFinalize();
+      foreach (var p in ptrs) {
+        Marshal.FreeHGlobal(p);
+      }
+    }
+  }
+
+  public static Dictionary<string, object> ProbeUserDictExportWithIdentity(
+      string shared,
+      string user,
+      string build,
+      string schema,
+      string[] modulesInput,
+      string input,
+      string dictName,
+      string exportPath,
+      ProbeIdentity identity) {
+    var ptrs = new List<IntPtr>();
+    var traits = Traits(shared, user, build, modulesInput, identity, ptrs);
+    var result = new Dictionary<string, object>();
+    UIntPtr session = UIntPtr.Zero;
+    try {
+      RimeSetup(ref traits);
+      RimeInitialize(ref traits);
+      session = RimeCreateSession();
+      if (session == UIntPtr.Zero) {
+        throw new Exception("RimeCreateSession returned zero");
+      }
+      if (RimeSelectSchema(session, U8(schema, ptrs)) == 0) {
+        throw new Exception("RimeSelectSchema failed: " + schema);
+      }
+      RimeSetOption(session, U8("ascii_mode", ptrs), 0);
+      foreach (var ch in input ?? "") {
+        RimeProcessKey(session, (int)ch, 0);
+        TakeCommit(session);
+      }
+      RimeProcessKey(session, 32, 0);
+      result["training_input"] = input;
+      result["commit_text"] = TakeCommit(session);
+      RimeDestroySession(session);
+      session = UIntPtr.Zero;
+      result["sync_user_data"] = RimeSyncUserData() != 0;
+
+      var modulePtr = RimeFindModule(U8("levers", ptrs));
+      result["levers_module_found"] = modulePtr != IntPtr.Zero;
+      if (modulePtr == IntPtr.Zero) {
+        result["export_attempted"] = false;
+        result["blocker"] = "RimeFindModule(\"levers\") returned null in the v1.1.2 oracle process";
+        return result;
+      }
+
+      var module = (RimeModule)Marshal.PtrToStructure(modulePtr, typeof(RimeModule));
+      result["levers_module_name"] = S(module.module_name);
+      if (module.get_api == IntPtr.Zero) {
+        result["export_attempted"] = false;
+        result["blocker"] = "levers module has a null get_api function pointer";
+        return result;
+      }
+
+      var getApi = Marshal.GetDelegateForFunctionPointer<GetCustomApiDelegate>(module.get_api);
+      var apiPtr = getApi();
+      result["levers_api_found"] = apiPtr != IntPtr.Zero;
+      if (apiPtr == IntPtr.Zero) {
+        result["export_attempted"] = false;
+        result["blocker"] = "levers get_api returned null";
+        return result;
+      }
+
+      var api = (RimeLeversApi)Marshal.PtrToStructure(apiPtr, typeof(RimeLeversApi));
+      result["levers_api_data_size"] = api.data_size;
+      result["export_function_found"] = api.export_user_dict != IntPtr.Zero;
+      if (api.export_user_dict == IntPtr.Zero) {
+        result["export_attempted"] = false;
+        result["blocker"] = "RimeLeversApi.export_user_dict is null";
+        return result;
+      }
+
+      var exportUserDict =
+          Marshal.GetDelegateForFunctionPointer<ExportUserDictDelegate>(api.export_user_dict);
+      result["export_attempted"] = true;
+      result["dict_name"] = dictName;
+      result["export_return"] = exportUserDict(U8(dictName, ptrs), U8(exportPath, ptrs));
+      result["export_file_exists"] = File.Exists(exportPath);
+      if (File.Exists(exportPath)) {
+        result["export_text"] = File.ReadAllText(exportPath, Encoding.UTF8);
+      }
+      return result;
+    } finally {
+      if (session != UIntPtr.Zero) {
+        RimeDestroySession(session);
+      }
+      RimeFinalize();
+      foreach (var p in ptrs) {
+        Marshal.FreeHGlobal(p);
+      }
+    }
+  }
+
+  public static List<Dictionary<string, object>> CaptureScenariosSingleServiceWithIdentity(
+      string shared,
+      string user,
+      string build,
+      string schema,
+      string[] modulesInput,
+      ProbeScenario[] scenarios,
+      ProbeIdentity identity) {
+    var results = new List<Dictionary<string, object>>();
+    var ptrs = new List<IntPtr>();
+    var traits = Traits(shared, user, build, modulesInput, identity, ptrs);
+    UIntPtr session = UIntPtr.Zero;
+    try {
+      RimeSetup(ref traits);
+      RimeInitialize(ref traits);
+
+      foreach (var scenario in scenarios) {
+        session = RimeCreateSession();
+        if (session == UIntPtr.Zero) {
+          throw new Exception("RimeCreateSession returned zero");
+        }
+        var schemaPtr = U8(schema, ptrs);
+        if (RimeSelectSchema(session, schemaPtr) == 0) {
+          throw new Exception("RimeSelectSchema failed: " + schema);
+        }
+        RimeSetOption(session, U8("ascii_mode", ptrs), 0);
+        RimeSetOption(session, U8("full_shape", ptrs), 0);
+        RimeSetOption(session, U8("ascii_punct", ptrs), 0);
+        RimeSetOption(session, U8("zh_hans", ptrs), 0);
+
+        foreach (var action in scenario.actions ?? Array.Empty<ProbeAction>()) {
+          var type = action.type ?? "";
+          if (type == "input") {
+            foreach (var ch in action.text ?? "") {
+              RimeProcessKey(session, (int)ch, 0);
+              var commit = TakeCommit(session);
+              if (commit != null) {
+                var label = string.IsNullOrEmpty(action.label)
+                    ? "after_input_commit"
+                    : action.label;
+                results.Add(Snapshot(session, scenario.name, label, commit, identity));
+              }
+            }
+          } else if (type == "key") {
+            RimeProcessKey(session, action.keycode, action.mask);
+            var commit = TakeCommit(session);
+            if (commit != null) {
+              var label = string.IsNullOrEmpty(action.label)
+                  ? "after_key_" + action.keycode.ToString()
+                  : action.label;
+              results.Add(Snapshot(session, scenario.name, label, commit, identity));
+            }
+          } else if (type == "set_option") {
+            RimeSetOption(session, U8(action.option ?? "", ptrs), action.value);
+          } else if (type == "clear") {
+            RimeClearComposition(session);
+          } else if (type == "snapshot") {
+            results.Add(Snapshot(session, scenario.name, action.label ?? "snapshot", null, identity));
+          } else {
+            throw new Exception("unsupported scenario action type: " + type);
+          }
+        }
+
+        RimeDestroySession(session);
+        session = UIntPtr.Zero;
+      }
+      return results;
+    } finally {
+      if (session != UIntPtr.Zero) {
+        RimeDestroySession(session);
+      }
+      RimeFinalize();
+      foreach (var p in ptrs) {
+        Marshal.FreeHGlobal(p);
+      }
+    }
   }
 }

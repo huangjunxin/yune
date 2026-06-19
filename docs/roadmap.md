@@ -243,11 +243,11 @@ v1.1.2 oracle binary (oracle-measured, non-circular).
 
 | # | Work item | State | Notes |
 |---|---|---|---|
-| 0 | v1.1.2 capture wrapper | Planned | Parameterize the scenario-capable `oracle-rime-probe.cs` (upstream-identity hardcoded) or add a v1.1.2 wrapper with correct oracle identity / modules / provenance + a `jyut6ping3` fixture composer. |
-| 1 | Option-toggle goldens | Planned | `combine_candidates`, `show_full_code`, `enable_sentence` captured from v1.1.2 at multiple input lengths. |
-| 2 | Completion + correction goldens | Planned | `enable_completion`/prediction and correction (minimal-distance, m-abbreviation). |
-| 3 | Schema-menu goldens | Planned | First identify the **oracle-observable** surface (config API, schema-list/switcher API, or TypeDuck-Web UI state) and capture emitted behavior — not static config inspection alone (would be circular). |
-| 4 | userdb-pronunciation **feasibility spike** | Planned | Direct userdb introspection is not in the RIME C ABI, but the **levers** ABI exposes user-dict export/import/backup hooks — *first prove* whether the behavior is capturable via seeded/imported userdb state or exported snapshots; only if not, document it as a real fork-only deferred gap. |
+| 0 | v1.1.2 capture wrapper | Done | `oracle-rime-probe.cs` has TypeDuck v1.1.2 identity support and `scripts/capture-typeduck-jyutping.ps1` composes provenance-stamped fixtures. |
+| 1 | Option-toggle goldens | Done | `jyut6ping3-m14-options.json` captures deploy-time variants for `combine_candidates`, `show_full_code`, and `enable_sentence` at multiple input lengths. |
+| 2 | Completion + correction goldens | Done | `jyut6ping3-m14-completion-correction.json` captures completion and correction variants, including the `nri` correction difference. |
+| 3 | Schema-menu goldens | Done | `jyut6ping3-m14-schema-menu.json` captures the emitted `RimeGetSchemaList` one-schema vs multi-schema surface; `hide_lone_schema` / `hide_caret` UI decoration is deferred to the M16 browser assertion. |
+| 4 | userdb-pronunciation **feasibility spike** | Done | `jyut6ping3-m14-userdb.json` proves levers export is available and captures a learned `nei5` userdb row. |
 
 ### M15 — Dictionary-driven feature parity
 
@@ -256,7 +256,7 @@ scaffolding to refine; `combine_candidates` and `show_full_code` are from scratc
 
 | # | Work item | State | Notes |
 |---|---|---|---|
-| 0 | `combine_candidates` | Planned | Candidate grouping/dedup so homophones coalesce under one row (from scratch). |
+| 0 | `combine_candidates` | Planned | Implement exactly the grouping/dedup the v1.1.2 oracle defines (grouping key, comment shape, order) — do not assume the axis before M14 captures it. From scratch. |
 | 1 | `show_full_code` | Planned | Cangjie preedit algebra for the side-lookup path (from scratch). |
 | 2 | `enable_sentence` | Planned | Refine the existing Viterbi sentence path (`translator/mod.rs` `sentence_candidate`) to match v1.1.2. |
 | 3 | completion + correction | Planned | Improve completion ranking (prefix-search exists) and tune correction/tolerance weights. |
@@ -265,13 +265,12 @@ scaffolding to refine; `combine_candidates` and `show_full_code` are from scratc
 ### M16 — TypeDuck-Web fork-parity validation
 
 Re-run the full TypeDuck-Web browser matrix with every behavior enabled; un-ignore
-the `cantonese_parity` tests; resolve the userdb-pronunciation gap per the M14
-spike (native inspection vs documented deferral). **Done = TypeDuck-Web is
+the `cantonese_parity` tests; use the M14 levers-export userdb golden for
+userdb-pronunciation behavior. **Done = TypeDuck-Web is
 fork-like for all captured target behaviors (plus the M13 AI layer), with any
-uncapturable fork-only gap explicitly listed** (e.g. userdb pronunciations if the
-M14 spike proves them uncapturable).
+uncapturable fork-only gap explicitly listed**.
 
-Detail: [`plans/m14-plan-typeduck-v112-golden-capture.md`](./plans/m14-plan-typeduck-v112-golden-capture.md), [`plans/m15-plan-typeduck-dictionary-driven-parity.md`](./plans/m15-plan-typeduck-dictionary-driven-parity.md), and [`plans/m16-plan-typeduck-web-parity-validation.md`](./plans/m16-plan-typeduck-web-parity-validation.md).
+Detail: [`plans/archive/m14-plan-typeduck-v112-golden-capture.md`](./plans/archive/m14-plan-typeduck-v112-golden-capture.md), [`plans/m15-plan-typeduck-dictionary-driven-parity.md`](./plans/m15-plan-typeduck-dictionary-driven-parity.md), and [`plans/m16-plan-typeduck-web-parity-validation.md`](./plans/m16-plan-typeduck-web-parity-validation.md).
 
 ---
 
@@ -285,9 +284,10 @@ Archived pre-M12 M10 evidence is preserved: Windows test trust, fork-only
 `config_list_append_*` helper behavior, current TypeDuck comment shaping
 fixtures, and a historical native `rime.dll`/`.lib`/headers package smoke. That
 package smoke is not an active or valid gate for the default upstream
-`rime_get_api()` table after M12. Remaining TypeDuck work is still blocked by
-five uncaptured v1.1.2 Cantonese/Jyutping goldens and the real TypeDuck-Windows
-frontend E2E.
+`rime_get_api()` table after M12. Remaining TypeDuck-Windows work is still
+blocked by a named profile ABI surface and the real TypeDuck-Windows frontend
+E2E; the TypeDuck-Web Cantonese gaps are now fixture-backed under M14 and move
+to M15/M16 implementation and browser validation.
 
 Detail: [`typeduck-windows-backend-requirements.md`](./typeduck-windows-backend-requirements.md),
 [`plans/m10-reference-typeduck-windows-contract.md`](./plans/m10-reference-typeduck-windows-contract.md),
@@ -297,7 +297,7 @@ and [`plans/m10-reference-typeduck-windows-native-build.md`](./plans/m10-referen
 
 In priority order:
 
-1. **Execute M14–M16 — TypeDuck-Web fork parity (the chosen next arc).** Capture the v1.1.2 Cantonese goldens, implement the dictionary-driven behaviors, and prove fork-like Cantonese behavior in the TypeDuck-Web browser E2E. See the M14–M16 milestones above.
+1. **Execute M15–M16 — TypeDuck-Web fork parity (the chosen next arc).** M14 captured the v1.1.2 Cantonese goldens; next implement the dictionary-driven behaviors and prove fork-like Cantonese behavior in the TypeDuck-Web browser E2E. See the M14–M16 milestones above.
 2. **Preserve the upstream-first baseline.** Keep default `RimeApi` and core behavior aligned to upstream `1.17.0`; add new TypeDuck fork-only behavior only behind an explicit profile surface.
 3. **Keep M9/M13 web gates green on merge.** Preserve the reproducible Emscripten build, TypeScript runtime tests/build, TypeDuck-Web worker build, real-assets browser evidence, native `typeduck_web` fallback, and default-off M13 AI scenarios.
 4. **Hold Track 2 (M17–M19) lighter until TypeDuck-Web parity is proven.** The upstream language model, prism generation, deployment-write, and breadth schemas advance opportunistically per the scope ledger — not ahead of M14–M16.
@@ -308,7 +308,7 @@ In priority order:
 ## Beyond M12 — trajectory & scope ledger
 
 Priority is set by what a *named* (A)/(B) target needs, not by librime's feature
-list. **TypeDuck `jyut6ping3` reconciliation is now the active arc — see M14–M16
+list. **TypeDuck `jyut6ping3` reconciliation is now the active arc — see M15–M16
 above.** The remaining arc is **Track 2 (broad upstream depth), kept lighter until
 TypeDuck-Web fork parity is proven:**
 

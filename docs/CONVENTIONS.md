@@ -535,16 +535,20 @@ calls are local library/CLI/FFI (native or in-browser WASM). User dictionaries a
 
 ## 9. Key Risks / Concerns (current)
 
-**M9 web validation is complete — residual risk is regression (keep gates
-green).** The engine now runs through the real TypeDuck-Web browser E2E: the
-HR-5 real-assets matrix passes (composition, paging, selection, deletion,
-Space/phrase commit, deploy, customize, persistence sync, reload, dictionary
-panel) against `jyut6ping3_mobile`, and HR-7 recorded **GO WITH CONDITIONS**.
-The remaining concern is keeping it green: preserve the reproducible Emscripten
-build, the runtime tests/build, the TypeDuck-Web worker build, and the committed
-browser evidence on every merge. Files: `typeduck_web.rs`,
-`packages/yune-typeduck-runtime/`, `scripts/typeduck-wasm-build.sh`,
-`docs/plans/archive/m09-plan-typeduck-web-validation.md`.
+**M9/M13 TypeDuck-Web validation is complete — residual risk is regression
+(keep gates green).** The engine now runs through the real TypeDuck-Web browser
+E2E: the HR-5 real-assets matrix passes (composition, paging, selection,
+deletion, Space/phrase commit, deploy, customize, persistence sync, reload,
+dictionary panel) against `jyut6ping3_mobile`, and HR-7 recorded **GO WITH
+CONDITIONS**. M13 added the default-off, local-only AI second pass with browser
+evidence for AI-off identity, source labels, no default AI auto-commit, and
+explicit AI selection. Preserve the reproducible Emscripten build, runtime
+tests/build, TypeDuck-Web worker build, native `typeduck_web` fallback, committed
+browser evidence, and default-off AI scenarios on every merge. Files:
+`typeduck_web.rs`, `packages/yune-typeduck-runtime/`,
+`scripts/typeduck-wasm-build.sh`,
+`docs/plans/archive/m09-plan-typeduck-web-validation.md`,
+`docs/plans/archive/m13-plan-ai-native-frontend-exposure.md`.
 
 **Upstream latest-stable behavioral closeout is complete for the first
 `luna_pinyin` gate.** Default core behavior and default `RimeApi` follow
@@ -565,13 +569,17 @@ TypeDuck-Windows/weasel frontend E2E also remains blocked: the pinned fork
 checkout lacked the referenced integration-plan files, and local frontend build
 tools (`msbuild.exe`, `cmake.exe`, etc.) were not on PATH.
 
-**Comment-parity oracle gaps (narrowed).** HR-6 added oracle coverage for the reverse-lookup
-`"; "` joiner (`comments.join("; ")` in `filter/mod.rs`) and schema-name-in-prompt parity, so
-those are now byte-locked. **Still not golden-covered:** five Cantonese/Jyutping parity cases
-remain `#[ignore]`d pending dedicated v1.1.2 goldens (options `combine_candidates`/`show_full_code`/
-`enable_sentence`; completion/prediction; correction minimal-distance + m-abbreviation; schema-
-menu hiding; per-entry userdb pronunciation). Regressions in those pass CI because no
-oracle asserts them.
+**TypeDuck `jyut6ping3` fork-parity arc is active but not complete.** HR-6 added
+oracle coverage for the reverse-lookup `"; "` joiner (`comments.join("; ")` in
+`filter/mod.rs`) and schema-name-in-prompt parity, so those are byte-locked. The
+remaining Cantonese/Jyutping gaps are now tracked by M14-M16, not loose backlog:
+M14 captured TypeDuck-HK/librime `v1.1.2` goldens, M15 implements
+dictionary-driven behavior, and M16 proves it in TypeDuck-Web. Until M15/M16
+land, the five `cantonese_parity` cases remain `#[ignore]`d (options
+`combine_candidates`/`show_full_code`/`enable_sentence`; completion/prediction;
+correction minimal-distance + m-abbreviation; schema-menu hiding; per-entry
+userdb pronunciation), so do not claim TypeDuck-Web fork parity beyond
+fixture-backed capture.
 
 **Process-global single RIME service.** Runtime paths, sessions, module pointers, notifications,
 state-label cache, API tables, and switcher registries are process-wide singletons (e.g.
@@ -608,4 +616,4 @@ Planning, decisions, and conventions live under `docs/` — there is no external
 
 ---
 
-*Last reviewed: 2026-06-19 - M13 TypeDuck-Web AI exposure complete; default RimeApi follows upstream 1.17.0 and TypeDuck-Windows ABI/package work is parked pending a named profile surface.*
+*Last reviewed: 2026-06-19 - M13 TypeDuck-Web AI exposure complete; M14 TypeDuck `jyut6ping3` v1.1.2 capture complete; M15/M16 fork-parity implementation/browser validation active; default RimeApi follows upstream 1.17.0 and TypeDuck-Windows ABI/package work is parked pending a named profile surface.*

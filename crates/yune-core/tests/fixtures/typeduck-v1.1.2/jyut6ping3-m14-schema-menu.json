@@ -1,0 +1,116 @@
+{
+    "oracle":  {
+                   "engine":  "TypeDuck-HK/librime",
+                   "engine_tag":  "v1.1.2",
+                   "engine_commit":  "74cb52b78fb2411137a7643f6c8bc6517acfde69",
+                   "canonical_repository":  "https://github.com/TypeDuck-HK/librime",
+                   "release_url":  "https://github.com/TypeDuck-HK/librime/releases/tag/v1.1.2",
+                   "release_asset":  "rime-TypeDuck-v1.1.2-Windows-msvc-x64.7z",
+                   "dependency_asset":  "rime-deps-TypeDuck-v1.1.2-Windows-msvc-x64.7z",
+                   "plugin":  "TypeDuck-HK/rime-dictionary-lookup-filter",
+                   "plugin_commit":  "3e4605c4fae99f068df2edb85aaeab5a97752795",
+                   "schema":  "TypeDuck-HK/schema",
+                   "schema_commit":  "1bed1ae6a0ab48055f073774d7dfd152a171c548",
+                   "capture_date":  "2026-06-19",
+                   "capture_command":  "powershell -ExecutionPolicy Bypass -File scripts/capture-typeduck-jyutping.ps1 -Fixture SchemaMenu",
+                   "host":  "Windows"
+               },
+    "schema":  "mixed",
+    "schemas":  [
+                    "jyut6ping3",
+                    "jyut6ping3_mobile"
+                ],
+    "module_list":  [
+                        "default",
+                        "dictionary_lookup"
+                    ],
+    "scenarios":  [
+                      "schema_menu_hiding"
+                  ],
+    "capture":  {
+                    "schema_data":  "TypeDuck-HK/schema",
+                    "schema_data_commit":  "1bed1ae6a0ab48055f073774d7dfd152a171c548",
+                    "dictionary":  "jyut6ping3.dict.yaml",
+                    "source_row_policy":  "typeduck_v112_schema_list_emitted_surface",
+                    "candidate_layout":  "TypeDuck v1.1.2 RimeCandidate includes quality before reserved",
+                    "option_delivery":  "deploy-time common.custom.yaml/default.custom.yaml variants; runtime set_option does not apply these schema __patch hooks",
+                    "modules":  [
+                                    "default",
+                                    "dictionary_lookup"
+                                ],
+                    "oracle_observable_surface":  "RimeGetSchemaList emits selected schema rows; hide_lone_schema/hide_caret are switcher/frontend decoration, not candidate ABI rows",
+                    "m16_delivery":  "assert TypeDuck-Web UI behavior against one-schema and multi-schema emitted lists"
+                },
+    "cases":  [
+                  {
+                      "variant":  "one_schema_default",
+                      "patches":  [
+
+                                  ],
+                      "default_custom_mode":  "Remove",
+                      "rime_get_schema_list":  true,
+                      "schemas":  [
+                                      {
+                                          "index":  0,
+                                          "schema_id":  "jyut6ping3",
+                                          "name":  "粵語拼音"
+                                      }
+                                  ]
+                  },
+                  {
+                      "variant":  "mobile_multi_schema_custom",
+                      "patches":  [
+
+                                  ],
+                      "default_custom_mode":  "Keep",
+                      "rime_get_schema_list":  true,
+                      "schemas":  [
+                                      {
+                                          "index":  0,
+                                          "schema_id":  "jyut6ping3_mobile",
+                                          "name":  "粵語拼音"
+                                      },
+                                      {
+                                          "index":  1,
+                                          "schema_id":  "jyut6ping3_mobile_longpress",
+                                          "name":  "粵語拼音"
+                                      },
+                                      {
+                                          "index":  2,
+                                          "schema_id":  "jyut6ping3_mobile_10keys",
+                                          "name":  "九宮格粵語拼音"
+                                      },
+                                      {
+                                          "index":  3,
+                                          "schema_id":  "jyut6ping3_scolar",
+                                          "name":  "jyut6ping3_scolar"
+                                      },
+                                      {
+                                          "index":  4,
+                                          "schema_id":  "luna_pinyin",
+                                          "name":  "普通話"
+                                      },
+                                      {
+                                          "index":  5,
+                                          "schema_id":  "loengfan",
+                                          "name":  "粵語兩分"
+                                      },
+                                      {
+                                          "index":  6,
+                                          "schema_id":  "loengfan_longpress",
+                                          "name":  "粵語兩分"
+                                      },
+                                      {
+                                          "index":  7,
+                                          "schema_id":  "cangjie3",
+                                          "name":  "倉頡三代"
+                                      },
+                                      {
+                                          "index":  8,
+                                          "schema_id":  "cangjie5",
+                                          "name":  "倉頡五代"
+                                      }
+                                  ]
+                  }
+              ]
+}
