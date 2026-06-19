@@ -4,12 +4,15 @@
 
 **Core value:** existing RIME schemas and frontends should behave predictably through Yune, with every compatibility difference measured against librime before it is accepted.
 
+**Goal shape — target-driven, not feature-complete:** the oracle is a behavioral *floor*, not a feature checklist. Success means the *named* targets behave correctly versus the oracle — today the `luna_pinyin` core path (vs upstream `1.17.0`) and the TypeDuck `jyut6ping3` profile (vs `v1.1.2`) — broadening to common RIME schemas over time. The **AI-native layer librime cannot provide is the product north star**, not parity for its own sake; bit-for-bit librime feature parity is an explicit non-goal. A librime feature is implemented only when a named target needs it. See `decisions.md` D-24 (oracle precedence) and D-25 (target-driven scope).
+
 ## Canonical docs — read these
 
 - **[docs/CONVENTIONS.md](docs/CONVENTIONS.md) — start here.** The single reference for architecture, stack, repo structure, coding & testing conventions, C ABI rules, integrations, and current risks.
-- [docs/roadmap.md](docs/roadmap.md) - milestones and what's next (current baseline: **upstream-first after M12 closeout**).
+- [docs/roadmap.md](docs/roadmap.md) — milestones and what's next (M14–M16 and FORK-PARITY-01..09 complete; preserve web gates, advance Track 2 M17–M19 upstream depth, and define named platform tracks such as iOS before implementation).
 - [docs/decisions.md](docs/decisions.md) — the decision log (standing principles + `D-*` entries).
 - [docs/requirements.md](docs/requirements.md) — requirement IDs and their status.
+- [docs/fork-parity-ledger.md](docs/fork-parity-ledger.md) — **source of truth for every Cantoboard/TypeDuck fork improvement vs upstream `1.17.0`** (origin, category, Yune status: done / todo / deferred / non-goal). **Consult before touching TypeDuck/Cantonese parity** so a fork improvement is not silently lost or re-derived.
 - [docs/plans/](docs/plans/) — per-stage execution plans (active at the top, finished ones under `plans/archive/`).
 
 ## Key constraints

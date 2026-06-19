@@ -1,6 +1,6 @@
 # TypeDuck-Web Adapter
 
-> **Status:** Active · **Milestone:** M9 (TypeDuck-Web browser validation) · **Updated:** 2026-06-19 · **Type:** reference
+> **Status:** Reference · **Milestone:** M9 TypeDuck-Web browser validation + M13 AI surface · **Updated:** 2026-06-19 · **Type:** reference
 
 Yune exposes a small TypeDuck-Web-shaped C/WASM bridge from `yune-rime-api`. It is a facade over the existing `RimeApi` lifecycle, not a vendored TypeDuck-Web fork or a complete browser package.
 
@@ -15,6 +15,9 @@ The adapter exports prefixed symbols so it does not collide with librime-style A
 - `yune_typeduck_flip_page(state, backward) -> *mut YuneTypeDuckResponse`
 - `yune_typeduck_customize(state, config_id, key, value) -> Bool`
 - `yune_typeduck_deploy(state) -> Bool`
+- `yune_typeduck_set_option(state, option_name, value) -> Bool` *(M9: runtime option toggle)*
+- `yune_typeduck_set_ai_enabled(state, enabled) -> Bool` *(M13: default-off AI toggle; disabling clears staged AI)*
+- `yune_typeduck_stage_ai(state) -> *mut YuneTypeDuckResponse` *(M13: second-pass local AI; `process_key` stays provider-free)*
 - `yune_typeduck_cleanup(state)`
 - `yune_typeduck_response_json(response) -> *const c_char`
 - `yune_typeduck_response_handled(response) -> Bool`
@@ -47,7 +50,7 @@ Responses contain:
     "select_keys": "12345",
     "select_labels": [],
     "candidates": [
-      { "text": "八", "comment": "" }
+      { "text": "八", "comment": "", "source": null }
     ]
   },
   "status": {
@@ -63,6 +66,8 @@ Responses contain:
   }
 }
 ```
+
+Each candidate may carry an optional `source` field — `"ai:local"` for M13 AI rows, absent or `null` for classic candidates.
 
 If an operation cannot capture normal state, the response may include an `error` string.
 
@@ -141,7 +146,7 @@ Stale deployed config recovery is local-first and deterministic. Recover by sync
 
 ## WASM build/export contract
 
-The intended browser build target is `wasm32-unknown-emscripten`. Phase 7 keeps the adapter in `crates/yune-rime-api`; the crate already builds as `rlib`/`cdylib`, and `src/lib.rs` should remain facade wiring for `typeduck_web` rather than owned browser-build logic. This contract does not require upstream TypeDuck-Web source access; replacing or patching the upstream app is a later integration step.
+The intended browser build target is `wasm32-unknown-emscripten`. Phase 7 keeps the adapter in `crates/yune-rime-api`; the crate already builds as `rlib`/`cdylib`, and `src/lib.rs` should remain facade wiring for `typeduck_web` rather than owned browser-build logic. This reference owns the Yune adapter/export contract; the real TypeDuck-Web patch and browser E2E now live under `third_party/typeduck-web/` as regression gates, not future prerequisites.
 
 Use one repository command path for the browser build/export check:
 
@@ -179,6 +184,9 @@ yune_typeduck_delete_candidate
 yune_typeduck_flip_page
 yune_typeduck_deploy
 yune_typeduck_customize
+yune_typeduck_set_option
+yune_typeduck_set_ai_enabled
+yune_typeduck_stage_ai
 yune_typeduck_cleanup
 yune_typeduck_response_json
 yune_typeduck_response_handled
@@ -188,7 +196,7 @@ yune_typeduck_free_response
 Emscripten must receive the same list with underscore-prefixed native names so optimization does not remove JS-callable adapter functions:
 
 ```bash
--sEXPORTED_FUNCTIONS=_yune_typeduck_init,_yune_typeduck_process_key,_yune_typeduck_select_candidate,_yune_typeduck_delete_candidate,_yune_typeduck_flip_page,_yune_typeduck_deploy,_yune_typeduck_customize,_yune_typeduck_cleanup,_yune_typeduck_response_json,_yune_typeduck_response_handled,_yune_typeduck_free_response
+-sEXPORTED_FUNCTIONS=_yune_typeduck_init,_yune_typeduck_process_key,_yune_typeduck_select_candidate,_yune_typeduck_delete_candidate,_yune_typeduck_flip_page,_yune_typeduck_deploy,_yune_typeduck_customize,_yune_typeduck_set_option,_yune_typeduck_set_ai_enabled,_yune_typeduck_stage_ai,_yune_typeduck_cleanup,_yune_typeduck_response_json,_yune_typeduck_response_handled,_yune_typeduck_free_response
 -sEXPORTED_RUNTIME_METHODS=ccall,cwrap,UTF8ToString
 ```
 
@@ -270,9 +278,12 @@ The public wrapper operations map directly to the adapter contract:
 | `runtime.flipPage(backward)` | `yune_typeduck_flip_page` |
 | `runtime.deploy()` | `yune_typeduck_deploy` |
 | `runtime.customize(configId, key, value)` | `yune_typeduck_customize` |
+| `runtime.setOption(optionName, value)` | `yune_typeduck_set_option` |
+| `runtime.setAiEnabled(enabled)` | `yune_typeduck_set_ai_enabled` |
+| `runtime.stageAi()` | `yune_typeduck_stage_ai` |
 | `runtime.cleanup()` | `yune_typeduck_cleanup` |
 
-Candidate indices are page-relative, matching the native adapter contract. `deploy` and `customize` are explicit operations; after either operation, the browser host should sync IDBFS or equivalent persistent storage back to disk. Wrapper callers can use `deployAndSync(runtime, fs)` or `customizeAndSync(runtime, fs, configId, key, value)` to preserve the required order without changing `TypeDuckRuntime` lifecycle ownership.
+Candidate indices are page-relative, matching the native adapter contract. `deploy` and `customize` are explicit operations; after either operation, the browser host should sync IDBFS or equivalent persistent storage back to disk. Wrapper callers can use `deployAndSync(runtime, fs)` or `customizeAndSync(runtime, fs, configId, key, value)` to preserve the required order without changing `TypeDuckRuntime` lifecycle ownership. AI remains a second-pass flow: `processKey` is classic-first and provider-free, `setAiEnabled(false)` clears staged AI rows for the current input, and `stageAi()` returns the local-only AI update when enabled.
 
 ### Wrapper response ownership
 
@@ -332,12 +343,10 @@ cleanup(state);
 
 ## Current scope
 
-This adapter is native-tested through Rust integration tests. Phase 8 adds the package-local TypeScript wrapper, and Phase 9 adds the package-local browser filesystem/persistence helper contract documented above. It does not yet include:
+This adapter is native-tested through Rust integration tests, with the package-local TypeScript wrapper and browser filesystem/persistence helpers documented above. **M9** patched the real TypeDuck-Web app onto this surface and proved it in a real browser (HR-5/HR-7, GO WITH CONDITIONS); **M13** added a default-off, local-only AI surface (`set_ai_enabled` + the second-pass `stage_ai`) with committed browser evidence. It does not include:
 
-- TypeDuck-Web source cloning, source patches, or bridge replacement; Phase 10 owns that integration.
-- Real browser end-to-end coverage; Phase 10 owns browser app validation after the upstream seam is known.
 - Generated bindings, broad frontend bundler scaffolding, or root JavaScript workspace setup.
-- Browser application policy for choosing storage quota behavior, remote asset discovery, CDN/cache strategy, or service-worker lifecycle; Phase 09 helpers stay local-first and caller-driven.
+- Browser application policy for choosing storage quota behavior, remote asset discovery, CDN/cache strategy, or service-worker lifecycle; helpers stay local-first and caller-driven.
 - Native export expansion for persistence or userdb notification symbols; userdb persistence remains an explicit host sync boundary.
 - Multi-instance isolation beyond one active process-global Yune/RIME service.
-- AI provider, ranking, context, memory, or privacy behavior; those remain deferred to a future milestone.
+- Remote AI providers, and AI exposure in non-TypeDuck-Web frontends; those remain deferred (M13 is local-only and TypeDuck-Web-only). See [m11-design-ai-native.md](./m11-design-ai-native.md).
