@@ -7,7 +7,7 @@ use crate::{
     parse_key_sequence, AiDecision, AiResult, Candidate, CandidateFilter, CandidateRanker,
     CandidateSource, CommitRecord, Composition, Context, EchoTranslator, KeyCode, KeyEvent,
     KeyModifiers, KeySequenceParseError, MemoryStore, RerankResult, Snapshot, StagedAiCandidates,
-    Status, Translator, UserDb, UserDbCommitMetadata, UserDbLookupRequest,
+    Status, Translator, UserDb, UserDbCommitMetadata, UserDbLookupRequest, UserDbLookupResult,
 };
 
 pub struct Engine {
@@ -26,6 +26,8 @@ pub struct Engine {
 }
 
 const DEFAULT_PAGE_SIZE: usize = 5;
+const TYPEDUCK_E_SQUARED: f32 = 7.389_056;
+const TYPEDUCK_EXP_E_SQUARED: f32 = 1618.178;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum CommitIntent {
@@ -52,6 +54,59 @@ fn next_char_boundary(input: &str, caret: usize) -> Option<usize> {
         .chars()
         .next()
         .map(|character| caret + character.len_utf8())
+}
+
+fn learning_code_for_candidate(input: &str, candidate: &Candidate) -> String {
+    let primary_records = primary_dictionary_lookup_records(&candidate.comment);
+    if primary_records.is_empty() {
+        input.to_owned()
+    } else if candidate.source == CandidateSource::Sentence {
+        let exact_codes = primary_records
+            .iter()
+            .filter(|record| record.text == candidate.text)
+            .map(|record| record.code.as_str())
+            .collect::<Vec<_>>();
+        if exact_codes.is_empty() {
+            primary_records
+                .iter()
+                .map(|record| record.code.as_str())
+                .collect::<Vec<_>>()
+                .join(" ")
+        } else {
+            exact_codes.join(" ")
+        }
+    } else {
+        primary_records[0].code.clone()
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct PrimaryDictionaryLookupRecord {
+    text: String,
+    code: String,
+}
+
+fn primary_dictionary_lookup_records(comment: &str) -> Vec<PrimaryDictionaryLookupRecord> {
+    let Some((_, lookup_comment)) = comment.split_once('\u{000c}') else {
+        return Vec::new();
+    };
+    lookup_comment
+        .split('\r')
+        .filter(|record| !record.is_empty())
+        .filter_map(|record| {
+            let (flag, fields) = record.split_once(',')?;
+            if flag != "1" {
+                return None;
+            }
+            let mut fields = fields.split(',');
+            let text = fields.next()?.trim();
+            let code = fields.next()?.trim();
+            (!code.is_empty()).then(|| PrimaryDictionaryLookupRecord {
+                text: text.to_owned(),
+                code: code.to_owned(),
+            })
+        })
+        .collect()
 }
 
 impl Default for Engine {
@@ -638,6 +693,7 @@ impl Engine {
         self.context.candidates = vec![Candidate {
             comment: punctuation_candidate_comment(&text).to_owned(),
             text,
+            preedit: None,
             source: CandidateSource::Punctuation,
             quality: 1.0,
         }];
@@ -837,14 +893,13 @@ impl Engine {
         let input = self.context.composition.input.clone();
         let segment_start = 0;
         let segment_end = input.len();
-        let (text, candidate_source) = self
-            .context
-            .candidates
-            .get(candidate_index)
-            .map(|candidate| (candidate.text.clone(), candidate.source.clone()))?;
+        let candidate = self.context.candidates.get(candidate_index).cloned()?;
+        let text = candidate.text.clone();
+        let candidate_source = candidate.source.clone();
         if intent == CommitIntent::DefaultConfirm && candidate_source.is_ai() {
             return None;
         }
+        let code = learning_code_for_candidate(&input, &candidate);
         self.commit_tick = self.commit_tick.saturating_add(1);
         let learning = UserDbCommitMetadata::new(
             input.clone(),
@@ -853,7 +908,8 @@ impl Engine {
             segment_start,
             segment_end,
             self.commit_tick,
-        );
+        )
+        .with_code(code);
         if candidate_source.is_ai() {
             self.pending_userdb_learning = None;
             self.ai_memory.record_commit(&self.context, &learning);
@@ -874,6 +930,7 @@ impl Engine {
         self.commit_tick = self.commit_tick.saturating_add(1);
         let segment_end = input.len();
         let metadata = UserDbCommitMetadata {
+            code: input.clone(),
             input,
             selected_text: text,
             candidate_type: candidate_type.into(),
@@ -911,18 +968,18 @@ impl Engine {
                 )
             })
             .collect::<Vec<_>>();
-        candidates.extend(
-            self.userdb
-                .lookup(&UserDbLookupRequest::new(input.as_str()).with_predictive(true))
-                .into_iter()
-                .map(|result| result.candidate()),
-        );
         candidates.sort_by(|left, right| {
             right
                 .quality
                 .partial_cmp(&left.quality)
                 .unwrap_or(Ordering::Equal)
         });
+        merge_userdb_candidates(
+            &input,
+            &mut candidates,
+            self.userdb
+                .lookup(&UserDbLookupRequest::new(input.as_str()).with_predictive(true)),
+        );
         for filter in &self.filters {
             filter.apply_with_context(&mut candidates, &self.options, &self.context);
         }
@@ -935,6 +992,61 @@ impl Engine {
             merge_classic_and_staged_ai(&input, candidates, self.staged_ai_result.as_ref());
         self.context.highlighted = 0;
     }
+}
+
+fn merge_userdb_candidates(
+    input: &str,
+    candidates: &mut Vec<Candidate>,
+    userdb_results: Vec<UserDbLookupResult>,
+) {
+    let input_code_len = comparable_userdb_code_len(input);
+    for result in userdb_results {
+        let user_code_len = result.comparable_code_len();
+        let user_candidate = result.candidate();
+        let mut insertion_index = if user_code_len > input_code_len {
+            candidates
+                .iter()
+                .position(|candidate| candidate.source != CandidateSource::UserTable)
+                .unwrap_or(candidates.len())
+        } else if result.is_multi_segment_code() && user_code_len == input_code_len {
+            candidates
+                .iter()
+                .position(|candidate| {
+                    candidate_comparable_code_len(candidate, input_code_len) < user_code_len
+                })
+                .unwrap_or(candidates.len())
+        } else {
+            equal_code_user_phrase_insert_index(user_candidate.quality, candidates.len())
+        };
+        while insertion_index < candidates.len()
+            && candidates[insertion_index].source == CandidateSource::UserTable
+        {
+            insertion_index += 1;
+        }
+        candidates.insert(insertion_index, user_candidate);
+    }
+}
+
+fn equal_code_user_phrase_insert_index(user_quality: f32, candidates_len: usize) -> usize {
+    let probability = (user_quality - 0.5).max(0.0);
+    let threshold = (TYPEDUCK_E_SQUARED - probability * TYPEDUCK_EXP_E_SQUARED)
+        .max(0.0)
+        .ceil() as usize;
+    threshold.min(candidates_len)
+}
+
+fn candidate_comparable_code_len(candidate: &Candidate, input_code_len: usize) -> usize {
+    if candidate.source == CandidateSource::Sentence {
+        input_code_len
+    } else {
+        comparable_userdb_code_len(&candidate.comment)
+    }
+}
+
+fn comparable_userdb_code_len(code: &str) -> usize {
+    code.chars()
+        .filter(|ch| !ch.is_ascii_digit() && !ch.is_whitespace())
+        .count()
 }
 
 fn merge_classic_and_staged_ai(

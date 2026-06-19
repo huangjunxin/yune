@@ -2,6 +2,7 @@
 pub struct Candidate {
     pub text: String,
     pub comment: String,
+    pub preedit: Option<String>,
     pub source: CandidateSource,
     pub quality: f32,
 }

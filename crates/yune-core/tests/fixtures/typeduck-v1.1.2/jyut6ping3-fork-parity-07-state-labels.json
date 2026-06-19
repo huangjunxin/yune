@@ -1,0 +1,71 @@
+{
+    "oracle":  {
+                   "engine":  "TypeDuck-HK/librime",
+                   "engine_tag":  "v1.1.2",
+                   "engine_commit":  "74cb52b78fb2411137a7643f6c8bc6517acfde69",
+                   "canonical_repository":  "https://github.com/TypeDuck-HK/librime",
+                   "release_url":  "https://github.com/TypeDuck-HK/librime/releases/tag/v1.1.2",
+                   "release_asset":  "rime-TypeDuck-v1.1.2-Windows-msvc-x64.7z",
+                   "dependency_asset":  "rime-deps-TypeDuck-v1.1.2-Windows-msvc-x64.7z",
+                   "plugin":  "TypeDuck-HK/rime-dictionary-lookup-filter",
+                   "plugin_commit":  "3e4605c4fae99f068df2edb85aaeab5a97752795",
+                   "schema":  "TypeDuck-HK/schema",
+                   "schema_commit":  "1bed1ae6a0ab48055f073774d7dfd152a171c548",
+                   "capture_date":  "2026-06-19",
+                   "capture_command":  "powershell -ExecutionPolicy Bypass -File scripts/capture-typeduck-jyutping.ps1 -Fixture StateLabels",
+                   "host":  "Windows"
+               },
+    "schema":  "jyut6ping3_mobile",
+    "schemas":  [
+                    "jyut6ping3_mobile"
+                ],
+    "module_list":  [
+                        "default",
+                        "dictionary_lookup"
+                    ],
+    "scenarios":  [
+                      "state_labels"
+                  ],
+    "capture":  {
+                    "schema_data":  "TypeDuck-HK/schema",
+                    "schema_data_commit":  "1bed1ae6a0ab48055f073774d7dfd152a171c548",
+                    "dictionary":  "jyut6ping3.dict.yaml",
+                    "source_row_policy":  "typeduck_v112_full_shape_state_labels",
+                    "candidate_layout":  "TypeDuck v1.1.2 RimeCandidate includes quality before reserved",
+                    "option_delivery":  "deploy-time common.custom.yaml/default.custom.yaml variants; runtime set_option does not apply these schema __patch hooks",
+                    "modules":  [
+                                    "default",
+                                    "dictionary_lookup"
+                                ],
+                    "oracle_observable_surface":  "RimeGetStateLabel full_shape returns TypeDuck Traditional labels",
+                    "schema_source_file":  "TypeDuck-HK/schema/template.yaml",
+                    "deployed_schema_file":  "jyut6ping3_mobile.schema.yaml"
+                },
+    "cases":  [
+                  {
+                      "variant":  "state_labels_mobile",
+                      "schema_id":  "jyut6ping3_mobile",
+                      "schema_name":  "粵語拼音",
+                      "patches":  [
+
+                                  ],
+                      "default_custom_mode":  "Keep",
+                      "labels":  [
+                                     {
+                                         "option":  "full_shape",
+                                         "state":  0,
+                                         "label":  "半形",
+                                         "abbreviated_label":  "半",
+                                         "abbreviated_length":  3
+                                     },
+                                     {
+                                         "option":  "full_shape",
+                                         "state":  1,
+                                         "label":  "全形",
+                                         "abbreviated_label":  "全",
+                                         "abbreviated_length":  3
+                                     }
+                                 ]
+                  }
+              ]
+}

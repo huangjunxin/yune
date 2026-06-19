@@ -310,6 +310,7 @@ impl AiCandidateProvider for MockAiProvider {
             candidates: vec![Candidate {
                 text: text.to_owned(),
                 comment: "ai:mock 0.62".to_owned(),
+                preedit: None,
                 source: CandidateSource::ai("mock", AiConfidence::from_score(0.62)),
                 quality: 0.0,
             }],
@@ -376,6 +377,7 @@ mod tests {
                 candidates: vec![Candidate {
                     text: "remote".to_owned(),
                     comment: "ai:remote 0.80".to_owned(),
+                    preedit: None,
                     source: CandidateSource::ai("remote", AiConfidence::from_score(0.80)),
                     quality: 0.0,
                 }],
@@ -515,6 +517,7 @@ mod tests {
         context.candidates.push(Candidate {
             text: "你好".to_owned(),
             comment: "nihao".to_owned(),
+            preedit: None,
             source: CandidateSource::Table,
             quality: 1.0,
         });

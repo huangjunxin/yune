@@ -24,6 +24,7 @@ AI-native behavior on top as a separate product milestone.
 - [`decisions.md`](./decisions.md) — the consolidated decision log (standing principles + `D-*` entries).
 - [`requirements.md`](./requirements.md) — requirement IDs and their status.
 - [`typeduck-windows-backend-requirements.md`](./typeduck-windows-backend-requirements.md) - the parked TypeDuck-Windows compatibility-profile contract.
+- [`fork-parity-ledger.md`](./fork-parity-ledger.md) — the single source of truth for *every* Cantoboard + TypeDuck fork improvement vs upstream `1.17.0`, with origin, category, and Yune status (done / todo / non-goal). Sourced from [`CANTOBOARD_LIBRIME_REBASE_SUMMARY.md`](./CANTOBOARD_LIBRIME_REBASE_SUMMARY.md) and [`REBASE_SUMMARY_SINCE_D8BC266D.md`](./REBASE_SUMMARY_SINCE_D8BC266D.md).
 - [`plans/`](./plans/) — per-stage implementation plans, findings, build notes, and validation artifacts (finished ones under `plans/archive/`).
 
 > The GSD planning system (`.planning/`) has been retired; its durable content now lives in `decisions.md`, `requirements.md`, and `CONVENTIONS.md`.
@@ -278,6 +279,23 @@ export fixtures rather than claimed as browser UI coverage.
 
 Detail: [`plans/archive/m14-plan-typeduck-v112-golden-capture.md`](./plans/archive/m14-plan-typeduck-v112-golden-capture.md), [`plans/archive/m15-plan-typeduck-dictionary-driven-parity.md`](./plans/archive/m15-plan-typeduck-dictionary-driven-parity.md), and [`plans/archive/m16-plan-typeduck-web-parity-validation.md`](./plans/archive/m16-plan-typeduck-web-parity-validation.md).
 
+> **Scope of M14–M16, and what it did *not* cover.** M14–M16 closed the *captured*
+> `jyut6ping3_mobile` browser surface. A fuller audit of **all** Cantoboard + TypeDuck
+> fork improvements vs upstream `1.17.0` now lives in
+> [`fork-parity-ledger.md`](./fork-parity-ledger.md). Two corrections it records:
+> (1) **F2 (`santai`→身體/身體健康 prefix prediction) and F4 (auto-compose-only-as-fallback)
+> are upstream `1.17.0` behaviors, not fork inventions** — Yune preserves them by tracking
+> upstream, not by porting fork code; only the fork's *prediction ranking* differs.
+> (2) **The Cantonese 容錯 (fuzzy) ruleset was previously stripped on dictionaries >50k
+> entries** (`schema_install.rs:237-260`); the production `jyut6ping3_scolar` dict is
+> ~127k rows, so this became the highest-priority TypeDuck Cantonese engine-parity
+> backlog item and is now covered by a real-dictionary golden.
+>
+> **Backlog closeout:** FORK-PARITY-01..09 are now implemented or explicitly decided.
+> F08 keeps upstream `1.17.0` ranking semantics while preserving long-entry prediction
+> and adding profile controls for prediction thresholds / never-first behavior. F09 is
+> intentionally UI-side for TypeDuck-Web display-language selection.
+
 ---
 
 ## Parked - M10: TypeDuck-Windows native backend
@@ -307,6 +325,7 @@ In priority order:
 2. **Keep M9/M13/M16 web gates green on merge.** Preserve the reproducible Emscripten build, TypeScript runtime tests/build, TypeDuck-Web worker build, real-assets browser evidence, native `typeduck_web` fallback, and default-off M13 AI scenarios.
 3. **Advance Track 2 (M17–M19) opportunistically.** The upstream language model, prism generation, deployment-write, and breadth schemas now follow the upstream-first scope ledger after the M14–M16 TypeDuck-Web closeout.
 4. **Resume TypeDuck profile work only with a named surface.** Return to TypeDuck-Windows packaging after the profile ABI is defined and fork-header slot smoke is re-derived.
+5. **Add a future iOS keyboard-developer track before TypeDuck iOS work starts.** Treat the Cantoboard/TypeDuck iOS build repositories as platform-integration provenance, not as engine-parity code to port. The track should define Yune-native iOS packaging, Swift/Obj-C host bindings, resource bundling, sandboxed userdb/storage, keyboard-extension lifecycle limits, and mobile-specific configuration hooks.
 
 ---
 
@@ -328,6 +347,11 @@ TypeDuck-Web fork parity is proven:**
 - **AI-native frontend expansion** — the proven TypeDuck-Web surface stays
   default-off; Windows and other native frontend exposure wait for their own
   safety evidence.
+- **iOS keyboard developer track** — future TypeDuck iOS or third-party keyboard
+  work should build on the closed Cantonese engine-parity behavior, then define a
+  Yune-native iOS package/host contract. Cantoboard/TypeDuck iOS build repos are
+  reference material for static-linking, resource deployment, and keyboard-host
+  constraints, not a C++ implementation template.
 
 ### Scope ledger
 
@@ -342,6 +366,7 @@ the *Non-goal* column is not a backlog. Standing deferrals also appear in
 | TypeDuck `jyut6ping3` profile vs `v1.1.2` oracle | Browser/userdb UI evidence after M15 engine parity; broader OpenCC phrase/config breadth beyond the checked-in `hk2s` source chain | librime C++ plugin ABI as a requirement |
 | Common RIME schemas, as breadth (B) is added | Spelling-algebra prism generation; binary-dict / deployment writing | Cloud inference as a hard dependency |
 | AI-native layer (M11) on the compatible base | `contextual_translation`, `unity_table_encoder`, deeper gear coverage | Replacing or altering classic input paths by default |
+| TypeDuck-Web / TypeDuck profile surfaces, when named | iOS keyboard developer SDK: package format, Swift/Obj-C host API, resource bundle/deploy model, sandboxed userdb/storage, and mobile config hooks | Treating iOS build scripts as engine semantics |
 
 ---
 
@@ -349,6 +374,11 @@ the *Non-goal* column is not a backlog. Standing deferrals also appear in
 
 - **librime C++ plugin ABI** (Lua, octagram, predict, proto): deferred until a concrete frontend or distribution requires it; prefer Yune-native extension points first.
 - **AI-native input layer (future native/frontend expansion)** - after M13, TypeDuck-Web has a default-off local AI surface with browser safety evidence. Remaining AI-native product integration is exposing equivalent gates in additional real frontends without changing upstream-core, TypeDuck-Web classic behavior, or parked TypeDuck-Windows compatibility behavior. The architecture remains in [`plans/m11-design-ai-native.md`](./plans/m11-design-ai-native.md); CLI evidence lives in [`plans/archive/m11-plan-ai-native-cli-slice.md`](./plans/archive/m11-plan-ai-native-cli-slice.md), and web exposure evidence lives in [`plans/archive/m13-plan-ai-native-frontend-exposure.md`](./plans/archive/m13-plan-ai-native-frontend-exposure.md).
+- **iOS keyboard developer support** - future TypeDuck iOS work needs its own
+  track. The fork-parity ledger now classifies the Cantoboard/TypeDuck iOS build
+  rows as deferred platform integration: useful for Apple build/static-linking,
+  resource deployment, and keyboard-extension constraints, but outside the
+  completed engine-parity backlog.
 
 ## Principles (carried forward)
 

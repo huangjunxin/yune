@@ -10,6 +10,31 @@ use crate::{
     TableDictionary, TableDictionaryParseError, TableEntry, Translator,
 };
 
+const TYPEDUCK_CORRECTION_CREDIBILITY: f32 = -16.118_095; // log(1e-7)
+const TYPEDUCK_CORRECTION_MAX_DISTANCE: usize = 4;
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct LookupCodeSpec {
+    code: String,
+    correction_distance: Option<usize>,
+}
+
+impl LookupCodeSpec {
+    fn exact(code: impl Into<String>) -> Self {
+        Self {
+            code: code.into(),
+            correction_distance: None,
+        }
+    }
+
+    fn correction(code: impl Into<String>, distance: usize) -> Self {
+        Self {
+            code: code.into(),
+            correction_distance: Some(distance),
+        }
+    }
+}
+
 #[derive(Default)]
 pub struct EchoTranslator;
 
@@ -25,6 +50,7 @@ impl Translator for EchoTranslator {
         vec![Candidate {
             text: input.to_owned(),
             comment: "echo".to_owned(),
+            preedit: None,
             source: CandidateSource::Echo,
             quality: 0.0,
         }]
@@ -34,7 +60,9 @@ impl Translator for EchoTranslator {
 pub struct StaticTableTranslator {
     entries: Vec<(String, Candidate)>,
     entries_by_code: BTreeMap<String, Vec<Candidate>>,
+    normal_codes: HashSet<String>,
     enable_completion: bool,
+    enable_correction: bool,
     enable_charset_filter: bool,
     enable_sentence: bool,
     sentence_over_completion: bool,
@@ -42,6 +70,7 @@ pub struct StaticTableTranslator {
     delimiters: String,
     initial_quality: f32,
     comment_format: CommentFormat,
+    preedit_format: CommentFormat,
     dictionary_exclude: HashSet<String>,
     corrections: Vec<RimeCorrectionEntry>,
     tolerance_rules: Vec<RimeToleranceRule>,
@@ -49,6 +78,9 @@ pub struct StaticTableTranslator {
     prefix: String,
     suffix: String,
     show_full_code: bool,
+    single_letter_sentence_guard_enabled: bool,
+    prediction_weight_threshold: Option<f32>,
+    prediction_never_first: bool,
 }
 
 impl StaticTableTranslator {
@@ -64,6 +96,7 @@ impl StaticTableTranslator {
                     Candidate {
                         text,
                         comment: code,
+                        preedit: None,
                         source: CandidateSource::Table,
                         quality: 0.0,
                     },
@@ -71,10 +104,13 @@ impl StaticTableTranslator {
             })
             .collect();
         let entries_by_code = entries_by_code(&entries);
+        let normal_codes = normal_codes(&entries);
         Self {
             entries,
             entries_by_code,
+            normal_codes,
             enable_completion: false,
+            enable_correction: false,
             enable_charset_filter: false,
             enable_sentence: false,
             sentence_over_completion: false,
@@ -82,6 +118,7 @@ impl StaticTableTranslator {
             delimiters: " ".to_owned(),
             initial_quality: 0.0,
             comment_format: CommentFormat::default(),
+            preedit_format: CommentFormat::default(),
             dictionary_exclude: HashSet::new(),
             corrections: Vec::new(),
             tolerance_rules: Vec::new(),
@@ -89,6 +126,9 @@ impl StaticTableTranslator {
             prefix: String::new(),
             suffix: String::new(),
             show_full_code: true,
+            single_letter_sentence_guard_enabled: false,
+            prediction_weight_threshold: None,
+            prediction_never_first: false,
         }
     }
 
@@ -103,6 +143,7 @@ impl StaticTableTranslator {
                 let candidate = Candidate {
                     text: entry.text,
                     comment: entry.code.clone(),
+                    preedit: None,
                     source: CandidateSource::Table,
                     quality: entry.weight,
                 };
@@ -110,10 +151,13 @@ impl StaticTableTranslator {
             })
             .collect();
         let entries_by_code = entries_by_code(&entries);
+        let normal_codes = normal_codes(&entries);
         Self {
             entries,
             entries_by_code,
+            normal_codes,
             enable_completion: false,
+            enable_correction: false,
             enable_charset_filter: false,
             enable_sentence: false,
             sentence_over_completion: false,
@@ -121,6 +165,7 @@ impl StaticTableTranslator {
             delimiters: " ".to_owned(),
             initial_quality: 0.0,
             comment_format: CommentFormat::default(),
+            preedit_format: CommentFormat::default(),
             dictionary_exclude: HashSet::new(),
             corrections,
             tolerance_rules,
@@ -128,12 +173,21 @@ impl StaticTableTranslator {
             prefix: String::new(),
             suffix: String::new(),
             show_full_code: true,
+            single_letter_sentence_guard_enabled: false,
+            prediction_weight_threshold: None,
+            prediction_never_first: false,
         }
     }
 
     #[must_use]
     pub fn with_completion(mut self, enable_completion: bool) -> Self {
         self.enable_completion = enable_completion;
+        self
+    }
+
+    #[must_use]
+    pub fn with_correction(mut self, enable_correction: bool) -> Self {
+        self.enable_correction = enable_correction;
         self
     }
 
@@ -186,6 +240,12 @@ impl StaticTableTranslator {
     }
 
     #[must_use]
+    pub fn with_preedit_format(mut self, formulas: &[String]) -> Self {
+        self.preedit_format = CommentFormat::parse(formulas);
+        self
+    }
+
+    #[must_use]
     pub fn with_dictionary_exclude(
         mut self,
         words: impl IntoIterator<Item = impl Into<String>>,
@@ -214,6 +274,18 @@ impl StaticTableTranslator {
     }
 
     #[must_use]
+    pub fn with_prediction_weight_threshold(mut self, threshold: f32) -> Self {
+        self.prediction_weight_threshold = Some(threshold);
+        self
+    }
+
+    #[must_use]
+    pub fn with_prediction_never_first(mut self, prediction_never_first: bool) -> Self {
+        self.prediction_never_first = prediction_never_first;
+        self
+    }
+
+    #[must_use]
     pub fn with_corrections(
         mut self,
         corrections: impl IntoIterator<Item = RimeCorrectionEntry>,
@@ -235,8 +307,12 @@ impl StaticTableTranslator {
     pub fn with_spelling_algebra(mut self, formulas: &[String]) -> Self {
         let algebra = SpellingAlgebra::parse(formulas);
         if !algebra.is_empty() {
-            self.entries = algebra.expand_entries(self.entries);
+            let (entries, normal_codes, has_single_letter_abbreviations) =
+                algebra.expand_entries_with_normal_codes(self.entries);
+            self.entries = entries;
             self.entries_by_code = entries_by_code(&self.entries);
+            self.normal_codes = normal_codes;
+            self.single_letter_sentence_guard_enabled = has_single_letter_abbreviations;
         }
         self
     }
@@ -263,29 +339,78 @@ impl StaticTableTranslator {
             .any(|tag| segment_tags.iter().any(|segment_tag| segment_tag == tag))
     }
 
-    fn expanded_lookup_codes(&self, lookup_code: &str) -> Vec<String> {
-        let mut codes = vec![lookup_code.to_owned()];
-        for correction in &self.corrections {
-            if correction.observed_input == lookup_code
-                && !codes.iter().any(|code| code == &correction.canonical_code)
-            {
-                codes.push(correction.canonical_code.clone());
+    fn expanded_lookup_specs(&self, lookup_code: &str) -> Vec<LookupCodeSpec> {
+        let mut specs = vec![LookupCodeSpec::exact(lookup_code)];
+        if self.enable_correction {
+            let mut corrections = Vec::new();
+            for correction in &self.corrections {
+                if correction.observed_input != lookup_code
+                    || !self.normal_codes.contains(&correction.canonical_code)
+                {
+                    continue;
+                }
+                let distance = typeduck_restricted_distance(
+                    &correction.canonical_code,
+                    lookup_code,
+                    TYPEDUCK_CORRECTION_MAX_DISTANCE,
+                );
+                if distance == 0 || distance > TYPEDUCK_CORRECTION_MAX_DISTANCE {
+                    continue;
+                }
+                corrections.push((correction.canonical_code.clone(), distance));
+            }
+            if let Some(min_distance) = corrections.iter().map(|(_, distance)| *distance).min() {
+                for (code, distance) in corrections {
+                    if distance == min_distance && !specs.iter().any(|spec| spec.code == code) {
+                        specs.push(LookupCodeSpec::correction(code, distance));
+                    }
+                }
             }
         }
         for rule in &self.tolerance_rules {
             if rule.near_code == lookup_code {
                 for candidate_code in &rule.candidate_codes {
-                    if !codes.iter().any(|code| code == candidate_code) {
-                        codes.push(candidate_code.clone());
+                    if !specs.iter().any(|spec| &spec.code == candidate_code) {
+                        specs.push(LookupCodeSpec::exact(candidate_code));
                     }
                 }
             }
         }
-        codes
+        specs
     }
 
     fn is_dictionary_word_allowed(&self, candidate: &Candidate) -> bool {
         !self.dictionary_exclude.contains(&candidate.text)
+    }
+
+    fn is_prediction_candidate_allowed(&self, candidate: &Candidate) -> bool {
+        match self.prediction_weight_threshold {
+            Some(threshold) => candidate.quality >= threshold,
+            None => true,
+        }
+    }
+
+    fn enforce_prediction_never_first(&self, candidates: &mut [Candidate]) {
+        if !self.prediction_never_first {
+            return;
+        }
+        let Some(best_non_prediction_quality) = candidates
+            .iter()
+            .filter(|candidate| candidate.source != CandidateSource::Completion)
+            .map(|candidate| candidate.quality)
+            .max_by(|left, right| left.partial_cmp(right).unwrap_or(Ordering::Equal))
+        else {
+            return;
+        };
+        let capped_quality =
+            best_non_prediction_quality - 1.0e-6 * best_non_prediction_quality.abs().max(1.0);
+        for candidate in candidates {
+            if candidate.source == CandidateSource::Completion
+                && candidate.quality >= capped_quality
+            {
+                candidate.quality = capped_quality;
+            }
+        }
     }
 
     fn candidate_for_lookup(
@@ -293,6 +418,7 @@ impl StaticTableTranslator {
         entry_code: &str,
         candidate: &Candidate,
         lookup_code: &str,
+        correction_distance: Option<usize>,
     ) -> Candidate {
         let mut candidate = candidate.clone();
         let comment_code = if self.show_full_code {
@@ -310,7 +436,17 @@ impl StaticTableTranslator {
         } else {
             self.comment_format.apply(&comment_code)
         };
-        candidate.quality = candidate.quality.exp() + self.initial_quality;
+        if entry_code == lookup_code {
+            let preedit = self.preedit_format.apply(lookup_code);
+            if preedit != lookup_code {
+                candidate.preedit = Some(preedit);
+            }
+        }
+        let mut raw_quality = candidate.quality;
+        if let Some(distance) = correction_distance {
+            raw_quality += TYPEDUCK_CORRECTION_CREDIBILITY * distance as f32;
+        }
+        candidate.quality = raw_quality.exp() + self.initial_quality;
         if entry_code != lookup_code {
             candidate.source = CandidateSource::Completion;
             candidate.quality -= 1.0;
@@ -320,11 +456,12 @@ impl StaticTableTranslator {
 
     fn candidates_for_lookup_codes(
         &self,
-        lookup_codes: &[String],
+        lookup_specs: &[LookupCodeSpec],
         filter_by_charset: bool,
     ) -> Vec<Candidate> {
         let mut candidates = Vec::new();
-        for lookup_code in lookup_codes {
+        for lookup_spec in lookup_specs {
+            let lookup_code = lookup_spec.code.as_str();
             if let Some(exact_candidates) = self.entries_by_code.get(lookup_code) {
                 candidates.extend(
                     exact_candidates
@@ -334,14 +471,23 @@ impl StaticTableTranslator {
                                 && (!filter_by_charset || !contains_extended_cjk(&candidate.text))
                         })
                         .map(|candidate| {
-                            self.candidate_for_lookup(lookup_code, candidate, lookup_code)
+                            self.candidate_for_lookup(
+                                lookup_code,
+                                candidate,
+                                lookup_code,
+                                lookup_spec.correction_distance,
+                            )
                         }),
                 );
             }
-            if !self.enable_completion || lookup_code.is_empty() {
+            if lookup_spec.correction_distance.is_some()
+                || !self.enable_completion
+                || lookup_code.is_empty()
+            {
                 continue;
             }
-            for (entry_code, entry_candidates) in self.entries_by_code.range(lookup_code.clone()..)
+            for (entry_code, entry_candidates) in
+                self.entries_by_code.range(lookup_code.to_owned()..)
             {
                 if !entry_code.starts_with(lookup_code) {
                     break;
@@ -354,10 +500,16 @@ impl StaticTableTranslator {
                         .iter()
                         .filter(|candidate| {
                             self.is_dictionary_word_allowed(candidate)
+                                && self.is_prediction_candidate_allowed(candidate)
                                 && (!filter_by_charset || !contains_extended_cjk(&candidate.text))
                         })
                         .map(|candidate| {
-                            self.candidate_for_lookup(entry_code, candidate, lookup_code)
+                            self.candidate_for_lookup(
+                                entry_code,
+                                candidate,
+                                lookup_code,
+                                lookup_spec.correction_distance,
+                            )
                         }),
                 );
             }
@@ -385,12 +537,13 @@ impl StaticTableTranslator {
         let Some(lookup_code) = self.lookup_code(input) else {
             return Vec::new();
         };
-        let expanded_lookup_codes = self.expanded_lookup_codes(lookup_code);
+        let expanded_lookup_codes = self.expanded_lookup_specs(lookup_code);
         let mut candidates =
             self.candidates_for_lookup_codes(&expanded_lookup_codes, filter_by_charset);
         if self.combine_candidates {
             candidates = combine_duplicate_text_candidates(candidates);
         }
+        self.enforce_prediction_never_first(&mut candidates);
 
         if candidates.is_empty() && self.enable_sentence {
             if let Some(sentence) = self.sentence_candidate(input, filter_by_charset, None) {
@@ -454,6 +607,14 @@ impl StaticTableTranslator {
             {
                 let entry_code = &input[pos..end];
                 let is_final_segment = end == input.len();
+                // In abbreviation-bearing schemas, generated one-letter aliases are lookup
+                // shortcuts, not stable interior sentence boundaries.
+                if !is_final_segment
+                    && self.single_letter_sentence_guard_enabled
+                    && entry_code.len() == 1
+                {
+                    continue;
+                }
                 let mut entry_matches = Vec::new();
                 if let Some(candidates) = self.entries_by_code.get(entry_code) {
                     entry_matches.push(candidates.as_slice());
@@ -525,6 +686,7 @@ impl StaticTableTranslator {
         Some(Candidate {
             text: path.pieces.join(""),
             comment: " ☯ ".to_owned(),
+            preedit: None,
             source: CandidateSource::Sentence,
             quality,
         })
@@ -576,6 +738,118 @@ fn entries_by_code(entries: &[(String, Candidate)]) -> BTreeMap<String, Vec<Cand
             .push(candidate.clone());
     }
     indexed
+}
+
+fn normal_codes(entries: &[(String, Candidate)]) -> HashSet<String> {
+    entries.iter().map(|(code, _)| code.clone()).collect()
+}
+
+fn typeduck_restricted_distance(left: &str, right: &str, threshold: usize) -> usize {
+    let left = left.as_bytes();
+    let right = right.as_bytes();
+    let left_len = left.len();
+    let right_len = right.len();
+    let mut distance = vec![0; (left_len + 1) * (right_len + 1)];
+    let index = |left_index: usize, right_index: usize| left_index * (right_len + 1) + right_index;
+
+    for left_index in 1..=left_len {
+        distance[index(left_index, 0)] = left_index * 2;
+    }
+    for right_index in 1..=right_len {
+        distance[index(0, right_index)] = right_index * 2;
+    }
+
+    for left_index in 1..=left_len {
+        let mut row_min = threshold + 1;
+        for right_index in 1..=right_len {
+            distance[index(left_index, right_index)] = [
+                distance[index(left_index - 1, right_index)] + 2,
+                distance[index(left_index, right_index - 1)] + 2,
+                distance[index(left_index - 1, right_index - 1)]
+                    + typeduck_substitution_cost(left[left_index - 1], right[right_index - 1]),
+            ]
+            .into_iter()
+            .min()
+            .expect("distance candidates should be non-empty");
+            if left_index > 1
+                && right_index > 1
+                && left[left_index - 2] == right[right_index - 1]
+                && left[left_index - 1] == right[right_index - 2]
+            {
+                distance[index(left_index, right_index)] = distance[index(left_index, right_index)]
+                    .min(distance[index(left_index - 2, right_index - 2)] + 2);
+            }
+            row_min = row_min.min(distance[index(left_index, right_index)]);
+        }
+        if row_min > threshold {
+            return row_min;
+        }
+    }
+
+    distance[index(left_len, right_len)]
+}
+
+fn typeduck_substitution_cost(left: u8, right: u8) -> usize {
+    if left == right {
+        return 0;
+    }
+    if typeduck_keyboard_neighbors(left, right) {
+        1
+    } else {
+        4
+    }
+}
+
+fn typeduck_keyboard_neighbors(left: u8, right: u8) -> bool {
+    match left {
+        b'1' => matches!(right, b'2' | b'q' | b'w'),
+        b'2' => matches!(right, b'1' | b'3' | b'q' | b'w' | b'e'),
+        b'3' => matches!(right, b'2' | b'4' | b'w' | b'e' | b'r'),
+        b'4' => matches!(right, b'3' | b'5' | b'e' | b'r' | b't'),
+        b'5' => matches!(right, b'4' | b'6' | b'r' | b't' | b'y'),
+        b'6' => matches!(right, b'5' | b'7' | b't' | b'y' | b'u'),
+        b'7' => matches!(right, b'6' | b'8' | b'y' | b'u' | b'i'),
+        b'8' => matches!(right, b'7' | b'9' | b'u' | b'i' | b'o'),
+        b'9' => matches!(right, b'8' | b'0' | b'i' | b'o' | b'p'),
+        b'0' => matches!(right, b'9' | b'-' | b'o' | b'p' | b'['),
+        b'-' => matches!(right, b'0' | b'=' | b'p' | b'[' | b']'),
+        b'=' => matches!(right, b'-' | b'[' | b']' | b'\\'),
+        b'q' => matches!(right, b'w'),
+        b'w' => matches!(right, b'q' | b'e'),
+        b'e' => matches!(right, b'w' | b'r'),
+        b'r' => matches!(right, b'e' | b't'),
+        b't' => matches!(right, b'r' | b'y'),
+        b'y' => matches!(right, b't' | b'u'),
+        b'u' => matches!(right, b'y' | b'i'),
+        b'i' => matches!(right, b'u' | b'o'),
+        b'o' => matches!(right, b'i' | b'p'),
+        b'p' => matches!(right, b'o' | b'['),
+        b'[' => matches!(right, b'p' | b']'),
+        b']' => matches!(right, b'[' | b'\\'),
+        b'\\' => matches!(right, b']'),
+        b'a' => matches!(right, b's'),
+        b's' => matches!(right, b'a' | b'd'),
+        b'd' => matches!(right, b's' | b'f'),
+        b'f' => matches!(right, b'd' | b'g'),
+        b'g' => matches!(right, b'f' | b'h'),
+        b'h' => matches!(right, b'g' | b'j'),
+        b'j' => matches!(right, b'h' | b'k'),
+        b'k' => matches!(right, b'j' | b'l'),
+        b'l' => matches!(right, b'k' | b';'),
+        b';' => matches!(right, b'l' | b'\''),
+        b'\'' => matches!(right, b';'),
+        b'z' => matches!(right, b'x'),
+        b'x' => matches!(right, b'z' | b'c'),
+        b'c' => matches!(right, b'x' | b'v'),
+        b'v' => matches!(right, b'c' | b'b'),
+        b'b' => matches!(right, b'v' | b'n'),
+        b'n' => matches!(right, b'b' | b'm'),
+        b'm' => matches!(right, b'n' | b','),
+        b',' => matches!(right, b'm' | b'.'),
+        b'.' => matches!(right, b',' | b'/'),
+        b'/' => matches!(right, b'.'),
+        _ => false,
+    }
 }
 
 fn combine_duplicate_text_candidates(candidates: Vec<Candidate>) -> Vec<Candidate> {
@@ -789,6 +1063,7 @@ impl Translator for ReverseLookupTranslator {
                 Candidate {
                     text: entry.text.clone(),
                     comment,
+                    preedit: None,
                     source: CandidateSource::ReverseLookup,
                     quality,
                 }
@@ -888,6 +1163,7 @@ impl Translator for HistoryTranslator {
             .map(|record| Candidate {
                 text: record.text.clone(),
                 comment: String::new(),
+                preedit: None,
                 source: CandidateSource::History,
                 quality: self.initial_quality,
             })
@@ -1029,6 +1305,7 @@ impl Translator for SwitchTranslator {
                     candidates.push(Candidate {
                         text: states[current_index].clone(),
                         comment: format!("→ {}", states[1 - current_index]),
+                        preedit: None,
                         source: CandidateSource::Switch,
                         quality: 0.5,
                     });
@@ -1054,6 +1331,7 @@ impl Translator for SwitchTranslator {
                             } else {
                                 String::new()
                             },
+                            preedit: None,
                             source: CandidateSource::Switch,
                             quality: 0.5,
                         });
@@ -1072,6 +1350,7 @@ impl Translator for SwitchTranslator {
                         self.folded_options.suffix
                     ),
                     comment: String::new(),
+                    preedit: None,
                     source: CandidateSource::Unfold,
                     quality: 0.5,
                 }];
@@ -1134,6 +1413,7 @@ impl SwitchTranslator {
 
 pub struct SchemaListTranslator {
     entries: Vec<(String, String)>,
+    hide_lone_schema: bool,
 }
 
 impl SchemaListTranslator {
@@ -1144,7 +1424,14 @@ impl SchemaListTranslator {
                 .into_iter()
                 .map(|(schema_id, schema_name)| (schema_id.into(), schema_name.into()))
                 .collect(),
+            hide_lone_schema: false,
         }
+    }
+
+    #[must_use]
+    pub const fn with_hide_lone_schema(mut self, hide_lone_schema: bool) -> Self {
+        self.hide_lone_schema = hide_lone_schema;
+        self
     }
 }
 
@@ -1161,10 +1448,14 @@ impl Translator for SchemaListTranslator {
         if input.is_empty() {
             return Vec::new();
         }
+        if self.hide_lone_schema && self.entries.is_empty() {
+            return Vec::new();
+        }
 
         let mut candidates = vec![Candidate {
             text: status.schema_name.clone(),
             comment: String::new(),
+            preedit: None,
             source: CandidateSource::Schema,
             quality: 0.5,
         }];
@@ -1175,6 +1466,7 @@ impl Translator for SchemaListTranslator {
                 .map(|(_, schema_name)| Candidate {
                     text: schema_name.clone(),
                     comment: String::new(),
+                    preedit: None,
                     source: CandidateSource::Schema,
                     quality: 0.5,
                 }),

@@ -439,8 +439,11 @@ schema:\n  schema_id: {schema_id}\n  name: {schema_id}\nengine:\n  translators:\
     }
 
     fn write_correction_tolerance_schemas(&self) {
-        self.write_schema_for_dictionary("correction_source", "correction_source");
-        self.write_schema_for_dictionary("correction_compiled", "correction_compiled");
+        self.write_schema_for_dictionary_with_correction("correction_source", "correction_source");
+        self.write_schema_for_dictionary_with_correction(
+            "correction_compiled",
+            "correction_compiled",
+        );
         self.write_schema_for_dictionary("tolerance_source", "tolerance_source");
         self.write_schema_for_dictionary("tolerance_compiled", "tolerance_compiled");
     }
@@ -467,6 +470,17 @@ schema:\n  schema_id: {schema_id}\n  name: {schema_id}\nengine:\n  translators:\
             format!(
                 "\
 schema:\n  schema_id: {schema_id}\n  name: {schema_id}\nengine:\n  translators:\n    - table_translator\n    - echo_translator\ntranslator:\n  dictionary: {dictionary_id}\n"
+            ),
+        )
+        .expect("schema should be written");
+    }
+
+    fn write_schema_for_dictionary_with_correction(&self, schema_id: &str, dictionary_id: &str) {
+        fs::write(
+            self.staging.join(format!("{schema_id}.schema.yaml")),
+            format!(
+                "\
+schema:\n  schema_id: {schema_id}\n  name: {schema_id}\nengine:\n  translators:\n    - table_translator\n    - echo_translator\ntranslator:\n  dictionary: {dictionary_id}\n  enable_correction: true\n"
             ),
         )
         .expect("schema should be written");

@@ -178,6 +178,21 @@ Deferred beyond the TypeDuck-Web browser integration milestone. Tracked but not 
 - **FRONTEND-01**: Yune ships a new graphical end-user frontend.
 - **FRONTEND-02**: Yune-specific UI features expose optional AI ranking and contextual completion controls.
 
+### iOS Keyboard Developer Track
+
+- **IOS-DEV-01**: Yune provides a documented iOS package/host contract for
+  keyboard developers, separate from the default upstream `RimeApi` table and
+  without changing `RimeCandidate`.
+- **IOS-DEV-02**: iOS resource deployment is explicit: schemas, dictionaries,
+  OpenCC data, and userdb storage are bundled or generated in a sandbox-safe
+  location without arbitrary filesystem paths or startup recompilation surprises.
+- **IOS-DEV-03**: Swift/Obj-C integration defines keyboard-extension lifecycle,
+  memory, persistence, and privacy constraints before TypeDuck iOS exposure is
+  claimed.
+- **IOS-DEV-04**: Mobile-specific behavior such as near-key correction maps or
+  keyboard-layout differences is data/config-driven or UI-owned, not hardcoded
+  as desktop-vs-mobile engine branches.
+
 ### AI Extension Layer
 
 - [x] **AI-01**: Engine exposes an `AiCandidateProvider` interface and staged,
@@ -218,6 +233,25 @@ roadmap M14–M16 and `decisions.md` D-27.
 - [x] **TYPEDUCK-PARITY-05**: `enable_sentence`, completion ranking, and correction/tolerance tuning are refined to pass the captured goldens.
 - [x] **TYPEDUCK-PARITY-06**: OpenCC `hk2s` coverage is expanded from the built-in slice to the full conversion data the jyut6ping3 simplifier needs.
 - [x] **TYPEDUCK-PARITY-07**: The TypeDuck-Web browser matrix passes for the app-exposed `jyut6ping3_mobile` surface plus M13 AI, while deploy-only variants (`common:/separate_candidates`, `common:/show_full_code`), schema-menu UI hiding, correction UI detail, and per-entry userdb pronunciation are explicitly documented as browser/userdb inspection limits backed by M14/M15 oracle evidence.
+
+## Fork Parity Backlog — Cantonese engine-parity (complete)
+
+**Status: complete.** Derived from the full Cantoboard + TypeDuck fork-vs-`1.17.0` audit in
+[`fork-parity-ledger.md`](./fork-parity-ledger.md). These were genuine fork deltas Yune
+needed to preserve or explicitly decline (distinct from the upstream-depth Track 2 M17–M19 work). M14–M16
+closed the *captured* browser surface; these were the *uncaptured / partial* deltas the
+goldens did not exercise. Each completed implementation was measured against the v1.1.2
+oracle or closed by an explicit product decision.
+
+- [x] **FORK-PARITY-01**: The Cantonese 容錯 (fuzzy) spelling-algebra ruleset (`lv1_laanjam`, `lv2_upper`, `shortcuts`, `lv2_lower`, abbreviation — including the `ng→m` rule behind the F1 `m` case) runs on the real ~127k-entry `jyut6ping3` dictionary, with a real-dictionary golden.
+- [x] **FORK-PARITY-02**: `PreferUserPhrase` weighted gate — a user-dictionary phrase outranks a competing system phrase only with a longer code, or equal-length code and weight ≥ the system phrase.
+- [x] **FORK-PARITY-03**: Per-entry userdb element/full-code pronunciation recovery, including multi-syllable sentence commits preserving all primary lookup codes.
+- [x] **FORK-PARITY-04**: `hide_lone_schema` — suppress the schema switcher when only one schema exists (`838e3d41`).
+- [x] **FORK-PARITY-05**: Correction fidelity — edit-distance-scaled penalty + discard non-minimal-distance corrections (`kCorrection`, `81e13724`), an `enable_correction` gate independent of `enable_completion` (`585f4656`), and restricting corrections to normal spellings (`733eedc8`→`2f79c3ab`).
+- [x] **FORK-PARITY-06**: `letter_to_tone`/`tone_to_letter` — type `v`/`x`/`q` for tones via the TypeDuck profile's `preedit_format` path.
+- [x] **FORK-PARITY-07**: TypeDuck-profile `全形`/`半形` state labels (vs upstream `全角`/`半角`) — schema-asset/golden change only, no Rust change.
+- [x] **FORK-PARITY-08**: Product decision and implementation: do **not** chase full TypeDuck prediction-ranking byte parity; preserve upstream `1.17.0` long-entry completion (`santai` can surface `身體健康`) and expose profile controls for `prediction_never_first` plus raw-weight/frequency thresholds.
+- [x] **FORK-PARITY-09**: Product decision: `display_languages` gloss-column selection lives in TypeDuck-Web UI; the engine continues to emit stable, ordered lookup payloads without adding engine-side language filtering.
 
 ## Out of Scope
 
@@ -319,6 +353,15 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TYPEDUCK-PARITY-05 | M15 | Complete - enable_sentence/completion/correction parity assertions are active |
 | TYPEDUCK-PARITY-06 | M15 | Complete - checked-in OpenCC source dictionaries drive `hk2s` simplification |
 | TYPEDUCK-PARITY-07 | M16 | Complete with conditions - real TypeDuck-Web Playwright matrix covers app-exposed Cantonese paths plus M13 AI; deploy-only/UI/userdb gaps are explicit |
+| FORK-PARITY-01 | backlog | Complete - 容錯 ruleset runs on the real ~127k jyut6ping3 dictionary with golden coverage |
+| FORK-PARITY-02 | backlog | Complete - weighted PreferUserPhrase gate implemented |
+| FORK-PARITY-03 | backlog | Complete - per-entry userdb pronunciation recovery, including multi-syllable sentence codes |
+| FORK-PARITY-04 | backlog | Complete - `hide_lone_schema` implemented |
+| FORK-PARITY-05 | backlog | Complete - correction edit-distance/min-distance/enable_correction gate/normal-only behavior implemented |
+| FORK-PARITY-06 | backlog | Complete - TypeDuck letter-tone preedit path implemented |
+| FORK-PARITY-07 | backlog | Complete - TypeDuck-profile `全形`/`半形` labels locked |
+| FORK-PARITY-08 | backlog | Complete - upstream ranking accepted; long-entry prediction preserved; threshold and never-first controls implemented |
+| FORK-PARITY-09 | backlog | Complete - UI-side `display_languages` decision recorded |
 
 **Coverage:**
 - v1 requirements: 25 total
@@ -328,7 +371,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 - M12 upstream oracle and behavioral parity requirements: 9 total, 9 complete
 - M13 AI-native frontend exposure requirements: 6 total, 6 complete
 - M14–M16 TypeDuck-Web fork parity requirements: 7 total, 7 complete (M16 complete with explicit browser/userdb inspection limits)
-- Mapped to phases: 82
+- Fork parity backlog (Cantonese engine-parity, vs upstream 1.17.0): 9 total, 9 complete; see [`fork-parity-ledger.md`](./fork-parity-ledger.md)
+- Mapped to phases: 91
 - Unmapped: 0
 
 ---

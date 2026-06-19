@@ -7,7 +7,9 @@ use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde_yaml::Value;
-use yune_core::{Candidate, CandidateSource, StaticTableTranslator, Translator};
+use yune_core::{
+    Candidate, CandidateSource, StaticTableTranslator, Translator, UserDbCommitMetadata,
+};
 
 mod abi;
 mod candidate_api;
@@ -83,12 +85,14 @@ impl Translator for CommentTranslator {
             Candidate {
                 text: "你".to_owned(),
                 comment: "first-comment".to_owned(),
+                preedit: None,
                 source: CandidateSource::Table,
                 quality: 1.0,
             },
             Candidate {
                 text: "呢".to_owned(),
                 comment: "second-comment".to_owned(),
+                preedit: None,
                 source: CandidateSource::Table,
                 quality: 1.0,
             },

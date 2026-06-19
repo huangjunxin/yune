@@ -1,0 +1,131 @@
+{
+  "oracle": {
+    "engine": "TypeDuck-HK/librime",
+    "engine_tag": "v1.1.2",
+    "engine_commit": "74cb52b78fb2411137a7643f6c8bc6517acfde69",
+    "canonical_repository": "https://github.com/TypeDuck-HK/librime",
+    "release_url": "https://github.com/TypeDuck-HK/librime/releases/tag/v1.1.2",
+    "release_asset": "rime-TypeDuck-v1.1.2-Windows-msvc-x64.7z",
+    "dependency_asset": "rime-deps-TypeDuck-v1.1.2-Windows-msvc-x64.7z",
+    "plugin": "TypeDuck-HK/rime-dictionary-lookup-filter",
+    "plugin_commit": "3e4605c4fae99f068df2edb85aaeab5a97752795",
+    "schema": "TypeDuck-HK/schema",
+    "schema_commit": "1bed1ae6a0ab48055f073774d7dfd152a171c548",
+    "capture_date": "2026-06-19",
+    "capture_command": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/capture-typeduck-jyutping.ps1 -InternalCapture -OracleRoot target/typeduck-oracle/v1.1.2 -Shared target/typeduck-oracle/v1.1.2/rime-shared -User target/typeduck-oracle/v1.1.2/rime-user -Build target/typeduck-oracle/v1.1.2/rime-user/build -Schema jyut6ping3_mobile -Modules default,dictionary_lookup -Inputs m",
+    "host": "Windows"
+  },
+  "schema": "jyut6ping3_mobile",
+  "schemas": [
+    "jyut6ping3_mobile"
+  ],
+  "module_list": [
+    "default",
+    "dictionary_lookup"
+  ],
+  "input_sequence": [
+    "m"
+  ],
+  "capture": {
+    "schema_data": "TypeDuck-HK/schema",
+    "schema_data_commit": "1bed1ae6a0ab48055f073774d7dfd152a171c548",
+    "translator_dictionary": "jyut6ping3.dict.yaml",
+    "lookup_dictionary": "jyut6ping3_scolar.dict.yaml",
+    "translator_dictionary_file": "TypeDuck-HK/schema/jyut6ping3.dict.yaml",
+    "lookup_dictionary_file": "TypeDuck-HK/schema/jyut6ping3_scolar.dict.yaml",
+    "source_row_policy": "typeduck_v112_real_mobile_translator_and_scolar_lookup_fuzzy",
+    "source_row_counts": {
+      "translator_dictionary": 127144,
+      "lookup_dictionary": 127144
+    },
+    "candidate_layout": "TypeDuck v1.1.2 RimeCandidate includes quality before reserved",
+    "modules": [
+      "default",
+      "dictionary_lookup"
+    ],
+    "speller_algebra_rules": [
+      "derive/^ng(?=[aeiou])//",
+      "derive/^(?=[aeiou])/ng/",
+      "derive/^n(?!g)/l/",
+      "derive/^ng(?=\\d)/m/",
+      "derive/^(g|k)w(?=o)/$1/",
+      "derive/^jy?(?=[aeiou])/y/",
+      "derive/^jyu/ju/",
+      "derive/yu(?!ng|k)/y/",
+      "derive/(g|k)u(?!ng|k)/$1wu/",
+      "derive/^([zcs])/$1h/",
+      "derive/eoi(?=\\d)/eoy/",
+      "derive/eo/oe/",
+      "derive/oe/eo/",
+      "derive/aa(?=\\d)/a/",
+      "derive/\\d//",
+      "abbrev/^([a-z]).+$/$1/",
+      "xform/1/v/",
+      "xform/4/vv/",
+      "xform/2/x/",
+      "xform/5/xx/",
+      "xform/3/q/",
+      "xform/6/qq/"
+    ],
+    "source_translator_rows_for_candidates": [
+      {
+        "line": 18,
+        "code": "m4",
+        "text": "唔",
+        "row": "唔\tm4\t5473409"
+      },
+      {
+        "line": 499,
+        "code": "ng5",
+        "text": "五",
+        "row": "五\tng5\t557047"
+      }
+    ],
+    "source_lookup_rows_for_candidates": [
+      {
+        "line": 18,
+        "code": "m4",
+        "text": "唔",
+        "row": "m4,1,0,,oth,ver,,,不,,,not,نہیں,होइन,नहीं,tidak\t唔"
+      },
+      {
+        "line": 499,
+        "code": "ng5",
+        "text": "五",
+        "row": "ng5,1,0,,n,,,,,,,five,پانچ,पाँच,पांच,lima\t五"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "schema_id": "jyut6ping3_mobile",
+      "schema_name": "粵語拼音",
+      "input": "m",
+      "processed": [
+        1
+      ],
+      "is_composing": true,
+      "is_ascii_mode": false,
+      "preedit": "m",
+      "commit_text_preview": "唔",
+      "highlighted_candidate_index": 0,
+      "page_size": 50,
+      "page_no": 0,
+      "is_last_page": false,
+      "selected_candidates": [
+        {
+          "index": 0,
+          "text": "唔",
+          "comment": "\f\r1,唔,m4,1,0,,oth,ver,,,不,,,not,نہیں,होइन,नहीं,tidak",
+          "quality": 0.05473409726860065
+        },
+        {
+          "index": 1,
+          "text": "五",
+          "comment": "\f\r1,五,ng5,1,0,,n,,,,,,,five,پانچ,पाँच,पांच,lima",
+          "quality": 0.0055704697652649024
+        }
+      ]
+    }
+  ]
+}

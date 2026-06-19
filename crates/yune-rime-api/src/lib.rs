@@ -1649,7 +1649,40 @@ pub(crate) fn schema_list_translator_entries_for_current(
     current_schema: &str,
     schema_config: &Value,
 ) -> Vec<(String, String)> {
-    let mut entries = deployed_schema_list_entries()
+    schema_list_translator_config_for_current(current_schema, schema_config).entries
+}
+
+pub(crate) struct SchemaListTranslatorConfig {
+    pub(crate) entries: Vec<(String, String)>,
+    pub(crate) hide_lone_schema: bool,
+}
+
+pub(crate) fn schema_list_translator_config_for_current(
+    current_schema: &str,
+    schema_config: &Value,
+) -> SchemaListTranslatorConfig {
+    let deployed_entries = deployed_schema_list_entries();
+    let hide_lone_schema = find_config_value(schema_config, "switcher/hide_lone_schema")
+        .and_then(config_scalar_bool)
+        .unwrap_or(false)
+        && deployed_entries.len() == 1;
+
+    SchemaListTranslatorConfig {
+        entries: schema_list_translator_entries_for_deployed(
+            deployed_entries,
+            current_schema,
+            schema_config,
+        ),
+        hide_lone_schema,
+    }
+}
+
+fn schema_list_translator_entries_for_deployed(
+    deployed_entries: Vec<(String, String)>,
+    current_schema: &str,
+    schema_config: &Value,
+) -> Vec<(String, String)> {
+    let mut entries = deployed_entries
         .into_iter()
         .filter(|(schema_id, _)| schema_id != current_schema)
         .map(|(schema_id, schema_name)| {

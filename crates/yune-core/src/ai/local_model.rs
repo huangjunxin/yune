@@ -246,6 +246,7 @@ fn push_or_upgrade_candidate(
     candidates.push(Candidate {
         text,
         comment: local_model_comment(confidence),
+        preedit: None,
         source: CandidateSource::ai(LOCAL_MODEL_PROVIDER_NAME, confidence),
         quality: confidence.as_score(),
     });

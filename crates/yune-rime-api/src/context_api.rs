@@ -98,6 +98,11 @@ pub unsafe extern "C" fn RimeGetContext(
         None => None,
         Some(_) => None,
     };
+    let candidate_preedit = snapshot
+        .context
+        .candidates
+        .get(snapshot.context.highlighted)
+        .and_then(|candidate| candidate.preedit.clone());
     let composition = snapshot.context.composition;
     if !composition.input.is_empty() || chord_prompt.is_some() {
         let (preedit_text, length, cursor_pos, sel_start, sel_end) =
@@ -107,6 +112,9 @@ pub unsafe extern "C" fn RimeGetContext(
             } else if let Some((preedit, caret)) = affix_prompt_preedit {
                 let length = preedit.len() as c_int;
                 (preedit, length, caret as c_int, 0, caret as c_int)
+            } else if let Some(preedit) = candidate_preedit {
+                let length = preedit.len() as c_int;
+                (preedit, length, length, 0, length)
             } else {
                 (
                     composition.preedit,

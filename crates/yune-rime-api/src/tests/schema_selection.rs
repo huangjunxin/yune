@@ -18,6 +18,39 @@ fn typeduck_v112_reverse_lookup_case(fixture: &Value) -> &Value {
         .expect("reverse lookup fixture should have a case")
 }
 
+fn current_candidate_pairs(session_id: crate::RimeSessionId) -> Vec<(String, String)> {
+    let mut context = empty_context();
+    // SAFETY: context points to writable storage initialized with positive `data_size`.
+    assert_eq!(unsafe { RimeGetContext(session_id, &mut context) }, TRUE);
+    let candidates = unsafe {
+        std::slice::from_raw_parts(
+            context.menu.candidates,
+            context.menu.num_candidates as usize,
+        )
+    };
+    let pairs = candidates
+        .iter()
+        .map(|candidate| {
+            let text = unsafe { CStr::from_ptr(candidate.text) }
+                .to_str()
+                .expect("candidate text should be valid UTF-8")
+                .to_owned();
+            let comment = if candidate.comment.is_null() {
+                String::new()
+            } else {
+                unsafe { CStr::from_ptr(candidate.comment) }
+                    .to_str()
+                    .expect("candidate comment should be valid UTF-8")
+                    .to_owned()
+            };
+            (text, comment)
+        })
+        .collect::<Vec<_>>();
+    // SAFETY: nested pointers were allocated by `RimeGetContext` above.
+    assert_eq!(unsafe { RimeFreeContext(&mut context) }, TRUE);
+    pairs
+}
+
 fn dictionary_yaml_from_oracle_rows(name: &str, rows: &Value) -> String {
     let rows = rows
         .as_array()
@@ -2505,6 +2538,216 @@ ban\t班\t8
     assert_eq!(candidate_texts_for("complete"), ["爸", "班", "b"]);
     assert_eq!(candidate_texts_for("exact"), ["b"]);
 
+    let reset_traits = empty_traits();
+    // SAFETY: reset traits points to valid storage.
+    unsafe { RimeSetup(&reset_traits) };
+    fs::remove_dir_all(root).expect("temp dirs should be removed");
+}
+
+#[test]
+fn select_schema_wires_prediction_threshold_and_never_first_options() {
+    let _guard = test_guard();
+    RimeCleanupAllSessions();
+    let root = unique_temp_dir("schema-prediction-options");
+    let shared = root.join("shared");
+    let user = root.join("user");
+    let staging = user.join("build");
+    fs::create_dir_all(&shared).expect("shared dir should be created");
+    fs::create_dir_all(&staging).expect("staging dir should be created");
+    fs::write(
+        staging.join("prediction.schema.yaml"),
+        "\
+schema:
+  schema_id: prediction
+  name: Prediction
+engine:
+  translators:
+    - table_translator
+    - echo_translator
+translator:
+  dictionary: prediction
+  enable_completion: true
+  prediction_weight_threshold: 3
+  prediction_never_first: true
+",
+    )
+    .expect("prediction schema config should be written");
+    fs::write(
+        shared.join("prediction.dict.yaml"),
+        "\
+---
+name: prediction
+version: '0.1'
+sort: by_weight
+columns: [text, code, weight]
+...
+
+EXACT\tsan\t1
+LOW\tsanlow\t2
+HIGH\tsanhigh\t4
+",
+    )
+    .expect("dictionary should be written");
+
+    let shared_c = CString::new(shared.to_string_lossy().as_ref()).expect("path is valid");
+    let user_c = CString::new(user.to_string_lossy().as_ref()).expect("path is valid");
+    let mut traits = empty_traits();
+    traits.shared_data_dir = shared_c.as_ptr();
+    traits.user_data_dir = user_c.as_ptr();
+    // SAFETY: traits points to valid storage and strings live for the call.
+    unsafe { RimeSetup(&traits) };
+
+    let session_id = RimeCreateSession();
+    let schema_id = CString::new("prediction").expect("schema id should be valid");
+    // SAFETY: schema id is a valid NUL-terminated string.
+    assert_eq!(
+        unsafe { RimeSelectSchema(session_id, schema_id.as_ptr()) },
+        TRUE
+    );
+    for ch in ['s', 'a', 'n'] {
+        assert_eq!(RimeProcessKey(session_id, ch as c_int, 0), TRUE);
+    }
+    let texts = current_candidate_pairs(session_id)
+        .into_iter()
+        .map(|(text, _)| text)
+        .collect::<Vec<_>>();
+
+    assert_eq!(texts, ["EXACT", "HIGH", "san"]);
+    assert_eq!(RimeDestroySession(session_id), TRUE);
+    let reset_traits = empty_traits();
+    // SAFETY: reset traits points to valid storage.
+    unsafe { RimeSetup(&reset_traits) };
+    fs::remove_dir_all(root).expect("temp dirs should be removed");
+}
+
+#[test]
+fn select_schema_wires_typeduck_table_translator_comment_options() {
+    let _guard = test_guard();
+    RimeCleanupAllSessions();
+    let root = unique_temp_dir("schema-typeduck-table-comment-options");
+    let shared = root.join("shared");
+    let user = root.join("user");
+    let staging = user.join("build");
+    fs::create_dir_all(&shared).expect("shared dir should be created");
+    fs::create_dir_all(&staging).expect("staging dir should be created");
+    fs::write(
+        staging.join("affix-default.schema.yaml"),
+        "\
+schema:
+  schema_id: affix-default
+engine:
+  translators:
+    - table_translator
+    - echo_translator
+translator:
+  dictionary: options
+  prefix: x
+  suffix: z
+  enable_sentence: false
+",
+    )
+    .expect("default schema config should be written");
+    fs::write(
+        staging.join("affix-combined.schema.yaml"),
+        "\
+schema:
+  schema_id: affix-combined
+engine:
+  translators:
+    - table_translator
+    - echo_translator
+translator:
+  dictionary: options
+  prefix: x
+  suffix: z
+  show_full_code: true
+  combine_candidates: true
+  enable_sentence: false
+",
+    )
+    .expect("combined schema config should be written");
+    fs::write(
+        shared.join("options.dict.yaml"),
+        "\
+---
+name: options
+version: '0.1'
+sort: original
+columns: [code, text, weight]
+...
+
+cam\tOPTION\t2
+caam\tOPTION\t1
+caa\tOTHER\t0
+",
+    )
+    .expect("dictionary should be written");
+
+    let shared_c = CString::new(shared.to_string_lossy().as_ref()).expect("path is valid");
+    let user_c = CString::new(user.to_string_lossy().as_ref()).expect("path is valid");
+    let mut traits = empty_traits();
+    traits.shared_data_dir = shared_c.as_ptr();
+    traits.user_data_dir = user_c.as_ptr();
+    // SAFETY: traits points to valid storage and strings live for the call.
+    unsafe { RimeSetup(&traits) };
+
+    let session_id = RimeCreateSession();
+    let candidate_pairs_for = |schema: &str| {
+        RimeClearComposition(session_id);
+        let schema_id = CString::new(schema).expect("schema id should be valid");
+        // SAFETY: schema id is a valid NUL-terminated string.
+        assert_eq!(
+            unsafe { RimeSelectSchema(session_id, schema_id.as_ptr()) },
+            TRUE
+        );
+        for ch in "xcaz".chars() {
+            assert_eq!(RimeProcessKey(session_id, ch as c_int, 0), TRUE);
+        }
+        let mut context = empty_context();
+        // SAFETY: context points to writable storage initialized with positive `data_size`.
+        assert_eq!(unsafe { RimeGetContext(session_id, &mut context) }, TRUE);
+        let candidates = unsafe {
+            std::slice::from_raw_parts(
+                context.menu.candidates,
+                context.menu.num_candidates as usize,
+            )
+        };
+        let pairs = candidates
+            .iter()
+            .map(|candidate| {
+                let text = unsafe { CStr::from_ptr(candidate.text) }
+                    .to_str()
+                    .expect("candidate text should be valid UTF-8")
+                    .to_owned();
+                let comment = if candidate.comment.is_null() {
+                    String::new()
+                } else {
+                    unsafe { CStr::from_ptr(candidate.comment) }
+                        .to_str()
+                        .expect("candidate comment should be valid UTF-8")
+                        .to_owned()
+                };
+                (text, comment)
+            })
+            .collect::<Vec<_>>();
+        // SAFETY: nested pointers were allocated by `RimeGetContext` above.
+        assert_eq!(unsafe { RimeFreeContext(&mut context) }, TRUE);
+        pairs
+    };
+
+    assert_eq!(
+        candidate_pairs_for("affix-default")[0],
+        ("OPTION".to_owned(), "~m".to_owned()),
+        "affix should strip prefix/suffix and default show_full_code=false should keep short comments"
+    );
+    let combined_pairs = candidate_pairs_for("affix-combined");
+    assert_eq!(combined_pairs[0].0, "OPTION");
+    assert!(
+        matches!(combined_pairs[0].1.as_str(), "cam;caam" | "caam;cam"),
+        "schema combine_candidates and show_full_code should reach the installed translator: {combined_pairs:?}"
+    );
+
+    assert_eq!(RimeDestroySession(session_id), TRUE);
     let reset_traits = empty_traits();
     // SAFETY: reset traits points to valid storage.
     unsafe { RimeSetup(&reset_traits) };
@@ -6578,6 +6821,122 @@ gone	删	0
     fs::remove_dir_all(root).expect("temp dirs should be removed");
 }
 
+// Owner: schema_install.rs and yune-core spelling_algebra.rs; fork oracle:
+// TypeDuck v1.1.2 jyut6ping3_mobile with the real 127k-row jyut6ping3_scolar
+// dictionary keeps Cantonese ng->m fuzzy algebra for single-letter `m`.
+#[test]
+fn schema_large_cantonese_dictionary_keeps_fork_fuzzy_algebra() {
+    let _guard = test_guard();
+    RimeCleanupAllSessions();
+    let root = unique_temp_dir("schema-large-cantonese-fuzzy-algebra");
+    let shared = root.join("shared");
+    let user = root.join("user");
+    let staging = user.join("build");
+    fs::create_dir_all(&shared).expect("shared dir should be created");
+    fs::create_dir_all(&staging).expect("staging dir should be created");
+    fs::write(
+        staging.join("cantonese_large.schema.yaml"),
+        "\
+schema:
+  schema_id: cantonese_large
+  name: Cantonese Large
+engine:
+  translators:
+    - table_translator
+    - echo_translator
+speller:
+  algebra:
+    - derive/^ng(?=\\d)/m/
+    - derive/\\d//
+translator:
+  dictionary: cantonese_large
+  enable_completion: false
+  enable_sentence: false
+",
+    )
+    .expect("schema config should be written");
+
+    let mut dictionary = "\
+---
+name: cantonese_large
+version: '0.1'
+sort: original
+columns: [code, text, weight]
+...
+
+"
+    .to_owned();
+    dictionary.push_str("m4\t\u{5514}\t1\n");
+    dictionary.push_str("ng5\t\u{4e94}\t1\n");
+    for index in 0..50_000 {
+        dictionary.push_str(&format!("zz{index}\tFILLER{index}\t0\n"));
+    }
+    fs::write(shared.join("cantonese_large.dict.yaml"), dictionary)
+        .expect("dictionary should be written");
+
+    let shared_c = CString::new(shared.to_string_lossy().as_ref()).expect("path is valid");
+    let user_c = CString::new(user.to_string_lossy().as_ref()).expect("path is valid");
+    let mut traits = empty_traits();
+    traits.shared_data_dir = shared_c.as_ptr();
+    traits.user_data_dir = user_c.as_ptr();
+    // SAFETY: traits points to valid storage and strings live for the call.
+    unsafe { RimeSetup(&traits) };
+
+    let session_id = RimeCreateSession();
+    let schema_id = CString::new("cantonese_large").expect("schema id should be valid");
+    // SAFETY: schema id is a valid NUL-terminated string.
+    assert_eq!(
+        unsafe { RimeSelectSchema(session_id, schema_id.as_ptr()) },
+        TRUE
+    );
+
+    assert_eq!(RimeProcessKey(session_id, 'm' as c_int, 0), TRUE);
+    let mut context = empty_context();
+    // SAFETY: context points to writable storage initialized with positive `data_size`.
+    assert_eq!(unsafe { RimeGetContext(session_id, &mut context) }, TRUE);
+    let candidates = unsafe {
+        std::slice::from_raw_parts(
+            context.menu.candidates,
+            context.menu.num_candidates as usize,
+        )
+    };
+    let candidate_pairs = candidates
+        .iter()
+        .map(|candidate| {
+            let text = unsafe { CStr::from_ptr(candidate.text) }
+                .to_str()
+                .expect("candidate text should be valid UTF-8")
+                .to_owned();
+            let comment = if candidate.comment.is_null() {
+                String::new()
+            } else {
+                unsafe { CStr::from_ptr(candidate.comment) }
+                    .to_str()
+                    .expect("candidate comment should be valid UTF-8")
+                    .to_owned()
+            };
+            (text, comment)
+        })
+        .collect::<Vec<_>>();
+    // SAFETY: nested pointers were allocated by `RimeGetContext` above.
+    assert_eq!(unsafe { RimeFreeContext(&mut context) }, TRUE);
+
+    assert!(
+        candidate_pairs.contains(&("\u{5514}".to_owned(), "m4".to_owned())),
+        "large dictionary should keep the directly keyed real Cantonese row: {candidate_pairs:?}"
+    );
+    assert!(
+        candidate_pairs.contains(&("\u{4e94}".to_owned(), "ng5".to_owned())),
+        "large dictionary should keep fork ng->m fuzzy algebra for real Cantonese rows: {candidate_pairs:?}"
+    );
+
+    assert_eq!(RimeDestroySession(session_id), TRUE);
+    let reset_traits = empty_traits();
+    // SAFETY: reset traits points to valid storage.
+    unsafe { RimeSetup(&reset_traits) };
+    fs::remove_dir_all(root).expect("temp dirs should be removed");
+}
+
 // Owner: yune-core spelling_algebra.rs and translator/mod.rs; librime oracle: YAML-backed correction penalties participate in lookup ranking without compiled prism/table/reverse payloads.
 #[test]
 fn schema_tolerance_lookup_yaml_backed_ranking_matches_librime() {
@@ -6711,6 +7070,302 @@ pin	平	0
     // SAFETY: nested pointers were allocated by `RimeGetContext` above.
     assert_eq!(unsafe { RimeFreeContext(&mut context) }, TRUE);
     assert_eq!(texts, ["平".to_owned(), "病".to_owned(), "pin".to_owned()]);
+
+    assert_eq!(RimeDestroySession(session_id), TRUE);
+    let reset_traits = empty_traits();
+    // SAFETY: reset traits points to valid storage.
+    unsafe { RimeSetup(&reset_traits) };
+    fs::remove_dir_all(root).expect("temp dirs should be removed");
+}
+
+// Owner: schema_install.rs and yune-core translator/mod.rs; TypeDuck v1.1.2 oracle: translator/enable_correction is independent of enable_completion and gates dictionary correction lookup.
+#[test]
+fn schema_dictionary_correction_gate_is_independent_of_completion() {
+    let _guard = test_guard();
+    RimeCleanupAllSessions();
+    let root = unique_temp_dir("schema-dictionary-correction-gate");
+    let shared = root.join("shared");
+    let user = root.join("user");
+    let staging = user.join("build");
+    fs::create_dir_all(&shared).expect("shared dir should be created");
+    fs::create_dir_all(&staging).expect("staging dir should be created");
+    for (schema_id, enable_completion, enable_correction) in [
+        ("correction_disabled", false, false),
+        ("correction_enabled", true, true),
+    ] {
+        fs::write(
+            staging.join(format!("{schema_id}.schema.yaml")),
+            format!(
+                "\
+schema:
+  schema_id: {schema_id}
+  name: {schema_id}
+engine:
+  translators:
+    - table_translator
+    - echo_translator
+translator:
+  dictionary: correction
+  enable_completion: {enable_completion}
+  enable_sentence: false
+  enable_correction: {enable_correction}
+"
+            ),
+        )
+        .expect("schema config should be written");
+    }
+    fs::write(
+        shared.join("correction.dict.yaml"),
+        "\
+---
+name: correction
+version: '0.1'
+sort: by_weight
+correction: [bq=>ba]
+...
+
+八\tba\t2
+爸\tba\t1
+把\tbaa\t100
+",
+    )
+    .expect("dictionary should be written");
+
+    let shared_c = CString::new(shared.to_string_lossy().as_ref()).expect("path is valid");
+    let user_c = CString::new(user.to_string_lossy().as_ref()).expect("path is valid");
+    let mut traits = empty_traits();
+    traits.shared_data_dir = shared_c.as_ptr();
+    traits.user_data_dir = user_c.as_ptr();
+    // SAFETY: traits points to valid storage and strings live for the call.
+    unsafe { RimeSetup(&traits) };
+
+    let session_id = RimeCreateSession();
+    let schema_id = CString::new("correction_disabled").expect("schema id should be valid");
+    // SAFETY: schema id is a valid NUL-terminated string.
+    assert_eq!(
+        unsafe { RimeSelectSchema(session_id, schema_id.as_ptr()) },
+        TRUE
+    );
+    for ch in "bq".chars() {
+        assert_eq!(RimeProcessKey(session_id, ch as c_int, 0), TRUE);
+    }
+    assert_eq!(
+        current_candidate_pairs(session_id),
+        [("bq".to_owned(), "echo".to_owned())],
+        "correction dictionary entries should not leak when enable_correction is false"
+    );
+
+    RimeClearComposition(session_id);
+    let schema_id = CString::new("correction_enabled").expect("schema id should be valid");
+    // SAFETY: schema id is a valid NUL-terminated string.
+    assert_eq!(
+        unsafe { RimeSelectSchema(session_id, schema_id.as_ptr()) },
+        TRUE
+    );
+    for ch in "bq".chars() {
+        assert_eq!(RimeProcessKey(session_id, ch as c_int, 0), TRUE);
+    }
+    let ranked = current_candidate_pairs(session_id);
+    assert_eq!(
+        ranked[..2],
+        [
+            ("八".to_owned(), "ba".to_owned()),
+            ("爸".to_owned(), "ba".to_owned())
+        ],
+        "enable_correction should recover dictionary corrections independently of completion"
+    );
+    assert!(
+        ranked.iter().all(|(text, _)| text != "把"),
+        "corrected lookup should not expand completion rows from the canonical spelling"
+    );
+
+    assert_eq!(RimeDestroySession(session_id), TRUE);
+    let reset_traits = empty_traits();
+    // SAFETY: reset traits points to valid storage.
+    unsafe { RimeSetup(&reset_traits) };
+    fs::remove_dir_all(root).expect("temp dirs should be removed");
+}
+
+// Owner: schema_install.rs and context_api.rs; TypeDuck v1.1.2 oracle: include:/letter_to_tone maps v/x/q tone letters to numeric Jyutping in preedit only.
+#[test]
+fn schema_translator_preedit_format_applies_letter_to_tone_without_changing_input() {
+    let _guard = test_guard();
+    RimeCleanupAllSessions();
+    let root = unique_temp_dir("schema-preedit-format-letter-to-tone");
+    let shared = root.join("shared");
+    let user = root.join("user");
+    let staging = user.join("build");
+    fs::create_dir_all(&shared).expect("shared dir should be created");
+    fs::create_dir_all(&staging).expect("staging dir should be created");
+    fs::write(
+        staging.join("jyut.schema.yaml"),
+        "\
+schema:
+  schema_id: jyut
+  name: Jyut
+engine:
+  translators:
+    - table_translator
+    - echo_translator
+translator:
+  dictionary: jyut
+  enable_completion: false
+  enable_sentence: false
+  preedit_format:
+    - xform/([aeiouymngptk])vv/${1}4/
+    - xform/([aeiouymngptk])xx/${1}5/
+    - xform/([aeiouymngptk])qq/${1}6/
+    - xform/([aeiouymngptk])v/${1}1/
+    - xform/([aeiouymngptk])x/${1}2/
+    - xform/([aeiouymngptk])q/${1}3/
+speller:
+  algebra:
+    - xform/4/vv/
+",
+    )
+    .expect("schema config should be written");
+    fs::write(
+        shared.join("jyut.dict.yaml"),
+        "\
+---
+name: jyut
+version: '0.1'
+sort: by_weight
+...
+
+tone-four\tnei4\t1
+",
+    )
+    .expect("dictionary should be written");
+
+    let shared_c = CString::new(shared.to_string_lossy().as_ref()).expect("path is valid");
+    let user_c = CString::new(user.to_string_lossy().as_ref()).expect("path is valid");
+    let mut traits = empty_traits();
+    traits.shared_data_dir = shared_c.as_ptr();
+    traits.user_data_dir = user_c.as_ptr();
+    // SAFETY: traits points to valid storage and strings live for the call.
+    unsafe { RimeSetup(&traits) };
+
+    let session_id = RimeCreateSession();
+    let schema_id = CString::new("jyut").expect("schema id should be valid");
+    // SAFETY: schema id is a valid NUL-terminated string.
+    assert_eq!(
+        unsafe { RimeSelectSchema(session_id, schema_id.as_ptr()) },
+        TRUE
+    );
+    for ch in "neivv".chars() {
+        assert_eq!(RimeProcessKey(session_id, ch as c_int, 0), TRUE);
+    }
+    let input_ptr = RimeGetInput(session_id);
+    assert!(!input_ptr.is_null());
+    let raw_input = unsafe { CStr::from_ptr(input_ptr) }
+        .to_str()
+        .expect("raw input should be UTF-8");
+    assert_eq!(raw_input, "neivv");
+
+    let mut context = empty_context();
+    // SAFETY: context points to writable storage initialized with positive `data_size`.
+    assert_eq!(unsafe { RimeGetContext(session_id, &mut context) }, TRUE);
+    let preedit = unsafe { CStr::from_ptr(context.composition.preedit) }
+        .to_str()
+        .expect("preedit should be valid UTF-8")
+        .to_owned();
+    assert_eq!(context.composition.length, 4);
+    assert_eq!(context.composition.cursor_pos, 4);
+    assert_eq!(context.composition.sel_end, 4);
+    // SAFETY: nested pointers were allocated by `RimeGetContext` above.
+    assert_eq!(unsafe { RimeFreeContext(&mut context) }, TRUE);
+    assert_eq!(preedit, "nei4");
+
+    assert_eq!(RimeDestroySession(session_id), TRUE);
+    let reset_traits = empty_traits();
+    // SAFETY: reset traits points to valid storage.
+    unsafe { RimeSetup(&reset_traits) };
+    fs::remove_dir_all(root).expect("temp dirs should be removed");
+}
+
+// Owner: schema_install.rs and context_api.rs; TypeDuck v1.1.2 oracle: partial `q` input keeps raw preedit even when completion candidates exist.
+#[test]
+fn schema_translator_preedit_format_leaves_partial_letter_tone_completion_raw() {
+    let _guard = test_guard();
+    RimeCleanupAllSessions();
+    let root = unique_temp_dir("schema-preedit-format-partial-letter-tone");
+    let shared = root.join("shared");
+    let user = root.join("user");
+    let staging = user.join("build");
+    fs::create_dir_all(&shared).expect("shared dir should be created");
+    fs::create_dir_all(&staging).expect("staging dir should be created");
+    fs::write(
+        staging.join("jyut.schema.yaml"),
+        "\
+schema:
+  schema_id: jyut
+  name: Jyut
+engine:
+  translators:
+    - table_translator
+    - echo_translator
+translator:
+  dictionary: jyut
+  enable_sentence: false
+  preedit_format:
+    - xform/([aeiouymngptk])qq/${1}6/
+    - xform/([aeiouymngptk])q/${1}3/
+speller:
+  algebra:
+    - xform/6/qq/
+",
+    )
+    .expect("schema config should be written");
+    fs::write(
+        shared.join("jyut.dict.yaml"),
+        "\
+---
+name: jyut
+version: '0.1'
+sort: by_weight
+...
+
+tone-six\tnei6\t1
+",
+    )
+    .expect("dictionary should be written");
+
+    let shared_c = CString::new(shared.to_string_lossy().as_ref()).expect("path is valid");
+    let user_c = CString::new(user.to_string_lossy().as_ref()).expect("path is valid");
+    let mut traits = empty_traits();
+    traits.shared_data_dir = shared_c.as_ptr();
+    traits.user_data_dir = user_c.as_ptr();
+    // SAFETY: traits points to valid storage and strings live for the call.
+    unsafe { RimeSetup(&traits) };
+
+    let session_id = RimeCreateSession();
+    let schema_id = CString::new("jyut").expect("schema id should be valid");
+    // SAFETY: schema id is a valid NUL-terminated string.
+    assert_eq!(
+        unsafe { RimeSelectSchema(session_id, schema_id.as_ptr()) },
+        TRUE
+    );
+    for ch in "neiq".chars() {
+        assert_eq!(RimeProcessKey(session_id, ch as c_int, 0), TRUE);
+    }
+    let mut context = empty_context();
+    // SAFETY: context points to writable storage initialized with positive `data_size`.
+    assert_eq!(unsafe { RimeGetContext(session_id, &mut context) }, TRUE);
+    let preedit = unsafe { CStr::from_ptr(context.composition.preedit) }
+        .to_str()
+        .expect("preedit should be valid UTF-8")
+        .to_owned();
+    assert!(
+        context.menu.num_candidates > 0,
+        "partial tone-letter input should still expose candidates"
+    );
+    assert_eq!(context.composition.length, 4);
+    assert_eq!(context.composition.cursor_pos, 4);
+    assert_eq!(context.composition.sel_end, 4);
+    // SAFETY: nested pointers were allocated by `RimeGetContext` above.
+    assert_eq!(unsafe { RimeFreeContext(&mut context) }, TRUE);
+    assert_eq!(preedit, "neiq");
 
     assert_eq!(RimeDestroySession(session_id), TRUE);
     let reset_traits = empty_traits();

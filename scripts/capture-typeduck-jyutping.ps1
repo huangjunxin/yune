@@ -1,12 +1,14 @@
 param(
-    [ValidateSet("Smoke", "Options", "CompletionCorrection", "SchemaMenu", "UserDb", "All")]
+    [ValidateSet("Smoke", "Options", "CompletionCorrection", "SchemaMenu", "UserDb", "PreferUserPhrase", "LetterToTone", "StateLabels", "All")]
     [string]$Fixture = "Smoke",
     [string]$OracleRoot,
     [string]$Output,
     [string[]]$Inputs,
     [switch]$InternalCapture,
     [switch]$InternalSchemaList,
+    [switch]$InternalStateLabels,
     [switch]$InternalUserDbProbe,
+    [switch]$InternalUserDbImportCapture,
     [string]$Shared,
     [string]$User,
     [string]$Build,
@@ -16,6 +18,7 @@ param(
     [string]$CasesOutput,
     [string]$DictName = "jyut6ping3",
     [string]$ExportPath,
+    [string]$ImportPath,
     [string]$TrainingInput = "nei"
 )
 
@@ -71,6 +74,17 @@ function Write-CommonCustom([string]$SharedDir, [string[]]$Patches) {
     Write-Utf8NoBom (Join-Path $SharedDir "common.custom.yaml") $Text
 }
 
+function Write-SchemaCustom([string]$UserDir, [string]$SchemaId, [string[]]$PatchLines) {
+    if ($null -eq $PatchLines -or $PatchLines.Count -eq 0) {
+        return
+    }
+    $Lines = @("patch:")
+    foreach ($PatchLine in $PatchLines) {
+        $Lines += "  $PatchLine"
+    }
+    Write-Utf8NoBom (Join-Path $UserDir "$SchemaId.custom.yaml") (($Lines -join "`n") + "`n")
+}
+
 function Assert-OracleInputs {
     $RequiredPaths = @(
         (Join-Path $Extract "dist\lib\rime.dll"),
@@ -115,7 +129,8 @@ function New-Variant(
     [string]$VariantSchema,
     [string[]]$Patches,
     [string[]]$VariantInputs,
-    [string]$DefaultCustomMode = "Keep"
+    [string]$DefaultCustomMode = "Keep",
+    [string[]]$SchemaCustomPatchLines = @()
 ) {
     $Root = Join-Path $CaptureRoot (Join-Path $Group $Name)
     Remove-CaptureTree $Root $CaptureRoot
@@ -125,6 +140,7 @@ function New-Variant(
     New-Item -ItemType Directory -Force -Path $Root, $VariantUser | Out-Null
     Copy-Item -LiteralPath $SharedBase -Destination $VariantShared -Recurse
     Write-CommonCustom $VariantShared $Patches
+    Write-SchemaCustom $VariantUser $VariantSchema $SchemaCustomPatchLines
     if ($DefaultCustomMode -eq "Remove") {
         $DefaultCustom = Join-Path $VariantShared "default.custom.yaml"
         if (Test-Path -LiteralPath $DefaultCustom) {
@@ -143,6 +159,7 @@ function New-Variant(
         user = $VariantUser
         build = $VariantBuild
         default_custom_mode = $DefaultCustomMode
+        schema_custom_patch_lines = $SchemaCustomPatchLines
     }
 }
 
@@ -211,6 +228,36 @@ function Invoke-ChildSchemaList($Variant) {
     }
 }
 
+function Invoke-ChildStateLabels($Variant) {
+    $CasesPath = Join-Path $Variant.root "state-labels.json"
+    $Args = @(
+        "-NoProfile",
+        "-ExecutionPolicy", "Bypass",
+        "-File", $PSCommandPath,
+        "-InternalStateLabels",
+        "-OracleRoot", $OracleRoot,
+        "-Shared", $Variant.shared,
+        "-User", $Variant.user,
+        "-Build", $Variant.build,
+        "-Schema", $Variant.schema,
+        "-CasesOutput", $CasesPath,
+        "-Modules", ($Modules -join ",")
+    )
+    & powershell @Args
+    if ($LASTEXITCODE -ne 0) {
+        throw "state-label capture failed for $($Variant.name) with exit code $LASTEXITCODE"
+    }
+    $Result = Read-JsonFile $CasesPath
+    [ordered]@{
+        variant = $Variant.name
+        schema_id = $Result.schema_id
+        schema_name = $Result.schema_name
+        patches = $Variant.patches
+        default_custom_mode = $Variant.default_custom_mode
+        labels = $Result.labels
+    }
+}
+
 function Invoke-ChildUserDbProbe($Variant) {
     $CasesPath = Join-Path $Variant.root "userdb-probe.json"
     $Export = Join-Path $Variant.root "jyut6ping3-userdb-export.txt"
@@ -233,6 +280,35 @@ function Invoke-ChildUserDbProbe($Variant) {
     & powershell @Args
     if ($LASTEXITCODE -ne 0) {
         throw "userdb probe failed for $($Variant.name) with exit code $LASTEXITCODE"
+    }
+    Read-JsonFile $CasesPath
+}
+
+function Invoke-ChildUserDbImportCapture($Variant, [string]$ImportText) {
+    $CasesPath = Join-Path $Variant.root "userdb-import-capture.json"
+    $Import = Join-Path $Variant.root "prefer-user-phrase-import.tsv"
+    Write-Utf8NoBom $Import $ImportText
+    $InputsPath = Join-Path $Variant.root "inputs.json"
+    Write-JsonFile $InputsPath $Variant.inputs
+    $Args = @(
+        "-NoProfile",
+        "-ExecutionPolicy", "Bypass",
+        "-File", $PSCommandPath,
+        "-InternalUserDbImportCapture",
+        "-OracleRoot", $OracleRoot,
+        "-Shared", $Variant.shared,
+        "-User", $Variant.user,
+        "-Build", $Variant.build,
+        "-Schema", $Variant.schema,
+        "-CasesOutput", $CasesPath,
+        "-DictName", $DictName,
+        "-ImportPath", $Import,
+        "-InputsFile", $InputsPath,
+        "-Modules", ($Modules -join ",")
+    )
+    & powershell @Args
+    if ($LASTEXITCODE -ne 0) {
+        throw "userdb import capture failed for $($Variant.name) with exit code $LASTEXITCODE"
     }
     Read-JsonFile $CasesPath
 }
@@ -306,7 +382,7 @@ if ($null -ne $Inputs -and $Inputs.Count -eq 1 -and $Inputs[0].Contains(",")) {
 
 $env:PATH = (Join-Path $Extract "dist\lib") + ";" + (Join-Path $Extract "bin") + ";" + $env:PATH
 
-if ($InternalCapture -or $InternalSchemaList -or $InternalUserDbProbe) {
+if ($InternalCapture -or $InternalSchemaList -or $InternalStateLabels -or $InternalUserDbProbe -or $InternalUserDbImportCapture) {
     Add-Type -Path (Join-Path $RepoRoot "scripts\oracle-rime-probe.cs")
     $Identity = [RimeProbe]::TypeDuckV112Identity()
     if ($InternalCapture) {
@@ -332,7 +408,17 @@ if ($InternalCapture -or $InternalSchemaList -or $InternalUserDbProbe) {
             $Identity
         )
         Write-JsonFile $CasesOutput $Result
-    } else {
+    } elseif ($InternalStateLabels) {
+        $Result = [RimeProbe]::CaptureStateLabelsWithIdentity(
+            $Shared,
+            $User,
+            $Build,
+            $Schema,
+            [string[]]$Modules,
+            $Identity
+        )
+        Write-JsonFile $CasesOutput $Result
+    } elseif ($InternalUserDbProbe) {
         $Result = [RimeProbe]::ProbeUserDictExportWithIdentity(
             $Shared,
             $User,
@@ -345,6 +431,19 @@ if ($InternalCapture -or $InternalSchemaList -or $InternalUserDbProbe) {
             $Identity
         )
         Write-JsonFile $CasesOutput $Result
+    } else {
+        $Result = [RimeProbe]::CaptureImportedUserDictWithIdentity(
+            $Shared,
+            $User,
+            $Build,
+            $Schema,
+            [string[]]$Modules,
+            $DictName,
+            $ImportPath,
+            [string[]]$Inputs,
+            $Identity
+        )
+        Write-JsonFile $CasesOutput $Result
     }
     exit 0
 }
@@ -354,7 +453,7 @@ $SchemaCommit = Get-SchemaCommit
 New-Item -ItemType Directory -Force -Path $CaptureRoot | Out-Null
 
 if ($Fixture -eq "All") {
-    foreach ($Name in @("Smoke", "Options", "CompletionCorrection", "SchemaMenu", "UserDb")) {
+    foreach ($Name in @("Smoke", "Options", "CompletionCorrection", "SchemaMenu", "UserDb", "PreferUserPhrase", "LetterToTone", "StateLabels")) {
         & $PSCommandPath -Fixture $Name -OracleRoot $OracleRoot
         if ($LASTEXITCODE -ne 0) {
             throw "fixture capture failed for $Name with exit code $LASTEXITCODE"
@@ -370,6 +469,9 @@ if ([string]::IsNullOrWhiteSpace($Output)) {
         "CompletionCorrection" { "jyut6ping3-m14-completion-correction.json" }
         "SchemaMenu" { "jyut6ping3-m14-schema-menu.json" }
         "UserDb" { "jyut6ping3-m14-userdb.json" }
+        "PreferUserPhrase" { "jyut6ping3-fork-parity-02-prefer-user-phrase.json" }
+        "LetterToTone" { "jyut6ping3-fork-parity-06-letter-to-tone.json" }
+        "StateLabels" { "jyut6ping3-fork-parity-07-state-labels.json" }
     }
     $Output = Join-Path $RepoRoot (Join-Path "crates\yune-core\tests\fixtures\typeduck-v1.1.2" $OutputName)
 }
@@ -446,6 +548,84 @@ if ($Fixture -eq "Smoke") {
         dict_name = $DictName
     }
     $FixtureBody = New-Fixture "typeduck_v112_userdb_levers_export_probe" @("jyut6ping3_mobile") @("per_entry_userdb_pronunciation") $Cases $Finding
+    Write-JsonFile $Output $FixtureBody
+} elseif ($Fixture -eq "PreferUserPhrase") {
+    $Modules = [string[]]@("default", "dictionary_lookup", "levers")
+    $CaseSpecs = @(
+        [ordered]@{
+            name = "equal_code_low_commit_user_phrase"
+            inputs = [string[]]@("nei")
+            import_text = "YUNELOW`tnei5`t1`n"
+        },
+        [ordered]@{
+            name = "equal_code_high_commit_user_phrase"
+            inputs = [string[]]@("nei")
+            import_text = "YUNEHIGH`tnei5`t100000000`n"
+        },
+        [ordered]@{
+            name = "longer_code_user_phrase"
+            inputs = [string[]]@("neihou")
+            import_text = "YUNELONG`tnei5 hou2`t1`n"
+        }
+    )
+    $Cases = foreach ($Spec in $CaseSpecs) {
+        $Variant = New-Variant `
+            -Group "prefer-user-phrase" `
+            -Name $Spec.name `
+            -VariantSchema "jyut6ping3_mobile" `
+            -Patches ([string[]]@()) `
+            -VariantInputs ([string[]]$Spec.inputs) `
+            -SchemaCustomPatchLines ([string[]]@("translator/enable_user_dict: true", "translator/encode_commit_history: true"))
+        $Result = Invoke-ChildUserDbImportCapture $Variant $Spec.import_text
+        [ordered]@{
+            variant = $Variant.name
+            schema_id = $Variant.schema
+            patches = $Variant.patches
+            default_custom_mode = $Variant.default_custom_mode
+            schema_custom_patch_lines = $Variant.schema_custom_patch_lines
+            import_text = $Spec.import_text
+            probe = $Result
+        }
+    }
+    $Finding = [ordered]@{
+        import_path = "RimeLeversApi.import_user_dict"
+        dict_name = $DictName
+        expected_behavior = "User phrases are visible through userdb, longer-code phrases are preferred, and equal-code phrases are not preferred by code length alone."
+    }
+    $FixtureBody = New-Fixture "typeduck_v112_prefer_user_phrase_weighted_gate" @("jyut6ping3_mobile") @("prefer_user_phrase") $Cases $Finding
+    Write-JsonFile $Output $FixtureBody
+} elseif ($Fixture -eq "LetterToTone") {
+    if ($null -eq $Inputs -or $Inputs.Count -eq 0) {
+        $Inputs = [string[]]@("neiv", "neivv", "neix", "neixx", "neiq", "neiqq")
+    }
+    $Variant = New-Variant `
+        -Group "fork-parity-06" `
+        -Name "letter_to_tone_mobile" `
+        -VariantSchema "jyut6ping3_mobile" `
+        -Patches ([string[]]@()) `
+        -VariantInputs $Inputs
+    $Cases = Invoke-ChildCapture $Variant
+    $Finding = [ordered]@{
+        input_sequence = $Inputs
+        oracle_observable_surface = "RimeGetContext composition preedit maps TypeDuck v/x/q tone letters to Jyutping tone digits while RimeGetInput preserves raw letters"
+    }
+    $FixtureBody = New-Fixture "typeduck_v112_letter_to_tone_preedit" @("jyut6ping3_mobile") @("letter_to_tone") $Cases $Finding
+    $FixtureBody["input_sequence"] = $Inputs
+    Write-JsonFile $Output $FixtureBody
+} elseif ($Fixture -eq "StateLabels") {
+    $Variant = New-Variant `
+        -Group "fork-parity-07" `
+        -Name "state_labels_mobile" `
+        -VariantSchema "jyut6ping3_mobile" `
+        -Patches ([string[]]@()) `
+        -VariantInputs ([string[]]@())
+    $Cases = Invoke-ChildStateLabels $Variant
+    $Finding = [ordered]@{
+        oracle_observable_surface = "RimeGetStateLabel full_shape returns TypeDuck Traditional labels"
+        schema_source_file = "TypeDuck-HK/schema/template.yaml"
+        deployed_schema_file = "jyut6ping3_mobile.schema.yaml"
+    }
+    $FixtureBody = New-Fixture "typeduck_v112_full_shape_state_labels" @("jyut6ping3_mobile") @("state_labels") $Cases $Finding
     Write-JsonFile $Output $FixtureBody
 }
 

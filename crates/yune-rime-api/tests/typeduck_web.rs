@@ -1,6 +1,6 @@
 use std::{
     ffi::{CStr, CString},
-    fs,
+    fs, mem,
     path::{Path, PathBuf},
     ptr,
     sync::{Mutex, MutexGuard, OnceLock},
@@ -13,7 +13,7 @@ use yune_rime_api::{
     yune_typeduck_deploy, yune_typeduck_flip_page, yune_typeduck_free_response, yune_typeduck_init,
     yune_typeduck_process_key, yune_typeduck_response_handled, yune_typeduck_response_json,
     yune_typeduck_select_candidate, yune_typeduck_set_ai_enabled, yune_typeduck_set_option,
-    yune_typeduck_stage_ai, Bool, FALSE, TRUE,
+    yune_typeduck_stage_ai, Bool, RimeStringSlice, RimeTraits, FALSE, TRUE,
 };
 
 const SCHEMA_ID: &str = "typeduck_luna";
@@ -26,6 +26,39 @@ fn test_guard() -> MutexGuard<'static, ()> {
         .get_or_init(|| Mutex::new(()))
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
+fn empty_rime_traits() -> RimeTraits {
+    RimeTraits {
+        data_size: mem::size_of::<RimeTraits>() as i32,
+        shared_data_dir: ptr::null(),
+        user_data_dir: ptr::null(),
+        distribution_name: ptr::null(),
+        distribution_code_name: ptr::null(),
+        distribution_version: ptr::null(),
+        app_name: ptr::null(),
+        modules: ptr::null(),
+        min_log_level: 0,
+        log_dir: ptr::null(),
+        prebuilt_data_dir: ptr::null(),
+        staging_dir: ptr::null(),
+    }
+}
+
+fn state_label_text(label: *const std::os::raw::c_char) -> String {
+    assert!(!label.is_null());
+    unsafe { CStr::from_ptr(label) }
+        .to_str()
+        .expect("state label should be valid UTF-8")
+        .to_owned()
+}
+
+fn state_label_slice(label: RimeStringSlice) -> String {
+    assert!(!label.str.is_null());
+    let bytes = unsafe { std::slice::from_raw_parts(label.str.cast::<u8>(), label.length) };
+    std::str::from_utf8(bytes)
+        .expect("state label slice should be valid UTF-8")
+        .to_owned()
 }
 
 #[test]
@@ -916,6 +949,71 @@ fn typeduck_adapter_deploys_browser_real_assets_after_init() {
     assert_eq!(unsafe { yune_typeduck_deploy(state) }, TRUE);
 
     unsafe { yune_typeduck_cleanup(state) };
+    runtime.remove();
+}
+
+#[test]
+fn typeduck_adapter_real_assets_preserve_typeduck_full_shape_state_labels() {
+    let _guard = test_guard();
+    let runtime =
+        TypeDuckRuntime::create_with_schema("browser-real-state-labels", "jyut6ping3_mobile");
+    runtime.write_browser_real_assets();
+
+    let api = rime_get_api();
+    assert!(!api.is_null());
+    let api = unsafe { &*api };
+    let setup = api.setup.expect("frontend requires setup");
+    let initialize = api.initialize.expect("frontend requires initialize");
+    let cleanup_all_sessions = api
+        .cleanup_all_sessions
+        .expect("frontend requires cleanup_all_sessions");
+    let create_session = api
+        .create_session
+        .expect("frontend requires create_session");
+    let destroy_session = api
+        .destroy_session
+        .expect("frontend requires destroy_session");
+    let select_schema = api.select_schema.expect("frontend requires select_schema");
+    let get_state_label = api
+        .get_state_label
+        .expect("frontend requires get_state_label");
+    let get_state_label_abbreviated = api
+        .get_state_label_abbreviated
+        .expect("frontend requires get_state_label_abbreviated");
+
+    cleanup_all_sessions();
+    let mut traits = empty_rime_traits();
+    traits.shared_data_dir = runtime.shared_c.as_ptr();
+    traits.user_data_dir = runtime.user_c.as_ptr();
+    unsafe { setup(&traits) };
+    unsafe { initialize(&traits) };
+
+    let session_id = create_session();
+    assert_ne!(session_id, 0);
+    assert_eq!(
+        unsafe { select_schema(session_id, runtime.schema_id_c.as_ptr()) },
+        TRUE
+    );
+
+    let full_shape = CString::new("full_shape").expect("option name should be valid");
+    let half_label =
+        state_label_text(unsafe { get_state_label(session_id, full_shape.as_ptr(), FALSE) });
+    let full_label =
+        state_label_text(unsafe { get_state_label(session_id, full_shape.as_ptr(), TRUE) });
+    assert_eq!(half_label, "\u{534a}\u{5f62}");
+    assert_eq!(full_label, "\u{5168}\u{5f62}");
+
+    let half_abbrev =
+        unsafe { get_state_label_abbreviated(session_id, full_shape.as_ptr(), FALSE, TRUE) };
+    assert_eq!(half_abbrev.length, "\u{534a}".len());
+    assert_eq!(state_label_slice(half_abbrev), "\u{534a}");
+    let full_abbrev =
+        unsafe { get_state_label_abbreviated(session_id, full_shape.as_ptr(), TRUE, TRUE) };
+    assert_eq!(full_abbrev.length, "\u{5168}".len());
+    assert_eq!(state_label_slice(full_abbrev), "\u{5168}");
+
+    assert_eq!(destroy_session(session_id), TRUE);
+    cleanup_all_sessions();
     runtime.remove();
 }
 

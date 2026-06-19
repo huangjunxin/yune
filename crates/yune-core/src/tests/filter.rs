@@ -1,7 +1,8 @@
 use crate::{
     Candidate, CandidateFilter, CandidateSource, CharsetFilter, DictionaryLookupFilter, Engine,
-    ReverseLookupFilter, ReverseLookupTranslator, SimplifierFilter, SingleCharFilter,
-    StaticTableTranslator, TableDictionary, TaggedFilter, Translator, UniquifierFilter,
+    ReverseLookupFilter, ReverseLookupTranslator, RimeCorrectionEntry, SimplifierFilter,
+    SingleCharFilter, StaticTableTranslator, TableDictionary, TableDictionaryAdvancedData,
+    TableEntry, TaggedFilter, Translator, UniquifierFilter,
 };
 
 #[test]
@@ -25,24 +26,28 @@ sort: original
         Candidate {
             text: "你".to_owned(),
             comment: "ni".to_owned(),
+            preedit: None,
             source: CandidateSource::Table,
             quality: 1.0,
         },
         Candidate {
             text: "好".to_owned(),
             comment: String::new(),
+            preedit: None,
             source: CandidateSource::Table,
             quality: 1.0,
         },
         Candidate {
             text: "你".to_owned(),
             comment: String::new(),
+            preedit: None,
             source: CandidateSource::Completion,
             quality: 0.5,
         },
         Candidate {
             text: "你好".to_owned(),
             comment: " ☯ ".to_owned(),
+            preedit: None,
             source: CandidateSource::Sentence,
             quality: 2.0,
         },
@@ -56,6 +61,7 @@ sort: original
     let mut sentence_candidates = vec![Candidate {
         text: "你好".to_owned(),
         comment: " ☯ ".to_owned(),
+        preedit: None,
         source: CandidateSource::Sentence,
         quality: 2.0,
     }];
@@ -119,18 +125,21 @@ word	lei5	2	l	variant	lei5	you alt
         Candidate {
             text: "word".to_owned(),
             comment: "nei5".to_owned(),
+            preedit: None,
             source: CandidateSource::Table,
             quality: 1.0,
         },
         Candidate {
             text: "word".to_owned(),
             comment: "lei5".to_owned(),
+            preedit: None,
             source: CandidateSource::Completion,
             quality: 0.5,
         },
         Candidate {
             text: "word".to_owned(),
             comment: "history".to_owned(),
+            preedit: None,
             source: CandidateSource::History,
             quality: 2.0,
         },
@@ -171,12 +180,14 @@ ni1,2,0,,oth,ver,,,this,,,this,,,,\t{}\n",
         Candidate {
             text: "\u{4f60}".to_owned(),
             comment: "\u{000c}nei5".to_owned(),
+            preedit: None,
             source: CandidateSource::Table,
             quality: 1.0,
         },
         Candidate {
             text: "\u{5462}".to_owned(),
             comment: "\u{000c}nei1".to_owned(),
+            preedit: None,
             source: CandidateSource::Table,
             quality: 1.0,
         },
@@ -222,6 +233,7 @@ columns: [text, code, weight, stem, source, english]
     let mut candidates = vec![Candidate {
         text: "好".to_owned(),
         comment: "\u{000c}hou2;hou3".to_owned(),
+        preedit: None,
         source: CandidateSource::Table,
         quality: 1.0,
     }];
@@ -252,6 +264,7 @@ sort: original
     let mut candidates = vec![Candidate {
         text: "旴".to_owned(),
         comment: "\u{000b}～木".to_owned(),
+        preedit: None,
         source: CandidateSource::Completion,
         quality: -1.0,
     }];
@@ -285,6 +298,7 @@ columns: [text, code, weight, stem, source, english]
     let mut candidates = vec![Candidate {
         text: "我係個".to_owned(),
         comment: " ☯ ".to_owned(),
+        preedit: None,
         source: CandidateSource::Sentence,
         quality: 1.0,
     }];
@@ -486,6 +500,102 @@ fn static_table_translator_completion_matches_librime_option() {
 }
 
 #[test]
+fn static_table_translator_completion_can_filter_by_prediction_weight_threshold() {
+    let dictionary = TableDictionary::parse_rime_dict_yaml(
+        "\
+---
+name: prediction_threshold
+version: '1'
+sort: by_weight
+...
+
+LOW\tsanlow\t2
+HIGH\tsanhigh\t4
+",
+    )
+    .expect("dictionary should parse");
+    let mut engine = Engine::new();
+    engine.add_translator(
+        StaticTableTranslator::from_dictionary(dictionary)
+            .with_completion(true)
+            .with_prediction_weight_threshold(3.0),
+    );
+    engine.set_input("san");
+
+    let texts = engine
+        .context()
+        .candidates
+        .iter()
+        .map(|candidate| candidate.text.as_str())
+        .collect::<Vec<_>>();
+    assert_eq!(texts, ["HIGH", "san"]);
+}
+
+#[test]
+fn static_table_translator_prediction_never_first_keeps_exact_candidate_ahead() {
+    let dictionary = TableDictionary::parse_rime_dict_yaml(
+        "\
+---
+name: prediction_never_first
+version: '1'
+sort: by_weight
+...
+
+EXACT\tsan\t1
+LONG\tsantai\t4
+",
+    )
+    .expect("dictionary should parse");
+    let mut engine = Engine::new();
+    engine.add_translator(
+        StaticTableTranslator::from_dictionary(dictionary)
+            .with_completion(true)
+            .with_prediction_never_first(true),
+    );
+    engine.set_input("san");
+
+    let texts = engine
+        .context()
+        .candidates
+        .iter()
+        .map(|candidate| candidate.text.as_str())
+        .collect::<Vec<_>>();
+    assert_eq!(texts, ["EXACT", "LONG", "san"]);
+}
+
+#[test]
+fn static_table_translator_completion_surfaces_long_cantonese_prediction() {
+    let dictionary = TableDictionary::parse_rime_dict_yaml(
+        "\
+---
+name: cantonese_prediction
+version: '1'
+sort: by_weight
+...
+
+身體\tsantai\t3
+身體健康\tsantaiginhong\t5
+",
+    )
+    .expect("dictionary should parse");
+    let mut engine = Engine::new();
+    engine.add_translator(
+        StaticTableTranslator::from_dictionary(dictionary)
+            .with_completion(true)
+            .with_prediction_never_first(true),
+    );
+    engine.set_input("santai");
+
+    let texts = engine
+        .context()
+        .candidates
+        .iter()
+        .map(|candidate| candidate.text.as_str())
+        .collect::<Vec<_>>();
+    assert_eq!(texts, ["身體", "身體健康", "santai"]);
+}
+
+#[test]
 fn static_table_translator_honors_librime_segment_tags() {
     let mut custom_tag_engine = Engine::new();
     custom_tag_engine.add_translator(
@@ -573,6 +683,57 @@ fn static_table_translator_sentence_fallback_matches_librime_option() {
     assert_eq!(texts, ["爸包", "ba'bao"]);
     assert_eq!(sources, ["sentence", "echo"]);
     assert_eq!(comments[0], " ☯ ");
+}
+
+#[test]
+fn static_table_translator_sentence_allows_literal_single_letter_interior_segments() {
+    let mut engine = Engine::new();
+    engine.add_translator(
+        StaticTableTranslator::new([("ni", "N"), ("a", "A"), ("hao", "H")]).with_sentence(true),
+    );
+    engine
+        .process_key_sequence("niahao")
+        .expect("key sequence should parse");
+
+    let candidates = &engine.context().candidates;
+    assert_eq!(candidates[0].text, "NAH");
+    assert_eq!(candidates[0].source, CandidateSource::Sentence);
+}
+
+#[test]
+fn static_table_translator_sentence_skips_single_letter_segments_in_abbreviation_schemas() {
+    let dictionary = TableDictionary::parse_rime_dict_yaml(
+        "\
+---
+name: abbreviation_collision
+version: '1'
+sort: original
+...
+
+我\tngo5\t10
+係\thai6\t9
+個\tgo3\t8
+官\tng\t20
+O\to\t20
+",
+    )
+    .expect("dictionary should parse");
+    let formulas = vec![
+        "derive/\\d//".to_owned(),
+        "abbrev/^([a-z]).+$/$1/".to_owned(),
+    ];
+    let mut engine = Engine::new();
+    engine.add_translator(
+        StaticTableTranslator::from_dictionary(dictionary)
+            .with_spelling_algebra(&formulas)
+            .with_completion(true)
+            .with_sentence(true),
+    );
+    engine
+        .process_key_sequence("ngohaigo")
+        .expect("key sequence should parse");
+
+    assert_eq!(engine.context().candidates[0].text, "我係個");
 }
 
 #[test]
@@ -665,6 +826,46 @@ sort: original
 
     assert_eq!(engine.context().candidates[0].text, "我係個");
     assert_eq!(engine.process_char(' ').as_deref(), Some("我係個"));
+}
+
+#[test]
+fn static_table_translator_expands_cantonese_lookahead_spelling_algebra() {
+    let dictionary = TableDictionary::parse_rime_dict_yaml(
+        "\
+---
+name: jyut6ping3_lookahead
+version: '0.1'
+sort: original
+columns: [code, text, weight]
+...
+
+ng5\t\u{4e94}\t1
+noi5\t\u{5167}\t1
+oi3\t\u{611b}\t1
+",
+    )
+    .expect("dictionary should parse");
+    let formulas = vec![
+        "derive/^ng(?=\\d)/m/".to_owned(),
+        "derive/^n(?!g)/l/".to_owned(),
+        "derive/^(?=[aeiou])/ng/".to_owned(),
+        "derive/\\d//".to_owned(),
+    ];
+    let translator =
+        StaticTableTranslator::from_dictionary(dictionary).with_spelling_algebra(&formulas);
+
+    assert!(translator
+        .translate("m")
+        .iter()
+        .any(|candidate| candidate.text == "\u{4e94}"));
+    assert!(translator
+        .translate("loi")
+        .iter()
+        .any(|candidate| candidate.text == "\u{5167}"));
+    assert!(translator
+        .translate("ngoi")
+        .iter()
+        .any(|candidate| candidate.text == "\u{611b}"));
 }
 
 #[test]
@@ -870,6 +1071,144 @@ sort: original
 }
 
 #[test]
+fn static_table_translator_gates_dictionary_corrections_independently_of_completion() {
+    let dictionary = TableDictionary::with_advanced_data(
+        [TableEntry::new("ba", "八", 0.0)],
+        TableDictionaryAdvancedData {
+            corrections: vec![RimeCorrectionEntry::new("bq", "ba")],
+            ..TableDictionaryAdvancedData::default()
+        },
+    );
+
+    let disabled = StaticTableTranslator::from_dictionary(dictionary.clone())
+        .with_completion(false)
+        .translate("bq");
+    assert!(
+        disabled.is_empty(),
+        "dictionary corrections should stay off unless enable_correction is true"
+    );
+
+    let enabled = StaticTableTranslator::from_dictionary(dictionary)
+        .with_completion(false)
+        .with_correction(true)
+        .translate("bq");
+    assert_eq!(enabled[0].text, "八");
+    assert_eq!(enabled[0].comment, "ba");
+}
+
+#[test]
+fn static_table_translator_discards_non_minimal_dictionary_corrections() {
+    let dictionary = TableDictionary::with_advanced_data(
+        [
+            TableEntry::new("aaa", "正", 0.0),
+            TableEntry::new("aa", "近", 20.0),
+            TableEntry::new("a", "遠", 100.0),
+        ],
+        TableDictionaryAdvancedData {
+            corrections: vec![
+                RimeCorrectionEntry::new("aaa", "aa"),
+                RimeCorrectionEntry::new("aaa", "a"),
+            ],
+            ..TableDictionaryAdvancedData::default()
+        },
+    );
+
+    let candidates = StaticTableTranslator::from_dictionary(dictionary)
+        .with_correction(true)
+        .translate("aaa");
+    let texts = candidates
+        .iter()
+        .map(|candidate| candidate.text.as_str())
+        .collect::<Vec<_>>();
+    assert_eq!(texts, ["正", "近"]);
+}
+
+#[test]
+fn static_table_translator_dictionary_corrections_target_normal_derived_codes() {
+    let dictionary = TableDictionary::with_advanced_data(
+        [TableEntry::new("ba", "八", 0.0)],
+        TableDictionaryAdvancedData {
+            corrections: vec![RimeCorrectionEntry::new("bqq", "bq")],
+            ..TableDictionaryAdvancedData::default()
+        },
+    );
+
+    let candidates = StaticTableTranslator::from_dictionary(dictionary)
+        .with_spelling_algebra(&["derive/^ba$/bq/".to_owned()])
+        .with_correction(true)
+        .translate("bqq");
+    assert_eq!(candidates[0].text, "八");
+    assert_eq!(candidates[0].comment, "ba");
+}
+
+#[test]
+fn static_table_translator_dictionary_corrections_reject_non_normal_derived_codes() {
+    let dictionary = TableDictionary::with_advanced_data(
+        [TableEntry::new("ba", "八", 0.0)],
+        TableDictionaryAdvancedData {
+            corrections: vec![RimeCorrectionEntry::new("bqq", "bq")],
+            ..TableDictionaryAdvancedData::default()
+        },
+    );
+
+    let candidates = StaticTableTranslator::from_dictionary(dictionary)
+        .with_spelling_algebra(&["fuzz/^ba$/bq/".to_owned()])
+        .with_correction(true)
+        .translate("bqq");
+    assert!(
+        candidates.is_empty(),
+        "dictionary corrections should not target fuzzy spelling-algebra derived codes"
+    );
+}
+
+#[test]
+fn static_table_translator_scales_dictionary_correction_penalty_by_distance() {
+    let dictionary = TableDictionary::with_advanced_data(
+        [
+            TableEntry::new("aaa", "正", 0.0),
+            TableEntry::new("aa", "近", 20.0),
+        ],
+        TableDictionaryAdvancedData {
+            corrections: vec![RimeCorrectionEntry::new("aaa", "aa")],
+            ..TableDictionaryAdvancedData::default()
+        },
+    );
+
+    let candidates = StaticTableTranslator::from_dictionary(dictionary)
+        .with_correction(true)
+        .translate("aaa");
+    assert_eq!(candidates[0].text, "正");
+    assert_eq!(candidates[1].text, "近");
+    assert!(candidates[0].quality > candidates[1].quality);
+    let expected_correction_quality = (20.0_f32 + (-16.118_095_f32 * 2.0)).exp();
+    assert!((candidates[1].quality - expected_correction_quality).abs() < f32::EPSILON);
+}
+
+#[test]
+fn static_table_translator_dictionary_corrections_do_not_expand_completion_rows() {
+    let dictionary = TableDictionary::with_advanced_data(
+        [
+            TableEntry::new("ba", "八", 0.0),
+            TableEntry::new("baa", "把", 100.0),
+        ],
+        TableDictionaryAdvancedData {
+            corrections: vec![RimeCorrectionEntry::new("bq", "ba")],
+            ..TableDictionaryAdvancedData::default()
+        },
+    );
+
+    let candidates = StaticTableTranslator::from_dictionary(dictionary)
+        .with_completion(true)
+        .with_correction(true)
+        .translate("bq");
+    let texts = candidates
+        .iter()
+        .map(|candidate| candidate.text.as_str())
+        .collect::<Vec<_>>();
+    assert_eq!(texts, ["八"]);
+}
+
+#[test]
 fn simplifier_filter_converts_text_when_option_enabled() {
     let mut engine = Engine::new();
     engine.add_translator(StaticTableTranslator::new([("tw", "臺灣"), ("tw", "龍馬")]));
@@ -1045,12 +1384,14 @@ fn simplifier_filter_honors_librime_excluded_types() {
         Candidate {
             text: "臺灣".to_owned(),
             comment: "tw".to_owned(),
+            preedit: None,
             source: CandidateSource::Table,
             quality: 1.0,
         },
         Candidate {
             text: "龍".to_owned(),
             comment: String::new(),
+            preedit: None,
             source: CandidateSource::Punctuation,
             quality: 1.0,
         },
@@ -1117,6 +1458,7 @@ sort: original
     let mut candidates = vec![Candidate {
         text: "你".to_owned(),
         comment: String::new(),
+        preedit: None,
         source: CandidateSource::Table,
         quality: 1.0,
     }];

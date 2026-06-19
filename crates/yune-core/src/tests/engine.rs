@@ -18,12 +18,14 @@ impl Translator for CommentTranslator {
             Candidate {
                 text: "你".to_owned(),
                 comment: "first-comment".to_owned(),
+                preedit: None,
                 source: CandidateSource::Table,
                 quality: 1.0,
             },
             Candidate {
                 text: "呢".to_owned(),
                 comment: "second-comment".to_owned(),
+                preedit: None,
                 source: CandidateSource::Table,
                 quality: 1.0,
             },
@@ -39,6 +41,7 @@ fn ai_candidate_with_confidence(text: &str, confidence: f32) -> Candidate {
     Candidate {
         text: text.to_owned(),
         comment: format!("ai:mock {confidence:.2}"),
+        preedit: None,
         source: CandidateSource::ai("mock", AiConfidence::from_score(confidence)),
         quality: 0.0,
     }

@@ -95,6 +95,7 @@ impl Translator for PunctuationTranslator {
             return vec![Candidate {
                 comment: punctuation_candidate_comment(&text).to_owned(),
                 text,
+                preedit: None,
                 source: CandidateSource::Punctuation,
                 quality: 1.0,
             }];
@@ -148,6 +149,7 @@ fn punctuation_candidates(
                 Candidate {
                     comment: punctuation_candidate_comment(&text).to_owned(),
                     text,
+                    preedit: None,
                     source: CandidateSource::Punctuation,
                     quality: 1.0,
                 },

@@ -14,7 +14,7 @@ use crate::{
     config_scalar_bool, config_scalar_double, config_scalar_int, config_scalar_string,
     ends_with_ascii_digit, find_config_value, install_schema_punctuation_translator_from_config,
     load_runtime_config_root, resource_id::validate_data_resource_id, schema_folded_switch_options,
-    schema_list_translator_entries_for_current, schema_switch_translator_switches,
+    schema_list_translator_config_for_current, schema_switch_translator_switches,
     selected_runtime_data_path, switch_scalar_field, AffixSegmentor, ConfigOpenKind,
     MatcherPattern, MatcherSegmentor, PunctSegmentor, RemainingGearDeferral, SessionState,
 };
@@ -65,13 +65,14 @@ pub(crate) fn install_schema_translator_chain(session: &mut SessionState, schema
                 install_schema_switch_translator_from_config(session, &schema_config);
             }
             "schema_list_translator" => {
-                let entries = schema_list_translator_entries_for_current(
+                let schema_list_config = schema_list_translator_config_for_current(
                     session.engine.status().schema_id.as_str(),
                     &schema_config,
                 );
-                session
-                    .engine
-                    .add_translator(SchemaListTranslator::new(entries));
+                session.engine.add_translator(
+                    SchemaListTranslator::new(schema_list_config.entries)
+                        .with_hide_lone_schema(schema_list_config.hide_lone_schema),
+                );
             }
             "echo_translator" if !echo_translator_installed => {
                 session.engine.add_translator(EchoTranslator);
@@ -174,6 +175,10 @@ fn install_schema_dictionary_translator_from_config(
         find_config_value(schema_config, &format!("{name_space}/enable_completion"))
             .and_then(config_scalar_bool)
             .unwrap_or(true);
+    let enable_correction =
+        find_config_value(schema_config, &format!("{name_space}/enable_correction"))
+            .and_then(config_scalar_bool)
+            .unwrap_or(false);
     if matches!(component_name, "script_translator" | "r10n_translator") {
         if let Some(enable_word_completion) = find_config_value(
             schema_config,
@@ -199,9 +204,43 @@ fn install_schema_dictionary_translator_from_config(
         .unwrap_or_default();
     let has_affix = !prefix.is_empty();
     let show_full_code = find_config_value(schema_config, &format!("{name_space}/show_full_code"))
-        .or_else(|| find_config_value(schema_config, "show_full_code/show_full_code"))
         .and_then(config_scalar_bool)
         .unwrap_or(!has_affix);
+    let prediction_weight_threshold = find_config_value(
+        schema_config,
+        &format!("{name_space}/prediction_weight_threshold"),
+    )
+    .or_else(|| {
+        find_config_value(
+            schema_config,
+            &format!("{name_space}/prediction_frequency_threshold"),
+        )
+    })
+    .or_else(|| {
+        find_config_value(
+            schema_config,
+            &format!("{name_space}/prediction/frequency_threshold"),
+        )
+    })
+    .and_then(config_scalar_f32);
+    let prediction_never_first = find_config_value(
+        schema_config,
+        &format!("{name_space}/prediction_never_first"),
+    )
+    .or_else(|| {
+        find_config_value(
+            schema_config,
+            &format!("{name_space}/prediction-never-first"),
+        )
+    })
+    .or_else(|| {
+        find_config_value(
+            schema_config,
+            &format!("{name_space}/prediction/never_first"),
+        )
+    })
+    .and_then(config_scalar_bool)
+    .unwrap_or(false);
     let delimiters = find_config_value(schema_config, &format!("{name_space}/delimiter"))
         .or_else(|| find_config_value(schema_config, "speller/delimiter"))
         .and_then(config_scalar_string)
@@ -212,51 +251,35 @@ fn install_schema_dictionary_translator_from_config(
             .and_then(config_scalar_f32)
             .unwrap_or(0.0);
     let comment_format = schema_comment_format(schema_config, name_space);
+    let preedit_format = schema_preedit_format(schema_config, name_space);
     let dictionary_exclude =
         schema_string_list(schema_config, &format!("{name_space}/dictionary_exclude"));
-    let spelling_algebra =
-        spelling_algebra_for_dictionary(schema_config, dictionary.entries().len());
-    session.engine.add_translator(
-        StaticTableTranslator::from_dictionary(dictionary)
-            .with_spelling_algebra(&spelling_algebra)
-            .with_completion(enable_completion)
-            .with_charset_filter(enable_charset_filter)
-            .with_sentence(enable_sentence)
-            .with_sentence_over_completion(sentence_over_completion)
-            .with_delimiters(delimiters)
-            .with_tags(tags)
-            .with_initial_quality(initial_quality)
-            .with_comment_format(&comment_format)
-            .with_dictionary_exclude(dictionary_exclude)
-            .with_combine_candidates(combine_candidates)
-            .with_affix(prefix, suffix)
-            .with_show_full_code(show_full_code),
-    );
-}
-
-fn spelling_algebra_for_dictionary(schema_config: &Value, entry_count: usize) -> Vec<String> {
-    let formulas = schema_string_list(schema_config, "speller/algebra");
-    if entry_count < 50_000 {
-        return formulas;
+    let spelling_algebra = spelling_algebra_for_dictionary(schema_config);
+    let mut translator = StaticTableTranslator::from_dictionary(dictionary)
+        .with_spelling_algebra(&spelling_algebra)
+        .with_completion(enable_completion)
+        .with_correction(enable_correction)
+        .with_charset_filter(enable_charset_filter)
+        .with_sentence(enable_sentence)
+        .with_sentence_over_completion(sentence_over_completion)
+        .with_delimiters(delimiters)
+        .with_tags(tags)
+        .with_initial_quality(initial_quality)
+        .with_comment_format(&comment_format)
+        .with_preedit_format(&preedit_format)
+        .with_dictionary_exclude(dictionary_exclude)
+        .with_combine_candidates(combine_candidates)
+        .with_affix(prefix, suffix)
+        .with_show_full_code(show_full_code)
+        .with_prediction_never_first(prediction_never_first);
+    if let Some(threshold) = prediction_weight_threshold {
+        translator = translator.with_prediction_weight_threshold(threshold);
     }
-
-    formulas
-        .into_iter()
-        .filter(|formula| is_large_dictionary_spelling_formula(formula))
-        .collect()
+    session.engine.add_translator(translator);
 }
 
-fn is_large_dictionary_spelling_formula(formula: &str) -> bool {
-    matches!(
-        formula,
-        "derive/\\d//"
-            | "xform/1/v/"
-            | "xform/4/vv/"
-            | "xform/2/x/"
-            | "xform/5/xx/"
-            | "xform/3/q/"
-            | "xform/6/qq/"
-    )
+fn spelling_algebra_for_dictionary(schema_config: &Value) -> Vec<String> {
+    schema_string_list(schema_config, "speller/algebra")
 }
 
 fn install_schema_reverse_lookup_translator_from_config(
@@ -967,6 +990,10 @@ fn schema_dictionary_packs(schema_config: &Value, name_space: &str) -> Vec<Strin
 
 fn schema_comment_format(schema_config: &Value, name_space: &str) -> Vec<String> {
     schema_string_list(schema_config, &format!("{name_space}/comment_format"))
+}
+
+fn schema_preedit_format(schema_config: &Value, name_space: &str) -> Vec<String> {
+    schema_string_list(schema_config, &format!("{name_space}/preedit_format"))
 }
 
 fn schema_translator_tags(schema_config: &Value, name_space: &str) -> Vec<String> {

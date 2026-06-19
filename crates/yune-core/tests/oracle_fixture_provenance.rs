@@ -77,16 +77,170 @@ fn typeduck_v112_m14_fixtures_have_non_circular_source_provenance() {
         })
         .collect::<Vec<_>>();
     fixture_files.sort();
-    assert!(
-        !fixture_files.is_empty(),
-        "M14 should check in at least one TypeDuck v1.1.2 fixture"
+    assert_eq!(
+        fixture_files.len(),
+        5,
+        "M14 should keep the five TypeDuck v1.1.2 fixture files checked in"
     );
 
     for path in fixture_files {
         let fixture = read_json(&path);
-        assert_typeduck_m14_fixture_header(&path, &fixture);
+        assert_typeduck_v112_fixture_header(&path, &fixture);
         assert_no_local_absolute_paths(&path, &fixture);
     }
+}
+
+#[test]
+fn typeduck_v112_fork_parity_fixtures_have_non_circular_source_provenance() {
+    let root = fixture_root("typeduck-v1.1.2");
+    let mut fixture_files = fs::read_dir(&root)
+        .unwrap_or_else(|error| panic!("failed to read {}: {error}", root.display()))
+        .map(|entry| {
+            entry
+                .unwrap_or_else(|error| panic!("failed to read fixture entry: {error}"))
+                .path()
+        })
+        .filter(|path| {
+            path.file_name()
+                .and_then(|name| name.to_str())
+                .is_some_and(|name| {
+                    name.starts_with("jyut6ping3-fork-parity-") && name.ends_with(".json")
+                })
+        })
+        .collect::<Vec<_>>();
+    fixture_files.sort();
+    assert_eq!(
+        fixture_files.len(),
+        4,
+        "FORK-PARITY should keep the captured TypeDuck fork fixtures checked in"
+    );
+
+    let path = root.join("jyut6ping3-fork-parity-01-real-dictionary-fuzzy.json");
+    assert!(
+        path.is_file(),
+        "FORK-PARITY-01 should check in the TypeDuck real-dictionary fixture"
+    );
+    let fixture = read_json(&path);
+    assert_typeduck_v112_fixture_header(&path, &fixture);
+    assert_no_local_absolute_paths(&path, &fixture);
+    assert_eq!(
+        fixture["capture"]["source_row_policy"],
+        "typeduck_v112_real_mobile_translator_and_scolar_lookup_fuzzy",
+        "{path:?}"
+    );
+    assert_eq!(
+        fixture["capture"]["translator_dictionary_file"], "TypeDuck-HK/schema/jyut6ping3.dict.yaml",
+        "{path:?}"
+    );
+    assert_eq!(
+        fixture["capture"]["lookup_dictionary_file"],
+        "TypeDuck-HK/schema/jyut6ping3_scolar.dict.yaml",
+        "{path:?}"
+    );
+    for key in ["translator_dictionary", "lookup_dictionary"] {
+        let dictionary_count = fixture["capture"]["source_row_counts"][key]
+            .as_u64()
+            .unwrap_or_else(|| panic!("{key} source row count should be numeric"));
+        assert!(
+            dictionary_count > 50_000,
+            "{path:?} must prove the production-sized {key} path"
+        );
+    }
+    assert_non_empty_array(
+        &path,
+        &fixture,
+        &["capture", "source_translator_rows_for_candidates"],
+    );
+    assert_non_empty_array(
+        &path,
+        &fixture,
+        &["capture", "source_lookup_rows_for_candidates"],
+    );
+    assert_non_empty_array(&path, &fixture, &["capture", "speller_algebra_rules"]);
+
+    let path = root.join("jyut6ping3-fork-parity-02-prefer-user-phrase.json");
+    assert!(
+        path.is_file(),
+        "FORK-PARITY-02 should check in the TypeDuck PreferUserPhrase fixture"
+    );
+    let fixture = read_json(&path);
+    assert_typeduck_v112_fixture_header(&path, &fixture);
+    assert_no_local_absolute_paths(&path, &fixture);
+    assert_eq!(
+        fixture["capture"]["source_row_policy"], "typeduck_v112_prefer_user_phrase_weighted_gate",
+        "{path:?}"
+    );
+    assert_eq!(
+        fixture["module_list"],
+        serde_json::json!(["default", "dictionary_lookup", "levers"]),
+        "{path:?}"
+    );
+    assert_eq!(fixture["cases"][0]["probe"]["import_return"], 1, "{path:?}");
+    assert!(
+        fixture["cases"][0]["probe"]["captures"]
+            .as_array()
+            .is_some_and(|captures| !captures.is_empty()),
+        "{path:?} must include captured candidate snapshots"
+    );
+
+    let path = root.join("jyut6ping3-fork-parity-06-letter-to-tone.json");
+    assert!(
+        path.is_file(),
+        "FORK-PARITY-06 should check in the TypeDuck letter_to_tone fixture"
+    );
+    let fixture = read_json(&path);
+    assert_typeduck_v112_fixture_header(&path, &fixture);
+    assert_no_local_absolute_paths(&path, &fixture);
+    assert_eq!(
+        fixture["capture"]["source_row_policy"], "typeduck_v112_letter_to_tone_preedit",
+        "{path:?}"
+    );
+    assert_eq!(fixture["schema"], "jyut6ping3_mobile", "{path:?}");
+    assert_eq!(
+        fixture["module_list"],
+        serde_json::json!(["default", "dictionary_lookup"]),
+        "{path:?}"
+    );
+    assert_eq!(
+        fixture["capture"]["input_sequence"],
+        serde_json::json!(["neiv", "neivv", "neix", "neixx", "neiq", "neiqq"]),
+        "{path:?}"
+    );
+
+    let path = root.join("jyut6ping3-fork-parity-07-state-labels.json");
+    assert!(
+        path.is_file(),
+        "FORK-PARITY-07 should check in the TypeDuck full-shape state-label fixture"
+    );
+    let fixture = read_json(&path);
+    assert_typeduck_v112_fixture_header(&path, &fixture);
+    assert_no_local_absolute_paths(&path, &fixture);
+    assert_eq!(
+        fixture["capture"]["source_row_policy"], "typeduck_v112_full_shape_state_labels",
+        "{path:?}"
+    );
+    assert_eq!(fixture["schema"], "jyut6ping3_mobile", "{path:?}");
+    assert_eq!(
+        fixture["module_list"],
+        serde_json::json!(["default", "dictionary_lookup"]),
+        "{path:?}"
+    );
+    assert_eq!(
+        fixture["capture"]["deployed_schema_file"], "jyut6ping3_mobile.schema.yaml",
+        "{path:?}"
+    );
+    let labels = fixture["cases"][0]["labels"]
+        .as_array()
+        .unwrap_or_else(|| panic!("{path:?} should capture full_shape state labels"));
+    assert_eq!(labels.len(), 2, "{path:?}");
+    assert_eq!(
+        labels
+            .iter()
+            .map(|row| row["label"].as_str().unwrap_or_default())
+            .collect::<Vec<_>>(),
+        vec!["\u{534a}\u{5f62}", "\u{5168}\u{5f62}"],
+        "{path:?}"
+    );
 }
 
 fn assert_manifest(
@@ -122,7 +276,7 @@ fn assert_manifest(
     );
 }
 
-fn assert_typeduck_m14_fixture_header(path: &Path, fixture: &Value) {
+fn assert_typeduck_v112_fixture_header(path: &Path, fixture: &Value) {
     assert_eq!(
         fixture["oracle"]["engine"], "TypeDuck-HK/librime",
         "{path:?}"

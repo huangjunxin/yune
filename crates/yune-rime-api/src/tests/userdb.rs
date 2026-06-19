@@ -167,14 +167,16 @@ fn userdb_learning_persists_session_commits_and_reloads_candidates() {
         .position(|candidate| candidate.source == CandidateSource::Table && candidate.text == "你")
         .expect("table candidate should remain present");
     assert!(
-        learned_index < table_index,
-        "learned candidate should rank before table duplicate: {candidates:?}"
+        table_index < learned_index,
+        "low-weight same-code userdb candidate should not rank before table duplicate: {candidates:?}"
     );
+    let predictive_index = candidates
+        .iter()
+        .position(|candidate| candidate.text == "你好" && candidate.comment == "~hao")
+        .expect("predictive userdb candidate should be present");
     assert!(
-        candidates
-            .iter()
-            .any(|candidate| candidate.text == "你好" && candidate.comment == "~hao"),
-        "predictive userdb candidate should be present: {candidates:?}"
+        predictive_index < table_index,
+        "longer-code predictive userdb candidate should rank before the shorter table duplicate: {candidates:?}"
     );
 
     assert_eq!(RimeDestroySession(reloaded_session), TRUE);
@@ -243,6 +245,56 @@ fn userdb_rejects_malformed_logical_names_before_store_creation() {
             .expect("user dir should still exist")
             .count(),
         before
+    );
+
+    let reset_traits = empty_traits();
+    // SAFETY: reset traits points to valid storage.
+    unsafe { RimeSetup(&reset_traits) };
+    let _ = fs::remove_dir_all(root);
+}
+
+#[test]
+fn runtime_userdb_commit_exports_learned_full_code() {
+    let _guard = test_guard();
+    RimeCleanupAllSessions();
+    let root = unique_temp_dir("userdb-learned-code-export");
+    let user = root.join("user");
+    fs::create_dir_all(&user).expect("user dir should be created");
+
+    let user_c = CString::new(user.to_string_lossy().as_ref()).expect("path is valid");
+    let mut traits = empty_traits();
+    traits.user_data_dir = user_c.as_ptr();
+    // SAFETY: traits points to valid storage and strings live for the call.
+    unsafe { RimeSetup(&traits) };
+
+    let event =
+        UserDbCommitMetadata::new("nei", "\u{4f60}", CandidateSource::Table, 0, "nei".len(), 1)
+            .with_code("nei5");
+    crate::userdb::record_runtime_commit("jyut6ping3", &event)
+        .expect("runtime commit should persist");
+
+    let stored =
+        fs::read_to_string(user.join("jyut6ping3.userdb")).expect("store should be readable");
+    assert!(
+        stored.contains("nei5 \t\u{4f60}\tc=1"),
+        "store should use the learned full pronunciation code: {stored}"
+    );
+    assert!(
+        !stored.contains("nei \t\u{4f60}\tc=1"),
+        "store must not fall back to the typed prefix when a learned code is available: {stored}"
+    );
+
+    let dict = CString::new("jyut6ping3").expect("dict name should be valid");
+    let export = root.join("export.txt");
+    let export_c = CString::new(export.to_string_lossy().as_ref()).expect("path is valid");
+    // SAFETY: pointers reference valid NUL-terminated strings for the call.
+    assert_eq!(
+        unsafe { RimeLeversExportUserDict(dict.as_ptr(), export_c.as_ptr()) },
+        1
+    );
+    assert_eq!(
+        fs::read_to_string(export).expect("export should be readable"),
+        "\u{4f60}\tnei5\t1\n"
     );
 
     let reset_traits = empty_traits();

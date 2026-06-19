@@ -216,7 +216,7 @@ fn updated_record_for_commit(
     event: &UserDbCommitMetadata,
 ) -> Option<UserDbRecord> {
     let mut value = store
-        .get(&record_key(&event.input, &event.selected_text)?)
+        .get(&record_key(&event.code, &event.selected_text)?)
         .unwrap_or_default();
     if value.commits < 0 {
         value.commits = -value.commits;
@@ -230,7 +230,7 @@ fn updated_record_for_commit(
         .saturating_add(1);
     value.dee = formula_d(1.0, next_tick as f64, value.dee, value.tick as f64);
     value.tick = next_tick;
-    UserDbRecord::from_code_phrase(&event.input, &event.selected_text, value)
+    UserDbRecord::from_code_phrase(&event.code, &event.selected_text, value)
 }
 
 fn record_key(code: &str, phrase: &str) -> Option<String> {

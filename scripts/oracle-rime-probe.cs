@@ -70,6 +70,12 @@ public static class RimeProbe {
   }
 
   [StructLayout(LayoutKind.Sequential)]
+  public struct RimeStringSlice {
+    public IntPtr str;
+    public UIntPtr length;
+  }
+
+  [StructLayout(LayoutKind.Sequential)]
   public struct RimeModule {
     public int data_size;
     public IntPtr module_name;
@@ -120,6 +126,9 @@ public static class RimeProbe {
 
   [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
   delegate int ExportUserDictDelegate(IntPtr dictName, IntPtr textFile);
+
+  [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+  delegate int ImportUserDictDelegate(IntPtr dictName, IntPtr textFile);
 
   [StructLayout(LayoutKind.Sequential)]
   public struct RimeContext {
@@ -210,6 +219,16 @@ public static class RimeProbe {
   [DllImport("rime.dll", CallingConvention = CallingConvention.Cdecl)]
   public static extern int RimeFreeStatus(ref RimeStatus status);
   [DllImport("rime.dll", CallingConvention = CallingConvention.Cdecl)]
+  public static extern IntPtr RimeGetInput(UIntPtr session);
+  [DllImport("rime.dll", CallingConvention = CallingConvention.Cdecl)]
+  public static extern IntPtr RimeGetStateLabel(UIntPtr session, IntPtr optionName, int state);
+  [DllImport("rime.dll", CallingConvention = CallingConvention.Cdecl)]
+  public static extern RimeStringSlice RimeGetStateLabelAbbreviated(
+      UIntPtr session,
+      IntPtr optionName,
+      int state,
+      int abbreviated);
+  [DllImport("rime.dll", CallingConvention = CallingConvention.Cdecl)]
   public static extern void RimeClearComposition(UIntPtr session);
 
   static IntPtr U8(string value, List<IntPtr> ptrs) {
@@ -231,6 +250,19 @@ public static class RimeProbe {
     }
     byte[] bytes = new byte[len];
     Marshal.Copy(value, bytes, 0, len);
+    return Encoding.UTF8.GetString(bytes);
+  }
+
+  static string SliceS(RimeStringSlice value) {
+    if (value.str == IntPtr.Zero) {
+      return null;
+    }
+    ulong length = value.length.ToUInt64();
+    if (length > int.MaxValue) {
+      throw new Exception("RimeStringSlice length is too large");
+    }
+    byte[] bytes = new byte[(int)length];
+    Marshal.Copy(value.str, bytes, 0, (int)length);
     return Encoding.UTF8.GetString(bytes);
   }
 
@@ -388,6 +420,7 @@ public static class RimeProbe {
     result["schema_name"] = S(status.schema_name);
     result["scenario"] = scenario;
     result["label"] = label;
+    result["rime_get_input"] = S(RimeGetInput(session));
     result["is_composing"] = status.is_composing != 0;
     result["is_ascii_mode"] = status.is_ascii_mode != 0;
     result["is_full_shape"] = status.is_full_shape != 0;
@@ -468,6 +501,7 @@ public static class RimeProbe {
         result["schema_id"] = S(status.schema_id);
         result["schema_name"] = S(status.schema_name);
         result["input"] = input;
+        result["rime_get_input"] = S(RimeGetInput(session));
         result["processed"] = processed;
         result["is_composing"] = status.is_composing != 0;
         result["is_ascii_mode"] = status.is_ascii_mode != 0;
@@ -620,6 +654,66 @@ public static class RimeProbe {
     }
   }
 
+  public static Dictionary<string, object> CaptureStateLabelsWithIdentity(
+      string shared,
+      string user,
+      string build,
+      string schema,
+      string[] modulesInput,
+      ProbeIdentity identity) {
+    var ptrs = new List<IntPtr>();
+    var traits = Traits(shared, user, build, modulesInput, identity, ptrs);
+    var result = new Dictionary<string, object>();
+    UIntPtr session = UIntPtr.Zero;
+    try {
+      RimeSetup(ref traits);
+      RimeInitialize(ref traits);
+      session = RimeCreateSession();
+      if (session == UIntPtr.Zero) {
+        throw new Exception("RimeCreateSession returned zero");
+      }
+      if (RimeSelectSchema(session, U8(schema, ptrs)) == 0) {
+        throw new Exception("RimeSelectSchema failed: " + schema);
+      }
+
+      var status = new RimeStatus { data_size = Marshal.SizeOf(typeof(RimeStatus)) - sizeof(int) };
+      if (RimeGetStatus(session, ref status) == 0) {
+        throw new Exception("RimeGetStatus failed for state-label capture");
+      }
+      result["schema_id"] = S(status.schema_id);
+      result["schema_name"] = S(status.schema_name);
+      RimeFreeStatus(ref status);
+
+      var optionName = U8("full_shape", ptrs);
+      var labels = new List<Dictionary<string, object>>();
+      foreach (var state in new int[] { 0, 1 }) {
+        var abbreviated = RimeGetStateLabelAbbreviated(session, optionName, state, 1);
+        var abbreviatedLabel = SliceS(abbreviated);
+        var abbreviatedLength = checked((long)abbreviated.length.ToUInt64());
+        var row = new Dictionary<string, object>();
+        row["option"] = "full_shape";
+        row["state"] = state;
+        row["label"] = S(RimeGetStateLabel(session, optionName, state));
+        row["abbreviated_label"] = abbreviatedLabel;
+        row["abbreviated_length"] = abbreviatedLength;
+        labels.Add(row);
+      }
+      result["labels"] = labels;
+
+      RimeDestroySession(session);
+      session = UIntPtr.Zero;
+      return result;
+    } finally {
+      if (session != UIntPtr.Zero) {
+        RimeDestroySession(session);
+      }
+      RimeFinalize();
+      foreach (var p in ptrs) {
+        Marshal.FreeHGlobal(p);
+      }
+    }
+  }
+
   public static Dictionary<string, object> ProbeUserDictExportWithIdentity(
       string shared,
       string user,
@@ -699,6 +793,108 @@ public static class RimeProbe {
       if (File.Exists(exportPath)) {
         result["export_text"] = File.ReadAllText(exportPath, Encoding.UTF8);
       }
+      return result;
+    } finally {
+      if (session != UIntPtr.Zero) {
+        RimeDestroySession(session);
+      }
+      RimeFinalize();
+      foreach (var p in ptrs) {
+        Marshal.FreeHGlobal(p);
+      }
+    }
+  }
+
+  public static Dictionary<string, object> CaptureImportedUserDictWithIdentity(
+      string shared,
+      string user,
+      string build,
+      string schema,
+      string[] modulesInput,
+      string dictName,
+      string importPath,
+      string[] inputs,
+      ProbeIdentity identity) {
+    var ptrs = new List<IntPtr>();
+    var traits = Traits(shared, user, build, modulesInput, identity, ptrs);
+    var result = new Dictionary<string, object>();
+    UIntPtr session = UIntPtr.Zero;
+    try {
+      RimeSetup(ref traits);
+      RimeInitialize(ref traits);
+
+      var modulePtr = RimeFindModule(U8("levers", ptrs));
+      result["levers_module_found"] = modulePtr != IntPtr.Zero;
+      if (modulePtr == IntPtr.Zero) {
+        result["import_attempted"] = false;
+        result["blocker"] = "RimeFindModule(\"levers\") returned null in the v1.1.2 oracle process";
+        return result;
+      }
+
+      var module = (RimeModule)Marshal.PtrToStructure(modulePtr, typeof(RimeModule));
+      result["levers_module_name"] = S(module.module_name);
+      if (module.get_api == IntPtr.Zero) {
+        result["import_attempted"] = false;
+        result["blocker"] = "levers module has a null get_api function pointer";
+        return result;
+      }
+
+      var getApi = Marshal.GetDelegateForFunctionPointer<GetCustomApiDelegate>(module.get_api);
+      var apiPtr = getApi();
+      result["levers_api_found"] = apiPtr != IntPtr.Zero;
+      if (apiPtr == IntPtr.Zero) {
+        result["import_attempted"] = false;
+        result["blocker"] = "levers get_api returned null";
+        return result;
+      }
+
+      var api = (RimeLeversApi)Marshal.PtrToStructure(apiPtr, typeof(RimeLeversApi));
+      result["levers_api_data_size"] = api.data_size;
+      result["import_function_found"] = api.import_user_dict != IntPtr.Zero;
+      if (api.import_user_dict == IntPtr.Zero) {
+        result["import_attempted"] = false;
+        result["blocker"] = "RimeLeversApi.import_user_dict is null";
+        return result;
+      }
+
+      var importUserDict =
+          Marshal.GetDelegateForFunctionPointer<ImportUserDictDelegate>(api.import_user_dict);
+      result["import_attempted"] = true;
+      result["dict_name"] = dictName;
+      result["import_file_name"] = Path.GetFileName(importPath);
+      result["import_file_exists"] = File.Exists(importPath);
+      if (File.Exists(importPath)) {
+        result["import_text"] = File.ReadAllText(importPath, Encoding.UTF8);
+      }
+      result["import_return"] = importUserDict(U8(dictName, ptrs), U8(importPath, ptrs));
+
+      session = RimeCreateSession();
+      if (session == UIntPtr.Zero) {
+        throw new Exception("RimeCreateSession returned zero");
+      }
+      if (RimeSelectSchema(session, U8(schema, ptrs)) == 0) {
+        throw new Exception("RimeSelectSchema failed: " + schema);
+      }
+      RimeSetOption(session, U8("ascii_mode", ptrs), 0);
+      RimeSetOption(session, U8("full_shape", ptrs), 0);
+      RimeSetOption(session, U8("ascii_punct", ptrs), 0);
+      RimeSetOption(session, U8("zh_hans", ptrs), 0);
+
+      var captures = new List<Dictionary<string, object>>();
+      foreach (var input in inputs ?? Array.Empty<string>()) {
+        RimeClearComposition(session);
+        var processed = new List<int>();
+        foreach (var ch in input) {
+          processed.Add(RimeProcessKey(session, (int)ch, 0));
+        }
+        var snapshot = Snapshot(session, "prefer_user_phrase", input, null, identity);
+        snapshot["input"] = input;
+        snapshot["processed"] = processed;
+        captures.Add(snapshot);
+      }
+      result["captures"] = captures;
+      RimeDestroySession(session);
+      session = UIntPtr.Zero;
       return result;
     } finally {
       if (session != UIntPtr.Zero) {
