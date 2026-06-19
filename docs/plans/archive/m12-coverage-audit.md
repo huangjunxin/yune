@@ -1,9 +1,6 @@
 # M12 Coverage Audit
 
-> **Status:** Done - M12 closeout reference
-> **Milestone:** M12 upstream oracle refresh
-> **Updated:** 2026-06-19
-> **Type:** coverage audit
+> **Status:** Finished - **Milestone:** M12 (Upstream Oracle Refresh) - **Closed:** 2026-06-19 - **Type:** coverage audit reference
 
 M12 makes upstream `rime/librime 1.17.0` the default core oracle. TypeDuck
 `v1.1.2` remains a compatibility-profile oracle for TypeDuck-Web and parked

@@ -110,7 +110,7 @@ Yune's core engine now tracks upstream `rime/librime 1.17.0` as the default
 oracle target. M12 turned TypeDuck behavior into an explicit compatibility
 profile instead of the default engine truth.
 
-Detail: [`plans/upstream-oracle-refresh.md`](./plans/upstream-oracle-refresh.md).
+Detail: [`plans/archive/upstream-oracle-refresh.md`](./plans/archive/upstream-oracle-refresh.md).
 
 **Status**:
 
@@ -118,7 +118,7 @@ Detail: [`plans/upstream-oracle-refresh.md`](./plans/upstream-oracle-refresh.md)
 |---|---|---|---|
 | 0 | Pin upstream oracle | Done | Upstream `1.17.0` commit `33e78140250125871856cdc5b42ddc6a5fcd3cd4` is the default core target; upstream provenance and the runtime byte-capture build blocker are documented. |
 | 1 | Fixture naming policy | Done | Fixture manifests and the provenance guard test distinguish `upstream-1.17.0` from `typeduck-v1.1.2`. |
-| 2 | TypeDuck assumption audit | Done | Existing TypeDuck-derived behavior is classified in `docs/plans/m12-coverage-audit.md`. |
+| 2 | TypeDuck assumption audit | Done | Existing TypeDuck-derived behavior is classified in `docs/plans/archive/m12-coverage-audit.md`. |
 | 3 | First upstream parity slice | Done | Default `RimeApi` ABI parity was refreshed to `rime/librime 1.17.0`; fork-only `start_quick` and `config_list_append_*` slots are excluded from the core table. |
 
 ---

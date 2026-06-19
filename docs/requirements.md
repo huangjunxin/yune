@@ -253,7 +253,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | WIN-PARITY-01 | Phase 16 | Partial - ignored oracle cases still blocked |
 | UPSTREAM-ORACLE-01 | M12 | Complete - upstream `1.17.0` provenance pinned as default core oracle |
 | UPSTREAM-ORACLE-02 | M12 | Complete - fixture naming separates `upstream-1.17.0` and `typeduck-v1.1.2` goldens |
-| UPSTREAM-AUDIT-01 | M12 | Complete - coverage audit captured in `docs/plans/m12-coverage-audit.md` |
+| UPSTREAM-AUDIT-01 | M12 | Complete - coverage audit captured in `docs/plans/archive/m12-coverage-audit.md` |
 | TYPEDUCK-PROFILE-01 | M12 | Complete - TypeDuck-specific coverage remains profile-only and parked until explicitly resumed |
 | AI-01 | M11 S1 | Complete - staged provider interface in `yune-core` |
 | AI-02 | M11 S2/S5 | Complete - worker/fallback/confidence merge plus local rule-backed provider |

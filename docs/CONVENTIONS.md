@@ -83,7 +83,7 @@ M11's core/CLI AI layer is complete, and M12 closed the upstream oracle refresh.
 The current baseline is upstream `rime/librime 1.17.0` for default core behavior.
 M10 TypeDuck-Windows is parked as a TypeDuck compatibility profile until an
 explicit profile surface exists. See `docs/roadmap.md` and
-`docs/plans/upstream-oracle-refresh.md`.
+`docs/plans/archive/upstream-oracle-refresh.md`.
 
 **Behavior oracle.** The default compatibility oracle is upstream
 `rime/librime 1.17.0` (`33e78140250125871856cdc5b42ddc6a5fcd3cd4`). The
