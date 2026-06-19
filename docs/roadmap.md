@@ -116,7 +116,7 @@ Detail: [`plans/archive/upstream-oracle-refresh.md`](./plans/archive/upstream-or
 
 | # | Work item | State | Notes |
 |---|---|---|---|
-| 0 | Pin upstream oracle | Done | Upstream `1.17.0` commit `33e78140250125871856cdc5b42ddc6a5fcd3cd4` is the default core target; upstream provenance and the runtime byte-capture build blocker are documented. |
+| 0 | Pin upstream oracle | Done | Upstream `1.17.0` commit `33e78140250125871856cdc5b42ddc6a5fcd3cd4` is the default core target; provenance is checked in and the official Windows MSVC release binary is available for behavioral byte capture. |
 | 1 | Fixture naming policy | Done | Fixture manifests and the provenance guard test distinguish `upstream-1.17.0` from `typeduck-v1.1.2`. |
 | 2 | TypeDuck assumption audit | Done | Existing TypeDuck-derived behavior is classified in `docs/plans/archive/m12-coverage-audit.md`. |
 | 3 | First upstream parity slice | Done | Default `RimeApi` ABI parity was refreshed to `rime/librime 1.17.0`; fork-only `start_quick` and `config_list_append_*` slots are excluded from the core table. |
@@ -146,9 +146,10 @@ and [`plans/yune-windows-native-build.md`](./plans/yune-windows-native-build.md)
 In priority order:
 
 1. **Preserve the upstream-first baseline.** Keep default `RimeApi` and core behavior aligned to upstream `1.17.0`; add new TypeDuck fork-only behavior only behind an explicit profile surface.
-2. **Keep M9 web gates green on merge.** Preserve the reproducible Emscripten build, TypeScript runtime tests/build, TypeDuck-Web worker build, real-assets browser evidence, and native `typeduck_web` fallback.
-3. **Keep AI frontend exposure separate and default-off.** M11's CLI/core layer is complete; any future TypeDuck-Web, Windows, or other frontend exposure needs a new explicit plan and must preserve compatibility gates.
-4. **Resume TypeDuck profile work only with a named surface.** Return to TypeDuck-Windows packaging after the profile ABI is defined and fork-header slot smoke is re-derived.
+2. **Capture upstream behavioral goldens.** Use the official upstream `1.17.0` Windows MSVC release binary, canonical upstream schema data such as `luna_pinyin`, and the existing oracle-probe pattern to capture non-circular context/candidate/commit fixtures under `upstream-1.17.0/`.
+3. **Keep M9 web gates green on merge.** Preserve the reproducible Emscripten build, TypeScript runtime tests/build, TypeDuck-Web worker build, real-assets browser evidence, and native `typeduck_web` fallback.
+4. **Keep AI frontend exposure separate and default-off.** M11's CLI/core layer is complete; any future TypeDuck-Web, Windows, or other frontend exposure needs a new explicit plan and must preserve compatibility gates.
+5. **Resume TypeDuck profile work only with a named surface.** Return to TypeDuck-Windows packaging after the profile ABI is defined and fork-header slot smoke is re-derived.
 
 ---
 

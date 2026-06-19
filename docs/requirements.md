@@ -130,7 +130,9 @@ M9 with **GO WITH CONDITIONS** for gated AI-native frontend exposure.
 
 **Status: complete.** Upstream `rime/librime 1.17.0` is the default core
 oracle target. TypeDuck `v1.1.2` remains a compatibility-profile oracle for
-TypeDuck-Web/Windows only.
+TypeDuck-Web/Windows only. The official upstream Windows MSVC release binary is
+available as the preferred behavioral-capture oracle; local source builds are a
+reproducibility check rather than the primary capture source.
 
 - [x] **UPSTREAM-ORACLE-01**: Upstream `rime/librime 1.17.0` and commit `33e78140250125871856cdc5b42ddc6a5fcd3cd4` are pinned as the default core oracle in docs and fixture provenance.
 - [x] **UPSTREAM-ORACLE-02**: Oracle fixture/golden naming distinguishes upstream core fixtures from TypeDuck profile fixtures, e.g. `upstream-1.17.0/` vs `typeduck-v1.1.2/`.

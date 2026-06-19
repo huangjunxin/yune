@@ -2,6 +2,12 @@
 
 > **Status:** Finished - **Milestone:** M12 (Upstream Oracle Refresh) - **Closed:** 2026-06-19 - **Type:** execution plan record
 
+> **Post-closeout note:** The original local source-build blocker was retired
+> after the official upstream `1.17.0` Windows MSVC release archives were
+> downloaded and verified locally. The canonical behavioral-capture path is now
+> the upstream release binary cache under `target/upstream-oracle/1.17.0/`; the
+> local source build remains a reproducibility cross-check.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Re-establish upstream `rime/librime 1.17.0` as Yune's default core compatibility oracle, separate TypeDuck `v1.1.2` into an explicit compatibility profile, and land the first upstream parity slice without circular goldens.
