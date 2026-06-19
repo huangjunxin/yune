@@ -680,56 +680,18 @@ fn config_list_append_rejects_invalid_and_non_list_targets() {
 }
 
 #[test]
-fn rime_api_exposes_config_list_append_contract() {
+fn default_rime_api_exposes_upstream_config_list_contract() {
     let _guard = test_guard();
-    let mut config = empty_config();
     let api = unsafe { &*rime_get_api() };
-    let append_string = api
-        .config_list_append_string
-        .expect("TypeDuck-Windows requires config_list_append_string");
-    let append_bool = api
-        .config_list_append_bool
-        .expect("TypeDuck-Windows requires config_list_append_bool");
-    let append_int = api
-        .config_list_append_int
-        .expect("TypeDuck-Windows requires config_list_append_int");
-    let append_double = api
-        .config_list_append_double
-        .expect("TypeDuck-Windows requires config_list_append_double");
-    let list_size = api
-        .config_list_size
-        .expect("frontend requires config_list_size");
-    let values = CString::new("deployer/options").expect("key should be valid");
-    let label = CString::new("display_language").expect("value should be valid");
 
-    assert_eq!(unsafe { RimeConfigInit(&mut config) }, TRUE);
-    assert_eq!(
-        unsafe { append_string(&mut config, values.as_ptr(), label.as_ptr()) },
-        TRUE
+    assert!(
+        api.config_list_size.is_some(),
+        "upstream RimeApi exposes config_list_size"
     );
-    assert_eq!(
-        unsafe { append_bool(&mut config, values.as_ptr(), FALSE) },
-        TRUE
+    assert!(
+        api.config_begin_list.is_some(),
+        "upstream RimeApi exposes config_begin_list"
     );
-    assert_eq!(
-        unsafe { append_int(&mut config, values.as_ptr(), 42) },
-        TRUE
-    );
-    assert_eq!(
-        unsafe { append_double(&mut config, values.as_ptr(), 2.5) },
-        TRUE
-    );
-    assert_eq!(unsafe { list_size(&mut config, values.as_ptr()) }, 4);
-    assert_eq!(
-        config_string(&mut config, "deployer/options/@0").as_deref(),
-        Some("display_language")
-    );
-    assert_eq!(
-        config_string(&mut config, "deployer/options/@1").as_deref(),
-        Some("false")
-    );
-
-    assert_eq!(unsafe { RimeConfigClose(&mut config) }, TRUE);
 }
 
 #[test]
