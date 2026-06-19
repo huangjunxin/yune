@@ -83,8 +83,8 @@ M11's core/CLI AI layer is complete, and M12 closed the upstream oracle refresh
 plus the first expanded upstream behavioral parity gate. The current baseline is
 upstream `rime/librime 1.17.0` for default core behavior. M10 TypeDuck-Windows
 is parked as a TypeDuck compatibility profile until an explicit profile surface
-exists. See `docs/roadmap.md`, `docs/plans/archive/upstream-oracle-refresh.md`,
-and `docs/plans/archive/m12-upstream-behavioral-parity-closeout.md`.
+exists. See `docs/roadmap.md`, `docs/plans/archive/m12-plan-upstream-oracle-refresh.md`,
+and `docs/plans/archive/m12-plan-upstream-behavioral-parity-closeout.md`.
 
 **Behavior oracle.** The default compatibility oracle is upstream
 `rime/librime 1.17.0` (`33e78140250125871856cdc5b42ddc6a5fcd3cd4`). The
@@ -544,7 +544,7 @@ The remaining concern is keeping it green: preserve the reproducible Emscripten
 build, the runtime tests/build, the TypeDuck-Web worker build, and the committed
 browser evidence on every merge. Files: `typeduck_web.rs`,
 `packages/yune-typeduck-runtime/`, `scripts/typeduck-wasm-build.sh`,
-`docs/plans/archive/typeduck-web-validation-plan.md`.
+`docs/plans/archive/m09-plan-typeduck-web-validation.md`.
 
 **Upstream latest-stable behavioral closeout is complete for the first
 `luna_pinyin` gate.** Default core behavior and default `RimeApi` follow
@@ -601,7 +601,7 @@ Planning, decisions, and conventions live under `docs/` — there is no external
 
 - **`Milestone` is a required field, kept separate from `Status`.** Write `**Status:** Parked · **Milestone:** M10 (…)`, never `**Status:** Parked (M10)`. Append the within-milestone stage where useful, e.g. `**Milestone:** M9 — stage HR-3`.
 - Use `Updated:` for `Active`/`Reopened`/`Parked` docs and `Closed:` for `Finished`/`Superseded` ones.
-- **Active plan filenames use `m<two-digit milestone>[-<stage>]-<doc-type>-<short-topic>.md`.** Allowed type tokens are `plan`, `design`, `reference`, `analysis`, `findings`, `record`, and `audit`. Example active names: `m11-design-ai-native.md`, `m14-plan-typeduck-v112-golden-capture.md`, and `m09-reference-typeduck-web-adapter.md`. Archived files keep their historical names unless a separate archival normalization is explicitly requested.
+- **Plan filenames use `m<two-digit milestone>[-<stage>]-<doc-type>-<short-topic>.md`.** Allowed type tokens are `plan`, `design`, `reference`, `analysis`, `findings`, `record`, and `audit`. Example active names: `m11-design-ai-native.md`, `m14-plan-typeduck-v112-golden-capture.md`, and `m09-reference-typeduck-web-adapter.md`. Archived records follow the same style when created or normalized; older multi-milestone archive records may use a span such as `m05-m07-record-foundation-refactor.md`.
 - `grep -rn "Status:" docs/plans` is the at-a-glance dashboard of every plan — its milestone/stage and its state.
 - **Finished or superseded plans move to `docs/plans/archive/`** (banner flipped accordingly), never deleted — the trail stays.
 - The milestone → plans → status mapping lives in `docs/roadmap.md`; keep a plan's banner milestone consistent with the roadmap.

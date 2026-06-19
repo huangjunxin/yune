@@ -54,17 +54,17 @@ pre-M12 default `RimeApi` function-table field.
 
 ## File Map
 
-- Modify: `docs/plans/upstream-oracle-refresh.md` - this execution plan and live checklist.
+- Modify: `docs/plans/m12-plan-upstream-oracle-refresh.md` - this execution plan and live checklist.
 - Create: `crates/yune-core/tests/fixtures/upstream-1.17.0/README.md` - human-readable upstream fixture provenance.
 - Create: `crates/yune-core/tests/fixtures/upstream-1.17.0/oracle-manifest.json` - machine-readable upstream fixture provenance.
 - Create: `crates/yune-core/tests/fixtures/typeduck-v1.1.2/oracle-manifest.json` - machine-readable TypeDuck profile fixture provenance.
 - Create: `crates/yune-core/tests/oracle_fixture_provenance.rs` - test that oracle fixture roots declare their provenance.
-- Create: `docs/plans/m12-upstream-abi-audit.md` - slot-by-slot upstream vs TypeDuck vs current-Yune ABI audit.
+- Create: `docs/plans/m12-audit-upstream-abi.md` - slot-by-slot upstream vs TypeDuck vs current-Yune ABI audit.
 - Modify: `crates/yune-rime-api/src/abi.rs` - make default `RimeApi` match upstream `1.17.0`.
 - Modify: `crates/yune-rime-api/src/api_table.rs` - populate the upstream-shaped default API table.
 - Modify: `crates/yune-rime-api/src/tests/abi.rs` - assert upstream `1.17.0` default slots.
 - Modify: `crates/yune-rime-api/src/tests/config_api.rs` - keep direct tests for TypeDuck fork-only append helpers, but stop requiring them in default `rime_get_api()`.
-- Create: `docs/plans/m12-coverage-audit.md` - classification of existing tests/docs as upstream-core, TypeDuck-profile, or deferred.
+- Create: `docs/plans/m12-audit-coverage.md` - classification of existing tests/docs as upstream-core, TypeDuck-profile, or deferred.
 - Modify: `docs/requirements.md` - mark M12 requirements complete only after evidence lands.
 - Modify: `docs/roadmap.md` - update M12 table states after implementation.
 - Modify: `docs/CONVENTIONS.md` - keep any new fixture and ABI rules aligned with the implementation.
@@ -77,7 +77,7 @@ pre-M12 default `RimeApi` function-table field.
 - Read: `docs/requirements.md`
 - Read: `docs/CONVENTIONS.md`
 - Read: `docs/decisions.md`
-- Read: `docs/plans/upstream-oracle-refresh.md`
+- Read: `docs/plans/m12-plan-upstream-oracle-refresh.md`
 - Read: pinned upstream header via
   `git -C C:\Users\laubonghaudoi\Documents\GitHub\librime show 33e78140250125871856cdc5b42ddc6a5fcd3cd4:src/rime_api.h`
 - Read: pinned upstream levers header via
@@ -406,7 +406,7 @@ Expected: README-only commit. Do not commit upstream build outputs.
 ## Task 5: Audit And Refresh The Default C ABI
 
 **Files:**
-- Create: `docs/plans/m12-upstream-abi-audit.md`
+- Create: `docs/plans/m12-audit-upstream-abi.md`
 - Modify: `crates/yune-rime-api/src/abi.rs`
 - Modify: `crates/yune-rime-api/src/api_table.rs`
 - Modify: `crates/yune-rime-api/src/tests/abi.rs`
@@ -414,7 +414,7 @@ Expected: README-only commit. Do not commit upstream build outputs.
 
 - [ ] **Step 1: Create the ABI audit document**
 
-Create `docs/plans/m12-upstream-abi-audit.md` with this table:
+Create `docs/plans/m12-audit-upstream-abi.md` with this table:
 
 ```markdown
 # M12 Upstream ABI Audit
@@ -634,7 +634,7 @@ Expected: all PASS.
 Run:
 
 ```powershell
-git add docs\plans\m12-upstream-abi-audit.md crates\yune-rime-api\src\abi.rs crates\yune-rime-api\src\api_table.rs crates\yune-rime-api\src\tests\abi.rs crates\yune-rime-api\src\tests\config_api.rs
+git add docs\plans\m12-audit-upstream-abi.md crates\yune-rime-api\src\abi.rs crates\yune-rime-api\src\api_table.rs crates\yune-rime-api\src\tests\abi.rs crates\yune-rime-api\src\tests\config_api.rs
 git commit -m "fix: align default rime api with upstream oracle"
 ```
 
@@ -643,7 +643,7 @@ Expected: only ABI refresh files are committed.
 ## Task 6: Audit Existing TypeDuck Assumptions
 
 **Files:**
-- Create: `docs/plans/m12-coverage-audit.md`
+- Create: `docs/plans/m12-audit-coverage.md`
 - Modify: affected comments/test names only when the audit finds unlabeled profile behavior.
 
 - [ ] **Step 1: Generate the candidate list**
@@ -659,7 +659,7 @@ config append tests, docs, and packaging scripts.
 
 - [ ] **Step 2: Create the coverage audit document**
 
-Create `docs/plans/m12-coverage-audit.md`:
+Create `docs/plans/m12-audit-coverage.md`:
 
 ```markdown
 # M12 Coverage Audit
@@ -703,7 +703,7 @@ Expected:
 Run:
 
 ```powershell
-git add docs\plans\m12-coverage-audit.md crates\yune-core\tests\cantonese_parity.rs crates\yune-rime-api\src\tests\schema_selection.rs crates\yune-rime-api\tests\typeduck_web.rs scripts\package-typeduck-windows.ps1 docs\plans\m10-reference-typeduck-windows-contract.md docs\plans\m10-reference-typeduck-windows-native-build.md
+git add docs\plans\m12-audit-coverage.md crates\yune-core\tests\cantonese_parity.rs crates\yune-rime-api\src\tests\schema_selection.rs crates\yune-rime-api\tests\typeduck_web.rs scripts\package-typeduck-windows.ps1 docs\plans\m10-reference-typeduck-windows-contract.md docs\plans\m10-reference-typeduck-windows-native-build.md
 git diff --cached --name-only
 git commit -m "docs: audit TypeDuck profile coverage for M12"
 ```
@@ -727,7 +727,7 @@ Update `docs/requirements.md`:
 - `UPSTREAM-ORACLE-01`: checked only after upstream README and manifest land.
 - `UPSTREAM-ORACLE-02`: checked only after both upstream and TypeDuck manifest
   roots exist and the provenance test passes.
-- `UPSTREAM-AUDIT-01`: checked only after `docs/plans/m12-coverage-audit.md`
+- `UPSTREAM-AUDIT-01`: checked only after `docs/plans/m12-audit-coverage.md`
   lands.
 - `TYPEDUCK-PROFILE-01`: checked only after TypeDuck tests/docs/scripts are
   labeled profile-only and default upstream ABI no longer depends on fork-only
@@ -756,8 +756,8 @@ Make the smallest needed edits:
 Run:
 
 ```powershell
-rg -n --glob "!docs/plans/upstream-oracle-refresh.md" "TypeDuck.*default oracle|v1\.1\.2.*default core|M10.*active|upstream.*start_quick.*default|upstream.*config_list_append.*default|start_quick.*upstream core|config_list_append.*upstream core" AGENTS.md docs crates
-rg -n --glob "!docs/plans/upstream-oracle-refresh.md" "upstream-1\.17\.0|typeduck-v1\.1\.2|UPSTREAM-ORACLE|UPSTREAM-AUDIT|TYPEDUCK-PROFILE" AGENTS.md docs crates
+rg -n --glob "!docs/plans/m12-plan-upstream-oracle-refresh.md" "TypeDuck.*default oracle|v1\.1\.2.*default core|M10.*active|upstream.*start_quick.*default|upstream.*config_list_append.*default|start_quick.*upstream core|config_list_append.*upstream core" AGENTS.md docs crates
+rg -n --glob "!docs/plans/m12-plan-upstream-oracle-refresh.md" "upstream-1\.17\.0|typeduck-v1\.1\.2|UPSTREAM-ORACLE|UPSTREAM-AUDIT|TYPEDUCK-PROFILE" AGENTS.md docs crates
 ```
 
 Expected:

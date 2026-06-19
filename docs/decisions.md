@@ -709,8 +709,8 @@ precedence) and D-25 (target-driven scope). *Outcome: Pending.*
 
 ### Initialization notes (process decisions)
 
-**D-INIT-1 - Existing `docs/plans/archive/analysis.md`, `docs/roadmap.md`, and
-`docs/plans/archive/refactor-plan.md` are the retained source context** for the
+**D-INIT-1 - Existing `docs/plans/archive/m00-analysis-founding.md`, `docs/roadmap.md`, and
+`docs/plans/archive/m05-m07-record-foundation-refactor.md` are the retained source context** for the
 now-retired GSD project. Historical `.planning/codebase/` notes were folded into
 the retained docs before `.planning/` was removed. External research was skipped
 at setup because scope was driven by existing docs and direct librime comparison.

@@ -147,7 +147,7 @@ M12 behavioral closeout is complete when all of these are true:
 
 **Files:**
 
-- `docs/plans/m12-upstream-behavioral-parity-closeout.md`
+- `docs/plans/m12-plan-upstream-behavioral-parity-closeout.md`
 - `scripts/capture-upstream-luna-pinyin.ps1`
 - `scripts/oracle-rime-probe.cs`
 - `crates/yune-core/tests/upstream_luna_pinyin_parity.rs`
@@ -594,7 +594,7 @@ cargo test -p yune-core --test oracle_fixture_provenance
 - `docs/requirements.md`
 - `docs/CONVENTIONS.md`
 - `docs/decisions.md`
-- `docs/plans/m12-upstream-behavioral-parity-closeout.md`
+- `docs/plans/m12-plan-upstream-behavioral-parity-closeout.md`
 
 **Steps:**
 
@@ -698,7 +698,7 @@ git push origin main
 - [ ] Move this plan to `docs/plans/archive/` only after the completion criteria pass:
 
 ```powershell
-git mv docs/plans/m12-upstream-behavioral-parity-closeout.md docs/plans/archive/m12-upstream-behavioral-parity-closeout.md
+git mv docs/plans/m12-plan-upstream-behavioral-parity-closeout.md docs/plans/archive/m12-plan-upstream-behavioral-parity-closeout.md
 ```
 
 - [ ] Commit and push the archive move:

@@ -19,7 +19,7 @@ AI-native behavior on top as a separate product milestone.
 
 **Document map**
 - This file — high-level roadmap (what's done, what's next).
-- [`analysis.md`](./plans/archive/analysis.md) — founding architecture decisions (archived historical snapshot).
+- [`m00-analysis-founding.md`](./plans/archive/m00-analysis-founding.md) — founding architecture decisions (archived historical snapshot).
 - [`CONVENTIONS.md`](./CONVENTIONS.md) — architecture, stack, structure, coding/testing conventions, integrations, and current risks (one consolidated reference).
 - [`decisions.md`](./decisions.md) — the consolidated decision log (standing principles + `D-*` entries).
 - [`requirements.md`](./requirements.md) — requirement IDs and their status.
@@ -83,7 +83,7 @@ for its own sake. *(Ratified as a standing principle and `D-25` in
 - Compiled `.table.bin`/`.prism.bin`/`.reverse.bin` payload consumption and rebuild execution; correction/tolerance data in the compiled path.
 - UserDB compatibility beyond the plain-text shim: storage, snapshot/restore/recovery/sync, transaction rollback, learning, frequency updates, predictive lookup.
 
-Detail: [`plans/archive/compat-foundation-summary.md`](./plans/archive/compat-foundation-summary.md), [`plans/archive/refactor-plan.md`](./plans/archive/refactor-plan.md) (module/test ownership rules), and the [`decisions.md`](./decisions.md) log.
+Detail: [`plans/archive/m05-m07-record-compat-foundation-summary.md`](./plans/archive/m05-m07-record-compat-foundation-summary.md), [`plans/archive/m05-m07-record-foundation-refactor.md`](./plans/archive/m05-m07-record-foundation-refactor.md) (module/test ownership rules), and the [`decisions.md`](./decisions.md) log.
 
 ### M8: Real frontend validation & benchmarks
 - Host-shaped native loader validates the full `rime_get_api` → setup → deploy → schema select → session → key process → context/status → commit → teardown lifecycle.
@@ -91,7 +91,7 @@ Detail: [`plans/archive/compat-foundation-summary.md`](./plans/archive/compat-fo
 - Frontend-sensitive benchmark baselines for session lifecycle, per-key processing, deploy/dictionary loading, and userdb learning/sync.
 - **Outcome:** *GO WITH CONDITIONS* to begin AI-native candidate/ranking **design**.
 
-Detail: [`plans/archive/real-frontend-validation-plan.md`](./plans/archive/real-frontend-validation-plan.md), [`plans/archive/frontend-validation/`](./plans/archive/frontend-validation/).
+Detail: [`plans/archive/m08-plan-real-frontend-validation.md`](./plans/archive/m08-plan-real-frontend-validation.md), [`plans/archive/frontend-validation/`](./plans/archive/frontend-validation/).
 
 ### M9: TypeDuck-Web browser validation
 
@@ -116,7 +116,7 @@ Detail: [`plans/archive/real-frontend-validation-plan.md`](./plans/archive/real-
   disabled by default in real frontends until the M11 provider/ranking/privacy
   contracts are proven and explicitly enabled.
 
-Detail: [`plans/archive/typeduck-web-validation-plan.md`](./plans/archive/typeduck-web-validation-plan.md), [`plans/m09-reference-typeduck-web-adapter.md`](./plans/m09-reference-typeduck-web-adapter.md), [`plans/archive/typeduck-web-integration-findings.md`](./plans/archive/typeduck-web-integration-findings.md), [`plans/archive/ai-native-frontend-readiness.md`](./plans/archive/ai-native-frontend-readiness.md) (HR-7 recommendation).
+Detail: [`plans/archive/m09-plan-typeduck-web-validation.md`](./plans/archive/m09-plan-typeduck-web-validation.md), [`plans/m09-reference-typeduck-web-adapter.md`](./plans/m09-reference-typeduck-web-adapter.md), [`plans/archive/m09-findings-typeduck-web-integration.md`](./plans/archive/m09-findings-typeduck-web-integration.md), [`plans/archive/m09-record-ai-native-frontend-readiness.md`](./plans/archive/m09-record-ai-native-frontend-readiness.md) (HR-7 recommendation).
 
 ### M11: AI-native input layer — S1–S5 CLI/core complete *(2026-06-18; frontend exposure deferred)*
 
@@ -136,7 +136,7 @@ classic-first, non-blocking, no default auto-commit, **no userdb leak**,
 privacy-gated, deterministic fallback. Real frontend exposure remains deferred
 and default-off (see *Deferred / future*).
 
-Detail: [`plans/m11-design-ai-native.md`](./plans/m11-design-ai-native.md) (living architecture), [`plans/archive/ai-native-cli-slice-plan.md`](./plans/archive/ai-native-cli-slice-plan.md) (S1 record).
+Detail: [`plans/m11-design-ai-native.md`](./plans/m11-design-ai-native.md) (living architecture), [`plans/archive/m11-plan-ai-native-cli-slice.md`](./plans/archive/m11-plan-ai-native-cli-slice.md) (S1 record).
 
 ---
 
@@ -154,7 +154,7 @@ The phrase/language-model surface (`zhongguo` full-page sentence output),
 `ascii_punct` processor bypass, and punctuation immediate-commit processor
 behavior are fixture-backed ignored blockers, not hidden parity claims.
 
-Detail: [`plans/archive/upstream-oracle-refresh.md`](./plans/archive/upstream-oracle-refresh.md) and [`plans/archive/m12-upstream-behavioral-parity-closeout.md`](./plans/archive/m12-upstream-behavioral-parity-closeout.md).
+Detail: [`plans/archive/m12-plan-upstream-oracle-refresh.md`](./plans/archive/m12-plan-upstream-oracle-refresh.md) and [`plans/archive/m12-plan-upstream-behavioral-parity-closeout.md`](./plans/archive/m12-plan-upstream-behavioral-parity-closeout.md).
 
 **Status**:
 
@@ -162,7 +162,7 @@ Detail: [`plans/archive/upstream-oracle-refresh.md`](./plans/archive/upstream-or
 |---|---|---|---|
 | 0 | Pin upstream oracle | Done | Upstream `1.17.0` commit `33e78140250125871856cdc5b42ddc6a5fcd3cd4` is the default core target; provenance is checked in and the official Windows MSVC release binary is available for behavioral byte capture. |
 | 1 | Fixture naming policy | Done | Fixture manifests and the provenance guard test distinguish `upstream-1.17.0` from `typeduck-v1.1.2`. |
-| 2 | TypeDuck assumption audit | Done | Existing TypeDuck-derived behavior is classified in `docs/plans/archive/m12-coverage-audit.md`. |
+| 2 | TypeDuck assumption audit | Done | Existing TypeDuck-derived behavior is classified in `docs/plans/archive/m12-audit-coverage.md`. |
 | 3 | First upstream parity slice | Done | Default `RimeApi` ABI parity was refreshed to `rime/librime 1.17.0`; fork-only `start_quick` and `config_list_append_*` slots are excluded from the core table. |
 | 4 | First upstream behavioral fixture | Done | `luna-pinyin-basic.json` is captured from the official upstream `1.17.0` binary and checked by `upstream_luna_pinyin_parity`. |
 | 5 | Expanded upstream behavioral fixtures | Done | `luna-pinyin-selection`, `actions`, `reverse-lookup`, `punctuation`, and `options` fixtures are captured from the official release binary with provenance enforced by `oracle_fixture_provenance`. |
@@ -218,7 +218,7 @@ off, and disabling AI clears stale staged rows for the current input. This
 supersedes the *Deferred / future* "AI-native frontend exposure" item for the web
 surface only; native frontend exposure remains deferred.
 
-Detail: [`plans/archive/m13-ai-native-frontend-exposure.md`](./plans/archive/m13-ai-native-frontend-exposure.md) (execution plan) and [`plans/m11-design-ai-native.md`](./plans/m11-design-ai-native.md) (architecture).
+Detail: [`plans/archive/m13-plan-ai-native-frontend-exposure.md`](./plans/archive/m13-plan-ai-native-frontend-exposure.md) (execution plan) and [`plans/m11-design-ai-native.md`](./plans/m11-design-ai-native.md) (architecture).
 
 ---
 
@@ -343,7 +343,7 @@ the *Non-goal* column is not a backlog. Standing deferrals also appear in
 ## Deferred / future
 
 - **librime C++ plugin ABI** (Lua, octagram, predict, proto): deferred until a concrete frontend or distribution requires it; prefer Yune-native extension points first.
-- **AI-native input layer (future native/frontend expansion)** - after M13, TypeDuck-Web has a default-off local AI surface with browser safety evidence. Remaining AI-native product integration is exposing equivalent gates in additional real frontends without changing upstream-core, TypeDuck-Web classic behavior, or parked TypeDuck-Windows compatibility behavior. The architecture remains in [`plans/m11-design-ai-native.md`](./plans/m11-design-ai-native.md); CLI evidence lives in [`plans/archive/ai-native-cli-slice-plan.md`](./plans/archive/ai-native-cli-slice-plan.md), and web exposure evidence lives in [`plans/archive/m13-ai-native-frontend-exposure.md`](./plans/archive/m13-ai-native-frontend-exposure.md).
+- **AI-native input layer (future native/frontend expansion)** - after M13, TypeDuck-Web has a default-off local AI surface with browser safety evidence. Remaining AI-native product integration is exposing equivalent gates in additional real frontends without changing upstream-core, TypeDuck-Web classic behavior, or parked TypeDuck-Windows compatibility behavior. The architecture remains in [`plans/m11-design-ai-native.md`](./plans/m11-design-ai-native.md); CLI evidence lives in [`plans/archive/m11-plan-ai-native-cli-slice.md`](./plans/archive/m11-plan-ai-native-cli-slice.md), and web exposure evidence lives in [`plans/archive/m13-plan-ai-native-frontend-exposure.md`](./plans/archive/m13-plan-ai-native-frontend-exposure.md).
 
 ## Principles (carried forward)
 

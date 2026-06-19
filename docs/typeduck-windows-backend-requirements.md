@@ -2,7 +2,7 @@
 
 > **Purpose.** This records what the **TypeDuck-Windows** native IME frontend needs from the
 > engine, so Yune development can target it deliberately. It complements
-> [`typeduck-web-integration-findings.md`](./plans/archive/typeduck-web-integration-findings.md), which covers the
+> [`m09-findings-typeduck-web-integration.md`](./plans/archive/m09-findings-typeduck-web-integration.md), which covers the
 > *web* frontend. This M10 contract is parked as a TypeDuck compatibility
 > profile after M12 made upstream `rime/librime 1.17.0` the default core oracle.
 > The Windows frontend remains the downstream consumer when this profile is

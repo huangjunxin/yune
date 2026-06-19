@@ -41,8 +41,8 @@ Verified present on `main`:
 | TypeScript runtime | `packages/yune-typeduck-runtime/src/` (`response.ts`, `keys.ts`) | Parses per-candidate `comment`; `TypeDuckContext` exposes `highlighted` + `candidates`; key/mask mapping (incl. the recent `BackSpace` alias). |
 | WASM build script | `scripts/typeduck-wasm-build.sh` | Emscripten / `wasm32-unknown-emscripten`; export list in `scripts/typeduck-exports.txt`. |
 | Upstream app seam | tracked source: `third_party/typeduck-web/yune-integration/adapter.ts`; patch: `third_party/typeduck-web/patches/yune-typeduck-runtime.patch`; ignored checkout: `third_party/typeduck-web/source/src/yune-integration/adapter.ts` | Wires TypeDuck-Web's input engine to the Yune bridge. The tracked source/patch are the versions to fix in WI-2; the ignored checkout may be hot-patched locally but will not land in git. |
-| Findings + blockers | [`typeduck-web-integration-findings.md`](./typeduck-web-integration-findings.md) | HR-5 real-assets browser matrix records PASS evidence for composition, paging, selection, deletion, deploy, persistence, reload, and dictionary-comment rendering. |
-| HR-7 recommendation | [`archive/ai-native-frontend-readiness.md`](./ai-native-frontend-readiness.md) | The evidence-based GO WITH CONDITIONS record that supersedes the tooling-blocked Phase 10 NO-GO. |
+| Findings + blockers | [`m09-findings-typeduck-web-integration.md`](./m09-findings-typeduck-web-integration.md) | HR-5 real-assets browser matrix records PASS evidence for composition, paging, selection, deletion, deploy, persistence, reload, and dictionary-comment rendering. |
+| HR-7 recommendation | [`archive/m09-record-ai-native-frontend-readiness.md`](./m09-record-ai-native-frontend-readiness.md) | The evidence-based GO WITH CONDITIONS record that supersedes the tooling-blocked Phase 10 NO-GO. |
 
 The single thing that blocked Phase 10 was **no Emscripten toolchain** → no WASM
 artifact → browser validation could not run. WI-1 removes that block.
@@ -194,10 +194,10 @@ acceptable fallback). Move every row of the findings matrix from **BLOCKED** to
 
 ## Work Item 5 — Record the evidence-based GO/NO-GO
 
-1. Update [`typeduck-web-integration-findings.md`](./typeduck-web-integration-findings.md):
+1. Update [`m09-findings-typeduck-web-integration.md`](./m09-findings-typeduck-web-integration.md):
    replace the BLOCKED matrix with the WI-4 results.
 2. Write the recommendation that **supersedes** the Phase-10 NO-GO in
-   [`archive/ai-native-frontend-readiness.md`](./ai-native-frontend-readiness.md):
+   [`archive/m09-record-ai-native-frontend-readiness.md`](./m09-record-ai-native-frontend-readiness.md):
    exactly one `GO` / `GO WITH CONDITIONS` / `NO-GO` line, grounded in browser evidence.
 3. Update [`../../roadmap.md`](../../roadmap.md) (M9), [`../../requirements.md`](../../requirements.md) (`TYPEDUCK-E2E-03`), and [`../../decisions.md`](../../decisions.md).
 
