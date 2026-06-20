@@ -1,6 +1,6 @@
 # M21 — TypeDuck-Web Product Behavioral Comparison Protocol
 
-> **Status:** Active · **Type:** comparison protocol (validation activity) · **Updated:** 2026-06-20 · **Depends on:** M20 (merged) · **Critical path:** no (qualitative real-world sanity check that feeds the backlog)
+> **Status:** Active (product-side manual capture pending; M21-GAP-01/02 fixed) · **Milestone:** M21 (TypeDuck-Web product comparison) · **Updated:** 2026-06-20 · **Type:** comparison protocol (validation activity) · **Depends on:** M20 (merged) · **Critical path:** no (qualitative real-world sanity check that feeds the backlog)
 
 > **For agentic workers:** This is **not** an engine milestone and produces **no fixes by itself** — it produces a *divergence gap ledger*. It compares Yune's internal harness against the real deployed product as a *behavior/feel* target, **not a hard oracle**. The hard oracle remains the captured TypeDuck `v1.1.2` fixtures. Run this **after M20 merges** (M20 gives the harness the toggles needed to match the product's settings).
 
@@ -12,6 +12,21 @@
 so we know **which differences are real engine gaps, which are expected-by-design, and which are pending M17–M19** — without chasing noise.
 
 > **Surface reminder** (see `CONVENTIONS.md` → "Web surface terminology"): `packages/yune-typeduck-runtime/` is the runtime bridge; `third_party/typeduck-web/` is the internal harness compared *here*; the deployed `typeduck.hk/web` is the real product. These are three different things.
+
+## Current status
+
+M21 is not complete as a product-comparison activity: the deployed-product manual
+capture column in the gap ledger is still pending. The two hard-oracle-backed
+implementation gaps found while preparing that comparison are complete:
+
+- **M21-GAP-01:** dictionary sentence-composition divergence, fixed against the
+  `v1.1.2` fixture.
+- **M21-GAP-02:** `nri` prefix fallback plus `jyut6ping3` prediction-count
+  behavior, fixed against `v1.1.2` fixtures and browser evidence.
+
+Keep this protocol under `docs/plans/` until the product capture is either run
+and classified or explicitly closed as no longer needed. Do not archive it merely
+because GAP-01/GAP-02 are fixed.
 
 ## Why the deployed product is a target, not an oracle
 

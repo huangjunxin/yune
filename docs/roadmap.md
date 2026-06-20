@@ -444,10 +444,13 @@ is **Track 2 (broad upstream depth):**
   item (1) of `typeduck-windows-backend-requirements.md` without reopening Windows
   packaging.
   Detail: [`plans/m19-plan-breadth-schemas.md`](./plans/m19-plan-breadth-schemas.md).
-- **M21 — TypeDuck-Web product comparison** — a documented protocol (off the parity
-  critical path) comparing the Yune harness against the deployed `typeduck.hk/web`
-  product as a behavior/feel target (the `v1.1.2` fixtures stay the hard oracle); runs
-  after M20. See [`plans/m21-plan-typeduck-web-product-comparison.md`](./plans/m21-plan-typeduck-web-product-comparison.md).
+- **M21 — TypeDuck-Web product comparison** — an active documented protocol (off the
+  parity critical path) comparing the Yune harness against the deployed
+  `typeduck.hk/web` product as a behavior/feel target (the `v1.1.2` fixtures stay
+  the hard oracle). Product-side manual capture is still pending, so the protocol
+  remains active; the hard-oracle implementation gaps found so far are tracked
+  below as M21-GAP-01 and M21-GAP-02. See
+  [`plans/m21-plan-typeduck-web-product-comparison.md`](./plans/m21-plan-typeduck-web-product-comparison.md).
 - **M21-GAP-01 — multi-syllable dictionary-composition divergence (fixed against
   `v1.1.2`).** Manual harness testing found that toneless multi-syllable inputs
   whose target is a *dictionary-phrase* sentence returned wrong high-frequency
