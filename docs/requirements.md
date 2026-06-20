@@ -255,43 +255,47 @@ oracle or closed by an explicit product decision.
 
 ## M20 Web Demo Showcase Controls Requirements
 
-**Status: planned.** M20 is a web/demo track for this repo's patched internal
+**Status: complete.** M20 is a web/demo track for this repo's patched internal
 TypeDuck-Web harness, not a reopened M13 and not the separately cloned
 `TypeDuck-HK/TypeDuck-Web` product. It exposes already-supported Yune behavior
 through honest UI controls and guided scenarios while preserving the M9/M13/M16
-browser gates and the upstream-first ABI constraints.
+browser gates and the upstream-first ABI constraints. Browser evidence is under
+`third_party/typeduck-web/e2e/results/m20-showcase-controls/`.
 
-- [ ] **M20-DEMO-01**: TypeDuck-Web exposes only runtime-backed active controls:
+- [x] **M20-DEMO-01**: TypeDuck-Web exposes only runtime-backed active controls:
   schema/deploy-time controls flow through `customize()` plus deploy, live
   session controls flow through `setOption()`, display-only controls are grouped
   separately, and no new `RimeApi`, `RimeCandidate`, or `yune_typeduck_*` export
   is added for UI convenience.
-- [ ] **M20-DEMO-02**: Prediction controls are honest and profile-aligned:
+- [x] **M20-DEMO-02**: Prediction controls are honest and profile-aligned:
   `prediction_never_first` defaults on, and the UI exposes one prediction
   threshold control because the frequency/weight config aliases drive the same
   engine threshold; the fine-grained threshold UI scale is derived from real
   loaded dictionary/candidate quality and proven on real browser assets.
-- [ ] **M20-DEMO-03**: Static or default-on engine features are guided
+- [x] **M20-DEMO-03**: Static or default-on engine features are guided
   scenarios, not fake toggles: long-entry prediction (`santai` -> `身體健康`),
   Cantonese fuzzy/容錯, letter-to-tone, reverse lookup/dictionary panels, and
   AI second-pass behavior are demonstrable without misrepresenting their
   configurability.
-- [ ] **M20-DEMO-04**: The internal TypeDuck-Web harness and
+- [x] **M20-DEMO-04**: The internal TypeDuck-Web harness and
   `@yune-ime/typeduck-runtime` subtrees have local `AGENTS.md` guidance covering
   patch discipline, runtime wrapper boundaries, browser evidence, the
   control-honesty rule, and the distinction between the harness, the runtime
   bridge, and the real TypeDuck-Web web IME product.
-- [ ] **M20-DEMO-05**: Real browser evidence includes an honesty gate proving
+- [x] **M20-DEMO-05**: Real browser evidence includes an honesty gate proving
   every visible active control changes candidate output, committed output,
-  status output, or persisted config, and every visible display control changes
-  rendering; `ascii_punct` is not exposed as a working toggle until M18
-  implements the processor behavior.
-- [ ] **M20-DEMO-06**: The internal TypeDuck-Web harness is documented and
+  status output, or persisted config, and browser-reachable display controls
+  change rendering; `ascii_punct` is not exposed as a working toggle until M18
+  implements the processor behavior. The fixed `jyut6ping3_mobile` browser
+  schema lacks a `cangjie` namespace, so Reverse code display / Cangjie /
+  `show_full_code` are recorded as current-surface N/A instead of fake working
+  toggles.
+- [x] **M20-DEMO-06**: The internal TypeDuck-Web harness is documented and
   maintained as Yune's canonical browser playground: every browser-safe
   supported engine feature is reachable through an active control or guided
   scenario, and unsupported or deferred behavior is clearly absent or labeled
   rather than partially exposed.
-- [ ] **M20-DEMO-07**: Headline TypeDuck profile toggles are not lost in the
+- [x] **M20-DEMO-07**: Headline TypeDuck profile toggles are not lost in the
   playground: `translator/combine_candidates` is an active control whose
   default is verified against the real browser asset behavior, and
   `show_full_code` is either exercised through a browser-reachable Cangjie
@@ -407,13 +411,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FORK-PARITY-07 | backlog | Complete - TypeDuck-profile `全形`/`半形` labels locked |
 | FORK-PARITY-08 | backlog | Complete - upstream ranking accepted; long-entry prediction preserved; threshold and never-first controls implemented |
 | FORK-PARITY-09 | backlog | Complete - UI-side `display_languages` decision recorded |
-| M20-DEMO-01 | M20 | Planned - controls must use existing customize/setOption paths, keep display controls separate, and preserve ABI/export boundaries |
-| M20-DEMO-02 | M20 | Planned - prediction never-first defaults on; one fine-grained real-assets-scaled prediction threshold control |
-| M20-DEMO-03 | M20 | Planned - static/default-on features use guided scenarios, not fake toggles |
-| M20-DEMO-04 | M20 | Planned - local AGENTS guidance for internal TypeDuck-Web harness, runtime package, and product-surface distinction |
-| M20-DEMO-05 | M20 | Planned - browser honesty gate for active and display controls; no working `ascii_punct` toggle before M18 |
-| M20-DEMO-06 | M20 | Planned - internal TypeDuck-Web harness is the canonical browser playground for supported engine features |
-| M20-DEMO-07 | M20 | Planned - verified-default `combine_candidates` active control plus `show_full_code` browser scenario or N/A |
+| M20-DEMO-01 | M20 | Complete - controls use existing customize/deploy and setOption paths while preserving ABI/export boundaries |
+| M20-DEMO-02 | M20 | Complete - prediction never-first defaults on; real-assets-calibrated threshold control filters `santai` predictions |
+| M20-DEMO-03 | M20 | Complete - static/default-on features use guided scenarios, not fake toggles |
+| M20-DEMO-04 | M20 | Complete - local AGENTS guidance added for internal TypeDuck-Web harness, runtime package, and product-surface distinction |
+| M20-DEMO-05 | M20 | Complete - browser honesty gate covers active controls and browser-reachable display rendering; no working `ascii_punct` toggle before M18 |
+| M20-DEMO-06 | M20 | Complete - internal TypeDuck-Web harness is documented as the canonical browser playground for supported engine features |
+| M20-DEMO-07 | M20 | Complete - verified-default `combine_candidates` active control plus current-schema `show_full_code`/Cangjie N/A evidence |
 
 **Coverage:**
 - v1 requirements: 25 total
@@ -424,10 +428,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 - M13 AI-native frontend exposure requirements: 6 total, 6 complete
 - M14–M16 TypeDuck-Web fork parity requirements: 7 total, 7 complete (M16 complete with explicit browser/userdb inspection limits)
 - Fork parity backlog (Cantonese engine-parity, vs upstream 1.17.0): 9 total, 9 complete; see [`fork-parity-ledger.md`](./fork-parity-ledger.md)
-- M20 web demo showcase controls requirements: 7 total, 0 complete
+- M20 web demo showcase controls requirements: 7 total, 7 complete
 - Mapped to phases: 98
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-28*
-*Last updated: 2026-06-20 - M20 Web Demo Showcase Controls planned as a separate internal web/demo track; M13 remains complete; M14 TypeDuck v1.1.2 capture complete; M15 TypeDuck dictionary-driven engine parity complete; M16 TypeDuck-Web browser validation complete with documented browser/userdb limits; M10 TypeDuck-Windows remains parked as a TypeDuck compatibility profile until a named profile ABI surface exists*
+*Last updated: 2026-06-20 - M20 Web Demo Showcase Controls complete as a separate internal web/demo track with real browser evidence; M13 remains complete; M14 TypeDuck v1.1.2 capture complete; M15 TypeDuck dictionary-driven engine parity complete; M16 TypeDuck-Web browser validation complete with documented browser/userdb limits; M10 TypeDuck-Windows remains parked as a TypeDuck compatibility profile until a named profile ABI surface exists*

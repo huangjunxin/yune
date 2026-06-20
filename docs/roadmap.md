@@ -298,16 +298,15 @@ Detail: [`plans/archive/m14-plan-typeduck-v112-golden-capture.md`](./plans/archi
 
 ---
 
-## Planned - M20: Web demo showcase controls
+## Completed - M20: Web demo showcase controls
 
-M20 turns this repo's patched TypeDuck-Web harness into Yune's canonical
+M20 turned this repo's patched TypeDuck-Web harness into Yune's canonical
 internal browser playground for demoing, stress-testing, and comparing the
 behavior already proven by M9, M13, M14-M16, and the FORK-PARITY backlog. It is a
 **separate web/demo track**,
 not a reopened M13: M13 remains the completed default-off AI frontend exposure
-milestone, while M20 is about making the browser demo highly controllable,
-honest, inspectable, and useful for manual dogfooding before deeper M17-M19
-work.
+milestone, while M20 made the browser demo highly controllable, honest,
+inspectable, and useful for manual dogfooding before deeper M17-M19 work.
 
 This is not the same surface as a separately cloned `TypeDuck-HK/TypeDuck-Web`
 product checkout. `packages/yune-typeduck-runtime/` remains the reusable Yune
@@ -321,17 +320,24 @@ schema/deploy-time knobs through `customize()` (`enable_completion`,
 `prediction_never_first`, and one measured, fine-grained real-assets-scaled
 prediction threshold) and
 live session options through `setOption()` (`ascii_mode`, `full_shape`,
-`simplification`). Display-only controls are grouped separately and must prove a
-visible rendering change. Static or default-on engine features such as `santai`
+`simplification`). Display-only controls are grouped separately and prove visible
+rendering changes for the current browser-reachable display surface. Static or
+default-on engine features such as `santai`
 -> `身體健康`, Cantonese fuzzy/容錯, letter-to-tone input, reverse lookup,
 `show_full_code` reachability/N-A, and AI second-pass behavior are presented as
-guided scenarios rather than fake toggles. `ascii_punct` is explicitly not
-exposed as a working toggle until M18 implements the processor-level behavior.
+guided scenarios rather than fake toggles. For the current `jyut6ping3_mobile`
+browser schema, reverse/Cangjie/show-full-code evidence records the missing
+`cangjie` namespace as N/A instead of exposing a fake control. `ascii_punct` is
+explicitly not exposed as a working toggle until M18 implements the
+processor-level behavior.
 As Yune adds browser-safe engine features, this playground should gain either an
 active control or a guided scenario so the web surface stays useful for future
 regression hunts and product demos.
 
-Detail: [`plans/m20-plan-web-demo-showcase-controls.md`](./plans/m20-plan-web-demo-showcase-controls.md).
+Evidence lives under
+`third_party/typeduck-web/e2e/results/m20-showcase-controls/`. The completed
+plan is archived at
+[`plans/archive/m20-plan-web-demo-showcase-controls.md`](./plans/archive/m20-plan-web-demo-showcase-controls.md).
 
 ---
 
@@ -359,9 +365,9 @@ and [`plans/m10-reference-typeduck-windows-native-build.md`](./plans/m10-referen
 In priority order:
 
 1. **Preserve the upstream-first baseline.** Keep default `RimeApi` and core behavior aligned to upstream `1.17.0`; add new TypeDuck fork-only behavior only behind an explicit profile surface.
-2. **Keep M9/M13/M16 web gates green on merge.** Preserve the reproducible Emscripten build, TypeScript runtime tests/build, TypeDuck-Web worker build, real-assets browser evidence, native `typeduck_web` fallback, and default-off M13 AI scenarios.
-3. **Execute M20 as a web/demo track before or alongside Track 2.** Make the internal `third_party/typeduck-web/` harness the canonical browser playground for real controls, guided scenarios, stress cases, and browser honesty checks without reopening M13 or changing the ABI.
-4. **Advance Track 2 (M17-M19) opportunistically.** The upstream language model, prism generation, deployment-write, and breadth schemas now follow the upstream-first scope ledger after the M14-M16 TypeDuck-Web closeout.
+2. **Keep M9/M13/M16/M20 web gates green on merge.** Preserve the reproducible Emscripten build, TypeScript runtime tests/build, TypeDuck-Web worker build, real-assets browser evidence, native `typeduck_web` fallback, default-off M13 AI scenarios, and M20 showcase-control honesty checks.
+3. **Advance Track 2 (M17-M19) opportunistically.** The upstream language model, prism generation, deployment-write, and breadth schemas now follow the upstream-first scope ledger after the M14-M16 TypeDuck-Web closeout and M20 browser playground work.
+4. **Extend the M20 playground only with browser-safe supported features.** Add active controls or guided scenarios for new browser-safe engine behavior, and keep unsupported behavior absent or documented instead of partially exposed.
 5. **Resume TypeDuck profile work only with a named surface.** Return to TypeDuck-Windows packaging after the profile ABI is defined and fork-header slot smoke is re-derived.
 6. **Add a future TypeDuck-Web product-integration track before changing a separately cloned TypeDuck-Web product checkout.** Treat `TypeDuck-HK/TypeDuck-Web` as the dedicated web IME product, not as the M20 harness or the runtime bridge.
 7. **Add a future iOS keyboard-developer track before TypeDuck iOS work starts.** Treat the Cantoboard/TypeDuck iOS build repositories as platform-integration provenance, not as engine-parity code to port. The track should define Yune-native iOS packaging, Swift/Obj-C host bindings, resource bundling, sandboxed userdb/storage, keyboard-extension lifecycle limits, and mobile-specific configuration hooks.
@@ -371,14 +377,13 @@ In priority order:
 ## Beyond M12 — trajectory & scope ledger
 
 Priority is set by what a *named* (A)/(B) target needs, not by librime's feature
-list. **TypeDuck `jyut6ping3` reconciliation is complete; M20 is the active
-web/demo track that makes the proven behavior easier to dogfood.** The remaining
-engine-depth arc is **Track 2 (broad upstream depth):**
+list. **TypeDuck `jyut6ping3` reconciliation and M20 browser playground work are
+complete.** The remaining engine-depth arc is **Track 2 (broad upstream depth):**
 
-- **M20 - Web demo showcase controls** - internal TypeDuck-Web harness controls
-  and guided scenarios for already-supported engine behavior, with an honesty
-  gate proving every visible active control changes observable output or
-  persisted config.
+- **M20 - Web demo showcase controls** - complete; internal TypeDuck-Web harness
+  controls and guided scenarios for already-supported engine behavior, with
+  real-assets evidence for active controls, display rendering, AI gates, and
+  current-schema N/A limits.
 - **M17 - Upstream sentence / language model (poet)** - the statistical LM for
   `luna_pinyin` sentence/lattice parity (the two blocked upstream tests). The
   heavy item; *not* required for TypeDuck-Web parity.

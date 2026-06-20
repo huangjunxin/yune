@@ -1,6 +1,6 @@
 # M20 Web Demo Showcase Controls Implementation Plan
 
-> **Status:** Active · **Milestone:** M20 (Web demo showcase controls) · **Updated:** 2026-06-20 · **Type:** execution plan
+> **Status:** Finished · **Milestone:** M20 (Web demo showcase controls) · **Closed:** 2026-06-20 · **Type:** execution plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` (recommended) or `superpowers:executing-plans` to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -813,7 +813,7 @@ Expected: no whitespace errors.
 
 ```powershell
 git add third_party/typeduck-web/e2e/results/m20-showcase-controls
-git add docs/plans/m20-plan-web-demo-showcase-controls.md docs/roadmap.md docs/requirements.md
+git add docs/plans/archive/m20-plan-web-demo-showcase-controls.md docs/roadmap.md docs/requirements.md
 git commit -m "test: record TypeDuck-Web showcase evidence"
 ```
 
