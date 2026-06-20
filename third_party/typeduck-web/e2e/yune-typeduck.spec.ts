@@ -13,7 +13,7 @@
  * 6. Playwright installed (standalone spec framework)
  */
 
-import { test, expect, Page, BrowserContext } from "@playwright/test";
+import { test, expect, type Page, type BrowserContext, type TestInfo, type WorkerInfo } from "@playwright/test";
 
 // Test configuration
 const APP_URL = process.env.TYPEDUCK_APP_URL || "http://localhost:5173";
@@ -21,6 +21,7 @@ const TIMEOUT_MS = 120000; // WASM load and runtime init may be slow
 
 // E2E evidence directory
 const EVIDENCE_DIR = process.env.TYPEDUCK_EVIDENCE_DIR || "../e2e/results";
+let currentEvidenceScope = "unscoped";
 
 const ACTIVE_SHOWCASE_CONTROLS = [
   /Auto-completion/,
@@ -54,7 +55,7 @@ const LEARNED_PHRASE_TEXT = "\u6211\u4fc2\u500b";
 /**
  * Helper: Capture browser console errors to evidence file
  */
-async function captureConsoleErrors(page: Page, evidenceFile: string): Promise<string[]> {
+async function captureConsoleErrors(page: Page): Promise<string[]> {
   const errors: string[] = [];
   page.on("console", (msg) => {
     if (msg.type() === "error" || msg.type() === "warning" || APP_URL.includes("debug")) {
@@ -72,6 +73,31 @@ async function captureConsoleErrors(page: Page, evidenceFile: string): Promise<s
   return errors;
 }
 
+function evidenceSlug(value: string): string {
+  return value
+    .replace(/[^A-Za-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 90)
+    || "test";
+}
+
+function evidenceScopeForTest(testInfo: TestInfo): string {
+  return `worker-${testInfo.parallelIndex}-${evidenceSlug(testInfo.title)}`;
+}
+
+function evidenceScopeForWorker(workerInfo: WorkerInfo): string {
+  return `worker-${workerInfo.parallelIndex}`;
+}
+
+function setEvidenceScope(testInfo: TestInfo): void {
+  currentEvidenceScope = evidenceScopeForTest(testInfo);
+}
+
+async function evidencePath(filename: string, scope = currentEvidenceScope): Promise<string> {
+  const path = await import("path");
+  return path.join(EVIDENCE_DIR, scope, filename);
+}
+
 function consoleFailures(messages: string[]): string[] {
   return messages.filter((message) =>
     message.includes("console:error")
@@ -87,18 +113,27 @@ function consoleFailures(messages: string[]): string[] {
 async function saveEvidence(filename: string, content: string): Promise<void> {
   const fs = await import("fs/promises");
   const path = await import("path");
-  const evidencePath = path.join(EVIDENCE_DIR, filename);
-  await fs.mkdir(EVIDENCE_DIR, { recursive: true });
-  await fs.appendFile(evidencePath, content, "utf8");
+  const scopedPath = await evidencePath(filename);
+  await fs.mkdir(path.dirname(scopedPath), { recursive: true });
+  await fs.appendFile(scopedPath, content, "utf8");
+}
+
+async function saveWorkerEvidence(workerInfo: WorkerInfo, filename: string, content: string): Promise<void> {
+  const fs = await import("fs/promises");
+  const path = await import("path");
+  const scopedPath = await evidencePath(filename, evidenceScopeForWorker(workerInfo));
+  await fs.mkdir(path.dirname(scopedPath), { recursive: true });
+  await fs.appendFile(scopedPath, content, "utf8");
 }
 
 /**
  * Helper: Take screenshot with evidence filename
  */
 async function takeEvidenceScreenshot(page: Page, flowName: string): Promise<void> {
+  const fs = await import("fs/promises");
   const path = await import("path");
-  await (await import("fs/promises")).mkdir(EVIDENCE_DIR, { recursive: true });
-  const screenshotPath = path.join(EVIDENCE_DIR, `screenshot-${flowName}.png`);
+  const screenshotPath = await evidencePath(`screenshot-${flowName}.png`);
+  await fs.mkdir(path.dirname(screenshotPath), { recursive: true });
   await page.screenshot({ path: screenshotPath, fullPage: false });
 }
 
@@ -132,9 +167,9 @@ interface PersistenceDiagnosticSnapshot {
 async function writeEvidence(filename: string, content: string): Promise<void> {
   const fs = await import("fs/promises");
   const path = await import("path");
-  const evidencePath = path.join(EVIDENCE_DIR, filename);
-  await fs.mkdir(EVIDENCE_DIR, { recursive: true });
-  await fs.writeFile(evidencePath, content, "utf8");
+  const scopedPath = await evidencePath(filename);
+  await fs.mkdir(path.dirname(scopedPath), { recursive: true });
+  await fs.writeFile(scopedPath, content, "utf8");
 }
 
 async function saveJsonEvidence(filename: string, value: unknown): Promise<void> {
@@ -452,20 +487,23 @@ test.describe("TypeDuck-Web Browser E2E", () => {
 
   let consoleErrors: string[] = [];
 
-  test.beforeAll(async ({ browser }) => {
+  test.beforeAll(async ({}, workerInfo) => {
     // Record browser runner start
-    await saveEvidence(
+    await saveWorkerEvidence(
+      workerInfo,
       "browser-run.log",
       `[${new Date().toISOString()}] Browser E2E started\nURL: ${APP_URL}\n`
     );
   });
 
-  test.beforeEach(async ({ page }) => {
-    consoleErrors = await captureConsoleErrors(page, "browser-console.log");
+  test.beforeEach(async ({ page }, testInfo) => {
+    setEvidenceScope(testInfo);
+    consoleErrors = await captureConsoleErrors(page);
     await openApp(page);
   });
 
   test.afterEach(async ({ page }, testInfo) => {
+    setEvidenceScope(testInfo);
     // Append test result to evidence log
     const status = testInfo.status || "unknown";
     const duration = testInfo.duration || 0;
@@ -483,7 +521,7 @@ test.describe("TypeDuck-Web Browser E2E", () => {
     }
   });
 
-  test("Composition after typing schema-valid keys", async ({ page }) => {
+  test("Composition after typing schema-valid keys @smoke", async ({ page }) => {
     // D-08/D-10: Composition appears after typing schema-valid keys
 
     await focusInputAndType(page, "nei");
@@ -497,7 +535,7 @@ test.describe("TypeDuck-Web Browser E2E", () => {
     );
   });
 
-  test("Candidate list visible", async ({ page }) => {
+  test("Candidate list visible @smoke", async ({ page }) => {
     // D-08/D-10: Candidate list is visible after composition
 
     await focusInputAndType(page, "nei");
@@ -527,7 +565,7 @@ test.describe("TypeDuck-Web Browser E2E", () => {
     }
   });
 
-  test("M13 AI-off identity and AI-on second-pass source labels", async ({ page }) => {
+  test("M13 AI-off identity and AI-on second-pass source labels @smoke", async ({ page }) => {
     await focusInputAndType(page, "nei");
 
     const offState = await readCandidatePanelSnapshot(page, false);
@@ -686,7 +724,7 @@ test.describe("TypeDuck-Web Browser E2E", () => {
     expect(consoleFailures(consoleErrors)).toEqual([]);
   });
 
-  test("M20 Prediction never first persists schema customization", async ({ page }) => {
+  test("M20 Prediction never first persists schema customization @smoke", async ({ page }) => {
     const neverFirstOn = await waitForPersistedSettings(page, {
       "translator/prediction_never_first": "true",
     });
@@ -915,7 +953,7 @@ test.describe("TypeDuck-Web Browser E2E", () => {
     expect(consoleErrors).toEqual([]);
   });
 
-  test("M16 sentence composition browser path matches M14", async ({ page }) => {
+  test("M16 sentence composition browser path matches M14 @smoke", async ({ page }) => {
     await focusInputAndType(page, "ngohaigo");
     await captureM16Scenario(
       page,

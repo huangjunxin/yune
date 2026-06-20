@@ -17,6 +17,28 @@ Manual real-browser smoke test for patched TypeDuck-Web + Yune runtime seam. Thi
 
 ## Procedure
 
+### Automated Playwright Entry Points
+
+The automated suite is the primary real-browser gate when Playwright is available:
+
+```bash
+npm --prefix third_party/typeduck-web/e2e run test:e2e
+```
+
+The suite currently contains 28 tests. The full `test:e2e` run is the merge/honesty
+gate and must remain green with the same assertions.
+
+For inner-loop work only, a representative smoke subset is tagged with `@smoke`:
+
+```bash
+npm --prefix third_party/typeduck-web/e2e run test:e2e:smoke
+```
+
+The smoke subset covers composition, candidate-list rendering, the M20
+prediction-never-first control, M16 sentence composition parity, and M13 AI-off
+identity/source-label safety. Passing smoke is useful during development, but it
+does not replace the full 28-test gate.
+
 ### Step 1: Apply Patch
 
 ```bash
