@@ -1,0 +1,18 @@
+[2026-06-20T09:47:33.904Z] M21 Yune harness capture started
+URL: http://127.0.0.1:5174/web/
+Yune commit: cdb7bd52e638647493e7b097a4deecb38d9efb04
+[2026-06-20T09:48:23.420Z] Captured nei: input=nei candidates=5 expectedFound=true
+[2026-06-20T09:48:25.835Z] Captured ngo: input=ngo candidates=5 expectedFound=true
+[2026-06-20T09:48:28.552Z] Captured santai: input=santai candidates=5 expectedFound=true
+[2026-06-20T09:48:31.152Z] Captured sigin: input=sigin candidates=5 expectedFound=true
+[2026-06-20T09:48:33.669Z] Captured mgoi: input=mgoi candidates=2 expectedFound=true
+[2026-06-20T09:48:36.570Z] Captured ngohaigo: input=ngohaigo candidates=1 expectedFound=true
+[2026-06-20T09:48:39.003Z] Captured hou: input=hou candidates=5 expectedFound=true
+[2026-06-20T09:48:41.535Z] Captured tone-letters-seov: input=seov candidates=1 expectedFound=true
+[2026-06-20T09:48:43.969Z] Captured one-edit-typo-nri-correction-off: input=nri candidates=0 expectedFound=null
+[2026-06-20T09:49:10.784Z] Captured one-edit-typo-nri-correction-on: input=nri candidates=0 expectedFound=null
+[2026-06-20T09:49:39.266Z] Captured hk2s-ngohaigo-simplification-on: input=ngohaigo candidates=1 expectedFound=true
+[2026-06-20T09:49:42.734Z] Captured reverse-lookup-nei-comments: input=nei candidates=5 expectedFound=true
+[2026-06-20T09:49:45.166Z] Captured multi-page-nei-page1: input=nei candidates=5 expectedFound=true
+[2026-06-20T09:49:46.400Z] Captured multi-page-nei-page2 candidates=5
+[2026-06-20T10:01:41.616Z] Supplemental standalone m capture: top=唔 | 無 | 面 | 明 | 民, pageSize=6, screenshot=screenshot-yune-m.png

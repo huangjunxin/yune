@@ -1,0 +1,38 @@
+{
+  "protocol": "M21 TypeDuck-Web product behavioral comparison",
+  "snapshotId": "2026-06-20T0849Z-yune-cdb7bd52-product-manual",
+  "captureMode": {
+    "yuneHarness": "automated real local browser capture through the M20 playground",
+    "deployedProduct": "pending manual capture; no automated scraping performed"
+  },
+  "yuneHarness": {
+    "branch": "codex/m21-and-control-fidelity",
+    "commit": "cdb7bd52e638647493e7b097a4deecb38d9efb04",
+    "appUrl": "http://127.0.0.1:5174/web/",
+    "captureStartedAt": "2026-06-20T09:47:33.904Z",
+    "captureCompletedAt": "2026-06-20T10:01:41.616Z",
+    "schema": "jyut6ping3_mobile",
+    "freshUserdb": "fresh Playwright browser context for the M21 corpus capture",
+    "pageSize": 6,
+    "supplementalCaptures": [
+      {
+        "id": "m",
+        "input": "m",
+        "capturedAt": "2026-06-20T10:01:41.616Z",
+        "reason": "Covers the standalone-m row required by the M21 corpus."
+      }
+    ]
+  },
+  "deployedProduct": {
+    "url": "https://www.typeduck.hk/web/",
+    "captureStatus": "pending manual capture",
+    "observedEngineVersion": "pending manual capture",
+    "observedDictionaryVersion": "pending manual capture",
+    "manualCaptureRequired": true
+  },
+  "classificationPolicy": {
+    "hardOracle": "TypeDuck-HK/librime v1.1.2 fixtures remain the reproducible oracle",
+    "productRole": "deployed product is a behavior/feel target only",
+    "realDivergenceDisposition": "capture a v1.1.2 golden and fix against that, never chase the live site directly"
+  }
+}

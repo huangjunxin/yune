@@ -1,0 +1,17 @@
+{
+  "completion": true,
+  "correction": false,
+  "autoComposition": true,
+  "inputMemory": true,
+  "combineCandidates": true,
+  "predictionNeverFirst": true,
+  "predictionThreshold": "0",
+  "simplification": false,
+  "asciiMode": false,
+  "fullShape": false,
+  "userdbState": "fresh Playwright browser context for this capture; no learned phrase sequence performed before corpus capture",
+  "schema": "jyut6ping3_mobile",
+  "yuneCommit": "cdb7bd52e638647493e7b097a4deecb38d9efb04",
+  "appUrl": "http://127.0.0.1:5174/web/",
+  "pageSize": 6
+}

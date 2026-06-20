@@ -1,0 +1,701 @@
+{
+  "startedAt": "2026-06-20T09:47:33.904Z",
+  "completedAt": "2026-06-20T10:01:41.616Z",
+  "commit": "cdb7bd52e638647493e7b097a4deecb38d9efb04",
+  "appUrl": "http://127.0.0.1:5174/web/",
+  "settingsSnapshot": {
+    "completion": true,
+    "correction": false,
+    "autoComposition": true,
+    "inputMemory": true,
+    "combineCandidates": true,
+    "predictionNeverFirst": true,
+    "predictionThreshold": "0",
+    "simplification": false,
+    "asciiMode": false,
+    "fullShape": false,
+    "userdbState": "fresh Playwright browser context for this capture; no learned phrase sequence performed before corpus capture",
+    "schema": "jyut6ping3_mobile",
+    "yuneCommit": "cdb7bd52e638647493e7b097a4deecb38d9efb04",
+    "appUrl": "http://127.0.0.1:5174/web/",
+    "pageSize": 6
+  },
+  "cases": [
+    {
+      "id": "nei",
+      "input": "nei",
+      "expectedText": "你",
+      "expectedFound": true,
+      "aiEnabled": false,
+      "inputValue": "",
+      "panelCount": 5,
+      "candidates": [
+        {
+          "index": 0,
+          "text": "你",
+          "note": null,
+          "source": null,
+          "rowText": "1.nei5你you (singular)ⓘ"
+        },
+        {
+          "index": 1,
+          "text": "呢",
+          "note": null,
+          "source": null,
+          "rowText": "2.ne1呢(how about)ⓘ"
+        },
+        {
+          "index": 2,
+          "text": "尼",
+          "note": null,
+          "source": null,
+          "rowText": "3.nei4尼nunⓘ"
+        },
+        {
+          "index": 3,
+          "text": "妮",
+          "note": null,
+          "source": null,
+          "rowText": "4.nei4妮little girlⓘ"
+        },
+        {
+          "index": 4,
+          "text": "彌",
+          "note": null,
+          "source": null,
+          "rowText": "5.nei4彌full; fillⓘ"
+        }
+      ],
+      "highlightedIndex": 0,
+      "topNText": [
+        "你",
+        "呢",
+        "尼",
+        "妮",
+        "彌"
+      ],
+      "rowText": [
+        "1.nei5你you (singular)ⓘ",
+        "2.ne1呢(how about)ⓘ",
+        "3.nei4尼nunⓘ",
+        "4.nei4妮little girlⓘ",
+        "5.nei4彌full; fillⓘ"
+      ],
+      "comments": [],
+      "notes": null
+    },
+    {
+      "id": "ngo",
+      "input": "ngo",
+      "expectedText": "我",
+      "expectedFound": true,
+      "aiEnabled": false,
+      "inputValue": "",
+      "panelCount": 5,
+      "candidates": [
+        {
+          "index": 0,
+          "text": "我",
+          "note": null,
+          "source": null,
+          "rowText": "1.ngo5我I, meⓘ"
+        },
+        {
+          "index": 1,
+          "text": "俄",
+          "note": null,
+          "source": null,
+          "rowText": "2.ngo4俄Russianⓘ"
+        },
+        {
+          "index": 2,
+          "text": "柯",
+          "note": null,
+          "source": null,
+          "rowText": "3.o1柯surname [Or]ⓘ"
+        },
+        {
+          "index": 3,
+          "text": "餓",
+          "note": null,
+          "source": null,
+          "rowText": "4.ngo6餓hungryⓘ"
+        },
+        {
+          "index": 4,
+          "text": "屙",
+          "note": null,
+          "source": null,
+          "rowText": "5.o1屙excreteⓘ"
+        }
+      ],
+      "highlightedIndex": 0,
+      "topNText": [
+        "我",
+        "俄",
+        "柯",
+        "餓",
+        "屙"
+      ],
+      "rowText": [
+        "1.ngo5我I, meⓘ",
+        "2.ngo4俄Russianⓘ",
+        "3.o1柯surname [Or]ⓘ",
+        "4.ngo6餓hungryⓘ",
+        "5.o1屙excreteⓘ"
+      ],
+      "comments": [],
+      "notes": null
+    },
+    {
+      "id": "santai",
+      "input": "santai",
+      "expectedText": "身體健康",
+      "expectedFound": true,
+      "aiEnabled": false,
+      "inputValue": "",
+      "panelCount": 5,
+      "candidates": [
+        {
+          "index": 0,
+          "text": "身體",
+          "note": null,
+          "source": null,
+          "rowText": "1.san1 tai2身體bodyⓘ"
+        },
+        {
+          "index": 1,
+          "text": "神體",
+          "note": null,
+          "source": null,
+          "rowText": "2.san4 tai2神體"
+        },
+        {
+          "index": 2,
+          "text": "身體健康",
+          "note": null,
+          "source": null,
+          "rowText": "3.san1 tai2 gin6 hong1身體健康have good healthⓘ"
+        },
+        {
+          "index": 3,
+          "text": "身體力行",
+          "note": null,
+          "source": null,
+          "rowText": "4.san1 tai2 lik6 hang4身體力行make good earnestlyⓘ"
+        },
+        {
+          "index": 4,
+          "text": "身體部分",
+          "note": null,
+          "source": null,
+          "rowText": "5.san1 tai2 bou6 fan6身體部分"
+        }
+      ],
+      "highlightedIndex": 0,
+      "topNText": [
+        "身體",
+        "神體",
+        "身體健康",
+        "身體力行",
+        "身體部分"
+      ],
+      "rowText": [
+        "1.san1 tai2身體bodyⓘ",
+        "2.san4 tai2神體",
+        "3.san1 tai2 gin6 hong1身體健康have good healthⓘ",
+        "4.san1 tai2 lik6 hang4身體力行make good earnestlyⓘ",
+        "5.san1 tai2 bou6 fan6身體部分"
+      ],
+      "comments": [],
+      "notes": null
+    },
+    {
+      "id": "sigin",
+      "input": "sigin",
+      "expectedText": "市建局",
+      "expectedFound": true,
+      "aiEnabled": false,
+      "inputValue": "",
+      "panelCount": 5,
+      "candidates": [
+        {
+          "index": 0,
+          "text": "事件",
+          "note": null,
+          "source": null,
+          "rowText": "1.si6 gin2事件affair; event; incidentⓘ"
+        },
+        {
+          "index": 1,
+          "text": "使勁",
+          "note": null,
+          "source": null,
+          "rowText": "2.si2 ging3使勁strainingⓘ"
+        },
+        {
+          "index": 2,
+          "text": "市建局",
+          "note": null,
+          "source": null,
+          "rowText": "3.si5 gin3 guk2市建局Urban Renewal Authority*ⓘ"
+        },
+        {
+          "index": 3,
+          "text": "史景遷",
+          "note": null,
+          "source": null,
+          "rowText": "4.si2 ging2 cin1史景遷Jonathan Dermot Spenceⓘ"
+        },
+        {
+          "index": 4,
+          "text": "事件相關電位",
+          "note": null,
+          "source": null,
+          "rowText": "5.si6 gin2 soeng1 gwaan1 din6 wai2事件相關電位"
+        }
+      ],
+      "highlightedIndex": 0,
+      "topNText": [
+        "事件",
+        "使勁",
+        "市建局",
+        "史景遷",
+        "事件相關電位"
+      ],
+      "rowText": [
+        "1.si6 gin2事件affair; event; incidentⓘ",
+        "2.si2 ging3使勁strainingⓘ",
+        "3.si5 gin3 guk2市建局Urban Renewal Authority*ⓘ",
+        "4.si2 ging2 cin1史景遷Jonathan Dermot Spenceⓘ",
+        "5.si6 gin2 soeng1 gwaan1 din6 wai2事件相關電位"
+      ],
+      "comments": [],
+      "notes": null
+    },
+    {
+      "id": "m",
+      "input": "m",
+      "expectedText": "唔",
+      "expectedFound": true,
+      "aiEnabled": false,
+      "inputValue": "",
+      "panelCount": 5,
+      "candidates": [
+        {
+          "index": 0,
+          "text": "唔",
+          "note": null,
+          "source": null,
+          "rowText": "1.m4唔notⓘ"
+        },
+        {
+          "index": 1,
+          "text": "無",
+          "note": null,
+          "source": null,
+          "rowText": "2.mou4無not; withoutⓘ"
+        },
+        {
+          "index": 2,
+          "text": "面",
+          "note": null,
+          "source": null,
+          "rowText": "3.min6面face; sideⓘ"
+        },
+        {
+          "index": 3,
+          "text": "明",
+          "note": null,
+          "source": null,
+          "rowText": "4.ming4明understandⓘ"
+        },
+        {
+          "index": 4,
+          "text": "民",
+          "note": null,
+          "source": null,
+          "rowText": "5.man4民citizenⓘ"
+        }
+      ],
+      "highlightedIndex": 0,
+      "topNText": [
+        "唔",
+        "無",
+        "面",
+        "明",
+        "民"
+      ],
+      "rowText": [
+        "1.m4唔notⓘ",
+        "2.mou4無not; withoutⓘ",
+        "3.min6面face; sideⓘ",
+        "4.ming4明understandⓘ",
+        "5.man4民citizenⓘ"
+      ],
+      "comments": [],
+      "notes": "Supplemental M21 local-browser capture added after review to cover the required standalone-m corpus row."
+    },
+    {
+      "id": "mgoi",
+      "input": "mgoi",
+      "expectedText": "唔該",
+      "expectedFound": true,
+      "aiEnabled": false,
+      "inputValue": "",
+      "panelCount": 2,
+      "candidates": [
+        {
+          "index": 0,
+          "text": "唔該",
+          "note": null,
+          "source": null,
+          "rowText": "1.m4 goi1唔該thank youⓘ"
+        },
+        {
+          "index": 1,
+          "text": "唔該晒",
+          "note": null,
+          "source": null,
+          "rowText": "2.m4 goi1 saai3唔該晒thank youⓘ"
+        }
+      ],
+      "highlightedIndex": 0,
+      "topNText": [
+        "唔該",
+        "唔該晒"
+      ],
+      "rowText": [
+        "1.m4 goi1唔該thank youⓘ",
+        "2.m4 goi1 saai3唔該晒thank youⓘ"
+      ],
+      "comments": [],
+      "notes": null
+    },
+    {
+      "id": "ngohaigo",
+      "input": "ngohaigo",
+      "expectedText": "我係個",
+      "expectedFound": true,
+      "aiEnabled": false,
+      "inputValue": "",
+      "panelCount": 1,
+      "candidates": [
+        {
+          "index": 0,
+          "text": "我係個",
+          "note": null,
+          "source": null,
+          "rowText": "1.ngo5 hai6我係I amⓘgo3個item of"
+        }
+      ],
+      "highlightedIndex": 0,
+      "topNText": [
+        "我係個"
+      ],
+      "rowText": [
+        "1.ngo5 hai6我係I amⓘgo3個item of"
+      ],
+      "comments": [],
+      "notes": null
+    },
+    {
+      "id": "hou",
+      "input": "hou",
+      "expectedText": "好",
+      "expectedFound": true,
+      "aiEnabled": false,
+      "inputValue": "",
+      "panelCount": 5,
+      "candidates": [
+        {
+          "index": 0,
+          "text": "好",
+          "note": null,
+          "source": null,
+          "rowText": "1.hou2好good; veryⓘ"
+        },
+        {
+          "index": 1,
+          "text": "號",
+          "note": null,
+          "source": null,
+          "rowText": "2.hou6號sign; numberⓘ"
+        },
+        {
+          "index": 2,
+          "text": "豪",
+          "note": null,
+          "source": null,
+          "rowText": "3.hou4豪richⓘ"
+        },
+        {
+          "index": 3,
+          "text": "毫",
+          "note": null,
+          "source": null,
+          "rowText": "4.hou4毫centⓘ"
+        },
+        {
+          "index": 4,
+          "text": "浩",
+          "note": null,
+          "source": null,
+          "rowText": "5.hou6浩grandⓘ"
+        }
+      ],
+      "highlightedIndex": 0,
+      "topNText": [
+        "好",
+        "號",
+        "豪",
+        "毫",
+        "浩"
+      ],
+      "rowText": [
+        "1.hou2好good; veryⓘ",
+        "2.hou6號sign; numberⓘ",
+        "3.hou4豪richⓘ",
+        "4.hou4毫centⓘ",
+        "5.hou6浩grandⓘ"
+      ],
+      "comments": [],
+      "notes": null
+    },
+    {
+      "id": "tone-letters-seov",
+      "input": "seov",
+      "expectedText": "瀡板",
+      "expectedFound": true,
+      "aiEnabled": false,
+      "inputValue": "",
+      "panelCount": 1,
+      "candidates": [
+        {
+          "index": 0,
+          "text": "瀡板",
+          "note": null,
+          "source": null,
+          "rowText": "1.soe4 baan2瀡板"
+        }
+      ],
+      "highlightedIndex": 0,
+      "topNText": [
+        "瀡板"
+      ],
+      "rowText": [
+        "1.soe4 baan2瀡板"
+      ],
+      "comments": [],
+      "notes": null
+    },
+    {
+      "id": "one-edit-typo-nri-correction-off",
+      "input": "nri",
+      "expectedText": null,
+      "expectedFound": null,
+      "aiEnabled": false,
+      "inputValue": "",
+      "panelCount": 0,
+      "candidates": [],
+      "highlightedIndex": 0,
+      "topNText": [],
+      "rowText": [],
+      "comments": [],
+      "notes": "No browser candidate panel renders for nri with correction off."
+    },
+    {
+      "id": "one-edit-typo-nri-correction-on",
+      "input": "nri",
+      "expectedText": null,
+      "expectedFound": null,
+      "aiEnabled": false,
+      "inputValue": "",
+      "panelCount": 0,
+      "candidates": [],
+      "highlightedIndex": 0,
+      "topNText": [],
+      "rowText": [],
+      "comments": [],
+      "notes": "No browser candidate panel renders for nri with correction on; explicit browser-surface N/A, engine-proven at cantonese_parity."
+    },
+    {
+      "id": "hk2s-ngohaigo-simplification-on",
+      "input": "ngohaigo",
+      "expectedText": "我系个",
+      "expectedFound": true,
+      "aiEnabled": false,
+      "inputValue": "",
+      "panelCount": 1,
+      "candidates": [
+        {
+          "index": 0,
+          "text": "我系个",
+          "note": null,
+          "source": null,
+          "rowText": "1.ngo5 hai6我係I amⓘgo3個item of"
+        }
+      ],
+      "highlightedIndex": 0,
+      "topNText": [
+        "我系个"
+      ],
+      "rowText": [
+        "1.ngo5 hai6我係I amⓘgo3個item of"
+      ],
+      "comments": [],
+      "notes": null
+    },
+    {
+      "id": "reverse-lookup-nei-comments",
+      "input": "nei",
+      "expectedText": "你",
+      "expectedFound": true,
+      "aiEnabled": false,
+      "inputValue": "",
+      "panelCount": 5,
+      "candidates": [
+        {
+          "index": 0,
+          "text": "你",
+          "note": null,
+          "source": null,
+          "rowText": "1.nei5你you (singular)ⓘ"
+        },
+        {
+          "index": 1,
+          "text": "呢",
+          "note": null,
+          "source": null,
+          "rowText": "2.ne1呢(how about)ⓘ"
+        },
+        {
+          "index": 2,
+          "text": "尼",
+          "note": null,
+          "source": null,
+          "rowText": "3.nei4尼nunⓘ"
+        },
+        {
+          "index": 3,
+          "text": "妮",
+          "note": null,
+          "source": null,
+          "rowText": "4.nei4妮little girlⓘ"
+        },
+        {
+          "index": 4,
+          "text": "彌",
+          "note": null,
+          "source": null,
+          "rowText": "5.nei4彌full; fillⓘ"
+        }
+      ],
+      "highlightedIndex": 0,
+      "topNText": [
+        "你",
+        "呢",
+        "尼",
+        "妮",
+        "彌"
+      ],
+      "rowText": [
+        "1.nei5你you (singular)ⓘ",
+        "2.ne1呢(how about)ⓘ",
+        "3.nei4尼nunⓘ",
+        "4.nei4妮little girlⓘ",
+        "5.nei4彌full; fillⓘ"
+      ],
+      "comments": [],
+      "notes": "Candidate rows include Jyutping/comment/dictionary text in rowText; Cangjie side lookup is N/A on jyut6ping3_mobile."
+    }
+  ],
+  "paging": {
+    "id": "multi-page-nei",
+    "input": "nei",
+    "firstPage": [
+      {
+        "index": 0,
+        "text": "你",
+        "note": null,
+        "source": null,
+        "rowText": "1.nei5你you (singular)ⓘ"
+      },
+      {
+        "index": 1,
+        "text": "呢",
+        "note": null,
+        "source": null,
+        "rowText": "2.ne1呢(how about)ⓘ"
+      },
+      {
+        "index": 2,
+        "text": "尼",
+        "note": null,
+        "source": null,
+        "rowText": "3.nei4尼nunⓘ"
+      },
+      {
+        "index": 3,
+        "text": "妮",
+        "note": null,
+        "source": null,
+        "rowText": "4.nei4妮little girlⓘ"
+      },
+      {
+        "index": 4,
+        "text": "彌",
+        "note": null,
+        "source": null,
+        "rowText": "5.nei4彌full; fillⓘ"
+      }
+    ],
+    "secondPage": [
+      {
+        "index": 0,
+        "text": "妳",
+        "note": null,
+        "source": null,
+        "rowText": "1.nei5妳youⓘ"
+      },
+      {
+        "index": 1,
+        "text": "您",
+        "note": null,
+        "source": null,
+        "rowText": "2.nei5您youⓘ"
+      },
+      {
+        "index": 2,
+        "text": "膩",
+        "note": null,
+        "source": null,
+        "rowText": "3.nei6膩greasyⓘ"
+      },
+      {
+        "index": 3,
+        "text": "你估",
+        "note": null,
+        "source": null,
+        "rowText": "4.nei5 gu2你估you guessⓘ"
+      },
+      {
+        "index": 4,
+        "text": "餌",
+        "note": null,
+        "source": null,
+        "rowText": "5.nei6餌to feed; baitⓘ"
+      }
+    ]
+  },
+  "supplementalCaptures": [
+    {
+      "id": "m",
+      "input": "m",
+      "reason": "Covers the standalone-m row required by the M21 corpus.",
+      "capturedAt": "2026-06-20T10:01:41.616Z",
+      "appUrl": "http://127.0.0.1:5174/web/",
+      "screenshot": "yune-harness/screenshot-yune-m.png"
+    }
+  ]
+}

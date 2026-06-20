@@ -1,0 +1,104 @@
+{
+  "status": "pending manual capture",
+  "capturePolicy": "Manual transcription only; no automated scraping of https://www.typeduck.hk/web/.",
+  "cases": [
+    {
+      "id": "nei",
+      "input": "nei",
+      "productOutput": null,
+      "screenshots": [],
+      "notes": "pending manual capture"
+    },
+    {
+      "id": "ngo",
+      "input": "ngo",
+      "productOutput": null,
+      "screenshots": [],
+      "notes": "pending manual capture"
+    },
+    {
+      "id": "santai",
+      "input": "santai",
+      "productOutput": null,
+      "screenshots": [],
+      "notes": "pending manual capture"
+    },
+    {
+      "id": "sigin",
+      "input": "sigin",
+      "productOutput": null,
+      "screenshots": [],
+      "notes": "pending manual capture"
+    },
+    {
+      "id": "m",
+      "input": "m",
+      "productOutput": null,
+      "screenshots": [],
+      "notes": "pending manual capture"
+    },
+    {
+      "id": "mgoi",
+      "input": "mgoi",
+      "productOutput": null,
+      "screenshots": [],
+      "notes": "pending manual capture"
+    },
+    {
+      "id": "ngohaigo",
+      "input": "ngohaigo",
+      "productOutput": null,
+      "screenshots": [],
+      "notes": "pending manual capture"
+    },
+    {
+      "id": "hou",
+      "input": "hou",
+      "productOutput": null,
+      "screenshots": [],
+      "notes": "pending manual capture"
+    },
+    {
+      "id": "tone-letters-seov",
+      "input": "seov",
+      "productOutput": null,
+      "screenshots": [],
+      "notes": "pending manual capture"
+    },
+    {
+      "id": "one-edit-typo-nri-correction-off",
+      "input": "nri",
+      "productOutput": null,
+      "screenshots": [],
+      "notes": "pending manual capture"
+    },
+    {
+      "id": "one-edit-typo-nri-correction-on",
+      "input": "nri",
+      "productOutput": null,
+      "screenshots": [],
+      "notes": "pending manual capture"
+    },
+    {
+      "id": "hk2s-ngohaigo-simplification-on",
+      "input": "ngohaigo",
+      "productOutput": null,
+      "screenshots": [],
+      "notes": "pending manual capture"
+    },
+    {
+      "id": "reverse-lookup-nei-comments",
+      "input": "nei",
+      "productOutput": null,
+      "screenshots": [],
+      "notes": "pending manual capture"
+    },
+    {
+      "id": "multi-page-nei",
+      "input": "nei",
+      "productOutput": null,
+      "screenshots": [],
+      "notes": "pending manual capture"
+    }
+  ]
+}
