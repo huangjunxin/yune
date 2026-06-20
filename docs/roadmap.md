@@ -139,9 +139,7 @@ and default-off (see *Deferred / future*).
 
 Detail: [`plans/m11-design-ai-native.md`](./plans/m11-design-ai-native.md) (living architecture), [`plans/archive/m11-plan-ai-native-cli-slice.md`](./plans/archive/m11-plan-ai-native-cli-slice.md) (S1 record).
 
----
-
-## Current baseline - M12: Upstream Behavioral Parity Closeout complete
+### M12: Upstream behavioral parity closeout (upstream `1.17.0`)
 
 Yune's core engine now tracks upstream `rime/librime 1.17.0` as the default
 oracle target. M12 turned TypeDuck behavior into an explicit compatibility
@@ -169,9 +167,7 @@ Detail: [`plans/archive/m12-plan-upstream-oracle-refresh.md`](./plans/archive/m1
 | 5 | Expanded upstream behavioral fixtures | Done | `luna-pinyin-selection`, `actions`, `reverse-lookup`, `punctuation`, and `options` fixtures are captured from the official release binary with provenance enforced by `oracle_fixture_provenance`. |
 | 6 | Full-pipeline parity gates | Done | Active `upstream_luna_pinyin_parity` coverage drives Yune's real parser, dictionary, translator, filter, and Engine paths; unsupported phrase/language-model and processor-only edges are explicit ignored blockers. |
 
----
-
-## Completed - M13: AI-native frontend exposure
+### M13: AI-native frontend exposure
 
 The first test of the product thesis: take M11's completed CLI/core AI layer to a
 **real frontend** — default-off, local-first, and gated by the same safety
@@ -221,9 +217,7 @@ surface only; native frontend exposure remains deferred.
 
 Detail: [`plans/archive/m13-plan-ai-native-frontend-exposure.md`](./plans/archive/m13-plan-ai-native-frontend-exposure.md) (execution plan) and [`plans/m11-design-ai-native.md`](./plans/m11-design-ai-native.md) (architecture).
 
----
-
-## Completed - M14–M16: TypeDuck-Web fork parity
+### M14–M16: TypeDuck-Web fork parity
 
 The chosen next arc: complete the **TypeDuck `jyut6ping3` target** so the
 TypeDuck-Web example behaves like the fork — the named (A) target from the
@@ -235,7 +229,7 @@ features**, *not* the upstream language model (that is Track 2 / M17). Five
 behaviors are fixture-backed in `cantonese_parity.rs`, with browser-only gaps
 listed explicitly below.
 
-### M14 — Capture the TypeDuck v1.1.2 Cantonese goldens
+#### M14 — Capture the TypeDuck v1.1.2 Cantonese goldens
 
 Parameterize the scenario-capable `oracle-rime-probe.cs` (its traits currently
 hardcode upstream `1.17.0` identity) — or add a TypeDuck v1.1.2 capture wrapper —
@@ -251,7 +245,7 @@ v1.1.2 oracle binary (oracle-measured, non-circular).
 | 3 | Schema-menu goldens | Done | `jyut6ping3-m14-schema-menu.json` captures the emitted `RimeGetSchemaList` one-schema vs multi-schema surface; `hide_lone_schema` / `hide_caret` UI decoration is deferred to the M16 browser assertion. |
 | 4 | userdb-pronunciation **feasibility spike** | Done | `jyut6ping3-m14-userdb.json` proves levers export is available and captures a learned `nei5` userdb row. |
 
-### M15 — Dictionary-driven feature parity
+#### M15 — Dictionary-driven feature parity
 
 Complete. Yune's real engine now passes the M14 dictionary-driven goldens without
 adding a language model or changing the upstream ABI.
@@ -264,7 +258,7 @@ adding a language model or changing the upstream ABI.
 | 3 | completion + correction | Done | Completion/correction fixture paths are active in `cantonese_parity`; correction uses the real spelling-algebra path. |
 | 4 | OpenCC `hk2s` data | Done | `SimplifierFilter` now loads checked-in OpenCC source dictionaries for the `hk2s` chain instead of a hardcoded char slice. |
 
-### M16 — TypeDuck-Web fork-parity validation
+#### M16 — TypeDuck-Web fork-parity validation
 
 Complete with documented browser-surface limits. The real TypeDuck-Web Playwright
 matrix now covers the browser-supported `jyut6ping3_mobile` surface against the
@@ -296,9 +290,7 @@ Detail: [`plans/archive/m14-plan-typeduck-v112-golden-capture.md`](./plans/archi
 > and adding profile controls for prediction thresholds / never-first behavior. F09 is
 > intentionally UI-side for TypeDuck-Web display-language selection.
 
----
-
-## Completed - M20: Web demo showcase controls
+### M20: Web demo showcase controls
 
 M20 turned this repo's patched TypeDuck-Web harness into Yune's canonical
 internal browser playground for demoing, stress-testing, and comparing the
@@ -347,7 +339,9 @@ plan is archived at
 
 ---
 
-## Parked - M10: TypeDuck-Windows native backend
+## Parked
+
+### M10: TypeDuck-Windows native backend
 
 TypeDuck-Windows remains valuable, but it is no longer the active core-engine
 priority. Its work is parked as a TypeDuck compatibility profile until Yune has
@@ -380,16 +374,13 @@ In priority order:
 
 ---
 
-## Beyond M12 — trajectory & scope ledger
+## Planned / Next up
 
 Priority is set by what a *named* (A)/(B) target needs, not by librime's feature
-list. **TypeDuck `jyut6ping3` reconciliation and M20 browser playground work are
-complete.** The remaining engine-depth arc is **Track 2 (broad upstream depth):**
+list. **TypeDuck `jyut6ping3` reconciliation (M14–M16) and the M20 browser
+playground are complete** (see *Completed* above). The remaining engine-depth arc
+is **Track 2 (broad upstream depth):**
 
-- **M20 - Web demo showcase controls** - complete; internal TypeDuck-Web harness
-  controls and guided scenarios for already-supported engine behavior, with
-  real-assets evidence for active controls, display rendering, AI gates, and
-  current-schema N/A limits.
 - **M17 - Upstream sentence / language model (poet)** - the statistical LM for
   `luna_pinyin` sentence/lattice parity (the two blocked upstream tests). The
   heavy item; *not* required for TypeDuck-Web parity.
@@ -407,7 +398,7 @@ complete.** The remaining engine-depth arc is **Track 2 (broad upstream depth):*
   reference material for static-linking, resource deployment, and keyboard-host
   constraints, not a C++ implementation template.
 
-### Scope ledger
+## Scope ledger
 
 A living map so "parity" always names a target. Deferred rows move into *in
 scope* only as a named target needs them; nothing here commits to a timeline, and
