@@ -457,6 +457,34 @@ is **Track 2 (broad upstream depth):**
   penalty for dictionary sentence composition, and
   [`fork-parity-ledger.md`](./fork-parity-ledger.md) note 5 records the narrowed
   exception to the previous do-not-preserve decision.
+- **M22 — TypeDuck-Web playground feature-completeness + multi-schema + engine
+  debug inspector** — the M20 successor (playground build-out, *not* M21's
+  product-comparison protocol). Surfaces more of Yune's engine in the internal
+  `third_party/typeduck-web/` harness across three separate buckets. **(1) Missing
+  honest toggles:** the browser-safe user-facing controls M20 skipped —
+  `traditionalization`, `disabled`, `extended_charset` (via `setOption()`; the option
+  the always-on `CharsetFilter` reads, `filter/mod.rs:65-69`), and deploy-time
+  `dictionary_exclude` (`schema_install.rs:281-297`); `ascii_punct` stays deferred to
+  M18 and is never shown as working. Every active control must clear the M20 honesty
+  gate (real browser before/after) or be a documented browser-surface N/A. **(2)
+  Read-only debug inspector:** a per-keystroke panel that *observes* (never toggles)
+  segments + `segment_tags`, each candidate's source translator/filter (extending
+  `attach_candidate_sources()`, `typeduck_web.rs:589-619`), comments/preedit,
+  spelling-algebra expansion, the filter pipeline, prediction scores vs the threshold,
+  and AI staging — additive opt-in debug JSON only, **no default
+  `RimeApi`/`RimeCandidate` ABI change**. **(3) Multi-schema (highest leverage):**
+  load three schemas — `jyut6ping3_mobile` + `cangjie5` + `luna_pinyin` — behind a
+  schema-switcher wired to the existing `RimeSelectSchema` ABI (`abi.rs:301`), with
+  reverse lookup on both new schemas; unblocks `show_full_code` and the schema-switch
+  surface M20 could only mark browser-surface N/A as a single-schema harness, and gives
+  M21 a multi-schema surface. Honest dependency: Yune cannot build dictionaries until
+  M18, so `cangjie5`/`luna_pinyin` must ship as **pre-compiled upstream
+  `.table.bin`/`.prism.bin`/`.reverse.bin` artifacts** (only `.dict.yaml` source exists
+  today; `luna_pinyin`'s table-bin size is an asset-budget risk). Honesty-gate
+  exclusions (`uniquifier_filter`, `single_char_filter`, always-on `charset_filter`,
+  schema-owned templates, internal `_`-prefixed options) stay inspect-only or
+  always-on — never toggles.
+  Detail: [`plans/m22-plan-web-playground-multischema-inspector.md`](./plans/m22-plan-web-playground-multischema-inspector.md).
 - **AI-native frontend expansion** — the proven TypeDuck-Web surface stays
   default-off; Windows and other native frontend exposure wait for their own
   safety evidence.
