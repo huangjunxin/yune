@@ -783,7 +783,7 @@ Required evidence:
 - Screenshots for at least `santai`, `mgoi`, prediction-never-first, AI second pass, and one live `setOption()` control.
 - `blocker.md` only if a real browser/tooling blocker occurs; it must not replace browser evidence when the browser can run.
 
-- [ ] **Step 8: Whitespace check**
+- [ ] **Step 8: ABI no-diff check**
 
 ```powershell
 git diff -- crates/yune-rime-api/src/abi.rs crates/yune-rime-api/src/api_table.rs crates/yune-rime-api/src/candidate_api.rs
