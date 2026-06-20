@@ -4,7 +4,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` (recommended) or `superpowers:executing-plans` to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Turn the patched TypeDuck-Web app into Yune's canonical browser playground for demoing, stress-testing, and comparing the engine features already supported by M9, M13, M14-M16, and the FORK-PARITY backlog, without reopening M13 or changing the core ABI.
+**Goal:** Turn the patched TypeDuck-Web app inside this repository into Yune's canonical internal browser playground for demoing, stress-testing, and comparing the engine features already supported by M9, M13, M14-M16, and the FORK-PARITY backlog, without reopening M13 or changing the core ABI.
 
 **Architecture:** Keep the existing TypeDuck-Web app and Yune seam, but treat the UI as a high-control engine workbench rather than a minimal end-user settings page. Runtime-changing controls must flow through the existing `customize()` schema-key path or `setOption()` session-option path; no new `RimeApi`, `RimeCandidate`, or `yune_typeduck_*` export is allowed unless a later task proves the existing paths cannot express the behavior. Every supported browser-safe engine feature should be reachable as either a live control, a deploy-time control, or a guided scenario; unsupported or deferred behavior must be visibly absent or explicitly labeled as deferred, never represented as working.
 
@@ -23,6 +23,13 @@ with real assets. When a new engine feature becomes browser-safe, the default
 expectation is to add either an active control or a guided scenario here; when a
 feature is not browser-safe or not implemented, document the deferral instead of
 leaving a confusing partial UI.
+
+Terminology guard: M20 targets only this repo's patched internal harness under
+`third_party/typeduck-web/` plus the reusable runtime bridge in
+`packages/yune-typeduck-runtime/`. A separately cloned `TypeDuck-HK/TypeDuck-Web`
+checkout is the real dedicated web IME product and belongs to a future named
+product-integration milestone. Do not touch, import from, or re-pull that product
+checkout for M20, and do not treat `packages/yune-typeduck-runtime/` as a UI app.
 
 For M20, **browser-safe** means the behavior can be exercised through the
 TypeDuck-Web worker with real checked-in browser assets, without changing the
@@ -132,11 +139,14 @@ Create `third_party/typeduck-web/AGENTS.md`:
 ```markdown
 # TypeDuck-Web Yune Integration Guide
 
-This subtree is the browser demo/integration surface for Yune. The canonical source is the maintained patch in `patches/yune-typeduck-runtime.patch` plus the checked-out upstream app under `source/`.
+This subtree is the internal browser demo/integration harness for Yune. The canonical source is the maintained patch in `patches/yune-typeduck-runtime.patch` plus the checked-out upstream app under `source/`.
+
+It is not the shipping `TypeDuck-HK/TypeDuck-Web` product checkout, and it is not the reusable runtime package in `packages/yune-typeduck-runtime/`. Future product work may target a separate TypeDuck-Web clone, but M20 changes stay inside this harness and the Yune runtime bridge.
 
 ## Rules
 
 - Keep TypeDuck-Web changes in the upstream app patch unless a file is intentionally Yune-owned (`yune-integration/`, `e2e/`, `README.yune-source.md`).
+- Do not import from, re-pull, or edit a separately cloned `TypeDuck-HK/TypeDuck-Web` product checkout as part of this harness work.
 - After editing `source/`, regenerate and reverse-check `patches/yune-typeduck-runtime.patch`.
 - Preserve the native TypeDuck-Web fallback shape expected by the app: `Actions.processKey`, `stageAi`, candidate action methods, `customize`, `deploy`, and `setOption`.
 - Use `customize()` for schema/deploy-time keys and `setOption()` for live session options. Do not add a new WASM export when the existing transport works.

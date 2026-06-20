@@ -71,7 +71,7 @@ none reach into `yune-core` directly):
    exporting the simplified `yune_typeduck_*` C API in
    `crates/yune-rime-api/src/typeduck_web.rs`. The `@yune-ime/typeduck-runtime`
    TypeScript package (`packages/yune-typeduck-runtime/`) wraps the module; the
-   upstream app integrates through the tracked seam
+   internal browser harness integrates through the tracked seam
    `third_party/typeduck-web/yune-integration/adapter.ts`.
 3. **TypeDuck-Windows** - parked TypeDuck compatibility-profile work. The default
    `rime_get_api()` table follows upstream librime 1.17.0 and does not expose the
@@ -180,11 +180,19 @@ M12 closeout and fails fast. The default `RimeApi` follows upstream
 surface exists and its slot smoke is re-derived from TypeDuck-HK/librime
 `v1.1.2` `rime_api.h`.
 
+**Web surface terminology** — keep three similarly named surfaces distinct:
+`packages/yune-typeduck-runtime/` is the reusable Yune-owned TypeScript/WASM
+runtime bridge; `third_party/typeduck-web/` is the patched internal
+TypeDuck-Web harness used for browser evidence, demos, and regression work; a
+separate checkout of `TypeDuck-HK/TypeDuck-Web` is the real web IME product and
+belongs to a future product-integration track. Do not treat the runtime bridge
+as a UI product, and do not treat the internal harness as the shipping product.
+
 **Web integration seam** — the upstream TypeDuck-Web app is vendored at
 `third_party/typeduck-web/source`; the Yune seam is
 `third_party/typeduck-web/yune-integration/` (`adapter.ts`, `assets.ts`, etc.), which
-adapts `@yune-ime/typeduck-runtime` into the upstream app. In-browser M9 validation runs
-through this seam.
+adapts `@yune-ime/typeduck-runtime` into the upstream app. In-browser validation
+for M9/M13/M16 and M20 runs through this internal harness.
 
 **Key deps & cross-platform note:** `libc::ctime_r` is used only on
 `all(unix, not(target_os = "emscripten"))`; on Windows + Emscripten/WASM a pure-Rust
@@ -256,7 +264,7 @@ yune/
 |   |-- typeduck-wasm-build.sh         # Emscripten/WASM build (wasm32-unknown-emscripten)
 |   |-- typeduck-exports.txt           # Exported-symbol allowlist (yune_typeduck_*)
 |   `-- package-typeduck-windows.ps1   # Native packaging (-> rime.dll/.lib + headers)
-|-- third_party/typeduck-web/          # Vendored upstream + Yune integration seam
+|-- third_party/typeduck-web/          # Internal patched TypeDuck-Web harness + Yune seam
 |   |-- source/                        # Upstream app (own librime/)
 |   |-- yune-integration/ (adapter.ts, assets.ts, ...)
 |   |-- e2e/ (Playwright)  / patches/  / typeduck-web.lock.json
