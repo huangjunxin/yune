@@ -597,7 +597,8 @@ processor semantics into `yune-core`) lands only when a real non-ABI consumer
   `M25-DOGFOOD-05` moves the Cangjie version control into that same top-control
   area; `M25-DOGFOOD-06` swaps Display controls above Live session controls in
   the settings grid; `M25-DOGFOOD-07` replaces unintuitive pill-style binary
-  switches with checkbox-style controls.
+  switches with checkbox-style controls; `M25-DOGFOOD-08` corrects the Jyutping
+  luna_pinyin reverse-lookup trigger from `` `p`` to bare `` ` ``.
   The startup row now prioritizes
   release-mode browser WASM and deploy-state reuse before lower-level runtime
   micro-optimization, because current evidence points at a debug Emscripten

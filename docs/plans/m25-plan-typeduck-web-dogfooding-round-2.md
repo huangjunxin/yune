@@ -34,7 +34,7 @@ Use M24 as the baseline for:
 - TypeDuck-Web patch discipline,
 - the `jigaajiusihaa` TypeDuck `v1.1.2` ordering fixture,
 - the `menu/page_size` customize key,
-- the Jyutping Mandarin-pinyin affix path `` `p... ``.
+- the Jyutping Mandarin-pinyin affix path `` `p... `` as historical M24 behavior; `M25-DOGFOOD-08` reopens that dogfood UX and requests bare `` ` `` for the web reverse-lookup trigger.
 
 M25 evidence belongs under `third_party/typeduck-web/e2e/results/m25-dogfooding/<issue-id>/`.
 
@@ -88,6 +88,7 @@ M25 intake began on 2026-06-21 with user-reported browser dogfooding regressions
 | M25-DOGFOOD-05 | Open | UI polish / top controls layout | The `倉頡版本 Cangjie version` control currently lives in a separate lower `Web Frontend Controls` section, but it is tightly related to schema choice. The user wants it moved to the top beside the schema selection so the page does not spend vertical space on a one-control section. | User-reported during manual dogfooding on 2026-06-21. Local verification found the control in `third_party/typeduck-web/source/src/Preferences.tsx` under `Web Frontend Controls`, using `prefs.isCangjie5` with `三代 Version 3` and `五代 Version 5` segments. Evidence: `third_party/typeduck-web/e2e/results/m25-dogfooding/M25-DOGFOOD-05/cangjie-version-top-controls-report.json`. | `third_party/typeduck-web/source/src/App.tsx`, `third_party/typeduck-web/source/src/Toolbar.tsx`, `third_party/typeduck-web/source/src/SchemaSwitcher.tsx`, `third_party/typeduck-web/source/src/Preferences.tsx`, `third_party/typeduck-web/source/src/Inputs.tsx`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`. | Close when the Cangjie version segmented control is colocated with the schema selector in the top control band on desktop and wraps within that same compact band on narrow screens, the lower `Web Frontend Controls` section is removed if it has no remaining controls, and changing 三代/五代 still updates the `isCangjie5` customize path. Add Playwright evidence for layout and both Cangjie version values; regenerate and reverse/forward check `third_party/typeduck-web/patches/yune-typeduck-runtime.patch` if source changed. |
 | M25-DOGFOOD-06 | Open | UI polish / settings section order | The `顯示設定 Display controls` section is currently in the second-row right column. The user wants it in the top-row right column, meaning `顯示設定 Display controls` and `即時狀態 Live session controls` should exchange positions. | User-reported during manual dogfooding on 2026-06-21. Local verification found `Preferences.tsx` renders `即時狀態 Live session controls` before `顯示設定 Display controls`, causing Display controls to land below the top-right slot in the two-column settings grid. Evidence: `third_party/typeduck-web/e2e/results/m25-dogfooding/M25-DOGFOOD-06/display-live-section-order-report.json`. | `third_party/typeduck-web/source/src/Preferences.tsx`, `third_party/typeduck-web/source/src/Inputs.tsx`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`. | Close when Display controls render before Live session controls in the settings grid, occupy the top-right column on desktop, and Live session controls move to the position Display controls previously occupied. Preserve all existing control labels, state bindings, and live-option behavior. Add Playwright desktop and narrow-viewport evidence for the section order and bounding boxes; regenerate and reverse/forward check `third_party/typeduck-web/patches/yune-typeduck-runtime.patch` if source changed. |
 | M25-DOGFOOD-07 | Open | UI polish / binary control affordance | Binary settings are currently shown as rounded rectangle pill switches that fill blue when checked. The user finds this unintuitive and wants these binary toggles to be raw checkbox-style controls instead. | User-reported during manual dogfooding on 2026-06-21 with screenshot `codex-clipboard-da4df560-7b7a-49fd-814f-4cfe5cbd6968.png`. Local verification found `Toggle` renders `input type="checkbox"` with `className="yd-switch"` in `Inputs.tsx`, and `.yd-switch` applies the pill styling in `index.css`; `.yd-check` already exists as a square checkbox style. Evidence: `third_party/typeduck-web/e2e/results/m25-dogfooding/M25-DOGFOOD-07/raw-checkbox-binary-controls-report.json`. | `third_party/typeduck-web/source/src/Inputs.tsx`, `third_party/typeduck-web/source/src/index.css`, `third_party/typeduck-web/source/src/App.tsx`, `third_party/typeduck-web/source/src/ThemeSwitcher.tsx`, `third_party/typeduck-web/source/src/Preferences.tsx`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`. | Close when binary dogfood controls render as checkbox-style controls rather than pill switches, checked/unchecked states remain clear and keyboard-accessible, and no settings-panel binary control uses the blue rounded-pill affordance. Decide explicitly whether the app theme toggle remains a specialized icon switch or also moves to checkbox styling. Add Playwright evidence for checked and unchecked states across engine/session/display/frontend settings plus the inspector toggle; regenerate and reverse/forward check `third_party/typeduck-web/patches/yune-typeduck-runtime.patch` if source changed. |
+| M25-DOGFOOD-08 | Open | Browser integration / reverse lookup schema trigger | Jyutping Mandarin reverse lookup currently appears to require `` `p``. The user says this is a mistake and the luna_pinyin reverse-lookup trigger should be the single grave accent `` ` ``. While trying reverse lookup, the app is also slow and can show `執行操作時發生錯誤。如輸入法不能正常運作，請重新載入頁面。 / An error occurred while performing the operation...`; treat that performance/error symptom as related to `M25-DOGFOOD-01`/`M25-DOGFOOD-03` unless a fresh repro proves a distinct reverse-lookup crash. | User-reported during manual dogfooding on 2026-06-21. Local verification found `third_party/typeduck-web/source/schema/jyut6ping3.schema.yaml` and `jyut6ping3_mobile.schema.yaml` set `luna_pinyin` prefix to `` `p`` and alphabet regex ``^`p[a-z']*;?$``; the TypeDuck v1.1.2 captured schema also has `` `p``, so this is a new M25 web dogfood correction request rather than a continuation of the M24 assumption. Evidence: `third_party/typeduck-web/e2e/results/m25-dogfooding/M25-DOGFOOD-08/reverse-lookup-bare-grave-trigger-report.json`. | `third_party/typeduck-web/source/schema/jyut6ping3.schema.yaml`, `third_party/typeduck-web/source/schema/jyut6ping3_mobile.schema.yaml`, `third_party/typeduck-web/source/src/consts.ts`, `crates/yune-rime-api/src/schema_install.rs`, `crates/yune-rime-api/tests/typeduck_web.rs`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`. | Close when the web Jyutping schema uses bare `` ` `` for luna_pinyin reverse lookup, the visible hint changes from `` `pzhe`` to a bare-grave example such as `` `zhe``, browser evidence shows typing `` `zhe`` reaches luna_pinyin reverse lookup without needing `p`, and `` `p...`` is either still handled intentionally or documented as no longer required. Add or update native/schema coverage for the affix translator trigger, capture browser JSON/screenshot evidence, and regenerate plus reverse/forward check `third_party/typeduck-web/patches/yune-typeduck-runtime.patch` if source changed. |
 
 ## Accepted Review Corrections
 
@@ -394,6 +395,45 @@ M25 intake began on 2026-06-21 with user-reported browser dogfooding regressions
 - [ ] **Step 6: Capture visual evidence**
 
   Save desktop and narrow-viewport screenshots plus a JSON summary under `M25-DOGFOOD-07`. The JSON should include the class names and computed styles for each checked control, unchecked control, and any explicitly exempted theme toggle.
+
+- [ ] **Step 7: Regenerate the TypeDuck-Web patch if source changed**
+
+  If any file under `third_party/typeduck-web/source/` changed, regenerate `third_party/typeduck-web/patches/yune-typeduck-runtime.patch`, reverse-check it from `source/`, and forward-check it on a clean source checkout.
+
+### Task 9: M25-DOGFOOD-08 Bare-Grave Luna Reverse Lookup Trigger
+
+**Files:**
+- Modify: `third_party/typeduck-web/source/schema/jyut6ping3.schema.yaml`
+- Modify: `third_party/typeduck-web/source/schema/jyut6ping3_mobile.schema.yaml`
+- Modify: `third_party/typeduck-web/source/src/consts.ts`
+- Modify if schema installation rejects bare grave overlap: `crates/yune-rime-api/src/schema_install.rs`
+- Test: `crates/yune-rime-api/tests/typeduck_web.rs`
+- Test: `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`
+- Evidence: `third_party/typeduck-web/e2e/results/m25-dogfooding/M25-DOGFOOD-08/`
+
+- [ ] **Step 1: Preserve the trigger baseline and superseded assumption**
+
+  Keep `reverse-lookup-bare-grave-trigger-report.json` as the issue baseline. Current web schemas use ``luna_pinyin.prefix: "`p"`` and ``luna_pinyin: "^`p[a-z']*;?$"`` under `speller/algebra`. TypeDuck v1.1.2 captured schema data also uses `` `p``, while the new M25 dogfood request explicitly wants the bare grave accent. Treat this as an intentional web dogfood correction request and record any oracle/profile tension in the final evidence.
+
+- [ ] **Step 2: Add failing native/schema coverage**
+
+  Add or extend a `typeduck_web` test that installs the Jyutping web/mobile schema and proves an input beginning with bare grave, for example `` `zhe``, routes into the `luna_pinyin` affix translator. The test should also record whether `` `pzhe`` remains accepted as a compatibility alias or is no longer required. If accepting both triggers would create ambiguous segmentation, document the chosen behavior before implementation.
+
+- [ ] **Step 3: Add failing browser coverage**
+
+  Add a Playwright test that loads `/web/`, keeps the Jyutping schema active, types `` `zhe``, and asserts the candidate/debug state identifies the luna_pinyin reverse-lookup path without requiring the `p` prefix. Capture whether the generic operation-error toast appears; if the toast appears because the worker is blocked or slow rather than because of trigger parsing, link that finding back to `M25-DOGFOOD-01` and `M25-DOGFOOD-03` instead of broadening this row.
+
+- [ ] **Step 4: Change the schema trigger**
+
+  Update the `luna_pinyin` affix translator settings in `jyut6ping3.schema.yaml` and `jyut6ping3_mobile.schema.yaml` so the prefix is bare `` ` `` and the alphabet regex accepts bare-grave Mandarin pinyin input, for example `` ^`[a-z']*;?$ ``. Make the smallest schema change that does not disturb Cangjie, Loengfan, or other reverse-lookup affixes.
+
+- [ ] **Step 5: Update user-facing hints**
+
+  Update `SCHEMA_OPTIONS` in `consts.ts` so the Jyutping reverse-lookup example no longer says `` `pzhe -> ... ``. Use a bare-grave example such as `` `zhe -> 這（普通話反查） ``. Keep the Cangjie and Luna schema hints unchanged unless the browser test proves they are also wrong.
+
+- [ ] **Step 6: Prove behavior and error handling**
+
+  Run the native/schema test and browser test. Save JSON evidence with the typed input, active schema id, reverse-lookup tag/source if available, first candidates, whether the operation-error toast appeared, and per-key timing if available. If reverse lookup remains slow after the trigger fix, leave or cross-link the latency to `M25-DOGFOOD-01`/`M25-DOGFOOD-03`; open a new row only if the trigger fix exposes a distinct crash.
 
 - [ ] **Step 7: Regenerate the TypeDuck-Web patch if source changed**
 
