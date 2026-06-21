@@ -25,9 +25,35 @@ AI-native behavior on top as a separate product milestone.
 - [`requirements.md`](./requirements.md) — requirement IDs and their status.
 - [`typeduck-windows-backend-requirements.md`](./typeduck-windows-backend-requirements.md) - the completed TypeDuck-Windows compatibility-profile contract.
 - [`fork-parity-ledger.md`](./fork-parity-ledger.md) — the single source of truth for *every* Cantoboard + TypeDuck fork improvement vs upstream `1.17.0`, with origin, category, and Yune status (done / todo / non-goal). Sourced from archived provenance notes under [`archive/fork-provenance/`](./archive/fork-provenance/).
+- [`plans/p2-win01-plan-typeduck-windows-next.md`](./plans/p2-win01-plan-typeduck-windows-next.md) - Phase 2 planning for a Yune-first TypeDuck-Windows product/frontend track.
 - [`plans/`](./plans/) — per-stage implementation plans, findings, build notes, and validation artifacts (finished ones under `plans/archive/`).
 
 > The GSD planning system (`.planning/`) has been retired; its durable content now lives in `decisions.md`, `requirements.md`, and `CONVENTIONS.md`.
+
+---
+
+## Phase 1 closeout — engine build-out complete
+
+As of 2026-06-21, the Phase 1 engine build-out is effectively complete for the
+named target set: upstream `luna_pinyin` / common-schema behavior is measured
+against upstream `rime/librime 1.17.0`, and TypeDuck/Cantoboard fork behavior is
+captured as the TypeDuck `jyut6ping3` compatibility profile against
+TypeDuck-HK/librime `v1.1.2`. M0-M23 are complete, including the M10
+TypeDuck-Windows backend smoke; M24 remains active as a **web
+dogfooding/demo-hardening loop**, not as a new oracle-parity milestone.
+
+This does **not** mean Yune is a bit-for-bit clone of librime. It means the
+current Phase 1 promise is met: the named upstream and TypeDuck targets have
+oracle-backed behavior, the fork deltas are documented, and frontend integration
+can consume Yune through explicit profile surfaces without widening the default
+upstream ABI.
+
+Phase 2 moves from engine construction to product/platform frontends and
+continuous maintenance: TypeDuck-Web dogfooding, a Yune-first Windows IME,
+future iOS/native tracks, AI-native frontend exposure where explicitly gated,
+and ongoing oracle fixture refresh when new real targets need deeper behavior.
+The first Phase 2 planning artifact is the TypeDuck-Windows next-product plan:
+[`plans/p2-win01-plan-typeduck-windows-next.md`](./plans/p2-win01-plan-typeduck-windows-next.md).
 
 ---
 
@@ -517,7 +543,7 @@ In priority order:
 4. **Keep Track 2 complete and fixture-gated.** M17's upstream `luna_pinyin` null-grammar sentence/lattice path, M18's prism/deployment/processor depth, M19's breadth schemas, and M22's playground build-out are complete. Future upstream-depth work needs a named target and fresh oracle fixtures before implementation.
 5. **Run M24 TypeDuck-Web dogfooding as an active demo-hardening loop.** Treat manual web-demo issues as triaged findings in [`plans/m24-plan-typeduck-web-dogfooding.md`](./plans/m24-plan-typeduck-web-dogfooding.md): classify each report as browser integration, UI polish, engine correctness, unsupported/N/A, or future product integration before changing code.
 6. **Extend the M20 playground only with browser-safe supported features.** Add active controls or guided scenarios for new browser-safe engine behavior, and keep unsupported behavior absent or documented instead of partially exposed.
-7. **Keep TypeDuck-Windows profile integration scoped.** M10 completed with T1/T2 package/build evidence and a stock TypeDuck-Windows real-server IPC smoke. Future Windows frontend modernization or full TSF automation is product/platform work, not a reason to widen Yune's default ABI.
+7. **Start Phase 2 Windows work with a repo/architecture decision, not direct porting.** M10 completed with T1/T2 package/build evidence and a stock TypeDuck-Windows real-server IPC smoke. The Yune-side boundary is proven; the next Windows effort is a Yune-first product/frontend track. Use [`plans/p2-win01-plan-typeduck-windows-next.md`](./plans/p2-win01-plan-typeduck-windows-next.md) to decide whether to continue inside `TypeDuck-HK/TypeDuck-Windows`, start a fresh repo, or use a hybrid extraction path. None of those choices should widen Yune's default ABI.
 8. **Add a future TypeDuck-Web product-integration track before changing a separately cloned TypeDuck-Web product checkout.** Treat `TypeDuck-HK/TypeDuck-Web` as the dedicated web IME product, not as the M20 harness or the runtime bridge.
 9. **Add a future iOS keyboard-developer track before TypeDuck iOS work starts.** Treat the Cantoboard/TypeDuck iOS build repositories as platform-integration provenance, not as engine-parity code to port. The track should define Yune-native iOS packaging, Swift/Obj-C host bindings, resource bundling, sandboxed userdb/storage, keyboard-extension lifecycle limits, and mobile-specific configuration hooks.
 
@@ -531,8 +557,9 @@ playground, M23 architecture hardening, M17 upstream sentence/lattice depth, M18
 deployment/processor depth, M19 breadth schemas, and M22 playground build-out
 are complete** (see *Completed* above). The active numbered track is now **M24
 TypeDuck-Web dogfooding and demo hardening**, a non-parity polish/debug loop for
-the internal browser playground. Future engine-depth work remains trigger-gated
-by named targets and fresh oracle fixtures.
+the internal browser playground. Phase 2 Windows work starts as **P2-WIN-01**
+planning, not as another Yune-core milestone. Future engine-depth work remains
+trigger-gated by named targets and fresh oracle fixtures.
 
 ### Execution order — what to do next
 
@@ -582,6 +609,14 @@ processor semantics into `yune-core`) lands only when a real non-ABI consumer
   adding or leaning on a component framework, and the replacement UI should be
   minimalistic and elegant rather than preserving DaisyUI's old visual style.
   Detail: [`plans/m24-plan-typeduck-web-dogfooding.md`](./plans/m24-plan-typeduck-web-dogfooding.md).
+- **P2-WIN-01 — TypeDuck-Windows next product/frontend planning (draft)** —
+  starts Phase 2 by defining a Yune-first Windows IME product track. The engine
+  direction is Yune-only; old librime/Weasel code is reference material and a
+  platform-shell extraction source, not a runtime fallback requirement. The plan
+  is deliberately decision-gated: audit the existing TypeDuck-Windows repo,
+  compare fresh-repo vs in-place modernization vs hybrid extraction, and prove a
+  minimal TSF + Yune host spike before committing to a large implementation path.
+  Detail: [`plans/p2-win01-plan-typeduck-windows-next.md`](./plans/p2-win01-plan-typeduck-windows-next.md).
 - **M17 — Upstream sentence / language model (poet) (complete)** — implements the upstream
   `1.17.0` statistical sentence path so `luna_pinyin` SENTENCE + full-page LATTICE
   output matches the captured oracle, with the former `zhongguo` phrase and
@@ -683,7 +718,7 @@ the *Non-goal* column is not a backlog. Standing deferrals also appear in
 | TypeDuck `jyut6ping3` profile vs `v1.1.2` oracle | Browser/userdb UI evidence after M15 engine parity; broader OpenCC phrase/config breadth beyond the checked-in `hk2s` source chain | librime C++ plugin ABI as a requirement |
 | Common RIME schemas, as breadth (B) is added | Spelling-algebra prism generation; binary-dict / deployment writing | Cloud inference as a hard dependency |
 | AI-native layer (M11) on the compatible base | `contextual_translation`, `unity_table_encoder`, deeper gear coverage | Replacing or altering classic input paths by default |
-| TypeDuck-Web / TypeDuck profile surfaces, when named | iOS keyboard developer SDK: package format, Swift/Obj-C host API, resource bundle/deploy model, sandboxed userdb/storage, and mobile config hooks | Treating iOS build scripts as engine semantics |
+| TypeDuck-Web / TypeDuck profile surfaces, when named | Phase 2 platform frontends: Yune-first Windows IME product, iOS keyboard developer SDK, resource bundle/deploy model, sandboxed userdb/storage, and mobile config hooks | Treating frontend repos or platform build scripts as engine semantics |
 
 ---
 
