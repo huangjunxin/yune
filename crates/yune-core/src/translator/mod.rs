@@ -966,6 +966,7 @@ impl StaticTableTranslator {
 
         #[derive(Clone)]
         struct SentencePath {
+            fuzzy_pieces: usize,
             quality: f32,
             raw_quality: f32,
             pieces: Vec<String>,
@@ -973,6 +974,7 @@ impl StaticTableTranslator {
 
         let mut paths: Vec<Option<SentencePath>> = vec![None; input.len() + 1];
         paths[0] = Some(SentencePath {
+            fuzzy_pieces: 0,
             quality: 0.0,
             raw_quality: 0.0,
             pieces: Vec::new(),
@@ -1039,6 +1041,9 @@ impl StaticTableTranslator {
                             continue;
                         }
                         let mut next_path = path.clone();
+                        if !sentence_piece_matches_input_code(candidate, entry_code) {
+                            next_path.fuzzy_pieces += 1;
+                        }
                         next_path.quality +=
                             sentence_piece_quality(candidate.quality, self.sentence_word_penalty);
                         next_path.raw_quality += candidate.quality;
@@ -1048,13 +1053,20 @@ impl StaticTableTranslator {
                         }
                         let replace = match paths[end_pos].as_ref() {
                             Some(existing) => match next_path
-                                .quality
-                                .partial_cmp(&existing.quality)
-                                .unwrap_or(Ordering::Equal)
+                                .fuzzy_pieces
+                                .cmp(&existing.fuzzy_pieces)
                             {
-                                Ordering::Greater => true,
-                                Ordering::Equal => next_path.raw_quality > existing.raw_quality,
-                                Ordering::Less => false,
+                                Ordering::Less => true,
+                                Ordering::Greater => false,
+                                Ordering::Equal => match next_path
+                                    .quality
+                                    .partial_cmp(&existing.quality)
+                                    .unwrap_or(Ordering::Equal)
+                                {
+                                    Ordering::Greater => true,
+                                    Ordering::Equal => next_path.raw_quality > existing.raw_quality,
+                                    Ordering::Less => false,
+                                },
                             },
                             None => true,
                         };
@@ -1176,6 +1188,14 @@ fn original_code_allows_prefix_fallback(raw_code: &str, lookup_code: &str) -> bo
         .map(|ch| ch.to_ascii_lowercase())
         .collect::<String>();
     normalized == lookup || (lookup.len() == 1 && normalized.starts_with(&lookup))
+}
+
+fn sentence_piece_matches_input_code(candidate: &Candidate, entry_code: &str) -> bool {
+    if candidate.comment.is_empty() {
+        return true;
+    }
+    let normalized = normalized_original_code(&candidate.comment);
+    normalized == entry_code
 }
 
 fn source_code_syllable_count(raw_code: &str) -> Option<usize> {

@@ -17,11 +17,12 @@ import { test, expect, type Page, type BrowserContext, type TestInfo, type Worke
 
 // Test configuration
 const APP_URL = process.env.TYPEDUCK_APP_URL || "http://localhost:5173";
-const TIMEOUT_MS = 120000; // WASM load and runtime init may be slow
+const TIMEOUT_MS = 300000; // WASM load and runtime init may be slow
 
 // E2E evidence directory
 const EVIDENCE_DIR = process.env.TYPEDUCK_EVIDENCE_DIR || "../e2e/results";
 let currentEvidenceScope = "unscoped";
+const M24_EVIDENCE_DIR = "m24-dogfooding";
 
 const ACTIVE_SHOWCASE_CONTROLS = [
   /Auto-completion/,
@@ -55,6 +56,8 @@ const LEARNED_PREFIX_INPUT = "ngo";
 const LEARNED_PHRASE_INPUT = "ngohaigo";
 const CLASSIC_NGO_TEXT = "\u6211";
 const LEARNED_PHRASE_TEXT = "\u6211\u4fc2\u500b";
+const M24_DOGFOOD_INPUT = "jigaajiusihaa";
+const M24_DOGFOOD_TOP = "\u800c\u5bb6\u8981\u8a66\u4e0b";
 
 /**
  * Helper: Capture browser console errors to evidence file
@@ -161,6 +164,8 @@ interface PersistenceDiagnosticSnapshot {
   marker: {
     phase?: string;
     reason?: string;
+    wasmBinary?: string;
+    loadedSharedAssets?: string[];
     persistedConfig?: {
       exists?: boolean;
       settings?: Record<string, string | null>;
@@ -178,6 +183,27 @@ async function writeEvidence(filename: string, content: string): Promise<void> {
 
 async function saveJsonEvidence(filename: string, value: unknown): Promise<void> {
   await writeEvidence(filename, `${JSON.stringify(value, null, 2)}\n`);
+}
+
+async function m24EvidencePath(issueId: string, filename: string): Promise<string> {
+  const path = await import("path");
+  return path.join(EVIDENCE_DIR, M24_EVIDENCE_DIR, issueId, filename);
+}
+
+async function saveM24Json(issueId: string, filename: string, payload: unknown): Promise<void> {
+  const fs = await import("fs/promises");
+  const path = await import("path");
+  const jsonPath = await m24EvidencePath(issueId, filename);
+  await fs.mkdir(path.dirname(jsonPath), { recursive: true });
+  await fs.writeFile(jsonPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
+}
+
+async function takeM24Screenshot(page: Page, issueId: string, filename: string): Promise<void> {
+  const fs = await import("fs/promises");
+  const path = await import("path");
+  const screenshotPath = await m24EvidencePath(issueId, `screenshot-${filename}.png`);
+  await fs.mkdir(path.dirname(screenshotPath), { recursive: true });
+  await page.screenshot({ path: screenshotPath, fullPage: false });
 }
 
 async function findRepoRoot(): Promise<string> {
@@ -243,7 +269,7 @@ async function waitForAppReady(page: Page): Promise<void> {
     undefined,
     { timeout: TIMEOUT_MS },
   );
-  await expect(page.locator(".loading")).toHaveCount(0, { timeout: TIMEOUT_MS });
+  await expect(page.locator("[data-yune-loading-indicator]")).toHaveCount(0, { timeout: TIMEOUT_MS });
 }
 
 async function openApp(page: Page): Promise<void> {
@@ -538,11 +564,18 @@ async function typeInputForStatus(page: Page, input: string): Promise<void> {
 async function readYuneStatus(page: Page): Promise<Record<string, string | null>> {
   const status = page.locator("[data-yune-status]");
   await expect(status).toBeVisible({ timeout: 10000 });
+  const schema = page.locator("[data-yune-status-schema]");
+  const disabled = page.locator("[data-yune-status-disabled]");
+  const traditional = page.locator("[data-yune-status-traditional]");
+  const ascii = page.locator("[data-yune-status-ascii]");
+  const disabledValue = await disabled.getAttribute("data-yune-status-disabled");
+  const traditionalValue = await traditional.getAttribute("data-yune-status-traditional");
+  const asciiValue = await ascii.getAttribute("data-yune-status-ascii");
   return {
-    schema: await page.locator("[data-yune-status-schema]").textContent(),
-    disabled: await page.locator("[data-yune-status-disabled]").textContent(),
-    traditional: await page.locator("[data-yune-status-traditional]").textContent(),
-    ascii: await page.locator("[data-yune-status-ascii]").textContent(),
+    schema: await schema.getAttribute("data-yune-status-schema-id") ?? await schema.textContent(),
+    disabled: disabledValue === "true" ? "disabled" : "enabled",
+    traditional: traditionalValue === "true" ? "traditional" : "not traditional",
+    ascii: asciiValue === "true" ? "ASCII" : "Chinese",
   };
 }
 
@@ -603,6 +636,13 @@ async function captureM16Scenario(
   return state;
 }
 
+async function captureM24Phrase(page: Page, issueId: string, input: string, expectedTopText: string): Promise<CandidatePanelSnapshot> {
+  const state = await typeCompositionAndWaitForTopCandidate(page, input, expectedTopText);
+  await saveM24Json(issueId, `${input}-state.json`, state);
+  await takeM24Screenshot(page, issueId, `${input}-candidate-panel`);
+  return state;
+}
+
 test.describe("TypeDuck-Web Browser E2E", () => {
   test.setTimeout(TIMEOUT_MS);
 
@@ -640,6 +680,201 @@ test.describe("TypeDuck-Web Browser E2E", () => {
         consoleErrors.join("\n") + "\n"
       );
     }
+  });
+
+  test("M24 startup timing trace records loading phases", async ({ page }) => {
+    let startup: PersistenceDiagnosticSnapshot | undefined;
+    await expect.poll(async () => {
+      const diagnostics = await readPersistenceDiagnostics(page);
+      startup = diagnostics.find((diagnostic) => diagnostic.source === "yune-startup");
+      return startup?.marker.phase ?? "";
+    }, { timeout: TIMEOUT_MS }).toBe("startup:complete");
+    const resources = await page.evaluate(() =>
+      performance.getEntriesByType("resource")
+        .filter(entry => /yune-typeduck|schema|\.bin|\.ocd2/.test(entry.name))
+        .map(entry => ({
+          name: entry.name,
+          duration: entry.duration,
+          transferSize: "transferSize" in entry ? (entry as PerformanceResourceTiming).transferSize : 0,
+        })),
+    );
+    await saveM24Json("M24-DOGFOOD-01", "startup-resources.json", { startup, resources });
+    await takeM24Screenshot(page, "M24-DOGFOOD-01", "startup-ready");
+    expect(startup?.marker.wasmBinary).toBe("yune-typeduck.wasm");
+    expect(startup?.marker.loadedSharedAssets).toContain("luna_pinyin_yune_reverse.dict.yaml");
+    expect(startup?.marker.phase).toBe("startup:complete");
+  });
+
+  test("M24 phrase comments render without raw control markers", async ({ page }) => {
+    const state = await captureM24Phrase(page, "M24-DOGFOOD-02", M24_DOGFOOD_INPUT, M24_DOGFOOD_TOP);
+    const visibleRows = state.candidates.map(candidate => candidate.rowText).join("\n");
+    expect(visibleRows).not.toMatch(/(?:\\f|\\r|\\v|\f|\r|\v)/);
+  });
+
+  test("M24 compound candidate rows stay compact with details in the dictionary panel", async ({ page }) => {
+    const state = await captureM24Phrase(page, "M24-DOGFOOD-03", M24_DOGFOOD_INPUT, M24_DOGFOOD_TOP);
+    expect(state.candidates[0].rowText).not.toContain("think; ponder");
+    await page.locator(`.candidate-panel .candidates tbody[data-candidate-text="${M24_DOGFOOD_TOP}"]`).hover();
+    await expect(page.locator(".dictionary-panel")).toContainText(/think; ponder|want; need|now/, { timeout: 5000 });
+    await takeM24Screenshot(page, "M24-DOGFOOD-03", "dictionary-detail-panel");
+  });
+
+  test("M24 jigaajiusihaa order is recorded against the current pinned expectation", async ({ page }) => {
+    const state = await captureM24Phrase(page, "M24-DOGFOOD-04", M24_DOGFOOD_INPUT, M24_DOGFOOD_TOP);
+    const fixture = await loadFixture("jyut6ping3-m24-dogfooding.json");
+    const expectedCase = fixture.cases.find((candidate) =>
+      candidate["variant"] === "default_combined" && candidate["input"] === M24_DOGFOOD_INPUT
+    ) as { selected_candidates: { text: string }[] } | undefined;
+    if (!expectedCase) {
+      throw new Error(`Missing M24 dogfood fixture case for ${M24_DOGFOOD_INPUT}`);
+    }
+    const expectedTexts = expectedCase.selected_candidates.map((candidate) => candidate.text);
+    const actualTexts = candidateTexts(state);
+    const compareCount = Math.min(expectedTexts.length, actualTexts.length, 5);
+    await saveM24Json("M24-DOGFOOD-04", "jigaajiusihaa-order.json", {
+      candidateTexts: actualTexts,
+      expectedTexts: expectedTexts.slice(0, compareCount),
+      note: "Engine ordering is fixture-gated against TypeDuck v1.1.2; live deployed-site differences are not treated as hard oracle evidence.",
+    });
+    expect(actualTexts.slice(0, compareCount)).toEqual(expectedTexts.slice(0, compareCount));
+  });
+
+  test("M24 settings labels are Cantonese-first and grouped by engine, session, display, and frontend", async ({ page }) => {
+    await expect(page.getByText(/引擎設定 Active engine controls/)).toBeVisible();
+    await expect(page.getByText(/即時狀態 Live session controls/)).toBeVisible();
+    await expect(page.getByText(/顯示設定 Display controls/)).toBeVisible();
+    await expect(page.getByText(/網頁前端 Web Frontend Controls/)).toBeVisible();
+    await expect(page.getByText(/會重新部署 schema/)).toBeVisible();
+    await expect(page.getByText(/只改目前 session/)).toBeVisible();
+    await takeM24Screenshot(page, "M24-DOGFOOD-05", "settings-labels-desktop");
+    await page.setViewportSize({ width: 390, height: 900 });
+    await takeM24Screenshot(page, "M24-DOGFOOD-05", "settings-labels-narrow");
+  });
+
+  test("M24 display languages use a checklist with deterministic primary language", async ({ page }) => {
+    await expect(page.getByText(/主要語言 Main Language/)).toHaveCount(0);
+    const languageChecks = page.locator(".yd-field").filter({ hasText: /Display languages/ }).locator("input[type='checkbox']");
+    await expect(languageChecks).toHaveCount(5);
+    await page.getByLabel(/Hindi/).last().check({ force: true });
+    const state = await captureM24Phrase(page, "M24-DOGFOOD-06", M24_DOGFOOD_INPUT, M24_DOGFOOD_TOP);
+    await takeM24Screenshot(page, "M24-DOGFOOD-06", "display-languages-checklist");
+    expect(state.candidates.length).toBeGreaterThan(0);
+  });
+
+  test("M24 candidate page-size slider limits the visible candidate page", async ({ page }) => {
+    for (const pageSize of [4, 10] as const) {
+      await setPreferenceRange(page, /No\. of Candidates Per Page|每頁候選詞數量/, pageSize);
+      await waitForPersistedSettings(page, { "menu/page_size": String(pageSize) });
+      const state = await captureM24Phrase(page, "M24-DOGFOOD-07", M24_DOGFOOD_INPUT, M24_DOGFOOD_TOP);
+      await saveM24Json("M24-DOGFOOD-07", `page-size-${pageSize}-state.json`, state);
+      await takeM24Screenshot(page, "M24-DOGFOOD-07", `page-size-${pageSize}-candidates`);
+      expect(state.candidates.length).toBeLessThanOrEqual(pageSize);
+    }
+  });
+
+  test("M24 candidate menu layout is a frontend-only horizontal or vertical setting", async ({ page }) => {
+    const horizontal = await captureM24Phrase(page, "M24-DOGFOOD-08", M24_DOGFOOD_INPUT, M24_DOGFOOD_TOP);
+    await clearComposition(page);
+    await page.getByText("直排 Vertical").click();
+    await expect(page.getByLabel(/直排 Vertical/).last()).toBeChecked();
+    const vertical = await captureM24Phrase(page, "M24-DOGFOOD-08", M24_DOGFOOD_INPUT, M24_DOGFOOD_TOP);
+    await expect(page.locator(".candidate-panel")).toHaveClass(/candidate-panel--vertical/);
+    await takeM24Screenshot(page, "M24-DOGFOOD-08", "vertical");
+    await clearComposition(page);
+    await page.getByText("橫排 Horizontal").click();
+    await expect(page.getByLabel(/橫排 Horizontal/).last()).toBeChecked();
+    await captureM24Phrase(page, "M24-DOGFOOD-08", M24_DOGFOOD_INPUT, M24_DOGFOOD_TOP);
+    await takeM24Screenshot(page, "M24-DOGFOOD-08", "horizontal");
+    expect(classicCandidateSignature(vertical)).toEqual(classicCandidateSignature(horizontal));
+  });
+
+  test("M24 engine status strip explains labeled state", async ({ page }) => {
+    await typeInputForStatus(page, "nei");
+    await expect(page.getByText(/引擎狀態 Engine status/)).toBeVisible();
+    await expect(page.getByText(/顯示目前 schema/)).toBeVisible();
+    await saveM24Json("M24-DOGFOOD-09", "status-strip.json", await readYuneStatus(page));
+    await takeM24Screenshot(page, "M24-DOGFOOD-09", "status-strip");
+  });
+
+  test("M24 schema switcher uses bundled real schema names", async ({ page }) => {
+    const schemaSwitcher = page.locator("[data-yune-schema-switcher]");
+    await expect(schemaSwitcher.getByText("粵語拼音")).toBeVisible();
+    await expect(schemaSwitcher.getByText("倉頡五代")).toBeVisible();
+    await expect(schemaSwitcher.getByText("普通話", { exact: true })).toBeVisible();
+    await selectSchema(page, /Cangjie 5/);
+    await typeInputForStatus(page, "a");
+    await expect(page.locator("[data-yune-status-schema]")).toContainText("倉頡五代");
+    await takeM24Screenshot(page, "M24-DOGFOOD-10", "schema-switcher-real-names");
+  });
+
+  test("M24 Jyutping reverse lookup accepts Mandarin pinyin affix input", async ({ page }) => {
+    await selectSchema(page, /Jyutping/);
+    const state = await typeCompositionAndWaitForCandidate(page, "`pzhe", "這");
+    await saveM24Json("M24-DOGFOOD-11", "jyutping-reverse-lookup-pzhe.json", state);
+    await takeM24Screenshot(page, "M24-DOGFOOD-11", "jyutping-reverse-lookup-pzhe");
+    expect(candidateTexts(state)).toContain("這");
+
+    await clearComposition(page);
+    const normal = await typeCompositionAndWaitForTopCandidate(page, "nei", "你");
+    expect(normal.candidates[0].text).toBe("你");
+  });
+
+  test("M24 Chinese typeface picker applies full family names to visible Chinese surfaces", async ({ page }) => {
+    await expect(page.getByText("Chiron Sung HK")).toBeVisible();
+    await expect(page.getByText("Chiron Hei HK")).toBeVisible();
+    await expect(page.getByText("Iansui")).toBeVisible();
+    await expect(page.getByText(/宋體 Sung|黑體 Hei/)).toHaveCount(0);
+    await page.getByLabel("Iansui").check({ force: true });
+    const state = await captureM24Phrase(page, "M24-DOGFOOD-12", M24_DOGFOOD_INPUT, M24_DOGFOOD_TOP);
+    await page.locator(`.candidate-panel .candidates tbody[data-candidate-text="${M24_DOGFOOD_TOP}"]`).hover();
+    await expect(page.locator("[data-chinese-typeface='iansui']").first()).toBeVisible();
+    const textareaFont = await page.locator("textarea").evaluate(element => getComputedStyle(element).fontFamily);
+    await saveM24Json("M24-DOGFOOD-12", "typeface-picker-font-resources.json", { textareaFont, state });
+    await takeM24Screenshot(page, "M24-DOGFOOD-12", "typeface-picker-iansui");
+    expect(textareaFont).toContain("Iansui");
+  });
+
+  test("M24 dogfood UI uses only local Tailwind components", async ({ page }) => {
+    const packageJson = JSON.parse(await readRepoText("third_party/typeduck-web/source/package.json")) as {
+      dependencies?: Record<string, string>;
+      devDependencies?: Record<string, string>;
+    };
+    expect(packageJson.dependencies?.daisyui).toBeUndefined();
+    expect(packageJson.devDependencies?.daisyui).toBeUndefined();
+
+    const tailwindConfig = await readRepoText("third_party/typeduck-web/source/tailwind.config.ts");
+    expect(tailwindConfig).not.toMatch(/\bdaisyui\b/i);
+    expect(tailwindConfig).not.toContain("DaisyUIConfig");
+
+    const filesToScan = [
+      "third_party/typeduck-web/source/src/Inputs.tsx",
+      "third_party/typeduck-web/source/src/Toolbar.tsx",
+      "third_party/typeduck-web/source/src/ThemeSwitcher.tsx",
+      "third_party/typeduck-web/source/src/YuneFeatureShowcase.tsx",
+      "third_party/typeduck-web/source/src/App.tsx",
+      "third_party/typeduck-web/source/src/Preferences.tsx",
+      "third_party/typeduck-web/source/src/CandidatePanel.tsx",
+      "third_party/typeduck-web/source/src/Candidate.tsx",
+      "third_party/typeduck-web/source/src/DictionaryPanel.tsx",
+      "third_party/typeduck-web/source/src/YuneStatusStrip.tsx",
+      "third_party/typeduck-web/source/src/YuneInspector.tsx",
+      "third_party/typeduck-web/source/src/index.css",
+    ];
+    const forbiddenDaisyUiClasses = /\b(?:btn|toggle|radio|checkbox|range|textarea|badge|join|tooltip|link|loading)(?:-[A-Za-z0-9_:[\]\/.%#]+)?\b/;
+    for (const file of filesToScan) {
+      const source = await readRepoText(file);
+      const classSnippets = source.match(/className\s*=\s*(?:"[^"]*"|'[^']*'|`[^`]*`|\{`[^`]*`\}|\{"[^"]*"\}|\{'[^']*'\})/g) ?? [];
+      for (const snippet of classSnippets) {
+        expect(snippet, `${file}: ${snippet}`).not.toMatch(forbiddenDaisyUiClasses);
+      }
+    }
+
+    await expect(page.getByRole("button", { name: /ASCII mode|中/ })).toBeVisible();
+    await focusInputAndType(page, "nei", "你");
+    await expect(page.locator("[data-yune-schema-switcher]")).toBeVisible();
+    await expect(page.locator("[data-yune-status]")).toBeVisible({ timeout: 10000 });
+    await expect(page.locator(".candidate-panel")).toBeVisible();
+    await takeM24Screenshot(page, "M24-DOGFOOD-13", "local-tailwind-components");
   });
 
   test("Composition after typing schema-valid keys @smoke", async ({ page }) => {
@@ -1352,7 +1587,7 @@ test.describe("TypeDuck-Web Browser E2E", () => {
     );
 
     await clearComposition(page);
-    await page.locator(".btn-toolbar").nth(1).click();
+    await page.getByRole("button", { name: /Simplification/ }).click();
     await page.waitForTimeout(500);
     await focusInputAndType(page, "ngohaigo");
     const simplified = await captureM16Scenario(

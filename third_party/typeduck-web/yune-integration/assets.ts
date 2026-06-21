@@ -55,12 +55,19 @@ export async function loadAssetContent(source: AssetSource): Promise<string | Ui
       if (!response.ok) {
         throw new Error(`Asset URL loading failed: ${source.url} (${response.status})`);
       }
+      if (isBinaryAssetUrl(source.url)) {
+        return new Uint8Array(await response.arrayBuffer());
+      }
       return response.text();
     }
 
     default:
       throw new Error(`Invalid asset source type: ${source}`);
   }
+}
+
+function isBinaryAssetUrl(url: string): boolean {
+  return /\.(?:bin|ocd2)(?:[?#].*)?$/i.test(url);
 }
 
 /**

@@ -1,0 +1,359 @@
+{
+  "textareaFont": "Iansui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Ubuntu, \"Helvetica Neue\", \"Noto Sans\", \"Liberation Sans\", Arial, \"Microsoft JhengHei\", \"Microsoft JhengHei UI\", \"Noto Sans HK\", \"Noto Sans CJK HK\", \"sans-serif\", \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\"",
+  "state": {
+    "aiEnabled": false,
+    "inputValue": "",
+    "candidates": [
+      {
+        "index": 0,
+        "text": "而家要試下",
+        "note": "(compound 詞組)",
+        "source": null,
+        "rowText": "1.ji4 gaa1 jiu3 si3 haa5而家要試下(compound 詞組)ⓘ"
+      },
+      {
+        "index": 1,
+        "text": "而家",
+        "note": null,
+        "source": null,
+        "rowText": "2.ji4gaa1而家"
+      },
+      {
+        "index": 2,
+        "text": "依家",
+        "note": null,
+        "source": null,
+        "rowText": "3.ji1gaa1依家"
+      },
+      {
+        "index": 3,
+        "text": "宜家",
+        "note": null,
+        "source": null,
+        "rowText": "4.ji4gaa1宜家"
+      },
+      {
+        "index": 4,
+        "text": "議價",
+        "note": null,
+        "source": null,
+        "rowText": "5.ji5gaa3議價"
+      },
+      {
+        "index": 5,
+        "text": "衣架",
+        "note": null,
+        "source": null,
+        "rowText": "6.ji1gaa2衣架"
+      },
+      {
+        "index": 6,
+        "text": "移駕",
+        "note": null,
+        "source": null,
+        "rowText": "7.ji4gaa3移駕"
+      },
+      {
+        "index": 7,
+        "text": "以",
+        "note": null,
+        "source": null,
+        "rowText": "8.ji5以"
+      },
+      {
+        "index": 8,
+        "text": "而",
+        "note": null,
+        "source": null,
+        "rowText": "9.ji4而"
+      },
+      {
+        "index": 9,
+        "text": "意",
+        "note": null,
+        "source": null,
+        "rowText": "0.ji3意"
+      },
+      {
+        "index": 10,
+        "text": "已",
+        "note": null,
+        "source": null,
+        "rowText": "1.ji5已"
+      },
+      {
+        "index": 11,
+        "text": "二",
+        "note": null,
+        "source": null,
+        "rowText": "2.ji6二"
+      },
+      {
+        "index": 12,
+        "text": "議",
+        "note": null,
+        "source": null,
+        "rowText": "3.ji5議"
+      },
+      {
+        "index": 13,
+        "text": "醫",
+        "note": null,
+        "source": null,
+        "rowText": "4.ji1醫"
+      },
+      {
+        "index": 14,
+        "text": "依",
+        "note": null,
+        "source": null,
+        "rowText": "5.ji1依"
+      },
+      {
+        "index": 15,
+        "text": "兒",
+        "note": null,
+        "source": null,
+        "rowText": "6.ji4兒"
+      },
+      {
+        "index": 16,
+        "text": "疑",
+        "note": null,
+        "source": null,
+        "rowText": "7.ji4疑"
+      },
+      {
+        "index": 17,
+        "text": "義",
+        "note": null,
+        "source": null,
+        "rowText": "8.ji6義"
+      },
+      {
+        "index": 18,
+        "text": "易",
+        "note": null,
+        "source": null,
+        "rowText": "9.ji6易"
+      },
+      {
+        "index": 19,
+        "text": "爾",
+        "note": null,
+        "source": null,
+        "rowText": "0.ji5爾"
+      },
+      {
+        "index": 20,
+        "text": "衣",
+        "note": null,
+        "source": null,
+        "rowText": "1.ji1衣"
+      },
+      {
+        "index": 21,
+        "text": "宜",
+        "note": null,
+        "source": null,
+        "rowText": "2.ji4宜"
+      },
+      {
+        "index": 22,
+        "text": "移",
+        "note": null,
+        "source": null,
+        "rowText": "3.ji4移"
+      },
+      {
+        "index": 23,
+        "text": "耳",
+        "note": null,
+        "source": null,
+        "rowText": "4.ji5耳"
+      },
+      {
+        "index": 24,
+        "text": "伊",
+        "note": null,
+        "source": null,
+        "rowText": "5.ji1伊"
+      },
+      {
+        "index": 25,
+        "text": "異",
+        "note": null,
+        "source": null,
+        "rowText": "6.ji6異"
+      },
+      {
+        "index": 26,
+        "text": "儀",
+        "note": null,
+        "source": null,
+        "rowText": "7.ji4儀"
+      },
+      {
+        "index": 27,
+        "text": "怡",
+        "note": null,
+        "source": null,
+        "rowText": "8.ji4怡"
+      },
+      {
+        "index": 28,
+        "text": "擬",
+        "note": null,
+        "source": null,
+        "rowText": "9.ji4擬"
+      },
+      {
+        "index": 29,
+        "text": "椅",
+        "note": null,
+        "source": null,
+        "rowText": "0.ji2椅"
+      },
+      {
+        "index": 30,
+        "text": "姨",
+        "note": null,
+        "source": null,
+        "rowText": "1.ji1姨"
+      },
+      {
+        "index": 31,
+        "text": "誼",
+        "note": null,
+        "source": null,
+        "rowText": "2.ji4誼"
+      },
+      {
+        "index": 32,
+        "text": "倚",
+        "note": null,
+        "source": null,
+        "rowText": "3.ji2倚"
+      },
+      {
+        "index": 33,
+        "text": "咦",
+        "note": null,
+        "source": null,
+        "rowText": "4.ji2咦"
+      },
+      {
+        "index": 34,
+        "text": "綺",
+        "note": null,
+        "source": null,
+        "rowText": "5.ji2綺"
+      },
+      {
+        "index": 35,
+        "text": "夷",
+        "note": null,
+        "source": null,
+        "rowText": "6.ji4夷"
+      },
+      {
+        "index": 36,
+        "text": "矣",
+        "note": null,
+        "source": null,
+        "rowText": "7.ji5矣"
+      },
+      {
+        "index": 37,
+        "text": "頤",
+        "note": null,
+        "source": null,
+        "rowText": "8.ji4頤"
+      },
+      {
+        "index": 38,
+        "text": "懿",
+        "note": null,
+        "source": null,
+        "rowText": "9.ji3懿"
+      },
+      {
+        "index": 39,
+        "text": "𠵱",
+        "note": null,
+        "source": null,
+        "rowText": "0.ji1𠵱"
+      },
+      {
+        "index": 40,
+        "text": "胰",
+        "note": null,
+        "source": null,
+        "rowText": "1.ji4胰"
+      },
+      {
+        "index": 41,
+        "text": "貽",
+        "note": null,
+        "source": null,
+        "rowText": "2.ji4貽"
+      },
+      {
+        "index": 42,
+        "text": "洱",
+        "note": null,
+        "source": null,
+        "rowText": "3.ji5洱"
+      },
+      {
+        "index": 43,
+        "text": "漪",
+        "note": null,
+        "source": null,
+        "rowText": "4.ji2漪"
+      },
+      {
+        "index": 44,
+        "text": "薏",
+        "note": null,
+        "source": null,
+        "rowText": "5.ji3薏"
+      },
+      {
+        "index": 45,
+        "text": "貳",
+        "note": null,
+        "source": null,
+        "rowText": "6.ji6貳"
+      },
+      {
+        "index": 46,
+        "text": "苡",
+        "note": null,
+        "source": null,
+        "rowText": "7.ji5苡"
+      },
+      {
+        "index": 47,
+        "text": "咿",
+        "note": null,
+        "source": null,
+        "rowText": "8.ji1咿"
+      },
+      {
+        "index": 48,
+        "text": "沂",
+        "note": null,
+        "source": null,
+        "rowText": "9.ji4沂"
+      },
+      {
+        "index": 49,
+        "text": "彝",
+        "note": null,
+        "source": null,
+        "rowText": "0.ji4彝"
+      }
+    ]
+  }
+}

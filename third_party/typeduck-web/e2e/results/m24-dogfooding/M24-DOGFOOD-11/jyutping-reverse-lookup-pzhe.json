@@ -1,0 +1,356 @@
+{
+  "aiEnabled": false,
+  "inputValue": "",
+  "candidates": [
+    {
+      "index": 0,
+      "text": "這",
+      "note": null,
+      "source": null,
+      "rowText": "1.ze2這ⓘ"
+    },
+    {
+      "index": 1,
+      "text": "这",
+      "note": "~i",
+      "source": null,
+      "rowText": "2.这~i"
+    },
+    {
+      "index": 2,
+      "text": "㖽",
+      "note": null,
+      "source": null,
+      "rowText": "3.㖽"
+    },
+    {
+      "index": 3,
+      "text": "㚖",
+      "note": null,
+      "source": null,
+      "rowText": "4.㚖"
+    },
+    {
+      "index": 4,
+      "text": "㟙",
+      "note": null,
+      "source": null,
+      "rowText": "5.㟙"
+    },
+    {
+      "index": 5,
+      "text": "㣱",
+      "note": null,
+      "source": null,
+      "rowText": "6.㣱"
+    },
+    {
+      "index": 6,
+      "text": "㤞",
+      "note": "(rare 罕見)",
+      "source": null,
+      "rowText": "7.caa3㤞(rare 罕見)"
+    },
+    {
+      "index": 7,
+      "text": "㥽",
+      "note": "(rare 罕見)",
+      "source": null,
+      "rowText": "8.caak3㥽(rare 罕見)"
+    },
+    {
+      "index": 8,
+      "text": "㳁",
+      "note": null,
+      "source": null,
+      "rowText": "9.㳁"
+    },
+    {
+      "index": 9,
+      "text": "㳻",
+      "note": null,
+      "source": null,
+      "rowText": "0.㳻"
+    },
+    {
+      "index": 10,
+      "text": "㺓",
+      "note": null,
+      "source": null,
+      "rowText": "1.㺓"
+    },
+    {
+      "index": 11,
+      "text": "䇥",
+      "note": null,
+      "source": null,
+      "rowText": "2.䇥"
+    },
+    {
+      "index": 12,
+      "text": "䔼",
+      "note": null,
+      "source": null,
+      "rowText": "3.䔼"
+    },
+    {
+      "index": 13,
+      "text": "䕉",
+      "note": null,
+      "source": null,
+      "rowText": "4.䕉"
+    },
+    {
+      "index": 14,
+      "text": "䟄",
+      "note": null,
+      "source": null,
+      "rowText": "5.䟄"
+    },
+    {
+      "index": 15,
+      "text": "䯔",
+      "note": null,
+      "source": null,
+      "rowText": "6.䯔"
+    },
+    {
+      "index": 16,
+      "text": "䰹",
+      "note": null,
+      "source": null,
+      "rowText": "7.䰹"
+    },
+    {
+      "index": 17,
+      "text": "䶡",
+      "note": null,
+      "source": null,
+      "rowText": "8.䶡"
+    },
+    {
+      "index": 18,
+      "text": "䶦",
+      "note": null,
+      "source": null,
+      "rowText": "9.䶦"
+    },
+    {
+      "index": 19,
+      "text": "仄",
+      "note": null,
+      "source": null,
+      "rowText": "0.zak1仄ⓘ"
+    },
+    {
+      "index": 20,
+      "text": "则",
+      "note": null,
+      "source": null,
+      "rowText": "1.则"
+    },
+    {
+      "index": 21,
+      "text": "則",
+      "note": null,
+      "source": null,
+      "rowText": "2.zak1則ⓘ"
+    },
+    {
+      "index": 22,
+      "text": "咋",
+      "note": null,
+      "source": null,
+      "rowText": "3.zaa3咋ⓘ"
+    },
+    {
+      "index": 23,
+      "text": "唶",
+      "note": null,
+      "source": null,
+      "rowText": "4.唶"
+    },
+    {
+      "index": 24,
+      "text": "啧",
+      "note": null,
+      "source": null,
+      "rowText": "5.啧"
+    },
+    {
+      "index": 25,
+      "text": "嘖",
+      "note": null,
+      "source": null,
+      "rowText": "6.zaak3嘖ⓘ"
+    },
+    {
+      "index": 26,
+      "text": "夨",
+      "note": null,
+      "source": null,
+      "rowText": "7.夨"
+    },
+    {
+      "index": 27,
+      "text": "嫧",
+      "note": null,
+      "source": null,
+      "rowText": "8.嫧"
+    },
+    {
+      "index": 28,
+      "text": "岅",
+      "note": null,
+      "source": null,
+      "rowText": "9.岅"
+    },
+    {
+      "index": 29,
+      "text": "岝",
+      "note": null,
+      "source": null,
+      "rowText": "0.岝"
+    },
+    {
+      "index": 30,
+      "text": "岞",
+      "note": "(rare 罕見)",
+      "source": null,
+      "rowText": "1.zok6岞(rare 罕見)"
+    },
+    {
+      "index": 31,
+      "text": "崱",
+      "note": null,
+      "source": null,
+      "rowText": "2.崱"
+    },
+    {
+      "index": 32,
+      "text": "帻",
+      "note": null,
+      "source": null,
+      "rowText": "3.帻"
+    },
+    {
+      "index": 33,
+      "text": "幘",
+      "note": null,
+      "source": null,
+      "rowText": "4.幘"
+    },
+    {
+      "index": 34,
+      "text": "庂",
+      "note": null,
+      "source": null,
+      "rowText": "5.庂"
+    },
+    {
+      "index": 35,
+      "text": "怎",
+      "note": null,
+      "source": null,
+      "rowText": "6.zam2怎ⓘ"
+    },
+    {
+      "index": 36,
+      "text": "戝",
+      "note": "(rare 罕見)",
+      "source": null,
+      "rowText": "7.caak3戝(rare 罕見)"
+    },
+    {
+      "index": 37,
+      "text": "択",
+      "note": "(rare 罕見)",
+      "source": null,
+      "rowText": "8.zaak6択(rare 罕見)"
+    },
+    {
+      "index": 38,
+      "text": "择",
+      "note": null,
+      "source": null,
+      "rowText": "9.择"
+    },
+    {
+      "index": 39,
+      "text": "捑",
+      "note": null,
+      "source": null,
+      "rowText": "0.捑"
+    },
+    {
+      "index": 40,
+      "text": "擇",
+      "note": null,
+      "source": null,
+      "rowText": "1.zaak6擇ⓘ"
+    },
+    {
+      "index": 41,
+      "text": "昃",
+      "note": "(rare 罕見)",
+      "source": null,
+      "rowText": "2.zak1昃(rare 罕見)"
+    },
+    {
+      "index": 42,
+      "text": "昗",
+      "note": null,
+      "source": null,
+      "rowText": "3.昗"
+    },
+    {
+      "index": 43,
+      "text": "柞",
+      "note": null,
+      "source": null,
+      "rowText": "4.zaa3柞ⓘ"
+    },
+    {
+      "index": 44,
+      "text": "樍",
+      "note": null,
+      "source": null,
+      "rowText": "5.樍"
+    },
+    {
+      "index": 45,
+      "text": "檡",
+      "note": "(rare 罕見)",
+      "source": null,
+      "rowText": "6.zaak6檡(rare 罕見)"
+    },
+    {
+      "index": 46,
+      "text": "歵",
+      "note": null,
+      "source": null,
+      "rowText": "7.歵"
+    },
+    {
+      "index": 47,
+      "text": "汄",
+      "note": null,
+      "source": null,
+      "rowText": "8.汄"
+    },
+    {
+      "index": 48,
+      "text": "沢",
+      "note": null,
+      "source": null,
+      "rowText": "9.zaak6沢ⓘ"
+    },
+    {
+      "index": 49,
+      "text": "泽",
+      "note": null,
+      "source": null,
+      "rowText": "0.泽"
+    }
+  ]
+}

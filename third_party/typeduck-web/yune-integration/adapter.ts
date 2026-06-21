@@ -152,7 +152,7 @@ interface PersistedConfigSnapshot {
 }
 
 const PERSISTED_CUSTOM_CONFIG_KEYS = [
-  "page_size",
+  "menu/page_size",
   "translator/enable_completion",
   "translator/enable_correction",
   "translator/enable_sentence",
@@ -461,7 +461,7 @@ export async function customize(preferences: RimePreferences): Promise<boolean> 
   };
 
   if (preferences.pageSize !== undefined) {
-    customizeSetting("page_size", String(preferences.pageSize));
+    customizeSetting("menu/page_size", String(preferences.pageSize));
   }
 
   for (const { preference, keys } of BOOLEAN_CUSTOMIZATION_KEYS) {
@@ -678,7 +678,7 @@ function snapshotYamlConfig(
     return {
       path,
       exists: true,
-      pageSize: settings["page_size"],
+      pageSize: settings["menu/page_size"],
       settings,
       bytes: text.length,
     };

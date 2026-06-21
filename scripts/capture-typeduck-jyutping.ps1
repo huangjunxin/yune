@@ -1,5 +1,5 @@
 param(
-    [ValidateSet("Smoke", "Options", "CompletionCorrection", "SchemaMenu", "UserDb", "PreferUserPhrase", "LetterToTone", "StateLabels", "PredictionRanking", "M21Closeout", "All")]
+    [ValidateSet("Smoke", "Options", "CompletionCorrection", "SchemaMenu", "UserDb", "PreferUserPhrase", "LetterToTone", "StateLabels", "PredictionRanking", "M21Closeout", "Dogfooding", "All")]
     [string]$Fixture = "Smoke",
     [string]$OracleRoot,
     [string]$Output,
@@ -558,7 +558,7 @@ $SchemaCommit = Get-SchemaCommit
 New-Item -ItemType Directory -Force -Path $CaptureRoot | Out-Null
 
 if ($Fixture -eq "All") {
-    foreach ($Name in @("Smoke", "Options", "CompletionCorrection", "SchemaMenu", "UserDb", "PreferUserPhrase", "LetterToTone", "StateLabels", "PredictionRanking", "M21Closeout")) {
+    foreach ($Name in @("Smoke", "Options", "CompletionCorrection", "SchemaMenu", "UserDb", "PreferUserPhrase", "LetterToTone", "StateLabels", "PredictionRanking", "M21Closeout", "Dogfooding")) {
         & $PSCommandPath -Fixture $Name -OracleRoot $OracleRoot
         if ($LASTEXITCODE -ne 0) {
             throw "fixture capture failed for $Name with exit code $LASTEXITCODE"
@@ -579,6 +579,7 @@ if ([string]::IsNullOrWhiteSpace($Output)) {
         "StateLabels" { "jyut6ping3-fork-parity-07-state-labels.json" }
         "PredictionRanking" { "jyut6ping3-m21-prediction-ranking.json" }
         "M21Closeout" { "jyut6ping3-m21-closeout.json" }
+        "Dogfooding" { "jyut6ping3-m24-dogfooding.json" }
     }
     $Output = Join-Path $RepoRoot (Join-Path "crates\yune-core\tests\fixtures\typeduck-v1.1.2" $OutputName)
 }
@@ -791,6 +792,26 @@ if ($Fixture -eq "Smoke") {
         settings_profile = "default_combined uses no common.custom patches so translator/combine_candidates stays true; simplification_on uses runtime RimeSetOption('simplification', 1)"
     }
     $FixtureBody = New-Fixture "typeduck_v112_m21_product_comparison_closeout" @("jyut6ping3_mobile") @("product_comparison_closeout", "hk2s") $Cases $Finding
+    $FixtureBody["input_sequence"] = $Inputs
+    Write-JsonFile $Output $FixtureBody
+} elseif ($Fixture -eq "Dogfooding") {
+    if ($null -eq $Inputs -or $Inputs.Count -eq 0) {
+        $Inputs = [string[]]@("jigaajiusihaa", "jigaa", "jiusihau", "jigaajiu")
+    }
+    $Variant = New-Variant `
+        -Group "m24-dogfooding" `
+        -Name "default_combined" `
+        -VariantSchema "jyut6ping3_mobile" `
+        -Patches ([string[]]@()) `
+        -VariantInputs $Inputs
+    $Cases = Invoke-ChildCapture $Variant
+    $Finding = [ordered]@{
+        input_sequence = $Inputs
+        oracle_observable_surface = "RimeGetContext selected_candidates records M24 dogfood phrases against TypeDuck v1.1.2 instead of the live deployed web app"
+        settings_profile = "default_combined uses no common.custom patches; translator/combine_candidates stays true and translator/prediction_candidate_limit remains 1"
+        m21_constraint = "Protects the M21 prediction_candidate_limit=1 browser profile while recording the dogfood phrase order"
+    }
+    $FixtureBody = New-Fixture "typeduck_v112_m24_dogfooding_exact_inputs" @("jyut6ping3_mobile") @("dogfooding_order") $Cases $Finding
     $FixtureBody["input_sequence"] = $Inputs
     Write-JsonFile $Output $FixtureBody
 }

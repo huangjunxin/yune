@@ -75,7 +75,11 @@ pub(crate) fn process_recognizer_processor(
 
     let mut input = session.engine.context().composition.input.clone();
     input.push(ch);
-    if !recognizer_patterns_match(&processor.patterns, &input) {
+    let affix_prefix_in_progress = session
+        .affix_segmentors
+        .iter()
+        .any(|segmentor| segmentor.prefix.starts_with(&input));
+    if !recognizer_patterns_match(&processor.patterns, &input) && !affix_prefix_in_progress {
         return false;
     }
     session.engine.set_input(input);

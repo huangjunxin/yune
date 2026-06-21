@@ -21,6 +21,8 @@ const M21_PREDICTION_RANKING_ORACLE: &str =
     include_str!("fixtures/typeduck-v1.1.2/jyut6ping3-m21-prediction-ranking.json");
 const M21_CLOSEOUT_ORACLE: &str =
     include_str!("fixtures/typeduck-v1.1.2/jyut6ping3-m21-closeout.json");
+const M24_DOGFOODING_ORACLE: &str =
+    include_str!("fixtures/typeduck-v1.1.2/jyut6ping3-m24-dogfooding.json");
 const FORK_PARITY_01_REAL_DICTIONARY_FUZZY_ORACLE: &str =
     include_str!("fixtures/typeduck-v1.1.2/jyut6ping3-fork-parity-01-real-dictionary-fuzzy.json");
 const FORK_PARITY_02_PREFER_USER_PHRASE_ORACLE: &str =
@@ -74,6 +76,11 @@ fn m21_prediction_ranking_fixture() -> Value {
 fn m21_closeout_fixture() -> Value {
     serde_json::from_str(M21_CLOSEOUT_ORACLE)
         .expect("TypeDuck v1.1.2 M21 closeout fixture should be valid JSON")
+}
+
+fn m24_dogfooding_fixture() -> Value {
+    serde_json::from_str(M24_DOGFOODING_ORACLE)
+        .expect("TypeDuck v1.1.2 M24 dogfooding fixture should be valid JSON")
 }
 
 fn fork_parity_01_real_dictionary_fuzzy_fixture() -> Value {
@@ -500,6 +507,41 @@ fn typeduck_v112_m21_closeout_fixture_is_locked() {
     let hk2s = m21_closeout_case(&fixture, "simplification_on", "ngohaigo");
     assert_eq!(hk2s["is_simplified"], true);
     assert_eq!(selected_candidate_text(hk2s, 0), "\u{6211}\u{7cfb}\u{4e2a}");
+}
+
+#[test]
+fn typeduck_v112_m24_dogfooding_fixture_is_locked() {
+    let fixture = m24_dogfooding_fixture();
+    assert_eq!(fixture["oracle"]["engine"], "TypeDuck-HK/librime");
+    assert_eq!(fixture["oracle"]["engine_tag"], "v1.1.2");
+    assert_eq!(
+        fixture["oracle"]["engine_commit"],
+        "74cb52b78fb2411137a7643f6c8bc6517acfde69"
+    );
+    assert_eq!(fixture["schema"], "jyut6ping3_mobile");
+    assert_eq!(
+        fixture["capture"]["source_row_policy"],
+        "typeduck_v112_m24_dogfooding_exact_inputs"
+    );
+    assert_eq!(
+        fixture["capture"]["m21_constraint"],
+        "Protects the M21 prediction_candidate_limit=1 browser profile while recording the dogfood phrase order"
+    );
+    assert_eq!(
+        fixture["capture"]["input_sequence"],
+        serde_json::json!(["jigaajiusihaa", "jigaa", "jiusihau", "jigaajiu"])
+    );
+
+    for input in ["jigaajiusihaa", "jigaa", "jiusihau", "jigaajiu"] {
+        let case = m24_dogfooding_case(&fixture, input);
+        assert_eq!(case["schema_id"], "jyut6ping3_mobile", "input {input}");
+        assert_eq!(case["variant"], "default_combined", "input {input}");
+        assert_eq!(case["variant_schema"], "jyut6ping3_mobile", "input {input}");
+        assert!(
+            candidate_count(case) > 0,
+            "input {input} should preserve at least one dogfood candidate"
+        );
+    }
 }
 
 #[test]
@@ -1105,6 +1147,15 @@ fn m21_closeout_case<'a>(fixture: &'a Value, variant: &str, input: &str) -> &'a 
         })
 }
 
+fn m24_dogfooding_case<'a>(fixture: &'a Value, input: &str) -> &'a Value {
+    fixture["cases"]
+        .as_array()
+        .expect("M24 dogfooding cases should be an array")
+        .iter()
+        .find(|case| case["variant"] == "default_combined" && case["input"] == input)
+        .unwrap_or_else(|| panic!("M24 dogfooding fixture should capture input {input}"))
+}
+
 fn candidate_count(case: &Value) -> usize {
     case["selected_candidates"]
         .as_array()
@@ -1341,6 +1392,46 @@ fn m21_closeout_rows_match_typeduck_v112_real_dictionary_goldens() {
     assert_eq!(
         hk2s_engine.context().candidates[0].text,
         selected_candidate_text(expected_hk2s, 0)
+    );
+}
+
+#[test]
+fn m24_jigaajiusihaa_order_matches_typeduck_v112_dogfood_fixture() {
+    let fixture = m24_dogfooding_fixture();
+    let expected = m24_dogfooding_case(&fixture, "jigaajiusihaa");
+    let mut engine = typeduck_jyut6ping3_mobile_engine(false);
+
+    engine.set_input("jigaajiusihaa");
+
+    let compare_count = candidate_count(expected).min(5);
+    let actual_texts = engine
+        .context()
+        .candidates
+        .iter()
+        .take(compare_count)
+        .map(|candidate| candidate.text.as_str())
+        .collect::<Vec<_>>();
+    let expected_texts = (0..compare_count)
+        .map(|index| selected_candidate_text(expected, index))
+        .collect::<Vec<_>>();
+    let actual_details = engine
+        .context()
+        .candidates
+        .iter()
+        .take(compare_count)
+        .map(|candidate| {
+            (
+                candidate.text.as_str(),
+                candidate.comment.as_str(),
+                candidate.source.as_str(),
+                candidate.quality,
+            )
+        })
+        .collect::<Vec<_>>();
+
+    assert_eq!(
+        actual_texts, expected_texts,
+        "jigaajiusihaa dogfood order; actual details {actual_details:?}"
     );
 }
 

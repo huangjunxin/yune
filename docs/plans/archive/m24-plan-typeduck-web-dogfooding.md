@@ -1,12 +1,12 @@
 # M24 TypeDuck-Web Dogfooding & Demo Hardening Implementation Plan
 
-> **Status:** Active - **Milestone:** M24 (TypeDuck-Web dogfooding and demo hardening) - **Created:** 2026-06-21 - **Type:** running execution plan / issue ledger
+> **Status:** Complete - **Milestone:** M24 (TypeDuck-Web dogfooding and demo hardening) - **Created:** 2026-06-21 - **Closed:** 2026-06-21 - **Type:** archived execution plan / issue ledger
 >
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Turn real manual play-testing of the internal TypeDuck-Web playground into a tracked, evidence-backed hardening loop without reopening completed parity milestones by accident.
+**Goal:** Close the first real manual play-testing batch for the internal TypeDuck-Web playground as a tracked, evidence-backed hardening loop without reopening completed parity milestones by accident.
 
-**Architecture:** M24 treats `third_party/typeduck-web/` as the active browser dogfooding surface. Browser loading, rendering, and UX defects can be fixed with browser evidence; candidate-set, candidate-order, or engine-semantic changes still require pinned oracle evidence from TypeDuck `v1.1.2` or upstream `1.17.0` before changing engine behavior. Each issue is classified first, then implemented in the narrowest owning layer.
+**Architecture:** M24 treated `third_party/typeduck-web/` as the browser dogfooding surface for this closed batch. Browser loading, rendering, and UX defects were fixed with browser evidence; candidate-set, candidate-order, or engine-semantic changes still required pinned oracle evidence from TypeDuck `v1.1.2` or upstream `1.17.0` before changing engine behavior. Each issue was classified first, then implemented in the narrowest owning layer.
 
 **Tech Stack:** TypeDuck-Web React/TypeScript, Vite/Bun, Tailwind CSS, small local React components, Playwright, `@yune-ime/typeduck-runtime`, `yune-rime-api` C ABI, `yune-core`, TypeDuck `v1.1.2` oracle fixtures. M24 explicitly removes DaisyUI from the dogfood demo stack.
 
@@ -14,7 +14,7 @@
 
 ## Scope
 
-M24 is an active dogfooding and hardening loop for the internal browser playground:
+M24 was a dogfooding and hardening batch for the internal browser playground:
 
 - **In scope:** first-load performance, visible loading state, candidate panel layout, comment rendering, dictionary panel ergonomics, browser schema-switch behavior, TypeDuck-Web runtime integration bugs, and browser evidence for user-visible fixes.
 - **In scope with oracle evidence:** candidate set, candidate order, phrase/sentence fallback, correction, prediction, dictionary lookup payloads, and any behavior that changes engine output.
@@ -37,10 +37,47 @@ The issue ledger is append-only, but implementation should follow this order unl
 - Do not add shadcn, MUI, Radix, another Tailwind component kit, a router framework, a CSS-in-JS stack, or a broad design system.
 - Remove DaisyUI in `M24-DOGFOOD-13`; until that task lands, avoid adding new DaisyUI-specific classes to new work.
 - Do not preserve DaisyUI styling for its own sake. Preserve behavior, accessibility, and test hooks, while allowing the UI to become more minimalistic and elegant.
-- Reuse and improve local components in `third_party/typeduck-web/source/src/Inputs.tsx` and local CSS in `third_party/typeduck-web/source/src/index.css`.
+- Reuse and improve local components in `third_party/typeduck-web/source/src/Inputs.tsx` and local CSS in `third_party/typeduck-web/source/src/index.css` as logical upstream-app edit targets, but do not treat `source/` edits as landed until the tracked patch is regenerated and checked.
+- `third_party/typeduck-web/source/` is a gitignored upstream checkout. The committed Yune source of truth is `third_party/typeduck-web/patches/yune-typeduck-runtime.patch`, plus intentionally Yune-owned files under `third_party/typeduck-web/yune-integration/`, `third_party/typeduck-web/e2e/`, and `third_party/typeduck-web/typeduck-web.lock.json`.
+- Every task that lists `third_party/typeduck-web/source/...` names the file to edit in the local checkout while developing. The same slice must also update the maintained patch, and the final staged diff must not rely on untracked `source/` changes.
 - Browser-visible claims require Playwright screenshots or JSON evidence from the real `/web/` app.
 - Engine-output changes require pinned oracle fixture evidence. Do not use the live deployed TypeDuck site as the hard oracle.
 - Commit in small slices. Keep implementation commits scoped to the issue being closed.
+
+## Patch-Layer Execution Rule
+
+M24 workers may edit `third_party/typeduck-web/source/` while testing the local app, but that directory is not vendored in this repository. Before any browser UI or TypeDuck-Web source change is considered complete:
+
+1. Regenerate `third_party/typeduck-web/patches/yune-typeduck-runtime.patch` from the patched upstream checkout.
+2. Reverse-check the patch from `third_party/typeduck-web/source/`:
+
+   ```powershell
+   git apply --reverse --check ..\patches\yune-typeduck-runtime.patch
+   ```
+
+3. Forward-check the patch on a clean source checkout reset to `third_party/typeduck-web/typeduck-web.lock.json`:
+
+   ```powershell
+   git apply --check ..\patches\yune-typeduck-runtime.patch
+   ```
+
+4. Stage only the tracked artifacts for the slice: the patch, Yune-owned integration files, Playwright tests/evidence, Rust/runtime files, docs, and lock metadata when the upstream source pin changes.
+
+If a task only edits `source/` and does not update the patch, it is not complete.
+
+## Minimal UI Design Direction
+
+This dogfood app is a debugging workbench, not a product landing page. The M24 UI should be minimalistic, elegant, and dense enough for repeated engine testing. It does not need to preserve the original DaisyUI look.
+
+- Use one-control-per-job local primitives: `Field`, `Switch`, `Checkbox`, `RadioList`, `Segmented`, `Slider`, `Button`, `IconButton`, `Tag`, and `Section`.
+- Put Cantonese first in visible labels, with English secondary where helpful.
+- Give active engine controls and live session controls one short help line each. Keep display controls compact without explanatory paragraphs.
+- Separate settings into clear groups: active engine controls, live session controls, display controls, web frontend controls, and Yune inspector/debug controls.
+- Display-language selection is checklist-only; derive any primary dictionary/comment display internally from selected language order.
+- Candidate rows stay compact. Long dictionary glosses and multilingual explanations belong below the selected/hovered candidate or in the dictionary/detail panel, not inline inside the horizontal candidate strip.
+- Candidate menu orientation is a frontend-only display setting. Switching horizontal/vertical layout must not change engine output, ranking, page size, or ABI behavior.
+- Status badges should be labeled diagnostic tags with a short status-strip hint, not raw booleans.
+- The typeface picker should be a radio list of full font-family names. Do not show ambiguous `Sung`/`Hei` category toggles.
 
 ## Evidence Rules
 
@@ -66,19 +103,19 @@ If a report is ambiguous, classify it as **Needs triage**, capture the screensho
 
 | ID | Status | Classification | User-visible issue | First repro / evidence | Owning surfaces | Close criteria |
 |---|---|---|---|---|---|---|
-| M24-DOGFOOD-01 | Open | Browser integration / performance | First visit to `http://localhost:5173/web/` remains on `載入中 Loading...` for too long. | Fresh browser tab to `/web/`; user observed a long loading period before the IME becomes usable. | `third_party/typeduck-web/source/src/worker.ts`, `third_party/typeduck-web/source/src/yune-integration/adapter.ts`, `third_party/typeduck-web/source/src/yune-integration/assets.ts`, `packages/yune-typeduck-runtime/`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts` | Timing trace separates WASM download, module creation, asset loading, persistence sync, and runtime init; local first-load budget is enforced or the exact unavoidable bottleneck is documented with byte/time evidence. |
-| M24-DOGFOOD-02 | Open | Browser integration / comment rendering | Long phrase candidates show a literal `\f` before Jyutping on following single-character candidates, while single-character input does not show it. | Type a long phrase such as `jigaajiusihaa`; screenshot shows candidates like `以 \fji5`. | `third_party/typeduck-web/source/src/CandidateInfo.ts`, `third_party/typeduck-web/source/src/Candidate.tsx`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`, candidate comments from `crates/yune-rime-api/tests/typeduck_web.rs` | No visible literal `\f`, `\r`, or `\v` appears in candidate rows; dictionary-rich comments still parse into entries; single-character and phrase inputs both render cleanly. |
-| M24-DOGFOOD-03 | Open | UI polish / candidate layout | Compound-candidate dictionary glosses render horizontally next to the candidate text, making `而家要思考(compound 詞組) 而家 (now) 要 (want; need) 思考 (think; ponder)` read like one confusing inline candidate. | Type `jigaajiusihaa`; screenshot shows the first highlighted candidate widened across the horizontal row. | `third_party/typeduck-web/source/src/Candidate.tsx`, `third_party/typeduck-web/source/src/CandidatePanel.tsx`, `third_party/typeduck-web/source/src/DictionaryPanel.tsx`, `third_party/typeduck-web/source/src/index.css` | Main candidate row stays compact; detailed English/gloss content moves below the candidate or into the dictionary/detail panel; before/after screenshots prove no horizontal overflow or misleading inline gloss. |
-| M24-DOGFOOD-04 | Open | Engine correctness / oracle recheck | For `jigaajiusihaa`, after the first compound candidate the next candidates are single characters, while the user-observed live TypeDuck behavior appears to prefer word entries such as `而家`, `依家`, `宜家` before single characters. | User compared the internal playground with `https://www.typeduck.hk/web/`; live product appears to show word candidates in positions 2-3. | `scripts/capture-typeduck-jyutping.ps1`, `crates/yune-core/tests/cantonese_parity.rs`, `crates/yune-core/src/translator/mod.rs`, `crates/yune-core/src/dictionary/`, `crates/yune-rime-api/tests/typeduck_web.rs`, M21 source-aware evidence under `third_party/typeduck-web/e2e/results/m21-product-comparison/` | A pinned TypeDuck `v1.1.2` fixture or a documented version-skew decision determines the expected row order; Yune either matches the fixture with active tests or records the live-site behavior as non-oracle product skew. |
-| M24-DOGFOOD-05 | Open | UI polish / settings localization and help text | Settings and developer controls mix Cantonese/English and many labels are English-only, so a new developer cannot tell what active engine controls or live session controls do. Cantonese should come first for all labels; active engine and live session toggles need short description text. Display controls need Cantonese-first labels but no extra descriptions. | Browser comment on `/web/` settings area: selected controls include `Active engine controls`, `Live session controls`, `Display controls`, `Yune inspector`, `Schema`, and English-only toggle labels such as `ASCII mode`, `Full shape`, `Prediction threshold`, and `Dictionary exclude`. | `third_party/typeduck-web/source/src/Preferences.tsx`, `third_party/typeduck-web/source/src/Inputs.tsx`, `third_party/typeduck-web/source/src/Toolbar.tsx`, `third_party/typeduck-web/source/src/SchemaSwitcher.tsx`, `third_party/typeduck-web/source/src/App.tsx`, `third_party/typeduck-web/source/src/YuneInspector.tsx`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts` | All visible settings/developer labels use Cantonese-first bilingual text; active-engine and live-session toggles show concise helper copy; display controls remain compact without helper paragraphs; before/after screenshots prove the settings page stays readable at desktop and narrow widths. |
-| M24-DOGFOOD-06 | Open | UI polish / display-language control semantics | The display-language fieldset shows both radio buttons and checkboxes, making it unclear whether the radio or checklist controls dictionary/comment language display. The visible UI should be a checklist only. | Browser comment on `/web/` display controls: `Display languages` shows five radio buttons on the left, five checkboxes on the right, and an arrow row for `主要語言 Main Language`. | `third_party/typeduck-web/source/src/Preferences.tsx`, `third_party/typeduck-web/source/src/Inputs.tsx`, `third_party/typeduck-web/source/src/CandidateInfo.ts`, `third_party/typeduck-web/source/src/DictionaryPanel.tsx`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts` | Display-language settings expose only checkboxes; the `主要語言 Main Language` arrow/radio concept is gone from the visible UI; at least one language remains selected; dictionary/detail output still has a deterministic primary definition when multiple languages are checked. |
-| M24-DOGFOOD-07 | Open | Browser integration / customize page-size wiring | The `每頁候選詞數量 No. of Candidates Per Page` slider appears not to control candidate page size; typing after selecting a smaller value still shows more candidates than selected. | Browser comment on `/web/` settings area: user changed the candidate-number control, then typed input whose candidate row clearly exceeded the selected page size. | `third_party/typeduck-web/source/src/Preferences.tsx`, `third_party/typeduck-web/source/src/App.tsx`, `third_party/typeduck-web/source/src/yune-integration/adapter.ts`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`, `crates/yune-rime-api/tests/typeduck_web.rs`, `crates/yune-rime-api/src/typeduck_web.rs`, `crates/yune-rime-api/src/context_api.rs` | Changing the slider to 4, 6, or 10 changes the deployed runtime `context.page_size` and visible candidate count on the next composition; the browser does not render more candidate cells than the selected page size; persistence evidence shows the setting is saved under the key the deployed schema actually reads. |
-| M24-DOGFOOD-08 | Open | UI polish / frontend candidate-menu layout | The playground has no control for horizontal versus vertical candidate menu layout. Users familiar with RIME expect a menu style choice, but this web setting should be clearly grouped as a frontend display preference rather than an engine/schema control. | Browser comment on `/web/` settings area: user requested a horizontal/vertical candidate list control and clearer grouping that distinguishes engine controls from web frontend controls. | `third_party/typeduck-web/source/src/Preferences.tsx`, `third_party/typeduck-web/source/src/types.ts`, `third_party/typeduck-web/source/src/consts.ts`, `third_party/typeduck-web/source/src/CandidatePanel.tsx`, `third_party/typeduck-web/source/src/Candidate.tsx`, `third_party/typeduck-web/source/src/index.css`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts` | Settings expose a Cantonese-first `候選排版 Candidate Menu Layout` segmented control with horizontal and vertical choices under a clearly frontend/display group; switching layout changes only the web candidate panel presentation, not engine output, page size, ranking, or ABI behavior; browser screenshots prove both layouts are readable. |
-| M24-DOGFOOD-09 | Open | UI polish / engine status strip explanation | The status strip under the schema switcher shows raw badges such as `jyut6ping3_mobile`, `enabled`, `not traditional`, and `Chinese` with no hint explaining what the strip is or what each value means. | Browser comment on `/web/` status strip: selected `jyut6ping3_mobile enabled not traditional Chinese`; user requested a UI hint for what this is. | `third_party/typeduck-web/source/src/YuneStatusStrip.tsx`, `third_party/typeduck-web/source/src/App.tsx`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`, `third_party/typeduck-web/source/src/index.css` | Status strip has a Cantonese-first label and one-line hint; badges use labeled, user-readable text instead of raw booleans; existing `data-yune-status-*` attributes remain for tests; before/after screenshots prove the hint is clear without crowding the toolbar/schema area. |
-| M24-DOGFOOD-10 | Open | UI polish / schema switcher names | The schema switcher uses English-ish labels such as `Jyutping`, `Cangjie 5`, and `Luna Pinyin`, even though the bundled schema YAML has real names: `粵語拼音`, `倉頡五代`, and `普通話`. The UI should show the real schema names where possible, with romanized/English helper text only as secondary text. | Browser comment on `/web/` schema switcher: user asked whether the real names should be `粵拼` / `倉頡五代` instead of English spellings. Local schema check: `jyut6ping3_mobile.schema.yaml` has `schema/name: 粵語拼音`, `cangjie5.schema.yaml` has `schema/name: 倉頡五代`, and `luna_pinyin.schema.yaml` has `schema/name: 普通話`. | `third_party/typeduck-web/source/src/consts.ts`, `third_party/typeduck-web/source/src/SchemaSwitcher.tsx`, `third_party/typeduck-web/source/schema/*.schema.yaml`, `third_party/typeduck-web/source/src/YuneStatusStrip.tsx`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts` | Schema switcher labels are Cantonese/Chinese-first and checked against bundled `schema/name` values; schema IDs are not the primary visible labels; the status strip and switcher agree on the selected schema name; browser screenshots prove the schema selector remains readable. |
-| M24-DOGFOOD-11 | Open | Browser integration / reverse lookup dogfood | The web dogfood does not visibly support the expected Jyutping reverse-lookup flow: with Jyutping active, typing Mandarin pinyin after a backtick, for example `` `zhe ``, should use the `luna_pinyin` lookup path and offer `這` as a candidate. | User feedback on `/web/`: expected `` `zhe `` to show `這`. Local code check: core and ABI have reverse-lookup translator/filter tests; `typeduck_web.rs` already proves browser app assets can reverse lookup for Cangjie/Luna schemas, but the visible Jyutping option is `jyut6ping3_mobile`, whose source schema does not declare the full reverse-lookup recognizer/translator path from `jyut6ping3.schema.yaml`. | `third_party/typeduck-web/source/schema/jyut6ping3_mobile.schema.yaml`, `third_party/typeduck-web/source/schema/jyut6ping3.schema.yaml`, `third_party/typeduck-web/source/schema/luna_pinyin.*`, `third_party/typeduck-web/source/src/consts.ts`, `third_party/typeduck-web/source/src/App.tsx`, `third_party/typeduck-web/source/src/yune-integration/adapter.ts`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`, `crates/yune-rime-api/tests/typeduck_web.rs`, `crates/yune-rime-api/src/typeduck_web.rs`, `crates/yune-rime-api/src/schema_install.rs` | With the visible Jyutping schema active, typing `` `zhe `` produces a candidate page containing `這`; the UI exposes a Cantonese-first reverse-lookup hint/example; normal `nei` / `jigaajiusihaa` Jyutping composition remains unchanged; native `typeduck_web` and browser Playwright evidence prove the path uses packaged browser assets, not an ad hoc frontend mock. |
-| M24-DOGFOOD-12 | Open | UI polish / Chinese typeface picker | The `中文字體 Chinese Typeface` control is a two-button `宋體 Sung` / `黑體 Hei` toggle backed by `isHeiTypeface`, which is ambiguous and hides the actual font family. It should become a radio list using full font family names. | Browser comment on `/web/` display controls: user selected `中文字體 Chinese Typeface 宋體 Sung 黑體 Hei` and requested a radio list with full names. Official Google Fonts pages confirm the requested family names: Chocolate Classical Sans, Iansui, LXGW WenKai Mono TC, LXGW WenKai TC, WDXL Lubrifont TC, Chiron GoRound TC, Chiron Hei HK, and Chiron Sung HK. | `third_party/typeduck-web/source/src/types.ts`, `third_party/typeduck-web/source/src/consts.ts`, `third_party/typeduck-web/source/src/hooks.ts`, `third_party/typeduck-web/source/src/Preferences.tsx`, `third_party/typeduck-web/source/src/App.tsx`, `third_party/typeduck-web/source/src/Candidate.tsx`, `third_party/typeduck-web/source/src/DictionaryPanel.tsx`, `third_party/typeduck-web/source/src/index.css`, `third_party/typeduck-web/source/tailwind.config.ts`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts` | The display controls expose a Cantonese-first `中文字款 Chinese Typeface` radio list with the eight full family names; the selected family applies consistently to textarea, candidate rows, and dictionary panel text; the old `宋體 Sung` / `黑體 Hei` segmented toggle is gone; legacy `isHeiTypeface` storage maps to Chiron Sung HK / Chiron Hei HK; font loading does not block IME initialization. |
-| M24-DOGFOOD-13 | Open | UI stack simplification / DaisyUI removal | The dogfood demo still depends on DaisyUI even though the intended stack is Vite + React + Tailwind CSS + small local components. DaisyUI classes such as `btn`, `toggle`, `radio`, `textarea`, `badge`, and `join` are used across the UI, and `tailwind.config.ts` imports the DaisyUI plugin. | User confirmed the desired stack should be simple because this is a debugging and stress-testing dogfood demo, not a large product site. The replacement UI does not need to keep the current DaisyUI look; it should be minimalistic and elegant while staying readable for debugging. Local code check: `third_party/typeduck-web/source/package.json` lists `daisyui`, `tailwind.config.ts` imports and configures it, and local components currently wrap DaisyUI classes. | `third_party/typeduck-web/source/package.json`, `third_party/typeduck-web/source/tailwind.config.ts`, `third_party/typeduck-web/source/src/Inputs.tsx`, `third_party/typeduck-web/source/src/index.css`, `third_party/typeduck-web/source/src/Toolbar.tsx`, `third_party/typeduck-web/source/src/ThemeSwitcher.tsx`, `third_party/typeduck-web/source/src/YuneFeatureShowcase.tsx`, `third_party/typeduck-web/source/src/App.tsx`, `third_party/typeduck-web/source/src/Preferences.tsx`, `third_party/typeduck-web/source/src/CandidatePanel.tsx`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts` | `daisyui` is removed from package metadata and Tailwind config; no `btn`, `toggle`, `radio`, `checkbox`, `range`, `textarea`, `badge`, `join`, or DaisyUI theme-controller classes remain in `src`; local Tailwind components preserve the existing controls, dark/light theme, keyboard accessibility, and Playwright-visible behavior without preserving the old DaisyUI visual style; the resulting UI is minimalistic, elegant, and readable; `npm.cmd --prefix third_party/typeduck-web/source run build` passes without DaisyUI. |
+| M24-DOGFOOD-01 | Closed | Browser integration / performance | First visit to `http://localhost:5173/web/` remains on `載入中 Loading...` for too long. | Fresh browser tab to `/web/`; user observed a long loading period before the IME becomes usable. | `third_party/typeduck-web/source/src/worker.ts`, `third_party/typeduck-web/source/src/yune-integration/adapter.ts`, `third_party/typeduck-web/source/src/yune-integration/assets.ts`, `packages/yune-typeduck-runtime/`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts` | Closed with startup marker and resource evidence under `third_party/typeduck-web/e2e/results/m24-dogfooding/M24-DOGFOOD-01/`; owned by Playwright `M24 startup timing trace records loading phases`. |
+| M24-DOGFOOD-02 | Closed | Browser integration / comment rendering | Long phrase candidates show a literal `\f` before Jyutping on following single-character candidates, while single-character input does not show it. | Type a long phrase such as `jigaajiusihaa`; screenshot shows candidates like `以 \fji5`. | `third_party/typeduck-web/source/src/CandidateInfo.ts`, `third_party/typeduck-web/source/src/Candidate.tsx`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`, candidate comments from `crates/yune-rime-api/tests/typeduck_web.rs` | Closed with clean candidate-row evidence under `third_party/typeduck-web/e2e/results/m24-dogfooding/M24-DOGFOOD-02/`; owned by Playwright `M24 phrase comments render without raw control markers`. |
+| M24-DOGFOOD-03 | Closed | UI polish / candidate layout | Compound-candidate dictionary glosses render horizontally next to the candidate text, making `而家要思考(compound 詞組) 而家 (now) 要 (want; need) 思考 (think; ponder)` read like one confusing inline candidate. | Type `jigaajiusihaa`; screenshot shows the first highlighted candidate widened across the horizontal row. | `third_party/typeduck-web/source/src/Candidate.tsx`, `third_party/typeduck-web/source/src/CandidatePanel.tsx`, `third_party/typeduck-web/source/src/DictionaryPanel.tsx`, `third_party/typeduck-web/source/src/index.css` | Closed with compact row and dictionary-panel evidence under `third_party/typeduck-web/e2e/results/m24-dogfooding/M24-DOGFOOD-03/`; owned by Playwright `M24 compound candidate rows stay compact with details in the dictionary panel`. |
+| M24-DOGFOOD-04 | Closed | Engine correctness / oracle recheck with version-skew risk | For `jigaajiusihaa`, after the first compound candidate the next candidates are single characters, while the user-observed live TypeDuck behavior appears to prefer word entries such as `而家`, `依家`, `宜家` before single characters. | User compared the internal playground with `https://www.typeduck.hk/web/`; live product appears to show word candidates in positions 2-3. Current Yune behavior is already influenced by the M21-pinned `prediction_candidate_limit=1` TypeDuck profile rule, so this must be fixture-first. | `scripts/capture-typeduck-jyutping.ps1`, `crates/yune-core/tests/cantonese_parity.rs`, `crates/yune-core/src/translator/mod.rs`, `crates/yune-core/src/dictionary/`, `crates/yune-rime-api/tests/typeduck_web.rs`, M21 source-aware evidence under `third_party/typeduck-web/e2e/results/m21-product-comparison/` | Closed with pinned TypeDuck `v1.1.2` fixture `jyut6ping3-m24-dogfooding.json` and browser order evidence under `third_party/typeduck-web/e2e/results/m24-dogfooding/M24-DOGFOOD-04/`; owned by `typeduck_v112_m24_dogfooding_fixture_is_locked`, `m24_jigaajiusihaa_order_matches_typeduck_v112_dogfood_fixture`, and Playwright `M24 jigaajiusihaa order is recorded against the current pinned expectation`. |
+| M24-DOGFOOD-05 | Closed | UI polish / settings localization and help text | Settings and developer controls mix Cantonese/English and many labels are English-only, so a new developer cannot tell what active engine controls or live session controls do. Cantonese should come first for all labels; active engine and live session toggles need short description text. Display controls need Cantonese-first labels but no extra descriptions. | Browser comment on `/web/` settings area: selected controls include `Active engine controls`, `Live session controls`, `Display controls`, `Yune inspector`, `Schema`, and English-only toggle labels such as `ASCII mode`, `Full shape`, `Prediction threshold`, and `Dictionary exclude`. | `third_party/typeduck-web/source/src/Preferences.tsx`, `third_party/typeduck-web/source/src/Inputs.tsx`, `third_party/typeduck-web/source/src/Toolbar.tsx`, `third_party/typeduck-web/source/src/SchemaSwitcher.tsx`, `third_party/typeduck-web/source/src/App.tsx`, `third_party/typeduck-web/source/src/YuneInspector.tsx`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts` | Closed with desktop and narrow settings evidence under `third_party/typeduck-web/e2e/results/m24-dogfooding/M24-DOGFOOD-05/`; owned by Playwright `M24 settings labels are Cantonese-first and grouped by engine, session, display, and frontend`. |
+| M24-DOGFOOD-06 | Closed | UI polish / display-language control semantics | The display-language fieldset shows both radio buttons and checkboxes, making it unclear whether the radio or checklist controls dictionary/comment language display. The visible UI should be a checklist only. | Browser comment on `/web/` display controls: `Display languages` shows five radio buttons on the left, five checkboxes on the right, and an arrow row for `主要語言 Main Language`. | `third_party/typeduck-web/source/src/Preferences.tsx`, `third_party/typeduck-web/source/src/Inputs.tsx`, `third_party/typeduck-web/source/src/CandidateInfo.ts`, `third_party/typeduck-web/source/src/DictionaryPanel.tsx`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts` | Closed with checklist and candidate evidence under `third_party/typeduck-web/e2e/results/m24-dogfooding/M24-DOGFOOD-06/`; owned by Playwright `M24 display languages use a checklist with deterministic primary language`. |
+| M24-DOGFOOD-07 | Closed | Browser integration / customize page-size wiring | The `每頁候選詞數量 No. of Candidates Per Page` slider appears not to control candidate page size; typing after selecting a smaller value still shows more candidates than selected. | Browser comment on `/web/` settings area: user changed the candidate-number control, then typed input whose candidate row clearly exceeded the selected page size. | `third_party/typeduck-web/source/src/Preferences.tsx`, `third_party/typeduck-web/source/src/App.tsx`, `third_party/typeduck-web/source/src/yune-integration/adapter.ts`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`, `crates/yune-rime-api/tests/typeduck_web.rs`, `crates/yune-rime-api/src/typeduck_web.rs`, `crates/yune-rime-api/src/context_api.rs` | Closed with page-size 4/10 evidence under `third_party/typeduck-web/e2e/results/m24-dogfooding/M24-DOGFOOD-07/`; owned by `typeduck_adapter_real_assets_page_size_customize_limits_context_page` and Playwright `M24 candidate page-size slider limits the visible candidate page`. |
+| M24-DOGFOOD-08 | Closed | UI polish / frontend candidate-menu layout | The playground has no control for horizontal versus vertical candidate menu layout. Users familiar with RIME expect a menu style choice, but this web setting should be clearly grouped as a frontend display preference rather than an engine/schema control. | Browser comment on `/web/` settings area: user requested a horizontal/vertical candidate list control and clearer grouping that distinguishes engine controls from web frontend controls. | `third_party/typeduck-web/source/src/Preferences.tsx`, `third_party/typeduck-web/source/src/types.ts`, `third_party/typeduck-web/source/src/consts.ts`, `third_party/typeduck-web/source/src/CandidatePanel.tsx`, `third_party/typeduck-web/source/src/Candidate.tsx`, `third_party/typeduck-web/source/src/index.css`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts` | Closed with horizontal/vertical screenshots and identical engine-output signatures under `third_party/typeduck-web/e2e/results/m24-dogfooding/M24-DOGFOOD-08/`; owned by Playwright `M24 candidate menu layout is a frontend-only horizontal or vertical setting`. |
+| M24-DOGFOOD-09 | Closed | UI polish / engine status strip explanation | The status strip under the schema switcher shows raw badges such as `jyut6ping3_mobile`, `enabled`, `not traditional`, and `Chinese` with no hint explaining what the strip is or what each value means. | Browser comment on `/web/` status strip: selected `jyut6ping3_mobile enabled not traditional Chinese`; user requested a UI hint for what this is. | `third_party/typeduck-web/source/src/YuneStatusStrip.tsx`, `third_party/typeduck-web/source/src/App.tsx`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`, `third_party/typeduck-web/source/src/index.css` | Closed with status JSON and screenshot under `third_party/typeduck-web/e2e/results/m24-dogfooding/M24-DOGFOOD-09/`; owned by Playwright `M24 engine status strip explains labeled state`. |
+| M24-DOGFOOD-10 | Closed | UI polish / schema switcher names | The schema switcher uses English-ish labels such as `Jyutping`, `Cangjie 5`, and `Luna Pinyin`, even though the bundled schema YAML has real names: `粵語拼音`, `倉頡五代`, and `普通話`. The UI should show the real schema names where possible, with romanized/English helper text only as secondary text. | Browser comment on `/web/` schema switcher: user asked whether the real names should be `粵拼` / `倉頡五代` instead of English spellings. Local schema check: `jyut6ping3_mobile.schema.yaml` has `schema/name: 粵語拼音`, `cangjie5.schema.yaml` has `schema/name: 倉頡五代`, and `luna_pinyin.schema.yaml` has `schema/name: 普通話`. | `third_party/typeduck-web/source/src/consts.ts`, `third_party/typeduck-web/source/src/SchemaSwitcher.tsx`, `third_party/typeduck-web/source/schema/*.schema.yaml`, `third_party/typeduck-web/source/src/YuneStatusStrip.tsx`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts` | Closed with schema-switcher screenshot under `third_party/typeduck-web/e2e/results/m24-dogfooding/M24-DOGFOOD-10/`; owned by Playwright `M24 schema switcher uses bundled real schema names`. |
+| M24-DOGFOOD-11 | Closed | Browser integration / reverse lookup dogfood | The web dogfood does not visibly support the expected Jyutping Mandarin-pinyin lookup flow: with Jyutping active, typing the `luna_pinyin` affix path, for example `` `pzhe ``, should offer `這` as a candidate. Bare `` `zhe `` is the generic reverse-lookup tag in the full Jyutping schema, not the Mandarin pinyin affix path. | User feedback on `/web/`: expected backtick + Mandarin pinyin to show `這`; local schema check shows `jyut6ping3.schema.yaml` uses `luna_pinyin` prefix `` `p `` and a `;` suffix, while `jyut6ping3_mobile` does not expose that full recognizer/translator path. Core and ABI have reverse-lookup translator/filter tests, and `typeduck_web.rs` already proves browser app assets can reverse lookup for Cangjie/Luna schemas. | `third_party/typeduck-web/source/schema/jyut6ping3_mobile.schema.yaml`, `third_party/typeduck-web/source/schema/jyut6ping3.schema.yaml`, `third_party/typeduck-web/source/schema/luna_pinyin.*`, `third_party/typeduck-web/source/src/consts.ts`, `third_party/typeduck-web/source/src/App.tsx`, `third_party/typeduck-web/source/src/yune-integration/adapter.ts`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`, `crates/yune-rime-api/tests/typeduck_web.rs`, `crates/yune-rime-api/src/typeduck_web.rs`, `crates/yune-rime-api/src/schema_install.rs` | Closed with `pzhe` JSON/screenshot under `third_party/typeduck-web/e2e/results/m24-dogfooding/M24-DOGFOOD-11/`; owned by `typeduck_adapter_browser_app_assets_load_jyutping_mandarin_pinyin_reverse_lookup` and Playwright `M24 Jyutping reverse lookup accepts Mandarin pinyin affix input`. |
+| M24-DOGFOOD-12 | Closed | UI polish / Chinese typeface picker | The `中文字體 Chinese Typeface` control is a two-button `宋體 Sung` / `黑體 Hei` toggle backed by `isHeiTypeface`, which is ambiguous and hides the actual font family. It should become a radio list using full font family names. | Browser comment on `/web/` display controls: user selected `中文字體 Chinese Typeface 宋體 Sung 黑體 Hei` and requested a radio list with full names. Official Google Fonts pages confirm the requested family names: Chocolate Classical Sans, Iansui, LXGW WenKai Mono TC, LXGW WenKai TC, WDXL Lubrifont TC, Chiron GoRound TC, Chiron Hei HK, and Chiron Sung HK. | `third_party/typeduck-web/source/src/types.ts`, `third_party/typeduck-web/source/src/consts.ts`, `third_party/typeduck-web/source/src/hooks.ts`, `third_party/typeduck-web/source/src/Preferences.tsx`, `third_party/typeduck-web/source/src/App.tsx`, `third_party/typeduck-web/source/src/Candidate.tsx`, `third_party/typeduck-web/source/src/DictionaryPanel.tsx`, `third_party/typeduck-web/source/src/index.css`, `third_party/typeduck-web/source/tailwind.config.ts`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts` | Closed with font-resource JSON and screenshot under `third_party/typeduck-web/e2e/results/m24-dogfooding/M24-DOGFOOD-12/`; owned by Playwright `M24 Chinese typeface picker applies full family names to visible Chinese surfaces`. |
+| M24-DOGFOOD-13 | Closed | UI stack simplification / DaisyUI removal | The dogfood demo still depends on DaisyUI even though the intended stack is Vite + React + Tailwind CSS + small local components. DaisyUI classes such as `btn`, `toggle`, `radio`, `textarea`, `badge`, and `join` are used across the UI, and `tailwind.config.ts` imports the DaisyUI plugin. | User confirmed the desired stack should be simple because this is a debugging and stress-testing dogfood demo, not a large product site. The replacement UI does not need to keep the current DaisyUI look; it should be minimalistic and elegant while staying readable for debugging. Local code check: `third_party/typeduck-web/source/package.json` lists `daisyui`, `tailwind.config.ts` imports and configures it, and local components currently wrap DaisyUI classes. | `third_party/typeduck-web/source/package.json`, `third_party/typeduck-web/source/tailwind.config.ts`, `third_party/typeduck-web/source/src/Inputs.tsx`, `third_party/typeduck-web/source/src/index.css`, `third_party/typeduck-web/source/src/Toolbar.tsx`, `third_party/typeduck-web/source/src/ThemeSwitcher.tsx`, `third_party/typeduck-web/source/src/YuneFeatureShowcase.tsx`, `third_party/typeduck-web/source/src/App.tsx`, `third_party/typeduck-web/source/src/Preferences.tsx`, `third_party/typeduck-web/source/src/CandidatePanel.tsx`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts` | Closed with local Tailwind screenshot under `third_party/typeduck-web/e2e/results/m24-dogfooding/M24-DOGFOOD-13/`; owned by Playwright `M24 dogfood UI uses only local Tailwind components` and `npm.cmd --prefix third_party/typeduck-web/source run build`. |
 
 ---
 
@@ -375,6 +412,7 @@ Input: jigaajiusihaa
 Internal playground observed: top compound candidate, then single-character rows.
 Live product observed by user: word candidates such as 而家 / 依家 / 宜家 appear before single-character rows.
 Hard-oracle status: not captured yet for this exact input.
+Existing Yune constraint: M21 pinned `jyut6ping3` prediction behavior to one long prediction before single-character rows via `prediction_candidate_limit=1`.
 ```
 
 - [ ] **Step 2: Capture TypeDuck `v1.1.2` for the exact input**
@@ -453,10 +491,11 @@ Use existing source-aware diagnostics from the M21 pattern to classify candidate
 - Are word entries present but ranked after single-character entries?
 - Does the sentence fallback return only one compound row and suppress the rest of the word path?
 - Is the live product behavior version skew rather than TypeDuck `v1.1.2` behavior?
+- Does the M21 prediction-candidate limit already explain the current order?
 
 - [ ] **Step 5: Implement only the oracle-backed ordering fix**
 
-If TypeDuck `v1.1.2` expects word candidates before single-character rows, adjust the narrow TypeDuck profile path. Keep default upstream `luna_pinyin` behavior untouched and keep TypeDuck-specific tuning behind explicit profile config.
+If TypeDuck `v1.1.2` expects word candidates before single-character rows, adjust the narrow TypeDuck profile path. Keep default upstream `luna_pinyin` behavior untouched and keep TypeDuck-specific tuning behind explicit profile config. If TypeDuck `v1.1.2` matches the current compound-then-single-character order, document the deployed-site difference as version skew and do not change ranking.
 
 - [ ] **Step 6: Add browser evidence**
 
@@ -704,6 +743,8 @@ Save after screenshots under `third_party/typeduck-web/e2e/results/m24-dogfoodin
 - Modify: `crates/yune-rime-api/tests/typeduck_web.rs`
 - Inspect first, then modify only if the bridge cannot customize the deployed key correctly: `crates/yune-rime-api/src/typeduck_web.rs`
 - Inspect first, then modify only if the deployed context ignores the customized key: `crates/yune-rime-api/src/context_api.rs`
+
+- **Known root-cause hypothesis:** this is not primarily a React wiring bug. The current patch/integration adapter maps the page-size preference through `customizeSetting("page_size", ...)`, while the deployed schema/context path reads `menu/page_size`. Prove or disprove that key mismatch first.
 
 - [ ] **Step 1: Capture the browser failure against the real settings control**
 
@@ -1244,7 +1285,7 @@ Expected: the schema switcher uses checked real schema names, the selected schem
 
 - [ ] **Step 1: Add a failing browser test for the user-visible Jyutping flow**
 
-The test should use the visible Jyutping schema, type the same backtick flow a user would type, and assert only the behavior we know from the report: `這` is present somewhere on the page.
+The test should use the visible Jyutping schema, type the Mandarin pinyin affix path from the full Jyutping schema, and assert only the behavior we know from the report: `這` is present somewhere on the page. Use `` `pzhe `` for the pinyin path; do not use bare `` `zhe `` unless a separate fixture proves the generic reverse-lookup tag should also be wired.
 
 ```ts
 test("M24 Jyutping reverse lookup accepts Mandarin pinyin", async ({ page }) => {
@@ -1253,7 +1294,7 @@ test("M24 Jyutping reverse lookup accepts Mandarin pinyin", async ({ page }) => 
   const inputField = page.locator("input[type='text'], textarea").first();
   await clearComposition(page);
   await inputField.focus();
-  await inputField.type("`zhe", { delay: 120 });
+  await inputField.type("`pzhe", { delay: 120 });
 
   await expect.poll(async () => {
     const state = await readCandidatePanelSnapshot(page, false);
@@ -1261,12 +1302,12 @@ test("M24 Jyutping reverse lookup accepts Mandarin pinyin", async ({ page }) => 
   }, { timeout: 10000 }).toContain("這");
 
   const state = await readCandidatePanelSnapshot(page, false);
-  await saveM24Json("M24-DOGFOOD-11", "jyutping-reverse-lookup-zhe.json", state);
-  await takeM24Screenshot(page, "M24-DOGFOOD-11", "jyutping-reverse-lookup-zhe");
+  await saveM24Json("M24-DOGFOOD-11", "jyutping-reverse-lookup-pzhe.json", state);
+  await takeM24Screenshot(page, "M24-DOGFOOD-11", "jyutping-reverse-lookup-pzhe");
 });
 ```
 
-Expected before the fix: this fails because the visible Jyutping schema does not produce `這` for `` `zhe `` in the browser dogfood.
+Expected before the fix: this fails because the visible Jyutping schema does not produce `這` for `` `pzhe `` in the browser dogfood.
 
 - [ ] **Step 2: Add a native `typeduck_web` bridge test for the same packaged-assets path**
 
@@ -1290,7 +1331,7 @@ fn typeduck_adapter_browser_app_assets_load_jyutping_mandarin_reverse_lookup() {
     assert!(!state.is_null(), "jyut6ping3_mobile should initialize from browser app assets");
 
     assert_eq!(unsafe { yune_typeduck_deploy(state) }, TRUE);
-    let reverse = process_input(state, "`zhe");
+    let reverse = process_input(state, "`pzhe");
     let texts = reverse["context"]["candidates"]
         .as_array()
         .expect("candidate list should be an array")
@@ -1299,7 +1340,7 @@ fn typeduck_adapter_browser_app_assets_load_jyutping_mandarin_reverse_lookup() {
         .collect::<Vec<_>>();
     assert!(
         texts.contains(&"這"),
-        "jyut6ping3_mobile reverse lookup should expose 這 for `zhe, got {texts:?}"
+        "jyut6ping3_mobile reverse lookup should expose 這 for `pzhe, got {texts:?}"
     );
 
     drop(response_json(unsafe {
@@ -1327,7 +1368,7 @@ Expected before the fix: the test fails on the `texts.contains(&"這")` assertio
 
 - [ ] **Step 3: Wire reverse lookup into the visible Jyutping web schema without changing normal composition**
 
-Keep `jyut6ping3_mobile` as the visible Jyutping schema unless a fresh TypeDuck `v1.1.2` fixture proves the product uses a different schema for the web dogfood. Extend only the backtick path by borrowing the full Jyutping reverse-lookup declarations:
+Keep `jyut6ping3_mobile` as the visible Jyutping schema unless a fresh TypeDuck `v1.1.2` fixture proves the product uses a different schema for the web dogfood. Extend only the Mandarin pinyin affix path by borrowing the full Jyutping `luna_pinyin` declarations:
 
 ```yaml
 schema:
@@ -1340,26 +1381,34 @@ engine:
   segmentors:
     - ascii_segmentor
     - matcher
-    - affix_segmentor@reverse_lookup
+    - affix_segmentor@luna_pinyin
     - abc_segmentor
     - punct_segmentor
     - fallback_segmentor
   translators:
     - punct_translator
     - script_translator
-    - reverse_lookup_translator
+    - script_translator@luna_pinyin
   filters:
     - dictionary_lookup_filter
     - simplifier
 
-reverse_lookup:
-  tag: reverse_lookup
+luna_pinyin:
+  tag: luna_pinyin
   dictionary: luna_pinyin
-  target: translator
-  prefix: "`"
-  suffix: ""
-  tips: 〔普通話反查〕
-  enable_completion: true
+  enable_sentence: false
+  enable_user_dict: false
+  encode_commit_history: false
+  always_show_comments: true
+  prefix: "`p"
+  suffix: ";"
+  tips: 〔普通話〕
+  preedit_format:
+    - xform/([nl])v/$1ü/
+    - xform/([nl])ue/$1üe/
+    - xform/([jqxy])v/$1u/
+  comment_format:
+    - xform/^/\v/
 ```
 
 Preserve the existing `translator` block, `menu` patch, and mobile patches in `jyut6ping3_mobile.schema.yaml`. If the deployed/generated schema already defines `engine` through `template:/`, place the added segmentor/translator items in the source YAML and verify the deployed schema includes them after build.
@@ -1372,15 +1421,15 @@ Update the Jyutping schema option and the quick example controls so users can di
 {
   id: "jyut6ping3_mobile",
   label: "粵語拼音 Jyutping",
-  reverseLookup: "`zhe -> 這（普通話反查）",
+  reverseLookup: "`pzhe -> 這（普通話反查）",
 }
 ```
 
 If M24-DOGFOOD-10 has already expanded `SchemaOption`, keep the same fields and only update the Jyutping `reverseLookup` text. Add a small Cantonese-first example button near the existing examples:
 
 ```tsx
-<button type="button" className="btn btn-sm btn-outline" onClick={() => runScenario("`zhe")}>
-  反查 `zhe
+<button type="button" className="yd-button" onClick={() => runScenario("`pzhe")}>
+  反查 `pzhe
 </button>
 ```
 
@@ -1412,7 +1461,7 @@ npm.cmd --prefix third_party/typeduck-web/source run build
 npx --prefix third_party/typeduck-web/source playwright test third_party/typeduck-web/e2e/yune-typeduck.spec.ts -g "M24 Jyutping reverse lookup"
 ```
 
-Expected: `jyut6ping3_mobile` still initializes from the browser app assets, `` `zhe `` exposes `這`, normal Jyutping composition stays green, and the screenshot under `M24-DOGFOOD-11` shows the reverse-lookup candidate in the real web panel.
+Expected: `jyut6ping3_mobile` still initializes from the browser app assets, `` `pzhe `` exposes `這`, normal Jyutping composition stays green, and the screenshot under `M24-DOGFOOD-11` shows the reverse-lookup candidate in the real web panel.
 
 ## Task 13: M24-DOGFOOD-12 Replace The Sung/Hei Toggle With A Full Typeface Picker
 
@@ -2079,6 +2128,8 @@ Expected: the app builds without DaisyUI, the smoke UI remains visible, candidat
 
 **Files:**
 - Modify: this plan as issue rows close
+- Modify when TypeDuck-Web source changes: `third_party/typeduck-web/patches/yune-typeduck-runtime.patch`
+- Modify when Yune-owned integration changes: `third_party/typeduck-web/yune-integration/*`
 - Modify if requirements become durable: `docs/requirements.md`
 - Modify when M24 closes: `docs/roadmap.md`
 
@@ -2106,7 +2157,18 @@ cargo test -p yune-core --test cantonese_parity
 cargo test -p yune-rime-api --test typeduck_web
 ```
 
-- [ ] **Step 2: Run broad gates before closing a batch**
+- [ ] **Step 2: Regenerate and check the TypeDuck-Web patch if any source files changed**
+
+If any task edited `third_party/typeduck-web/source/...`, regenerate the maintained patch and run both checks from `third_party/typeduck-web/source`:
+
+```powershell
+git apply --reverse --check ..\patches\yune-typeduck-runtime.patch
+git apply --check ..\patches\yune-typeduck-runtime.patch
+```
+
+Expected: both commands exit 0 after the source checkout is in the matching state for the direction being checked. The staged diff must include `third_party/typeduck-web/patches/yune-typeduck-runtime.patch`; untracked ignored `source/` edits alone are not a valid M24 deliverable.
+
+- [ ] **Step 3: Run broad gates before closing a batch**
 
 Run:
 
@@ -2119,14 +2181,14 @@ npm.cmd --prefix packages/yune-typeduck-runtime test
 npm.cmd --prefix packages/yune-typeduck-runtime run build
 ```
 
-- [ ] **Step 3: Update the running ledger**
+- [ ] **Step 4: Update the running ledger**
 
 For each closed row, change `Status` from `Open` to `Closed`, add the evidence directory, and state which test owns the regression.
 
-- [ ] **Step 4: Add requirements only for durable product/demo contracts**
+- [ ] **Step 5: Add requirements only for durable product/demo contracts**
 
 Do not add requirement IDs for every small bug. Add `M24-DOGFOOD-*` requirements only when a finding becomes a durable contract, such as startup budget, no raw comment-control rendering, or candidate-detail layout behavior.
 
-- [ ] **Step 5: Archive M24 only after the dogfooding batch is intentionally closed**
+- [ ] **Step 6: Archive M24 only after the dogfooding batch is intentionally closed**
 
 When the current batch is complete, move this plan to `docs/plans/archive/`, update `docs/roadmap.md`, and keep future dogfooding rounds as a new plan or a reopened M24 continuation only if the scope is still the same browser playground.

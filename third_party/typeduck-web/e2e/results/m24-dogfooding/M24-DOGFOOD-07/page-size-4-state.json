@@ -1,0 +1,34 @@
+{
+  "aiEnabled": false,
+  "inputValue": "",
+  "candidates": [
+    {
+      "index": 0,
+      "text": "而家要試下",
+      "note": "(compound 詞組)",
+      "source": null,
+      "rowText": "1.ji4 gaa1 jiu3 si3 haa5而家要試下(compound 詞組)ⓘ"
+    },
+    {
+      "index": 1,
+      "text": "而家",
+      "note": null,
+      "source": null,
+      "rowText": "2.ji4gaa1而家"
+    },
+    {
+      "index": 2,
+      "text": "依家",
+      "note": null,
+      "source": null,
+      "rowText": "3.ji1gaa1依家"
+    },
+    {
+      "index": 3,
+      "text": "宜家",
+      "note": null,
+      "source": null,
+      "rowText": "4.ji4gaa1宜家"
+    }
+  ]
+}

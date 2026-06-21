@@ -1,0 +1,1388 @@
+{
+    "oracle":  {
+                   "engine":  "TypeDuck-HK/librime",
+                   "engine_tag":  "v1.1.2",
+                   "engine_commit":  "74cb52b78fb2411137a7643f6c8bc6517acfde69",
+                   "canonical_repository":  "https://github.com/TypeDuck-HK/librime",
+                   "release_url":  "https://github.com/TypeDuck-HK/librime/releases/tag/v1.1.2",
+                   "release_asset":  "rime-TypeDuck-v1.1.2-Windows-msvc-x64.7z",
+                   "dependency_asset":  "rime-deps-TypeDuck-v1.1.2-Windows-msvc-x64.7z",
+                   "plugin":  "TypeDuck-HK/rime-dictionary-lookup-filter",
+                   "plugin_commit":  "3e4605c4fae99f068df2edb85aaeab5a97752795",
+                   "schema":  "TypeDuck-HK/schema",
+                   "schema_commit":  "1bed1ae6a0ab48055f073774d7dfd152a171c548",
+                   "capture_date":  "2026-06-21",
+                   "capture_command":  "powershell -ExecutionPolicy Bypass -File scripts/capture-typeduck-jyutping.ps1 -Fixture Dogfooding",
+                   "host":  "Windows"
+               },
+    "schema":  "jyut6ping3_mobile",
+    "schemas":  [
+                    "jyut6ping3_mobile"
+                ],
+    "module_list":  [
+                        "default",
+                        "dictionary_lookup"
+                    ],
+    "scenarios":  [
+                      "dogfooding_order"
+                  ],
+    "capture":  {
+                    "schema_data":  "TypeDuck-HK/schema",
+                    "schema_data_commit":  "1bed1ae6a0ab48055f073774d7dfd152a171c548",
+                    "dictionary":  "jyut6ping3.dict.yaml",
+                    "source_row_policy":  "typeduck_v112_m24_dogfooding_exact_inputs",
+                    "candidate_layout":  "TypeDuck v1.1.2 RimeCandidate includes quality before reserved",
+                    "option_delivery":  "deploy-time common.custom.yaml/default.custom.yaml variants; runtime set_option does not apply these schema __patch hooks",
+                    "modules":  [
+                                    "default",
+                                    "dictionary_lookup"
+                                ],
+                    "input_sequence":  [
+                                           "jigaajiusihaa",
+                                           "jigaa",
+                                           "jiusihau",
+                                           "jigaajiu"
+                                       ],
+                    "oracle_observable_surface":  "RimeGetContext selected_candidates records M24 dogfood phrases against TypeDuck v1.1.2 instead of the live deployed web app",
+                    "settings_profile":  "default_combined uses no common.custom patches; translator/combine_candidates stays true and translator/prediction_candidate_limit remains 1",
+                    "m21_constraint":  "Protects the M21 prediction_candidate_limit=1 browser profile while recording the dogfood phrase order"
+                },
+    "cases":  [
+                  {
+                      "schema_id":  "jyut6ping3_mobile",
+                      "schema_name":  "粵語拼音",
+                      "input":  "jigaajiusihaa",
+                      "rime_get_input":  "jigaajiusihaa",
+                      "processed":  [
+                                        1,
+                                        1,
+                                        1,
+                                        1,
+                                        1,
+                                        1,
+                                        1,
+                                        1,
+                                        1,
+                                        1,
+                                        1,
+                                        1,
+                                        1
+                                    ],
+                      "is_composing":  true,
+                      "is_ascii_mode":  false,
+                      "preedit":  "ji gaa jiu si haa",
+                      "commit_text_preview":  "而家要試下",
+                      "highlighted_candidate_index":  0,
+                      "page_size":  50,
+                      "page_no":  0,
+                      "is_last_page":  false,
+                      "selected_candidates":  [
+                                                  {
+                                                      "index":  0,
+                                                      "text":  "而家要試下",
+                                                      "comment":  "\f\r1,而家要試下,ji4gaa1jiu3si3haa5,1,0,,,,composition,,,,,,,,,\r1,而家,ji4gaa1,1,0,,oth,ver,,,現在,,,now,ابھی,अब,अभी,sekarang\r1,要,jiu3,1,0,,v,,,,,,,want; need,چاہنا,चाहनु,चाहना,mau\r1,試下,si3haa5,1,0,,oth,ver,,,試一下,,,try having; try out,,,,untuk mencobanya",
+                                                      "quality":  0
+                                                  },
+                                                  {
+                                                      "index":  1,
+                                                      "text":  "而家",
+                                                      "comment":  "\f\r1,而家,ji4gaa1,1,0,,oth,ver,,,現在,,,now,ابھی,अब,अभी,sekarang",
+                                                      "quality":  0.00077575984172943886
+                                                  },
+                                                  {
+                                                      "index":  2,
+                                                      "text":  "依家",
+                                                      "comment":  "\f\r1,依家,ji1gaa1,1,0,,n,ver,,,現在,,,now,ابھی,अब,अभी,Menurut keluarga",
+                                                      "quality":  0.0005959102405737358
+                                                  },
+                                                  {
+                                                      "index":  3,
+                                                      "text":  "宜家",
+                                                      "comment":  "\f\r1,宜家,ji4gaa1,1,0,,n,,hk_org_retail,,,,,Ikea,,,,",
+                                                      "quality":  0.00012546005799561971
+                                                  },
+                                                  {
+                                                      "index":  4,
+                                                      "text":  "議價",
+                                                      "comment":  "\f\r1,議價,ji5gaa3,1,0,,v,,,,,,,negotiate a price,,,,tawar menawar",
+                                                      "quality":  4.2609984796413015E-05
+                                                  },
+                                                  {
+                                                      "index":  5,
+                                                      "text":  "衣架",
+                                                      "comment":  "\f\r1,衣架,ji1gaa2,1,0,,n,,,,,,,hangers,,,,",
+                                                      "quality":  1.8000001899426722E-05
+                                                  },
+                                                  {
+                                                      "index":  6,
+                                                      "text":  "移駕",
+                                                      "comment":  "\f\r1,移駕,ji4gaa3,1,0,,,,,,,,,,,,,",
+                                                      "quality":  8.00000004571169E-08
+                                                  },
+                                                  {
+                                                      "index":  7,
+                                                      "text":  "以",
+                                                      "comment":  "\f\r1,以,ji5,1,0,,adv oth,,,,,,,by,,,,oleh",
+                                                      "quality":  0.05899402279318533
+                                                  },
+                                                  {
+                                                      "index":  8,
+                                                      "text":  "而",
+                                                      "comment":  "\f\r1,而,ji4,1,0,,oth,,,,,,,and,اور,र,और,dan",
+                                                      "quality":  0.025035734197035853
+                                                  },
+                                                  {
+                                                      "index":  9,
+                                                      "text":  "意",
+                                                      "comment":  "\f\r1,意,ji3,1,0,,n,,,,,,,opinion,,,,arti",
+                                                      "quality":  0.022946600769291454
+                                                  },
+                                                  {
+                                                      "index":  10,
+                                                      "text":  "已",
+                                                      "comment":  "\f\r1,已,ji5,1,0,,adv,,,,,,,already,پہلے سے,पहिले नै,पहले से,Sudah",
+                                                      "quality":  0.020651458323842884
+                                                  },
+                                                  {
+                                                      "index":  11,
+                                                      "text":  "二",
+                                                      "comment":  "\f\r1,二,ji6,1,0,,n,,,,,,,two,دو,दुई,दो,dua",
+                                                      "quality":  0.0086712410903027667
+                                                  },
+                                                  {
+                                                      "index":  12,
+                                                      "text":  "議",
+                                                      "comment":  "\f\r1,議,ji5,1,0,,morph,,,,,,議論，議會,discussion,,,,",
+                                                      "quality":  0.0084468332394314945
+                                                  },
+                                                  {
+                                                      "index":  13,
+                                                      "text":  "醫",
+                                                      "comment":  "\f\r1,醫,ji1,1,0,,v,,,,,,醫生，醫院,cure,ڈاکٹر,चिकित्सक,डॉक्टर,medis",
+                                                      "quality":  0.0071161695909575063
+                                                  },
+                                                  {
+                                                      "index":  14,
+                                                      "text":  "依",
+                                                      "comment":  "\f\r1,依,ji1,1,0,,v,,,,,,,according to; by,کے مطابق,यस अनुसार,इसके अनुसार,berdasarkan",
+                                                      "quality":  0.00575613770141914
+                                                  },
+                                                  {
+                                                      "index":  15,
+                                                      "text":  "兒",
+                                                      "comment":  "\f\r1,兒,ji4,1,0,,n,wri,,,,仔,,son,بیٹا,छोरा,बच्चा,anak lelaki",
+                                                      "quality":  0.0046972521080074362
+                                                  },
+                                                  {
+                                                      "index":  16,
+                                                      "text":  "疑",
+                                                      "comment":  "\f\r1,疑,ji4,1,0,,v adj,,,,,,,suspect,,,,",
+                                                      "quality":  0.0045155803198586447
+                                                  },
+                                                  {
+                                                      "index":  17,
+                                                      "text":  "義",
+                                                      "comment":  "\f\r1,義,ji6,1,0,,morph,,,,,,意義，義務，名義,meaning; justice,,,,adil",
+                                                      "quality":  0.0040328515749812792
+                                                  },
+                                                  {
+                                                      "index":  18,
+                                                      "text":  "易",
+                                                      "comment":  "\f\r1,易,ji6,1,0,,adj,,,,,,容易,easy,آسان,सजिलो,आसान,gampang\r0,易,jik6,2,0,,morph,,surname,,,,交易,exchange; surname [Yik],تبادلہ,आदानप्रदान,अदला बदली,bertukar",
+                                                      "quality":  0.0029360892309838885
+                                                  },
+                                                  {
+                                                      "index":  19,
+                                                      "text":  "爾",
+                                                      "comment":  "\f\r1,爾,ji5,1,0,,n oth,,,,,,,you; your; so; like,,,,",
+                                                      "quality":  0.0029152192122361923
+                                                  },
+                                                  {
+                                                      "index":  20,
+                                                      "text":  "衣",
+                                                      "comment":  "\f\r1,衣,ji1,1,0,,n,,,,,,衣物，衣服,clothing,کپڑے,लुगा,वस्त्र,pakaian",
+                                                      "quality":  0.0028402106965232069
+                                                  },
+                                                  {
+                                                      "index":  21,
+                                                      "text":  "宜",
+                                                      "comment":  "\f\r1,宜,ji4,1,0,,adv,,,,,,,should,,,,",
+                                                      "quality":  0.0026025211882163058
+                                                  },
+                                                  {
+                                                      "index":  22,
+                                                      "text":  "移",
+                                                      "comment":  "\f\r1,移,ji4,1,0,,v,,,,,,,move,ہجرت,सार्नु,खिसकाना,bergeser",
+                                                      "quality":  0.0023126605533051216
+                                                  },
+                                                  {
+                                                      "index":  23,
+                                                      "text":  "耳",
+                                                      "comment":  "\f\r1,耳,ji5,1,0,,n,,,,,,,ear,کان,कान,कान,telinga",
+                                                      "quality":  0.0018555796446354683
+                                                  },
+                                                  {
+                                                      "index":  24,
+                                                      "text":  "伊",
+                                                      "comment":  "\f\r1,伊,ji1,1,0,,morph,,,,,,伊始，伊人,,,,,",
+                                                      "quality":  0.0018011293327352617
+                                                  },
+                                                  {
+                                                      "index":  25,
+                                                      "text":  "異",
+                                                      "comment":  "\f\r1,異,ji6,1,0,,adj,,,,,,,different; unsual,,,,berbeda",
+                                                      "quality":  0.0016347596151396091
+                                                  },
+                                                  {
+                                                      "index":  26,
+                                                      "text":  "儀",
+                                                      "comment":  "\f\r1,儀,ji4,1,0,,morph,,,,,,儀式，禮儀，儀器,ritual; equipment,,,,",
+                                                      "quality":  0.0010906902456531587
+                                                  },
+                                                  {
+                                                      "index":  27,
+                                                      "text":  "怡",
+                                                      "comment":  "\f\r1,怡,ji4,1,0,,morph,,,,,,怡情,pleasure,,,,kesenangan",
+                                                      "quality":  0.00059647028330294793
+                                                  },
+                                                  {
+                                                      "index":  28,
+                                                      "text":  "擬",
+                                                      "comment":  "\f\r1,擬,ji4,1,0,,v,wri,,,,,,intend,پلان کرنا,योजना,योजना बनाना,merencanakan\r1,擬,ji5,2,0,,v,wri,,,,,,intend,پلان کرنا,योजना,योजना बनाना,merencanakan",
+                                                      "quality":  0.0005938701185519516
+                                                  },
+                                                  {
+                                                      "index":  29,
+                                                      "text":  "椅",
+                                                      "comment":  "\f\r1,椅,ji2,1,0,,n,,,,,,,chair,,,,",
+                                                      "quality":  0.0004032199597165087
+                                                  },
+                                                  {
+                                                      "index":  30,
+                                                      "text":  "姨",
+                                                      "comment":  "\f\r1,姨,ji1,1,1,,n,,,,,,姨姨，阿姨,aunt,پھوپھو,फूपु,बूआ,bibi\r1,姨,ji4,2,0,,morph,,,,,,姨媽，姨丈,aunt; auntie,خالہ,काकी,मौसी,tante",
+                                                      "quality":  0.000234549902338036
+                                                  },
+                                                  {
+                                                      "index":  31,
+                                                      "text":  "誼",
+                                                      "comment":  "\f\r1,誼,ji4,1,0,,morph,,,,,,友誼，情誼,friendship,,,,",
+                                                      "quality":  0.00018822006458772532
+                                                  },
+                                                  {
+                                                      "index":  32,
+                                                      "text":  "倚",
+                                                      "comment":  "\f\r1,倚,ji2,1,0,,morph,,,,,,倚靠，倚賴,rely,,,,bersandar",
+                                                      "quality":  0.00013013002619477752
+                                                  },
+                                                  {
+                                                      "index":  33,
+                                                      "text":  "咦",
+                                                      "comment":  "\f\r1,咦,ji2,1,0,,oth,,,,,,,well; what,دیکھو!,हेर!,देखो!,apa itu?",
+                                                      "quality":  0.00010995995141809547
+                                                  },
+                                                  {
+                                                      "index":  34,
+                                                      "text":  "綺",
+                                                      "comment":  "\f\r1,綺,ji2,1,0,,morph,,,,,,綺夢，綺麗,,,,,",
+                                                      "quality":  0.00010747000930393829
+                                                  },
+                                                  {
+                                                      "index":  35,
+                                                      "text":  "夷",
+                                                      "comment":  "\f\r1,夷,ji4,1,0,,n,,,,,,,foreign country,,,,",
+                                                      "quality":  9.5429961278421484E-05
+                                                  },
+                                                  {
+                                                      "index":  36,
+                                                      "text":  "矣",
+                                                      "comment":  "\f\r1,矣,ji5,1,0,,oth,,,,,,,particle,,,,",
+                                                      "quality":  8.4380004065838149E-05
+                                                  },
+                                                  {
+                                                      "index":  37,
+                                                      "text":  "頤",
+                                                      "comment":  "\f\r1,頤,ji4,1,0,,morph,,,,,,頤養天年,nourish,,,,memelihara",
+                                                      "quality":  6.0589999530654091E-05
+                                                  },
+                                                  {
+                                                      "index":  38,
+                                                      "text":  "懿",
+                                                      "comment":  "\f\r1,懿,ji3,1,0,,morph,,,,,,懿旨,virtuous,,,,berbudi luhur",
+                                                      "quality":  5.6310015184277787E-05
+                                                  },
+                                                  {
+                                                      "index":  39,
+                                                      "text":  "𠵱",
+                                                      "comment":  "\f\r1,𠵱,ji1,1,0,,v,ver,,,這,,,,,,,",
+                                                      "quality":  3.3289988854375688E-05
+                                                  },
+                                                  {
+                                                      "index":  40,
+                                                      "text":  "胰",
+                                                      "comment":  "\f\r1,胰,ji4,1,0,,n v,,,,,,,pancreas,,,,pankreas",
+                                                      "quality":  3.2520005584572816E-05
+                                                  },
+                                                  {
+                                                      "index":  41,
+                                                      "text":  "貽",
+                                                      "comment":  "\f\r1,貽,ji4,1,0,,v,,,,,,,hand down,,,,memberikan kepada",
+                                                      "quality":  2.3600003032602978E-05
+                                                  },
+                                                  {
+                                                      "index":  42,
+                                                      "text":  "洱",
+                                                      "comment":  "\f\r1,洱,ji5,1,0,,x,,,,,,普洱,普洱: pu\u0027er,,,,",
+                                                      "quality":  1.7740002737817612E-05
+                                                  },
+                                                  {
+                                                      "index":  43,
+                                                      "text":  "漪",
+                                                      "comment":  "\f\r1,漪,ji2,1,0,,x,,,,,,漣漪,漣漪: ripples,,,,",
+                                                      "quality":  1.6640002801389681E-05
+                                                  },
+                                                  {
+                                                      "index":  44,
+                                                      "text":  "薏",
+                                                      "comment":  "\f\r1,薏,ji3,1,0,,x,,,,,,,,,,,",
+                                                      "quality":  1.0439999535690616E-05
+                                                  },
+                                                  {
+                                                      "index":  45,
+                                                      "text":  "貳",
+                                                      "comment":  "\f\r1,貳,ji6,1,0,,morph,,,,,,貳，貳心，行不貳過,two (anti-fraud num),,,,",
+                                                      "quality":  7.7299999730807141E-06
+                                                  },
+                                                  {
+                                                      "index":  46,
+                                                      "text":  "苡",
+                                                      "comment":  "\f\r1,苡,ji5,1,0,,x,,,,,,,,,,,",
+                                                      "quality":  6.1300004030000284E-06
+                                                  },
+                                                  {
+                                                      "index":  47,
+                                                      "text":  "咿",
+                                                      "comment":  "\f\r1,咿,ji1,1,0,,v,,,,,,,,,,,",
+                                                      "quality":  5.3199988661642336E-06
+                                                  },
+                                                  {
+                                                      "index":  48,
+                                                      "text":  "沂",
+                                                      "comment":  "\f\r1,沂,ji4,1,0,,x,,,,,,,,,,,",
+                                                      "quality":  4.80000028525508E-06
+                                                  },
+                                                  {
+                                                      "index":  49,
+                                                      "text":  "彝",
+                                                      "comment":  "\f\r1,彝,ji4,1,0,,n,,,,,,彝族,Yi (ethnic group),,,,",
+                                                      "quality":  4.1600006845006942E-06
+                                                  }
+                                              ],
+                      "variant":  "default_combined",
+                      "variant_schema":  "jyut6ping3_mobile",
+                      "patches":  [
+
+                                  ],
+                      "default_custom_mode":  "Keep"
+                  },
+                  {
+                      "schema_id":  "jyut6ping3_mobile",
+                      "schema_name":  "粵語拼音",
+                      "input":  "jigaa",
+                      "rime_get_input":  "jigaa",
+                      "processed":  [
+                                        1,
+                                        1,
+                                        1,
+                                        1,
+                                        1
+                                    ],
+                      "is_composing":  true,
+                      "is_ascii_mode":  false,
+                      "preedit":  "ji gaa",
+                      "commit_text_preview":  "而家",
+                      "highlighted_candidate_index":  0,
+                      "page_size":  50,
+                      "page_no":  0,
+                      "is_last_page":  false,
+                      "selected_candidates":  [
+                                                  {
+                                                      "index":  0,
+                                                      "text":  "而家",
+                                                      "comment":  "\f\r1,而家,ji4gaa1,1,0,,oth,ver,,,現在,,,now,ابھی,अब,अभी,sekarang",
+                                                      "quality":  0.00077575984172943886
+                                                  },
+                                                  {
+                                                      "index":  1,
+                                                      "text":  "依家",
+                                                      "comment":  "\f\r1,依家,ji1gaa1,1,0,,n,ver,,,現在,,,now,ابھی,अब,अभी,Menurut keluarga",
+                                                      "quality":  0.0005959102405737358
+                                                  },
+                                                  {
+                                                      "index":  2,
+                                                      "text":  "宜家",
+                                                      "comment":  "\f\r1,宜家,ji4gaa1,1,0,,n,,hk_org_retail,,,,,Ikea,,,,",
+                                                      "quality":  0.00012546005799561971
+                                                  },
+                                                  {
+                                                      "index":  3,
+                                                      "text":  "而家都",
+                                                      "comment":  "\f\r1,而家都,ji4gaa1dou1,1,0,,oth,ver,,,現在都,,,now also,,,,",
+                                                      "quality":  4.2780019293564217E-05
+                                                  },
+                                                  {
+                                                      "index":  4,
+                                                      "text":  "議價",
+                                                      "comment":  "\f\r1,議價,ji5gaa3,1,0,,v,,,,,,,negotiate a price,,,,tawar menawar",
+                                                      "quality":  4.2609984796413015E-05
+                                                  },
+                                                  {
+                                                      "index":  5,
+                                                      "text":  "衣架",
+                                                      "comment":  "\f\r1,衣架,ji1gaa2,1,0,,n,,,,,,,hangers,,,,",
+                                                      "quality":  1.8000001899426722E-05
+                                                  },
+                                                  {
+                                                      "index":  6,
+                                                      "text":  "移駕",
+                                                      "comment":  "\f\r1,移駕,ji4gaa3,1,0,,,,,,,,,,,,,",
+                                                      "quality":  8.00000004571169E-08
+                                                  },
+                                                  {
+                                                      "index":  7,
+                                                      "text":  "以",
+                                                      "comment":  "\f\r1,以,ji5,1,0,,adv oth,,,,,,,by,,,,oleh",
+                                                      "quality":  0.05899402279318533
+                                                  },
+                                                  {
+                                                      "index":  8,
+                                                      "text":  "而",
+                                                      "comment":  "\f\r1,而,ji4,1,0,,oth,,,,,,,and,اور,र,और,dan",
+                                                      "quality":  0.025035734197035853
+                                                  },
+                                                  {
+                                                      "index":  9,
+                                                      "text":  "意",
+                                                      "comment":  "\f\r1,意,ji3,1,0,,n,,,,,,,opinion,,,,arti",
+                                                      "quality":  0.022946600769291454
+                                                  },
+                                                  {
+                                                      "index":  10,
+                                                      "text":  "已",
+                                                      "comment":  "\f\r1,已,ji5,1,0,,adv,,,,,,,already,پہلے سے,पहिले नै,पहले से,Sudah",
+                                                      "quality":  0.020651458323842884
+                                                  },
+                                                  {
+                                                      "index":  11,
+                                                      "text":  "二",
+                                                      "comment":  "\f\r1,二,ji6,1,0,,n,,,,,,,two,دو,दुई,दो,dua",
+                                                      "quality":  0.0086712410903027667
+                                                  },
+                                                  {
+                                                      "index":  12,
+                                                      "text":  "議",
+                                                      "comment":  "\f\r1,議,ji5,1,0,,morph,,,,,,議論，議會,discussion,,,,",
+                                                      "quality":  0.0084468332394314945
+                                                  },
+                                                  {
+                                                      "index":  13,
+                                                      "text":  "醫",
+                                                      "comment":  "\f\r1,醫,ji1,1,0,,v,,,,,,醫生，醫院,cure,ڈاکٹر,चिकित्सक,डॉक्टर,medis",
+                                                      "quality":  0.0071161695909575063
+                                                  },
+                                                  {
+                                                      "index":  14,
+                                                      "text":  "依",
+                                                      "comment":  "\f\r1,依,ji1,1,0,,v,,,,,,,according to; by,کے مطابق,यस अनुसार,इसके अनुसार,berdasarkan",
+                                                      "quality":  0.00575613770141914
+                                                  },
+                                                  {
+                                                      "index":  15,
+                                                      "text":  "兒",
+                                                      "comment":  "\f\r1,兒,ji4,1,0,,n,wri,,,,仔,,son,بیٹا,छोरा,बच्चा,anak lelaki",
+                                                      "quality":  0.0046972521080074362
+                                                  },
+                                                  {
+                                                      "index":  16,
+                                                      "text":  "疑",
+                                                      "comment":  "\f\r1,疑,ji4,1,0,,v adj,,,,,,,suspect,,,,",
+                                                      "quality":  0.0045155803198586447
+                                                  },
+                                                  {
+                                                      "index":  17,
+                                                      "text":  "義",
+                                                      "comment":  "\f\r1,義,ji6,1,0,,morph,,,,,,意義，義務，名義,meaning; justice,,,,adil",
+                                                      "quality":  0.0040328515749812792
+                                                  },
+                                                  {
+                                                      "index":  18,
+                                                      "text":  "易",
+                                                      "comment":  "\f\r1,易,ji6,1,0,,adj,,,,,,容易,easy,آسان,सजिलो,आसान,gampang\r0,易,jik6,2,0,,morph,,surname,,,,交易,exchange; surname [Yik],تبادلہ,आदानप्रदान,अदला बदली,bertukar",
+                                                      "quality":  0.0029360892309838885
+                                                  },
+                                                  {
+                                                      "index":  19,
+                                                      "text":  "爾",
+                                                      "comment":  "\f\r1,爾,ji5,1,0,,n oth,,,,,,,you; your; so; like,,,,",
+                                                      "quality":  0.0029152192122361923
+                                                  },
+                                                  {
+                                                      "index":  20,
+                                                      "text":  "衣",
+                                                      "comment":  "\f\r1,衣,ji1,1,0,,n,,,,,,衣物，衣服,clothing,کپڑے,लुगा,वस्त्र,pakaian",
+                                                      "quality":  0.0028402106965232069
+                                                  },
+                                                  {
+                                                      "index":  21,
+                                                      "text":  "宜",
+                                                      "comment":  "\f\r1,宜,ji4,1,0,,adv,,,,,,,should,,,,",
+                                                      "quality":  0.0026025211882163058
+                                                  },
+                                                  {
+                                                      "index":  22,
+                                                      "text":  "移",
+                                                      "comment":  "\f\r1,移,ji4,1,0,,v,,,,,,,move,ہجرت,सार्नु,खिसकाना,bergeser",
+                                                      "quality":  0.0023126605533051216
+                                                  },
+                                                  {
+                                                      "index":  23,
+                                                      "text":  "耳",
+                                                      "comment":  "\f\r1,耳,ji5,1,0,,n,,,,,,,ear,کان,कान,कान,telinga",
+                                                      "quality":  0.0018555796446354683
+                                                  },
+                                                  {
+                                                      "index":  24,
+                                                      "text":  "伊",
+                                                      "comment":  "\f\r1,伊,ji1,1,0,,morph,,,,,,伊始，伊人,,,,,",
+                                                      "quality":  0.0018011293327352617
+                                                  },
+                                                  {
+                                                      "index":  25,
+                                                      "text":  "異",
+                                                      "comment":  "\f\r1,異,ji6,1,0,,adj,,,,,,,different; unsual,,,,berbeda",
+                                                      "quality":  0.0016347596151396091
+                                                  },
+                                                  {
+                                                      "index":  26,
+                                                      "text":  "儀",
+                                                      "comment":  "\f\r1,儀,ji4,1,0,,morph,,,,,,儀式，禮儀，儀器,ritual; equipment,,,,",
+                                                      "quality":  0.0010906902456531587
+                                                  },
+                                                  {
+                                                      "index":  27,
+                                                      "text":  "怡",
+                                                      "comment":  "\f\r1,怡,ji4,1,0,,morph,,,,,,怡情,pleasure,,,,kesenangan",
+                                                      "quality":  0.00059647028330294793
+                                                  },
+                                                  {
+                                                      "index":  28,
+                                                      "text":  "擬",
+                                                      "comment":  "\f\r1,擬,ji4,1,0,,v,wri,,,,,,intend,پلان کرنا,योजना,योजना बनाना,merencanakan\r1,擬,ji5,2,0,,v,wri,,,,,,intend,پلان کرنا,योजना,योजना बनाना,merencanakan",
+                                                      "quality":  0.0005938701185519516
+                                                  },
+                                                  {
+                                                      "index":  29,
+                                                      "text":  "椅",
+                                                      "comment":  "\f\r1,椅,ji2,1,0,,n,,,,,,,chair,,,,",
+                                                      "quality":  0.0004032199597165087
+                                                  },
+                                                  {
+                                                      "index":  30,
+                                                      "text":  "姨",
+                                                      "comment":  "\f\r1,姨,ji1,1,1,,n,,,,,,姨姨，阿姨,aunt,پھوپھو,फूपु,बूआ,bibi\r1,姨,ji4,2,0,,morph,,,,,,姨媽，姨丈,aunt; auntie,خالہ,काकी,मौसी,tante",
+                                                      "quality":  0.000234549902338036
+                                                  },
+                                                  {
+                                                      "index":  31,
+                                                      "text":  "誼",
+                                                      "comment":  "\f\r1,誼,ji4,1,0,,morph,,,,,,友誼，情誼,friendship,,,,",
+                                                      "quality":  0.00018822006458772532
+                                                  },
+                                                  {
+                                                      "index":  32,
+                                                      "text":  "倚",
+                                                      "comment":  "\f\r1,倚,ji2,1,0,,morph,,,,,,倚靠，倚賴,rely,,,,bersandar",
+                                                      "quality":  0.00013013002619477752
+                                                  },
+                                                  {
+                                                      "index":  33,
+                                                      "text":  "咦",
+                                                      "comment":  "\f\r1,咦,ji2,1,0,,oth,,,,,,,well; what,دیکھو!,हेर!,देखो!,apa itu?",
+                                                      "quality":  0.00010995995141809547
+                                                  },
+                                                  {
+                                                      "index":  34,
+                                                      "text":  "綺",
+                                                      "comment":  "\f\r1,綺,ji2,1,0,,morph,,,,,,綺夢，綺麗,,,,,",
+                                                      "quality":  0.00010747000930393829
+                                                  },
+                                                  {
+                                                      "index":  35,
+                                                      "text":  "夷",
+                                                      "comment":  "\f\r1,夷,ji4,1,0,,n,,,,,,,foreign country,,,,",
+                                                      "quality":  9.5429961278421484E-05
+                                                  },
+                                                  {
+                                                      "index":  36,
+                                                      "text":  "矣",
+                                                      "comment":  "\f\r1,矣,ji5,1,0,,oth,,,,,,,particle,,,,",
+                                                      "quality":  8.4380004065838149E-05
+                                                  },
+                                                  {
+                                                      "index":  37,
+                                                      "text":  "頤",
+                                                      "comment":  "\f\r1,頤,ji4,1,0,,morph,,,,,,頤養天年,nourish,,,,memelihara",
+                                                      "quality":  6.0589999530654091E-05
+                                                  },
+                                                  {
+                                                      "index":  38,
+                                                      "text":  "懿",
+                                                      "comment":  "\f\r1,懿,ji3,1,0,,morph,,,,,,懿旨,virtuous,,,,berbudi luhur",
+                                                      "quality":  5.6310015184277787E-05
+                                                  },
+                                                  {
+                                                      "index":  39,
+                                                      "text":  "𠵱",
+                                                      "comment":  "\f\r1,𠵱,ji1,1,0,,v,ver,,,這,,,,,,,",
+                                                      "quality":  3.3289988854375688E-05
+                                                  },
+                                                  {
+                                                      "index":  40,
+                                                      "text":  "胰",
+                                                      "comment":  "\f\r1,胰,ji4,1,0,,n v,,,,,,,pancreas,,,,pankreas",
+                                                      "quality":  3.2520005584572816E-05
+                                                  },
+                                                  {
+                                                      "index":  41,
+                                                      "text":  "貽",
+                                                      "comment":  "\f\r1,貽,ji4,1,0,,v,,,,,,,hand down,,,,memberikan kepada",
+                                                      "quality":  2.3600003032602978E-05
+                                                  },
+                                                  {
+                                                      "index":  42,
+                                                      "text":  "洱",
+                                                      "comment":  "\f\r1,洱,ji5,1,0,,x,,,,,,普洱,普洱: pu\u0027er,,,,",
+                                                      "quality":  1.7740002737817612E-05
+                                                  },
+                                                  {
+                                                      "index":  43,
+                                                      "text":  "漪",
+                                                      "comment":  "\f\r1,漪,ji2,1,0,,x,,,,,,漣漪,漣漪: ripples,,,,",
+                                                      "quality":  1.6640002801389681E-05
+                                                  },
+                                                  {
+                                                      "index":  44,
+                                                      "text":  "薏",
+                                                      "comment":  "\f\r1,薏,ji3,1,0,,x,,,,,,,,,,,",
+                                                      "quality":  1.0439999535690616E-05
+                                                  },
+                                                  {
+                                                      "index":  45,
+                                                      "text":  "貳",
+                                                      "comment":  "\f\r1,貳,ji6,1,0,,morph,,,,,,貳，貳心，行不貳過,two (anti-fraud num),,,,",
+                                                      "quality":  7.7299999730807141E-06
+                                                  },
+                                                  {
+                                                      "index":  46,
+                                                      "text":  "苡",
+                                                      "comment":  "\f\r1,苡,ji5,1,0,,x,,,,,,,,,,,",
+                                                      "quality":  6.1300004030000284E-06
+                                                  },
+                                                  {
+                                                      "index":  47,
+                                                      "text":  "咿",
+                                                      "comment":  "\f\r1,咿,ji1,1,0,,v,,,,,,,,,,,",
+                                                      "quality":  5.3199988661642336E-06
+                                                  },
+                                                  {
+                                                      "index":  48,
+                                                      "text":  "沂",
+                                                      "comment":  "\f\r1,沂,ji4,1,0,,x,,,,,,,,,,,",
+                                                      "quality":  4.80000028525508E-06
+                                                  },
+                                                  {
+                                                      "index":  49,
+                                                      "text":  "彝",
+                                                      "comment":  "\f\r1,彝,ji4,1,0,,n,,,,,,彝族,Yi (ethnic group),,,,",
+                                                      "quality":  4.1600006845006942E-06
+                                                  }
+                                              ],
+                      "variant":  "default_combined",
+                      "variant_schema":  "jyut6ping3_mobile",
+                      "patches":  [
+
+                                  ],
+                      "default_custom_mode":  "Keep"
+                  },
+                  {
+                      "schema_id":  "jyut6ping3_mobile",
+                      "schema_name":  "粵語拼音",
+                      "input":  "jiusihau",
+                      "rime_get_input":  "jiusihau",
+                      "processed":  [
+                                        1,
+                                        1,
+                                        1,
+                                        1,
+                                        1,
+                                        1,
+                                        1,
+                                        1
+                                    ],
+                      "is_composing":  true,
+                      "is_ascii_mode":  false,
+                      "preedit":  "jiu si hau",
+                      "commit_text_preview":  "要時候",
+                      "highlighted_candidate_index":  0,
+                      "page_size":  50,
+                      "page_no":  0,
+                      "is_last_page":  false,
+                      "selected_candidates":  [
+                                                  {
+                                                      "index":  0,
+                                                      "text":  "要時候",
+                                                      "comment":  "\f\r1,要時候,jiu3si4hau6,1,0,,,,composition,,,,,,,,,\r1,要,jiu3,1,0,,v,,,,,,,want; need,چاہنا,चाहनु,चाहना,mau\r1,時候,si4hau6,1,0,,n,,,,,,,time,وقت,समय,समय,waktu",
+                                                      "quality":  0
+                                                  },
+                                                  {
+                                                      "index":  1,
+                                                      "text":  "要是",
+                                                      "comment":  "\f\r1,要是,jiu3si6,1,0,,oth,,,,,,,if,,,,",
+                                                      "quality":  0.00018333992104050222
+                                                  },
+                                                  {
+                                                      "index":  2,
+                                                      "text":  "要事",
+                                                      "comment":  "\f\r1,要事,jiu3si6,1,0,,n,,,,,,,important affair,,,,",
+                                                      "quality":  2.4169996827620006E-05
+                                                  },
+                                                  {
+                                                      "index":  3,
+                                                      "text":  "要",
+                                                      "comment":  "\f\r1,要,jiu3,1,0,,v,,,,,,,want; need,چاہنا,चाहनु,चाहना,mau",
+                                                      "quality":  0.044740031989789229
+                                                  },
+                                                  {
+                                                      "index":  4,
+                                                      "text":  "擾",
+                                                      "comment":  "\f\r1,擾,jiu2,1,0,,morph,,,,,,騷擾，干擾，擾攘,disturb,,,,",
+                                                      "quality":  0.00086894984769479526
+                                                  },
+                                                  {
+                                                      "index":  5,
+                                                      "text":  "耀",
+                                                      "comment":  "\f\r1,耀,jiu6,1,0,,morph,,,,,,耀眼，耀目,bright,,,,",
+                                                      "quality":  0.00076586036190315907
+                                                  },
+                                                  {
+                                                      "index":  6,
+                                                      "text":  "邀",
+                                                      "comment":  "\f\r1,邀,jiu1,1,0,,v,,,,,,邀請，邀功,invite,,,,",
+                                                      "quality":  0.00071856986807337377
+                                                  },
+                                                  {
+                                                      "index":  7,
+                                                      "text":  "腰",
+                                                      "comment":  "\f\r1,腰,jiu1,1,0,,n,,,,,,,waist,کمر,कम्मर,कमर,pinggang",
+                                                      "quality":  0.00067079011527497511
+                                                  },
+                                                  {
+                                                      "index":  8,
+                                                      "text":  "搖",
+                                                      "comment":  "\f\r1,搖,jiu4,1,0,,v,,,,,,,shake,ہلا,हल्लाउनु,हिलना,menggoyang",
+                                                      "quality":  0.00060743001802346006
+                                                  },
+                                                  {
+                                                      "index":  9,
+                                                      "text":  "妖",
+                                                      "comment":  "\f\r1,妖,jiu2,1,0,,n,,,,,,,monster,,,,",
+                                                      "quality":  0.00033091004403780624
+                                                  },
+                                                  {
+                                                      "index":  10,
+                                                      "text":  "遙",
+                                                      "comment":  "\f\r1,遙,jiu4,1,0,,morph,,,,,,遙遠，遙不可及，遙遙無期,distant,,,,jauh",
+                                                      "quality":  0.00030143986522908583
+                                                  },
+                                                  {
+                                                      "index":  11,
+                                                      "text":  "繞",
+                                                      "comment":  "\f\r1,繞,jiu2,1,0,,v,,,,,,,go around,,,,pergi berkeliling",
+                                                      "quality":  0.00022451989793823425
+                                                  },
+                                                  {
+                                                      "index":  12,
+                                                      "text":  "姚",
+                                                      "comment":  "\f\r1,姚,jiu4,1,0,,n,,surname,,,,,surname [Yiu],,,,nama keluarga [Yiu]",
+                                                      "quality":  0.00022220995789473436
+                                                  },
+                                                  {
+                                                      "index":  13,
+                                                      "text":  "堯",
+                                                      "comment":  "\f\r1,堯,jiu4,1,0,,n,,,,,,,surname [Yiu],,,,",
+                                                      "quality":  0.00021878994890442164
+                                                  },
+                                                  {
+                                                      "index":  14,
+                                                      "text":  "謠",
+                                                      "comment":  "\f\r1,謠,jiu4,1,0,,n,,,,,,,rumor,,,,",
+                                                      "quality":  0.00015690002410008241
+                                                  },
+                                                  {
+                                                      "index":  15,
+                                                      "text":  "瑤",
+                                                      "comment":  "\f\r1,瑤,jiu4,1,0,,n,,,,,,,jade,,,,batu giok berharga",
+                                                      "quality":  0.00014123998966838577
+                                                  },
+                                                  {
+                                                      "index":  16,
+                                                      "text":  "饒",
+                                                      "comment":  "\f\r1,饒,jiu4,1,0,,v,,surname,,,,,forgive; surname [Yiu],,,,",
+                                                      "quality":  7.8110002466685909E-05
+                                                  },
+                                                  {
+                                                      "index":  17,
+                                                      "text":  "曜",
+                                                      "comment":  "\f\r1,曜,jiu6,1,0,,x,,,,,,燦爛,,,,,",
+                                                      "quality":  4.6900003801927829E-05
+                                                  },
+                                                  {
+                                                      "index":  18,
+                                                      "text":  "揄",
+                                                      "comment":  "\f\r1,揄,jiu5,2,0,,x,,,,,,,,,,,\r0,揄,jau4,1,0,,v,,,,,,,,,,,\r0,揄,jyu4,2,0,,x,,,,,,,,,,,",
+                                                      "quality":  4.1560017330812643E-05
+                                                  },
+                                                  {
+                                                      "index":  19,
+                                                      "text":  "夭",
+                                                      "comment":  "\f\r1,夭,jiu1,1,0,,morph,,,,,,桃之夭夭,tender and beautiful,,,,",
+                                                      "quality":  3.3459986473735861E-05
+                                                  },
+                                                  {
+                                                      "index":  20,
+                                                      "text":  "么",
+                                                      "comment":  "\f\r1,么,jiu1,1,0,,x,,,,,,幺女，么兒，老幺,youngest,,,,",
+                                                      "quality":  3.0439991179026257E-05
+                                                  },
+                                                  {
+                                                      "index":  21,
+                                                      "text":  "窯",
+                                                      "comment":  "\f\r1,窯,jiu4,1,0,,n,,,,,,,kiln,,,,",
+                                                      "quality":  4.6399996272551433E-06
+                                                  },
+                                                  {
+                                                      "index":  22,
+                                                      "text":  "榚",
+                                                      "comment":  "\f\r1,榚,jiu5,1,0,,x,,,,,,,,,,,",
+                                                      "quality":  4.2200000315093557E-06
+                                                  },
+                                                  {
+                                                      "index":  23,
+                                                      "text":  "舀",
+                                                      "comment":  "\f\r1,舀,jiu5,1,0,,morph,,,,,,舀水，舀汤,scoop,,,,",
+                                                      "quality":  4.1999995027960159E-06
+                                                  },
+                                                  {
+                                                      "index":  24,
+                                                      "text":  "燿",
+                                                      "comment":  "\f\r1,燿,jiu6,1,0,,x,,,,,,,,,,,\r0,燿,soek3,2,0,,x,,,,,,,,,,,",
+                                                      "quality":  4.0300003674978213E-06
+                                                  },
+                                                  {
+                                                      "index":  25,
+                                                      "text":  "窰",
+                                                      "comment":  "\f\r1,窰,jiu4,1,0,,morph,,,,,,,kiln,,,,tempat pembakaran",
+                                                      "quality":  3.7199998505072118E-06
+                                                  },
+                                                  {
+                                                      "index":  26,
+                                                      "text":  "垚",
+                                                      "comment":  "\f\r1,垚,jiu4,1,0,,,,rare,,,,,,,,,",
+                                                      "quality":  1.6599996720392272E-06
+                                                  },
+                                                  {
+                                                      "index":  27,
+                                                      "text":  "鷂",
+                                                      "comment":  "\f\r1,鷂,jiu4,1,0,,morph,,,,,,鷂形，紙鷂,kite,,,,",
+                                                      "quality":  1.0900002110649541E-06
+                                                  },
+                                                  {
+                                                      "index":  28,
+                                                      "text":  "榣",
+                                                      "comment":  "\f\r1,榣,jiu4,1,0,,x,,,,,,,,,,,",
+                                                      "quality":  8.2999983443875092E-07
+                                                  },
+                                                  {
+                                                      "index":  29,
+                                                      "text":  "吆",
+                                                      "comment":  "\f\r1,吆,jiu1,1,0,,morph,,,,,,吆喝,吆喝: yell,,,,",
+                                                      "quality":  6.99999901915552E-07
+                                                  },
+                                                  {
+                                                      "index":  30,
+                                                      "text":  "鰩",
+                                                      "comment":  "\f\r1,鰩,jiu4,1,0,,x,,,,,,,,,,,",
+                                                      "quality":  6.00000032228507E-07
+                                                  },
+                                                  {
+                                                      "index":  31,
+                                                      "text":  "銚",
+                                                      "comment":  "\f\r1,銚,jiu4,2,0,,x,,,,,,,,,,,\r0,銚,diu6,1,0,,x,,,,,,,,,,,\r0,銚,siu6,2,0,,x,,,,,,,,,,,",
+                                                      "quality":  4.6000000835048923E-07
+                                                  },
+                                                  {
+                                                      "index":  32,
+                                                      "text":  "繇",
+                                                      "comment":  "\f\r1,繇,jiu4,2,0,,,,rare,,,,,,,,,\r0,繇,jau4,1,0,,,,rare,,,,,,,,,\r0,繇,zau6,2,0,,,,rare,,,,,,,,,",
+                                                      "quality":  4.2000003698572011E-07
+                                                  },
+                                                  {
+                                                      "index":  33,
+                                                      "text":  "遶",
+                                                      "comment":  "\f\r1,遶,jiu5,1,0,,x,,,,,,,,,,,",
+                                                      "quality":  3.500000337376479E-07
+                                                  },
+                                                  {
+                                                      "index":  34,
+                                                      "text":  "幺",
+                                                      "comment":  "\f\r1,幺,jiu1,1,0,,morph,,,么,,,,,,,,",
+                                                      "quality":  3.3000002745165778E-07
+                                                  },
+                                                  {
+                                                      "index":  35,
+                                                      "text":  "祅",
+                                                      "comment":  "\f\r1,祅,jiu1,1,0,,x,,,,,,,,,,,\r1,祅,jiu2,2,0,,x,,,,,,,,,,,",
+                                                      "quality":  2.5000001503539125E-07
+                                                  },
+                                                  {
+                                                      "index":  36,
+                                                      "text":  "徼",
+                                                      "comment":  "\f\r1,徼,jiu1,2,0,,,,rare,,,,,,,,,\r0,徼,giu1,1,0,,,,rare,,,,,,,,,\r0,徼,giu3,2,0,,,,rare,,,,,,,,,",
+                                                      "quality":  1.299999891582048E-07
+                                                  },
+                                                  {
+                                                      "index":  37,
+                                                      "text":  "嶢",
+                                                      "comment":  "\f\r1,嶢,jiu4,1,0,,x,,,,,,,,,,,",
+                                                      "quality":  1.0000000319754355E-07
+                                                  },
+                                                  {
+                                                      "index":  38,
+                                                      "text":  "蟯",
+                                                      "comment":  "\f\r1,蟯,jiu4,1,0,,morph,,,,,,蟯蟲,,,,,\r0,蟯,naau4,2,0,,morph,,,,,,蟯蟲,,,,,",
+                                                      "quality":  6.0000001304324418E-08
+                                                  },
+                                                  {
+                                                      "index":  39,
+                                                      "text":  "隢",
+                                                      "comment":  "\f\r1,隢,jiu5,1,0,,,,rare,,,,,,,,,",
+                                                      "quality":  6.0000001304324418E-08
+                                                  },
+                                                  {
+                                                      "index":  40,
+                                                      "text":  "蕘",
+                                                      "comment":  "\f\r1,蕘,jiu4,1,0,,,,rare,,,,,,,,,",
+                                                      "quality":  4.0000000152372275E-08
+                                                  },
+                                                  {
+                                                      "index":  41,
+                                                      "text":  "𥪯",
+                                                      "comment":  "\f\r1,𥪯,jiu4,1,0,,,,rare,,,,,,,,,",
+                                                      "quality":  4.0000000152372275E-08
+                                                  },
+                                                  {
+                                                      "index":  42,
+                                                      "text":  "媱",
+                                                      "comment":  "\f\r1,媱,jiu4,1,0,,,,rare,,,,,,,,,",
+                                                      "quality":  3.0000000595022584E-08
+                                                  },
+                                                  {
+                                                      "index":  43,
+                                                      "text":  "艞",
+                                                      "comment":  "\f\r1,艞,jiu6,1,0,,,,rare,,,,,,,,,",
+                                                      "quality":  3.0000000595022584E-08
+                                                  },
+                                                  {
+                                                      "index":  44,
+                                                      "text":  "以",
+                                                      "comment":  "\f\r1,以,ji5,1,0,,adv oth,,,,,,,by,,,,oleh",
+                                                      "quality":  0.05899402279318533
+                                                  },
+                                                  {
+                                                      "index":  45,
+                                                      "text":  "而",
+                                                      "comment":  "\f\r1,而,ji4,1,0,,oth,,,,,,,and,اور,र,और,dan",
+                                                      "quality":  0.025035734197035853
+                                                  },
+                                                  {
+                                                      "index":  46,
+                                                      "text":  "意",
+                                                      "comment":  "\f\r1,意,ji3,1,0,,n,,,,,,,opinion,,,,arti",
+                                                      "quality":  0.022946600769291454
+                                                  },
+                                                  {
+                                                      "index":  47,
+                                                      "text":  "已",
+                                                      "comment":  "\f\r1,已,ji5,1,0,,adv,,,,,,,already,پہلے سے,पहिले नै,पहले से,Sudah",
+                                                      "quality":  0.020651458323842884
+                                                  },
+                                                  {
+                                                      "index":  48,
+                                                      "text":  "二",
+                                                      "comment":  "\f\r1,二,ji6,1,0,,n,,,,,,,two,دو,दुई,दो,dua",
+                                                      "quality":  0.0086712410903027667
+                                                  },
+                                                  {
+                                                      "index":  49,
+                                                      "text":  "議",
+                                                      "comment":  "\f\r1,議,ji5,1,0,,morph,,,,,,議論，議會,discussion,,,,",
+                                                      "quality":  0.0084468332394314945
+                                                  }
+                                              ],
+                      "variant":  "default_combined",
+                      "variant_schema":  "jyut6ping3_mobile",
+                      "patches":  [
+
+                                  ],
+                      "default_custom_mode":  "Keep"
+                  },
+                  {
+                      "schema_id":  "jyut6ping3_mobile",
+                      "schema_name":  "粵語拼音",
+                      "input":  "jigaajiu",
+                      "rime_get_input":  "jigaajiu",
+                      "processed":  [
+                                        1,
+                                        1,
+                                        1,
+                                        1,
+                                        1,
+                                        1,
+                                        1,
+                                        1
+                                    ],
+                      "is_composing":  true,
+                      "is_ascii_mode":  false,
+                      "preedit":  "ji gaa jiu",
+                      "commit_text_preview":  "而家要",
+                      "highlighted_candidate_index":  0,
+                      "page_size":  50,
+                      "page_no":  0,
+                      "is_last_page":  false,
+                      "selected_candidates":  [
+                                                  {
+                                                      "index":  0,
+                                                      "text":  "而家要",
+                                                      "comment":  "\f\r1,而家要,ji4gaa1jiu3,1,0,,,,composition,,,,,,,,,\r1,而家,ji4gaa1,1,0,,oth,ver,,,現在,,,now,ابھی,अब,अभी,sekarang\r1,要,jiu3,1,0,,v,,,,,,,want; need,چاہنا,चाहनु,चाहना,mau",
+                                                      "quality":  0
+                                                  },
+                                                  {
+                                                      "index":  1,
+                                                      "text":  "而家",
+                                                      "comment":  "\f\r1,而家,ji4gaa1,1,0,,oth,ver,,,現在,,,now,ابھی,अब,अभी,sekarang",
+                                                      "quality":  0.00077575984172943886
+                                                  },
+                                                  {
+                                                      "index":  2,
+                                                      "text":  "依家",
+                                                      "comment":  "\f\r1,依家,ji1gaa1,1,0,,n,ver,,,現在,,,now,ابھی,अब,अभी,Menurut keluarga",
+                                                      "quality":  0.0005959102405737358
+                                                  },
+                                                  {
+                                                      "index":  3,
+                                                      "text":  "宜家",
+                                                      "comment":  "\f\r1,宜家,ji4gaa1,1,0,,n,,hk_org_retail,,,,,Ikea,,,,",
+                                                      "quality":  0.00012546005799561971
+                                                  },
+                                                  {
+                                                      "index":  4,
+                                                      "text":  "議價",
+                                                      "comment":  "\f\r1,議價,ji5gaa3,1,0,,v,,,,,,,negotiate a price,,,,tawar menawar",
+                                                      "quality":  4.2609984796413015E-05
+                                                  },
+                                                  {
+                                                      "index":  5,
+                                                      "text":  "衣架",
+                                                      "comment":  "\f\r1,衣架,ji1gaa2,1,0,,n,,,,,,,hangers,,,,",
+                                                      "quality":  1.8000001899426722E-05
+                                                  },
+                                                  {
+                                                      "index":  6,
+                                                      "text":  "移駕",
+                                                      "comment":  "\f\r1,移駕,ji4gaa3,1,0,,,,,,,,,,,,,",
+                                                      "quality":  8.00000004571169E-08
+                                                  },
+                                                  {
+                                                      "index":  7,
+                                                      "text":  "以",
+                                                      "comment":  "\f\r1,以,ji5,1,0,,adv oth,,,,,,,by,,,,oleh",
+                                                      "quality":  0.05899402279318533
+                                                  },
+                                                  {
+                                                      "index":  8,
+                                                      "text":  "而",
+                                                      "comment":  "\f\r1,而,ji4,1,0,,oth,,,,,,,and,اور,र,और,dan",
+                                                      "quality":  0.025035734197035853
+                                                  },
+                                                  {
+                                                      "index":  9,
+                                                      "text":  "意",
+                                                      "comment":  "\f\r1,意,ji3,1,0,,n,,,,,,,opinion,,,,arti",
+                                                      "quality":  0.022946600769291454
+                                                  },
+                                                  {
+                                                      "index":  10,
+                                                      "text":  "已",
+                                                      "comment":  "\f\r1,已,ji5,1,0,,adv,,,,,,,already,پہلے سے,पहिले नै,पहले से,Sudah",
+                                                      "quality":  0.020651458323842884
+                                                  },
+                                                  {
+                                                      "index":  11,
+                                                      "text":  "二",
+                                                      "comment":  "\f\r1,二,ji6,1,0,,n,,,,,,,two,دو,दुई,दो,dua",
+                                                      "quality":  0.0086712410903027667
+                                                  },
+                                                  {
+                                                      "index":  12,
+                                                      "text":  "議",
+                                                      "comment":  "\f\r1,議,ji5,1,0,,morph,,,,,,議論，議會,discussion,,,,",
+                                                      "quality":  0.0084468332394314945
+                                                  },
+                                                  {
+                                                      "index":  13,
+                                                      "text":  "醫",
+                                                      "comment":  "\f\r1,醫,ji1,1,0,,v,,,,,,醫生，醫院,cure,ڈاکٹر,चिकित्सक,डॉक्टर,medis",
+                                                      "quality":  0.0071161695909575063
+                                                  },
+                                                  {
+                                                      "index":  14,
+                                                      "text":  "依",
+                                                      "comment":  "\f\r1,依,ji1,1,0,,v,,,,,,,according to; by,کے مطابق,यस अनुसार,इसके अनुसार,berdasarkan",
+                                                      "quality":  0.00575613770141914
+                                                  },
+                                                  {
+                                                      "index":  15,
+                                                      "text":  "兒",
+                                                      "comment":  "\f\r1,兒,ji4,1,0,,n,wri,,,,仔,,son,بیٹا,छोरा,बच्चा,anak lelaki",
+                                                      "quality":  0.0046972521080074362
+                                                  },
+                                                  {
+                                                      "index":  16,
+                                                      "text":  "疑",
+                                                      "comment":  "\f\r1,疑,ji4,1,0,,v adj,,,,,,,suspect,,,,",
+                                                      "quality":  0.0045155803198586447
+                                                  },
+                                                  {
+                                                      "index":  17,
+                                                      "text":  "義",
+                                                      "comment":  "\f\r1,義,ji6,1,0,,morph,,,,,,意義，義務，名義,meaning; justice,,,,adil",
+                                                      "quality":  0.0040328515749812792
+                                                  },
+                                                  {
+                                                      "index":  18,
+                                                      "text":  "易",
+                                                      "comment":  "\f\r1,易,ji6,1,0,,adj,,,,,,容易,easy,آسان,सजिलो,आसान,gampang\r0,易,jik6,2,0,,morph,,surname,,,,交易,exchange; surname [Yik],تبادلہ,आदानप्रदान,अदला बदली,bertukar",
+                                                      "quality":  0.0029360892309838885
+                                                  },
+                                                  {
+                                                      "index":  19,
+                                                      "text":  "爾",
+                                                      "comment":  "\f\r1,爾,ji5,1,0,,n oth,,,,,,,you; your; so; like,,,,",
+                                                      "quality":  0.0029152192122361923
+                                                  },
+                                                  {
+                                                      "index":  20,
+                                                      "text":  "衣",
+                                                      "comment":  "\f\r1,衣,ji1,1,0,,n,,,,,,衣物，衣服,clothing,کپڑے,लुगा,वस्त्र,pakaian",
+                                                      "quality":  0.0028402106965232069
+                                                  },
+                                                  {
+                                                      "index":  21,
+                                                      "text":  "宜",
+                                                      "comment":  "\f\r1,宜,ji4,1,0,,adv,,,,,,,should,,,,",
+                                                      "quality":  0.0026025211882163058
+                                                  },
+                                                  {
+                                                      "index":  22,
+                                                      "text":  "移",
+                                                      "comment":  "\f\r1,移,ji4,1,0,,v,,,,,,,move,ہجرت,सार्नु,खिसकाना,bergeser",
+                                                      "quality":  0.0023126605533051216
+                                                  },
+                                                  {
+                                                      "index":  23,
+                                                      "text":  "耳",
+                                                      "comment":  "\f\r1,耳,ji5,1,0,,n,,,,,,,ear,کان,कान,कान,telinga",
+                                                      "quality":  0.0018555796446354683
+                                                  },
+                                                  {
+                                                      "index":  24,
+                                                      "text":  "伊",
+                                                      "comment":  "\f\r1,伊,ji1,1,0,,morph,,,,,,伊始，伊人,,,,,",
+                                                      "quality":  0.0018011293327352617
+                                                  },
+                                                  {
+                                                      "index":  25,
+                                                      "text":  "異",
+                                                      "comment":  "\f\r1,異,ji6,1,0,,adj,,,,,,,different; unsual,,,,berbeda",
+                                                      "quality":  0.0016347596151396091
+                                                  },
+                                                  {
+                                                      "index":  26,
+                                                      "text":  "儀",
+                                                      "comment":  "\f\r1,儀,ji4,1,0,,morph,,,,,,儀式，禮儀，儀器,ritual; equipment,,,,",
+                                                      "quality":  0.0010906902456531587
+                                                  },
+                                                  {
+                                                      "index":  27,
+                                                      "text":  "怡",
+                                                      "comment":  "\f\r1,怡,ji4,1,0,,morph,,,,,,怡情,pleasure,,,,kesenangan",
+                                                      "quality":  0.00059647028330294793
+                                                  },
+                                                  {
+                                                      "index":  28,
+                                                      "text":  "擬",
+                                                      "comment":  "\f\r1,擬,ji4,1,0,,v,wri,,,,,,intend,پلان کرنا,योजना,योजना बनाना,merencanakan\r1,擬,ji5,2,0,,v,wri,,,,,,intend,پلان کرنا,योजना,योजना बनाना,merencanakan",
+                                                      "quality":  0.0005938701185519516
+                                                  },
+                                                  {
+                                                      "index":  29,
+                                                      "text":  "椅",
+                                                      "comment":  "\f\r1,椅,ji2,1,0,,n,,,,,,,chair,,,,",
+                                                      "quality":  0.0004032199597165087
+                                                  },
+                                                  {
+                                                      "index":  30,
+                                                      "text":  "姨",
+                                                      "comment":  "\f\r1,姨,ji1,1,1,,n,,,,,,姨姨，阿姨,aunt,پھوپھو,फूपु,बूआ,bibi\r1,姨,ji4,2,0,,morph,,,,,,姨媽，姨丈,aunt; auntie,خالہ,काकी,मौसी,tante",
+                                                      "quality":  0.000234549902338036
+                                                  },
+                                                  {
+                                                      "index":  31,
+                                                      "text":  "誼",
+                                                      "comment":  "\f\r1,誼,ji4,1,0,,morph,,,,,,友誼，情誼,friendship,,,,",
+                                                      "quality":  0.00018822006458772532
+                                                  },
+                                                  {
+                                                      "index":  32,
+                                                      "text":  "倚",
+                                                      "comment":  "\f\r1,倚,ji2,1,0,,morph,,,,,,倚靠，倚賴,rely,,,,bersandar",
+                                                      "quality":  0.00013013002619477752
+                                                  },
+                                                  {
+                                                      "index":  33,
+                                                      "text":  "咦",
+                                                      "comment":  "\f\r1,咦,ji2,1,0,,oth,,,,,,,well; what,دیکھو!,हेर!,देखो!,apa itu?",
+                                                      "quality":  0.00010995995141809547
+                                                  },
+                                                  {
+                                                      "index":  34,
+                                                      "text":  "綺",
+                                                      "comment":  "\f\r1,綺,ji2,1,0,,morph,,,,,,綺夢，綺麗,,,,,",
+                                                      "quality":  0.00010747000930393829
+                                                  },
+                                                  {
+                                                      "index":  35,
+                                                      "text":  "夷",
+                                                      "comment":  "\f\r1,夷,ji4,1,0,,n,,,,,,,foreign country,,,,",
+                                                      "quality":  9.5429961278421484E-05
+                                                  },
+                                                  {
+                                                      "index":  36,
+                                                      "text":  "矣",
+                                                      "comment":  "\f\r1,矣,ji5,1,0,,oth,,,,,,,particle,,,,",
+                                                      "quality":  8.4380004065838149E-05
+                                                  },
+                                                  {
+                                                      "index":  37,
+                                                      "text":  "頤",
+                                                      "comment":  "\f\r1,頤,ji4,1,0,,morph,,,,,,頤養天年,nourish,,,,memelihara",
+                                                      "quality":  6.0589999530654091E-05
+                                                  },
+                                                  {
+                                                      "index":  38,
+                                                      "text":  "懿",
+                                                      "comment":  "\f\r1,懿,ji3,1,0,,morph,,,,,,懿旨,virtuous,,,,berbudi luhur",
+                                                      "quality":  5.6310015184277787E-05
+                                                  },
+                                                  {
+                                                      "index":  39,
+                                                      "text":  "𠵱",
+                                                      "comment":  "\f\r1,𠵱,ji1,1,0,,v,ver,,,這,,,,,,,",
+                                                      "quality":  3.3289988854375688E-05
+                                                  },
+                                                  {
+                                                      "index":  40,
+                                                      "text":  "胰",
+                                                      "comment":  "\f\r1,胰,ji4,1,0,,n v,,,,,,,pancreas,,,,pankreas",
+                                                      "quality":  3.2520005584572816E-05
+                                                  },
+                                                  {
+                                                      "index":  41,
+                                                      "text":  "貽",
+                                                      "comment":  "\f\r1,貽,ji4,1,0,,v,,,,,,,hand down,,,,memberikan kepada",
+                                                      "quality":  2.3600003032602978E-05
+                                                  },
+                                                  {
+                                                      "index":  42,
+                                                      "text":  "洱",
+                                                      "comment":  "\f\r1,洱,ji5,1,0,,x,,,,,,普洱,普洱: pu\u0027er,,,,",
+                                                      "quality":  1.7740002737817612E-05
+                                                  },
+                                                  {
+                                                      "index":  43,
+                                                      "text":  "漪",
+                                                      "comment":  "\f\r1,漪,ji2,1,0,,x,,,,,,漣漪,漣漪: ripples,,,,",
+                                                      "quality":  1.6640002801389681E-05
+                                                  },
+                                                  {
+                                                      "index":  44,
+                                                      "text":  "薏",
+                                                      "comment":  "\f\r1,薏,ji3,1,0,,x,,,,,,,,,,,",
+                                                      "quality":  1.0439999535690616E-05
+                                                  },
+                                                  {
+                                                      "index":  45,
+                                                      "text":  "貳",
+                                                      "comment":  "\f\r1,貳,ji6,1,0,,morph,,,,,,貳，貳心，行不貳過,two (anti-fraud num),,,,",
+                                                      "quality":  7.7299999730807141E-06
+                                                  },
+                                                  {
+                                                      "index":  46,
+                                                      "text":  "苡",
+                                                      "comment":  "\f\r1,苡,ji5,1,0,,x,,,,,,,,,,,",
+                                                      "quality":  6.1300004030000284E-06
+                                                  },
+                                                  {
+                                                      "index":  47,
+                                                      "text":  "咿",
+                                                      "comment":  "\f\r1,咿,ji1,1,0,,v,,,,,,,,,,,",
+                                                      "quality":  5.3199988661642336E-06
+                                                  },
+                                                  {
+                                                      "index":  48,
+                                                      "text":  "沂",
+                                                      "comment":  "\f\r1,沂,ji4,1,0,,x,,,,,,,,,,,",
+                                                      "quality":  4.80000028525508E-06
+                                                  },
+                                                  {
+                                                      "index":  49,
+                                                      "text":  "彝",
+                                                      "comment":  "\f\r1,彝,ji4,1,0,,n,,,,,,彝族,Yi (ethnic group),,,,",
+                                                      "quality":  4.1600006845006942E-06
+                                                  }
+                                              ],
+                      "variant":  "default_combined",
+                      "variant_schema":  "jyut6ping3_mobile",
+                      "patches":  [
+
+                                  ],
+                      "default_custom_mode":  "Keep"
+                  }
+              ],
+    "input_sequence":  [
+                           "jigaajiusihaa",
+                           "jigaa",
+                           "jiusihau",
+                           "jigaajiu"
+                       ]
+}

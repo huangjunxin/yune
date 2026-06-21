@@ -38,9 +38,10 @@ As of 2026-06-21, the Phase 1 engine build-out is effectively complete for the
 named target set: upstream `luna_pinyin` / common-schema behavior is measured
 against upstream `rime/librime 1.17.0`, and TypeDuck/Cantoboard fork behavior is
 captured as the TypeDuck `jyut6ping3` compatibility profile against
-TypeDuck-HK/librime `v1.1.2`. M0-M23 are complete, including the M10
-TypeDuck-Windows backend smoke; M24 remains active as a **web
-dogfooding/demo-hardening loop**, not as a new oracle-parity milestone.
+TypeDuck-HK/librime `v1.1.2`. M0-M24 are complete, including the M10
+TypeDuck-Windows backend smoke and the M24 TypeDuck-Web dogfooding/demo-hardening
+batch. M24 was a **web dogfooding/demo-hardening loop**, not a new
+oracle-parity milestone.
 
 This does **not** mean Yune is a bit-for-bit clone of librime. It means the
 current Phase 1 promise is met: the named upstream and TypeDuck targets have
@@ -541,7 +542,7 @@ In priority order:
 2. **Keep M9/M13/M16/M20 web gates green on merge.** Preserve the reproducible Emscripten build, TypeScript runtime tests/build, TypeDuck-Web worker build, real-assets browser evidence, native `typeduck_web` fallback, default-off M13 AI scenarios, and M20 showcase-control honesty checks.
 3. **Keep TypeDuck profile behavior isolated after M21.** TypeDuck-tuned sentence, correction, prediction, or ranking constants must stay behind an explicit profile predicate or typed translator config, not read unconditionally by default `luna_pinyin`/upstream behavior. A `TYPEDUCK_*` constant in shared core is a merge blocker unless it is gated or renamed with upstream-oracle evidence.
 4. **Keep Track 2 complete and fixture-gated.** M17's upstream `luna_pinyin` null-grammar sentence/lattice path, M18's prism/deployment/processor depth, M19's breadth schemas, and M22's playground build-out are complete. Future upstream-depth work needs a named target and fresh oracle fixtures before implementation.
-5. **Run M24 TypeDuck-Web dogfooding as an active demo-hardening loop.** Treat manual web-demo issues as triaged findings in [`plans/m24-plan-typeduck-web-dogfooding.md`](./plans/m24-plan-typeduck-web-dogfooding.md): classify each report as browser integration, UI polish, engine correctness, unsupported/N/A, or future product integration before changing code.
+5. **Keep the completed M24 TypeDuck-Web dogfood baseline green.** The first M24 demo-hardening batch is archived at [`plans/archive/m24-plan-typeduck-web-dogfooding.md`](./plans/archive/m24-plan-typeduck-web-dogfooding.md) with 13/13 rows closed. Future manual web-demo issues should start a new scoped dogfooding plan and classify each report as browser integration, UI polish, engine correctness, unsupported/N/A, or future product integration before changing code.
 6. **Extend the M20 playground only with browser-safe supported features.** Add active controls or guided scenarios for new browser-safe engine behavior, and keep unsupported behavior absent or documented instead of partially exposed.
 7. **Start Phase 2 Windows work with a repo/architecture decision, not direct porting.** M10 completed with T1/T2 package/build evidence and a stock TypeDuck-Windows real-server IPC smoke. The Yune-side boundary is proven; the next Windows effort is a Yune-first product/frontend track. Use [`plans/p2-win01-plan-typeduck-windows-next.md`](./plans/p2-win01-plan-typeduck-windows-next.md) to decide whether to continue inside `TypeDuck-HK/TypeDuck-Windows`, start a fresh repo, or use a hybrid extraction path. None of those choices should widen Yune's default ABI.
 8. **Add a future TypeDuck-Web product-integration track before changing a separately cloned TypeDuck-Web product checkout.** Treat `TypeDuck-HK/TypeDuck-Web` as the dedicated web IME product, not as the M20 harness or the runtime bridge.
@@ -554,21 +555,20 @@ In priority order:
 Priority is set by what a *named* (A)/(B) target needs, not by librime's feature
 list. **TypeDuck `jyut6ping3` reconciliation (M14-M16), the M20 browser
 playground, M23 architecture hardening, M17 upstream sentence/lattice depth, M18
-deployment/processor depth, M19 breadth schemas, and M22 playground build-out
-are complete** (see *Completed* above). The active numbered track is now **M24
-TypeDuck-Web dogfooding and demo hardening**, a non-parity polish/debug loop for
-the internal browser playground. Phase 2 Windows work starts as **P2-WIN-01**
+deployment/processor depth, M19 breadth schemas, M22 playground build-out, and
+M24 TypeDuck-Web dogfooding/demo hardening are complete** (see *Completed*
+above). Phase 2 Windows work starts as **P2-WIN-01**
 planning, not as another Yune-core milestone. Future engine-depth work remains
 trigger-gated by named targets and fresh oracle fixtures.
 
 ### Execution order — what to do next
 
 This is the **authoritative sequence**; the per-milestone detail bullets below
-are reference, not order. M17, M18, M19, M22, and M23 are complete. M24 is the
-active manual dogfooding/debug loop for the internal TypeDuck-Web playground; it
-must not reopen completed parity claims without oracle-backed evidence. New
-engine milestone work should start only after a plan names its target, oracle,
-fixtures, and front-end or schema need.
+are reference, not order. M17, M18, M19, M22, M23, and M24 are complete. Future
+manual dogfooding/debug loops for the internal TypeDuck-Web playground should
+start as new scoped plans and must not reopen completed parity claims without
+oracle-backed evidence. New engine milestone work should start only after a plan
+names its target, oracle, fixtures, and front-end or schema need.
 
 **Trigger-gated, not scheduled:** the core/ABI **processor extraction** (move
 processor semantics into `yune-core`) lands only when a real non-ABI consumer
@@ -582,33 +582,19 @@ processor semantics into `yune-core`) lands only when a real non-ABI consumer
 > The bullets below are reference detail. The **Execution order** above is the
 > authoritative sequence (note: M18 precedes M17, despite list position here).
 
-- **M24 — TypeDuck-Web dogfooding and demo hardening (active)** — runs the manual
-  play-testing, bug triage, performance, and UI-polish loop for the internal
-  `third_party/typeduck-web/` playground now that the named parity targets are
-  closed. M24 is intentionally not a new oracle-parity milestone: user-visible
-  browser bugs can be fixed with browser evidence, while candidate-set/ranking
-  changes still require TypeDuck `v1.1.2` or upstream `1.17.0` fixture evidence
-  before changing engine behavior. Initial findings cover slow first load,
-  literal `\f` comment-control leakage, horizontal candidate-gloss crowding, and
-  `jigaajiusihaa` word-candidate ordering that needs a TypeDuck `v1.1.2` oracle
-  recheck before any engine change, plus Cantonese-first settings labels and
-  short helper text for active engine/live session controls, and a simplified
-  display-language checklist without ambiguous main-language radios. The current
-  UI dogfooding queue also tracks the candidate page-size slider, which must
-  drive the deployed `menu/page_size` setting and visible candidate page length,
-  plus a frontend-only horizontal/vertical candidate-menu layout control that is
-  grouped separately from engine/schema controls, and a clearer engine-status
-  strip with a visible label and Cantonese-first hint text, and schema switcher
-  labels that use checked schema names such as `粵語拼音` and `倉頡五代`. The
-  queue now also tracks the visible Jyutping reverse-lookup path, where typing a
-  Mandarin pinyin probe such as `` `zhe `` should show `這` from packaged browser
-  assets without regressing normal Jyutping composition, and a full Chinese
-  typeface radio picker replacing the ambiguous Sung/Hei toggle with named
-  Google Fonts families. The dogfood frontend stack is intentionally Vite +
-  React + Tailwind CSS + small local components; M24 removes DaisyUI instead of
-  adding or leaning on a component framework, and the replacement UI should be
-  minimalistic and elegant rather than preserving DaisyUI's old visual style.
-  Detail: [`plans/m24-plan-typeduck-web-dogfooding.md`](./plans/m24-plan-typeduck-web-dogfooding.md).
+- **M24 — TypeDuck-Web dogfooding and demo hardening (complete)** — closed the
+  first manual play-testing, bug-triage, performance, and UI-polish batch for
+  the internal `third_party/typeduck-web/` playground. The 13 closed
+  `M24-DOGFOOD-*` rows cover startup evidence, comment-control cleanup, compact
+  candidate/detail layout, oracle-backed `jigaajiusihaa` ordering,
+  Cantonese-first grouped settings, checklist display languages, the
+  `menu/page_size` browser/runtime key, frontend-only horizontal/vertical menu
+  layout, a labeled engine status strip, real schema names, Jyutping `` `pzhe ``
+  reverse lookup, full Chinese typeface names, and DaisyUI removal in favor of
+  Vite + React + Tailwind CSS + small local components. Candidate/ranking
+  behavior remains fixture-gated against TypeDuck `v1.1.2` or upstream
+  `1.17.0`; M24 did not treat `typeduck.hk/web` as a hard oracle.
+  Detail: [`plans/archive/m24-plan-typeduck-web-dogfooding.md`](./plans/archive/m24-plan-typeduck-web-dogfooding.md).
 - **P2-WIN-01 — TypeDuck-Windows next product/frontend planning (draft)** —
   starts Phase 2 by defining a Yune-first Windows IME product track. The engine
   direction is Yune-only; old librime/Weasel code is reference material and a
