@@ -515,10 +515,11 @@ In priority order:
 2. **Keep M9/M13/M16/M20 web gates green on merge.** Preserve the reproducible Emscripten build, TypeScript runtime tests/build, TypeDuck-Web worker build, real-assets browser evidence, native `typeduck_web` fallback, default-off M13 AI scenarios, and M20 showcase-control honesty checks.
 3. **Keep TypeDuck profile behavior isolated after M21.** TypeDuck-tuned sentence, correction, prediction, or ranking constants must stay behind an explicit profile predicate or typed translator config, not read unconditionally by default `luna_pinyin`/upstream behavior. A `TYPEDUCK_*` constant in shared core is a merge blocker unless it is gated or renamed with upstream-oracle evidence.
 4. **Keep Track 2 complete and fixture-gated.** M17's upstream `luna_pinyin` null-grammar sentence/lattice path, M18's prism/deployment/processor depth, M19's breadth schemas, and M22's playground build-out are complete. Future upstream-depth work needs a named target and fresh oracle fixtures before implementation.
-5. **Extend the M20 playground only with browser-safe supported features.** Add active controls or guided scenarios for new browser-safe engine behavior, and keep unsupported behavior absent or documented instead of partially exposed.
-6. **Finish TypeDuck-Windows only with a real build and frontend smoke.** The M10 resume reached T2 with a current TypeDuck-profile package/header smoke and packaged DLL lifecycle. M10 stays blocked until a Visual Studio build shell can build/link the pinned TypeDuck-Windows checkout against that package and a real frontend smoke records exact input/output evidence.
-7. **Add a future TypeDuck-Web product-integration track before changing a separately cloned TypeDuck-Web product checkout.** Treat `TypeDuck-HK/TypeDuck-Web` as the dedicated web IME product, not as the M20 harness or the runtime bridge.
-8. **Add a future iOS keyboard-developer track before TypeDuck iOS work starts.** Treat the Cantoboard/TypeDuck iOS build repositories as platform-integration provenance, not as engine-parity code to port. The track should define Yune-native iOS packaging, Swift/Obj-C host bindings, resource bundling, sandboxed userdb/storage, keyboard-extension lifecycle limits, and mobile-specific configuration hooks.
+5. **Run M24 TypeDuck-Web dogfooding as an active demo-hardening loop.** Treat manual web-demo issues as triaged findings in [`plans/m24-plan-typeduck-web-dogfooding.md`](./plans/m24-plan-typeduck-web-dogfooding.md): classify each report as browser integration, UI polish, engine correctness, unsupported/N/A, or future product integration before changing code.
+6. **Extend the M20 playground only with browser-safe supported features.** Add active controls or guided scenarios for new browser-safe engine behavior, and keep unsupported behavior absent or documented instead of partially exposed.
+7. **Finish TypeDuck-Windows only with a real build and frontend smoke.** The M10 resume reached T2 with a current TypeDuck-profile package/header smoke and packaged DLL lifecycle. M10 stays blocked until a Visual Studio build shell can build/link the pinned TypeDuck-Windows checkout against that package and a real frontend smoke records exact input/output evidence.
+8. **Add a future TypeDuck-Web product-integration track before changing a separately cloned TypeDuck-Web product checkout.** Treat `TypeDuck-HK/TypeDuck-Web` as the dedicated web IME product, not as the M20 harness or the runtime bridge.
+9. **Add a future iOS keyboard-developer track before TypeDuck iOS work starts.** Treat the Cantoboard/TypeDuck iOS build repositories as platform-integration provenance, not as engine-parity code to port. The track should define Yune-native iOS packaging, Swift/Obj-C host bindings, resource bundling, sandboxed userdb/storage, keyboard-extension lifecycle limits, and mobile-specific configuration hooks.
 
 ---
 
@@ -528,16 +529,19 @@ Priority is set by what a *named* (A)/(B) target needs, not by librime's feature
 list. **TypeDuck `jyut6ping3` reconciliation (M14-M16), the M20 browser
 playground, M23 architecture hardening, M17 upstream sentence/lattice depth, M18
 deployment/processor depth, M19 breadth schemas, and M22 playground build-out
-are complete** (see *Completed* above). There is no active numbered compatibility
-milestone queued; future engine-depth work is trigger-gated by named targets and
-fresh oracle fixtures.
+are complete** (see *Completed* above). The active numbered track is now **M24
+TypeDuck-Web dogfooding and demo hardening**, a non-parity polish/debug loop for
+the internal browser playground. Future engine-depth work remains trigger-gated
+by named targets and fresh oracle fixtures.
 
 ### Execution order — what to do next
 
 This is the **authoritative sequence**; the per-milestone detail bullets below
-are reference, not order. M17, M18, M19, M22, and M23 are complete. New milestone
-work should start only after a plan names its target, oracle, fixtures, and
-front-end or schema need.
+are reference, not order. M17, M18, M19, M22, and M23 are complete. M24 is the
+active manual dogfooding/debug loop for the internal TypeDuck-Web playground; it
+must not reopen completed parity claims without oracle-backed evidence. New
+engine milestone work should start only after a plan names its target, oracle,
+fixtures, and front-end or schema need.
 
 **Trigger-gated, not scheduled:** the core/ABI **processor extraction** (move
 processor semantics into `yune-core`) lands only when a real non-ABI consumer
@@ -551,6 +555,17 @@ processor semantics into `yune-core`) lands only when a real non-ABI consumer
 > The bullets below are reference detail. The **Execution order** above is the
 > authoritative sequence (note: M18 precedes M17, despite list position here).
 
+- **M24 — TypeDuck-Web dogfooding and demo hardening (active)** — runs the manual
+  play-testing, bug triage, performance, and UI-polish loop for the internal
+  `third_party/typeduck-web/` playground now that the named parity targets are
+  closed. M24 is intentionally not a new oracle-parity milestone: user-visible
+  browser bugs can be fixed with browser evidence, while candidate-set/ranking
+  changes still require TypeDuck `v1.1.2` or upstream `1.17.0` fixture evidence
+  before changing engine behavior. Initial findings cover slow first load,
+  literal `\f` comment-control leakage, horizontal candidate-gloss crowding, and
+  `jigaajiusihaa` word-candidate ordering that needs a TypeDuck `v1.1.2` oracle
+  recheck before any engine change.
+  Detail: [`plans/m24-plan-typeduck-web-dogfooding.md`](./plans/m24-plan-typeduck-web-dogfooding.md).
 - **M17 — Upstream sentence / language model (poet) (complete)** — implements the upstream
   `1.17.0` statistical sentence path so `luna_pinyin` SENTENCE + full-page LATTICE
   output matches the captured oracle, with the former `zhongguo` phrase and
