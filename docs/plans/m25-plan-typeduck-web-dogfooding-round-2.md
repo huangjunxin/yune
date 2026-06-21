@@ -84,6 +84,7 @@ M25 intake began on 2026-06-21 with user-reported browser dogfooding regressions
 | M25-DOGFOOD-01 | Open | Browser integration / performance | Refreshing `http://localhost:5173/web/` still leaves `載入中 Loading...` visible for too long; the user sees no practical improvement compared with the pre-M24 app and considers this unacceptable for real users. | Reproduced in the in-app browser on 2026-06-21: reload took `47.752s`; startup marker reported `totalMs=47331`, with `runtime:initialized` consuming nearly the entire delay after assets loaded. Evidence: `third_party/typeduck-web/e2e/results/m25-dogfooding/M25-DOGFOOD-01/reload-startup-repro.json`. | `third_party/typeduck-web/source/src/worker.ts`, `third_party/typeduck-web/source/src/yune-integration/adapter.ts`, `third_party/typeduck-web/source/src/yune-integration/assets.ts`, `packages/yune-typeduck-runtime/src/typeduck.ts`, `packages/yune-typeduck-runtime/src/module.ts`, `packages/yune-typeduck-runtime/src/filesystem.ts`, `crates/yune-rime-api/src/typeduck_web.rs`, schema deploy/init paths under `crates/yune-rime-api/src/`. | Close only after a measured startup optimization lands. Add a Playwright startup budget test that records phase timings, preserve `startup:complete` diagnostics, and capture before/after evidence under this issue id. Target: interactive shell visible quickly and warm reload IME readiness materially below the current ~47s baseline; any chosen budget must be written into the test and justified by local evidence. |
 | M25-DOGFOOD-02 | Open | Browser integration / settings and candidate pagination | The page-size control is hard to find after M24 UI changes, its allowed range is wrong for the requested behavior, and changing it still does not cap the rendered candidate list. The user expects a visible slider/control allowing 3-10 candidates, where setting 9 shows exactly 9 visible candidates. | User screenshot showed `hai` rendering far more than 10 rows. Reproduced in the in-app browser on 2026-06-21: DOM had page-size slider `min=4`, `max=10`, `value=6`, but typing `hai` rendered `50` visible candidate rows. Evidence: `third_party/typeduck-web/e2e/results/m25-dogfooding/M25-DOGFOOD-02/page-size-hai-repro.json`. | `third_party/typeduck-web/source/src/Preferences.tsx`, `third_party/typeduck-web/source/src/Inputs.tsx`, `third_party/typeduck-web/source/src/CandidatePanel.tsx`, `third_party/typeduck-web/source/src/App.tsx`, `third_party/typeduck-web/source/src/yune-integration/adapter.ts`, `crates/yune-rime-api/src/typeduck_web.rs`, `crates/yune-rime-api/src/context_api.rs`, `crates/yune-rime-api/tests/typeduck_web.rs`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`. | Close when the UI exposes an obvious 3-10 page-size control and the rendered candidate panel never exceeds the configured page size. Add/extend native `typeduck_web` coverage for `menu/page_size` at 3 and 9, add Playwright coverage that sets 3/9/10 and types `hai`, verify page navigation still works, regenerate and reverse/forward check `third_party/typeduck-web/patches/yune-typeduck-runtime.patch`, and capture browser JSON/screenshot evidence under this issue id. |
 | M25-DOGFOOD-03 | Open | Browser integration / typing responsiveness | Typing in the textbox can still show the global `è¼‰å…¥ä¸­ Loading...` state and can stall for about a second when entering a character. This makes the dogfood IME feel blocked even after the page becomes visible. | User-reported during manual dogfooding on 2026-06-21. Evidence placeholder with exact report: `third_party/typeduck-web/e2e/results/m25-dogfooding/M25-DOGFOOD-03/typing-latency-user-report.json`. Needs measured browser repro with keydown-to-candidate timing. | `third_party/typeduck-web/source/src/CandidatePanel.tsx`, `third_party/typeduck-web/source/src/rime.ts`, `third_party/typeduck-web/source/src/worker.ts`, `third_party/typeduck-web/source/src/App.tsx`, `third_party/typeduck-web/source/src/Toolbar.tsx`, `third_party/typeduck-web/source/src/yune-integration/adapter.ts`, `packages/yune-typeduck-runtime/src/typeduck.ts`, `crates/yune-rime-api/src/typeduck_web.rs`, `crates/yune-core/src/engine.rs`. | Close only after per-key latency is measured and improved. Add Playwright instrumentation for keydown-to-candidate update latency on `hai`, `nei`, and a long phrase; split queue wait, worker roundtrip, Rust `process_key`, and React render time; remove global loading from normal per-key composition; ensure typing remains responsive while startup/deploy/customize is in flight; save before/after latency JSON under this issue id. |
+| M25-DOGFOOD-04 | Open | UI polish / schema switcher layout | The schema list sits in its own vertical block below the three mode buttons, wasting vertical space. The user wants the schema list moved into the same top row as the three buttons. The `luna_pinyin` option is also currently shown as `普通話`, but the user expects the schema name `朙月拼音`. | User-reported during manual dogfooding on 2026-06-21. Local verification found upstream `1.17.0` `luna_pinyin.schema.yaml` uses `朙月拼音`, while the current TypeDuck-Web source and TypeDuck v1.1.2 captured schema use `普通話`. Evidence: `third_party/typeduck-web/e2e/results/m25-dogfooding/M25-DOGFOOD-04/schema-switcher-toolbar-and-luna-name-report.json`. | `third_party/typeduck-web/source/src/App.tsx`, `third_party/typeduck-web/source/src/Toolbar.tsx`, `third_party/typeduck-web/source/src/SchemaSwitcher.tsx`, `third_party/typeduck-web/source/src/consts.ts`, `third_party/typeduck-web/source/src/Inputs.tsx`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`. | Close when the schema selector is part of the top control row with the three mode buttons on desktop, wraps within the same compact control band on narrow screens, and `luna_pinyin` is labeled `朙月拼音` as the primary user-facing schema name unless the row is explicitly revised with TypeDuck-v1.1.2-specific rationale. Add Playwright evidence covering desktop and mobile layout, active schema switching, and the visible Luna label; regenerate and reverse/forward check `third_party/typeduck-web/patches/yune-typeduck-runtime.patch` if source changed. |
 
 ## Accepted Review Corrections
 
@@ -242,6 +243,45 @@ M25 intake began on 2026-06-21 with user-reported browser dogfooding regressions
 - [ ] **Step 6: Prove typing responsiveness after the fix**
 
   Re-run the browser responsiveness test and save `typing-latency-after.json` with before/after p50/p95/p99 timings. The final evidence must show the textbox accepts keypresses without a visible one-second stall and the global loading indicator does not appear for normal composition.
+
+- [ ] **Step 7: Regenerate the TypeDuck-Web patch if source changed**
+
+  If any file under `third_party/typeduck-web/source/` changed, regenerate `third_party/typeduck-web/patches/yune-typeduck-runtime.patch`, reverse-check it from `source/`, and forward-check it on a clean source checkout.
+
+### Task 5: M25-DOGFOOD-04 Compact Schema Switcher And Luna Label
+
+**Files:**
+- Modify: `third_party/typeduck-web/source/src/App.tsx`
+- Modify: `third_party/typeduck-web/source/src/Toolbar.tsx`
+- Modify: `third_party/typeduck-web/source/src/SchemaSwitcher.tsx`
+- Modify: `third_party/typeduck-web/source/src/consts.ts`
+- Modify if segment markup needs shared layout changes: `third_party/typeduck-web/source/src/Inputs.tsx`
+- Test: `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`
+- Evidence: `third_party/typeduck-web/e2e/results/m25-dogfooding/M25-DOGFOOD-04/`
+
+- [ ] **Step 1: Preserve the schema-name verification**
+
+  Keep `schema-switcher-toolbar-and-luna-name-report.json` as the issue baseline. The implementation should treat the current web label `普通話` as a UI/source mismatch to resolve, not as proof that the user-facing label is correct. Upstream `1.17.0` names `luna_pinyin` as `朙月拼音`; TypeDuck v1.1.2 names it `普通話`, so any decision to keep `普通話` must be documented in this row with explicit TypeDuck-specific rationale.
+
+- [ ] **Step 2: Add failing browser layout coverage**
+
+  Add a Playwright test that loads `/web/` at a desktop viewport and asserts the schema switcher belongs to the same top control band as the ASCII/simplification/full-shape buttons. The test should check that `[data-yune-schema-switcher]` is inside or directly owned by the toolbar/top-controls component, the top edges of the three mode buttons and schema segments are aligned within one compact row, and no separate standalone schema block appears between the toolbar and status strip. Add a narrow viewport assertion that the same controls wrap within one compact band instead of becoming a separate full-width section.
+
+- [ ] **Step 3: Move the schema switcher into the toolbar row**
+
+  Refactor `Toolbar.tsx` to accept `activeSchema` and `setActiveSchema`, render `SchemaSwitcher` next to the three mode buttons, and keep the loading indicator in the same top control area without pushing the textarea downward. Remove the standalone `<SchemaSwitcher ... />` call from `App.tsx`. Keep accessible labels for each schema option and preserve the existing `data-yune-schema-switcher` hook for tests.
+
+- [ ] **Step 4: Make the Luna label explicit**
+
+  Update `SCHEMA_OPTIONS` in `consts.ts` so `luna_pinyin` uses `朙月拼音` as the primary visible `schemaName`. Keep `Luna Pinyin` or `Mandarin` only as a secondary label or tooltip if useful. Do not change engine output/ranking behavior for this UI-only row.
+
+- [ ] **Step 5: Prove schema switching still works**
+
+  In the browser test, switch from `jyut6ping3_mobile` to `luna_pinyin` and back, assert the visible active option changes, assert the Luna option text includes `朙月拼音`, and type a short smoke input after switching to prove the selector still drives the worker path.
+
+- [ ] **Step 6: Capture visual evidence**
+
+  Save desktop and narrow-viewport screenshots plus a JSON summary under `M25-DOGFOOD-04`. The JSON should include viewport size, active schema before/after switching, bounding boxes for the three mode buttons and schema switcher, and the visible text for the Luna option.
 
 - [ ] **Step 7: Regenerate the TypeDuck-Web patch if source changed**
 
