@@ -12,9 +12,9 @@
 ## Sources & method
 
 - **Source inventory (what the forks changed):**
-  [`CANTOBOARD_LIBRIME_REBASE_SUMMARY.md`](./CANTOBOARD_LIBRIME_REBASE_SUMMARY.md)
+  [`CANTOBOARD_LIBRIME_REBASE_SUMMARY.md`](./archive/fork-provenance/CANTOBOARD_LIBRIME_REBASE_SUMMARY.md)
   (Cantoboard's 18 master commits + side-branches, and which TypeDuck adopted) and
-  [`REBASE_SUMMARY_SINCE_D8BC266D.md`](./REBASE_SUMMARY_SINCE_D8BC266D.md) (the full
+  [`REBASE_SUMMARY_SINCE_D8BC266D.md`](./archive/fork-provenance/REBASE_SUMMARY_SINCE_D8BC266D.md) (the full
   TypeDuck delta `d8bc266d..v1.1.2`). These are **LLM-generated provenance notes**; every
   row below was re-verified against the on-disk fork source and live upstream 1.17.0.
 - **Upstream comparison:** fork source on disk at
@@ -175,8 +175,8 @@ copy the librime or fork implementation shape.
 > Per the standing upstream-first rule (D-25), the default `rime_get_api()` table tracks
 > upstream 1.17.0; fork-only ABI slots are reserved for a *named TypeDuck profile ABI
 > surface*. M19 added the opt-in `rime_get_typeduck_profile_api()` accessor for
-> `config_list_append_*`; Windows packaging and real frontend E2E remain separate
-> parked work.
+> `config_list_append_*`; M10 later verified packaging, TypeDuck-Windows
+> build/link, and stock real-server IPC smoke through that profile surface.
 
 ---
 

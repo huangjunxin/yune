@@ -23,8 +23,8 @@ AI-native behavior on top as a separate product milestone.
 - [`CONVENTIONS.md`](./CONVENTIONS.md) — architecture, stack, structure, coding/testing conventions, integrations, and current risks (one consolidated reference).
 - [`decisions.md`](./decisions.md) — the consolidated decision log (standing principles + `D-*` entries).
 - [`requirements.md`](./requirements.md) — requirement IDs and their status.
-- [`typeduck-windows-backend-requirements.md`](./typeduck-windows-backend-requirements.md) - the parked TypeDuck-Windows compatibility-profile contract.
-- [`fork-parity-ledger.md`](./fork-parity-ledger.md) — the single source of truth for *every* Cantoboard + TypeDuck fork improvement vs upstream `1.17.0`, with origin, category, and Yune status (done / todo / non-goal). Sourced from [`CANTOBOARD_LIBRIME_REBASE_SUMMARY.md`](./CANTOBOARD_LIBRIME_REBASE_SUMMARY.md) and [`REBASE_SUMMARY_SINCE_D8BC266D.md`](./REBASE_SUMMARY_SINCE_D8BC266D.md).
+- [`typeduck-windows-backend-requirements.md`](./typeduck-windows-backend-requirements.md) - the completed TypeDuck-Windows compatibility-profile contract.
+- [`fork-parity-ledger.md`](./fork-parity-ledger.md) — the single source of truth for *every* Cantoboard + TypeDuck fork improvement vs upstream `1.17.0`, with origin, category, and Yune status (done / todo / non-goal). Sourced from archived provenance notes under [`archive/fork-provenance/`](./archive/fork-provenance/).
 - [`plans/`](./plans/) — per-stage implementation plans, findings, build notes, and validation artifacts (finished ones under `plans/archive/`).
 
 > The GSD planning system (`.planning/`) has been retired; its durable content now lives in `decisions.md`, `requirements.md`, and `CONVENTIONS.md`.
@@ -473,7 +473,7 @@ The completed plan is archived at
 
 ---
 
-## Parked
+## Completed profile tracks
 
 ### M10: TypeDuck-Windows native backend
 
@@ -690,7 +690,7 @@ the *Non-goal* column is not a backlog. Standing deferrals also appear in
 ## Deferred / future
 
 - **librime C++ plugin ABI** (Lua, octagram, predict, proto): deferred until a concrete frontend or distribution requires it; prefer Yune-native extension points first.
-- **AI-native input layer (future native/frontend expansion)** - after M13, TypeDuck-Web has a default-off local AI surface with browser safety evidence. Remaining AI-native product integration is exposing equivalent gates in additional real frontends without changing upstream-core, TypeDuck-Web classic behavior, or parked TypeDuck-Windows compatibility behavior. The architecture remains in [`plans/m11-design-ai-native.md`](./plans/m11-design-ai-native.md); CLI evidence lives in [`plans/archive/m11-plan-ai-native-cli-slice.md`](./plans/archive/m11-plan-ai-native-cli-slice.md), and web exposure evidence lives in [`plans/archive/m13-plan-ai-native-frontend-exposure.md`](./plans/archive/m13-plan-ai-native-frontend-exposure.md).
+- **AI-native input layer (future native/frontend expansion)** - after M13, TypeDuck-Web has a default-off local AI surface with browser safety evidence. Remaining AI-native product integration is exposing equivalent gates in additional real frontends without changing upstream-core, TypeDuck-Web classic behavior, or the completed TypeDuck-Windows compatibility profile. The architecture remains in [`plans/m11-design-ai-native.md`](./plans/m11-design-ai-native.md); CLI evidence lives in [`plans/archive/m11-plan-ai-native-cli-slice.md`](./plans/archive/m11-plan-ai-native-cli-slice.md), and web exposure evidence lives in [`plans/archive/m13-plan-ai-native-frontend-exposure.md`](./plans/archive/m13-plan-ai-native-frontend-exposure.md).
 - **iOS keyboard developer support** - future TypeDuck iOS work needs its own
   track. The fork-parity ledger now classifies the Cantoboard/TypeDuck iOS build
   rows as deferred platform integration: useful for Apple build/static-linking,

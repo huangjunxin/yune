@@ -3,8 +3,8 @@
 > **Purpose.** This records what the **TypeDuck-Windows** native IME frontend needs from the
 > engine, so Yune development can target it deliberately. It complements
 > [`m09-findings-typeduck-web-integration.md`](./plans/archive/m09-findings-typeduck-web-integration.md), which covers the
-> *web* frontend. This M10 contract is parked as a TypeDuck compatibility
-> profile after M12 made upstream `rime/librime 1.17.0` the default core oracle.
+> *web* frontend. This M10 contract is complete as a TypeDuck compatibility
+> profile; upstream `rime/librime 1.17.0` remains the default core oracle.
 > The M10 resume completed T1/T2/T3 on 2026-06-21: Yune now has a current
 > native TypeDuck-profile package/header smoke, packaged DLL lifecycle gate, a
 > pinned TypeDuck-Windows x64 build/link against the Yune package, and stock
@@ -43,7 +43,7 @@
 TypeDuck is RIME-shaped: `weasel frontend  ↔  RIME C ABI  ↔  engine`.
 
 - **Today:** `TypeDuck-Windows` weasel fork (<https://github.com/TypeDuck-HK/TypeDuck-Windows>) -> RIME C ABI -> librime fork (`TypeDuck-HK/librime @ v1.1.2`).
-- **Future target:** `TypeDuck-Windows -> named TypeDuck profile RIME C ABI -> Yune`.
+- **Completed target:** `TypeDuck-Windows -> named TypeDuck profile RIME C ABI -> Yune`.
 
 Because the frontend only ever talks to the **RIME C ABI**, swapping librime→Yune is a *contained*
 change **iff** Yune presents the same ABI surface and emits the same candidate data. The four

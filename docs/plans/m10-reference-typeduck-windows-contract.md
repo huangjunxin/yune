@@ -1,38 +1,40 @@
-# Yune → TypeDuck-Windows: Concrete Implementation Plan
+# Yune -> TypeDuck-Windows: Compatibility Contract Reference
 
-> **Status:** Parked - **Milestone:** M10 (TypeDuck-Windows compatibility profile) - **Updated:** 2026-06-21 - **Type:** reference
+> **Status:** Completed / historical - **Milestone:** M10 (TypeDuck-Windows compatibility profile) - **Updated:** 2026-06-21 - **Type:** reference
 
 > **Audience.** An autonomous coding agent (e.g. GPT) executing directly in the
 > `yune` repo. Every work item is independently committable, names exact files,
 > and ends with copy-pasteable verification commands.
 >
-> **Goal.** Record the four-item TypeDuck compatibility-profile contract in
+> **Goal.** Record the four-item TypeDuck compatibility-profile contract that
+> M10 has now satisfied in
 > [`typeduck-windows-backend-requirements.md`](../typeduck-windows-backend-requirements.md)
-> so TypeDuck-Windows can later swap `librime -> Yune` behind the RIME C ABI
-> after M12 refreshed core Yune against upstream `rime/librime 1.17.0` and a
-> named TypeDuck profile ABI surface exists.
+> so future agents can preserve the completed `librime -> Yune` swap path behind
+> the named TypeDuck profile ABI. M12 refreshed core Yune against upstream
+> `rime/librime 1.17.0`; M19 added the opt-in TypeDuck profile ABI surface; M10
+> completed the Windows package/build/frontend smoke through that profile.
 >
 > **Line anchors** in this doc are accurate as of 2026-06-17 but *will drift* —
 > re-`grep` the named symbol before editing. Trust symbol names over line numbers.
 
 ---
 
-## Remaining / Not Yet Verified
+## Completion State (2026-06-21)
 
-The roadmap now treats M10 as parked profile work. Older `[x]` entries in this
-plan mean the code or documentation was authored; they do not by themselves
-prove target verification. The remaining TypeDuck-profile work is:
+M10 is complete as a TypeDuck compatibility profile. Older `[x]` entries in this
+plan are retained as historical implementation notes; do not reinterpret them as
+instructions to widen the default upstream `RimeApi` table.
 
 | Area | Authored | Verified-on-target | Current honest state |
 |---|---:|---:|---|
-| Item 4 comment shaping | [x] | [ ] | Current v1.1.2 fixture slices are byte-covered, including dictionary payloads, `"; "` joins, and schema prompt/preedit bytes; the real TypeDuck-Windows E2E has not run. |
-| Item 5 native package | [x] | T2 | The M10 resume package now uses upstream-shaped default headers plus `rime_typeduck_profile_api.h`, rejects `-SkipSmoke`, and smoke-loads the packaged DLL through `rime_get_typeduck_profile_api()`; real TypeDuck-Windows build/link and frontend smoke remain blocked by missing local Windows build tools. |
-| Item 6 Cantonese parity suite | [x] | [ ] | Four active golden-locked tests pass when verified; five fork-specific cases remain `#[ignore]`d pending genuine v1.1.2 goldens. |
-| TypeDuck-Windows E2E | [ ] | [ ] | Pinned checkout `f3ffcfe3b6a3018b1c3c9d256a6f0d587a2d2e27` exists under `target/`, but referenced integration-plan files were absent and native frontend build tools were missing from PATH. |
+| Item 4 comment shaping | [x] | [x] | Current v1.1.2 fixture slices are byte-covered, including dictionary payloads, `"; "` joins, schema prompt/preedit bytes, and T3 stock frontend smoke carrying candidate/context data. |
+| Item 5 native package | [x] | T1/T2/T3 | The M10 package uses upstream-shaped default headers plus `rime_typeduck_profile_api.h`, rejects `-SkipSmoke`, smoke-loads the packaged DLL through `rime_get_typeduck_profile_api()`, builds the pinned x64 TypeDuck-Windows solution/deployer/server projects, and passes the stock IPC smoke. |
+| Item 6 Cantonese parity suite | [x] | [x] | Captured M14-M21 `jyut6ping3` fixtures are active tests. Schema-menu and userdb-pronunciation details remain frontend/native evidence limits, not M10 blockers or default ABI changes. |
+| TypeDuck-Windows E2E | [x] | [x] | Stock `TypeDuckServer.exe` plus stock `TestTypeDuckIPC.exe /console` returns a nonzero session, sends `ngohaig` key events, and receives `status.schema_id=jyut6ping3` plus candidate/context data. Evidence: `target/typeduck-windows-e2e/evidence/m10-t3-20260621-100337-stock-real-server`. |
 
-Do not mark E2E or missing oracle cases verified by pointing at authored scripts,
-by running `package-typeduck-windows.ps1` with `-SkipSmoke` or `-NoBuild`, or by
-deriving new expected bytes from Yune itself.
+Do not reinterpret historical tasks below as instructions to add fork-only slots
+back into the default `RimeApi`, derive new expected bytes from Yune itself, or
+weaken the TypeDuck profile boundary.
 
 M12/M19/M10-resume note: older steps below that add `config_list_append_*` to
 the default `RimeApi` table are historical. The default table follows upstream
@@ -465,11 +467,10 @@ and per-entry userdb pronunciations.
 ```sh
 cargo test -p yune-core --test cantonese_parity   # all green (or documented ignores)
 ```
-Then locate the current TypeDuck-Windows lifecycle harness: with #1-#4 met
-through a named TypeDuck profile ABI and E2E green, the `librime -> Yune` swap
-behind that profile ABI is a contained change.
+M10 later located the current TypeDuck-Windows lifecycle harness and completed
+the `librime -> Yune` swap smoke behind the named TypeDuck profile ABI.
 
-### Current TypeDuck-Windows E2E blocker (2026-06-19)
+### Historical TypeDuck-Windows E2E blocker (2026-06-19; resolved by M10)
 
 A pinned checkout was cloned at
 `target/typeduck-windows-e2e/TypeDuck-Windows`:
@@ -482,10 +483,10 @@ The previously referenced `INTEGRATION_PLAN.md` and
 `LIBRIME_INTEGRATION_PLAN.md` files were not present in that checkout. The local
 shell also did not expose `msbuild.exe`, `devenv.exe`, `cmake.exe`,
 `nuget.exe`, or `nmake.exe`, so the real frontend build and lifecycle E2E were
-not run. Resume by installing the fork prerequisites from `README.md` /
-`INSTALL.md`, replacing the fork's `include`/`lib`/`output` librime payload with
-the smoke-verified Yune package, and running the current fork build/lifecycle
-harness from a Visual Studio developer shell.
+not run in that older attempt. M10 resolved this with Visual Studio 2022
+Community plus ATL/MFC, the current Yune package, and the stock
+`TypeDuckServer.exe` / `TestTypeDuckIPC.exe /console` IPC smoke. Keep this
+section only as provenance for the earlier blocked state.
 
 ---
 
@@ -525,9 +526,9 @@ No engine or Windows C ABI change was required.
 ## Summary checklist
 
 - [x] **Item 1** — Windows test baseline green (`librime_signature_modified_time` shape + poison-tolerant lock)
-- [x] **Item 2** - `config_list_append_{string,bool,int,double}` helper impl + direct tests retained as parked TypeDuck-profile work *(Contract #1)*
+- [x] **Item 2** - `config_list_append_{string,bool,int,double}` helper impl + direct tests retained as TypeDuck-profile work *(Contract #1)*
 - [x] **Item 3** — v1.1.2 goldens captured (or reproducible blocker) *(prereq)*
-- **Item 4** - authored [x] / verified-on-target [ ]: comment semantics for current v1.1.2 fixture slices are golden-tested, but the real TypeDuck-Windows E2E has not run.
-- **Item 5** - authored [x] / T2 verified [x]: native `rime.dll`/`.lib`/headers packaging now ships upstream-shaped default headers plus `rime_typeduck_profile_api.h`, rejects `-SkipSmoke`, and smoke-loads the packaged DLL through the named profile accessor. T1/T3 remain blocked by missing local TypeDuck-Windows build tools/frontend smoke.
-- **Item 6** - authored [x] / verified-on-target [ ]: Cantonese/Jyutping parity suite exists with documented ignored oracle gaps; full parity remains blocked by missing goldens.
+- [x] **Item 4** - comment semantics for current v1.1.2 fixture slices are golden-tested and covered by T3 stock frontend smoke.
+- [x] **Item 5** - native `rime.dll`/`.lib`/headers packaging ships upstream-shaped default headers plus `rime_typeduck_profile_api.h`, rejects `-SkipSmoke`, smoke-loads the packaged DLL through the named profile accessor, builds the pinned x64 TypeDuck-Windows targets, and passes stock IPC smoke.
+- [x] **Item 6** - Cantonese/Jyutping parity suite exists with captured active fixtures; any future uncaptured fork behavior needs new v1.1.2 goldens rather than widening default ABI behavior.
 - [x] **Item 0** — untracked files committed, EOL policy recorded, planning state reconciled, Windows milestone tracked

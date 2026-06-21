@@ -29,7 +29,7 @@ candidate/context data.
   `ngohaig` key events, and receives `status.schema_id=jyut6ping3` plus
   candidate/context data.
 
-Highest verified tier: **T1 + T2 + documented T3**. M10 is **complete** as a
+Highest verified tier: **T1/T2/T3**. M10 is **complete** as a
 TypeDuck-Windows compatibility-profile backend milestone.
 
 ## ABI/Header Decision
@@ -141,7 +141,7 @@ Packaged TypeDuck Windows native artifacts:
   C:\Users\laubonghaudoi\Documents\GitHub\yune\target\typeduck-windows-native\x86_64-pc-windows-msvc\dist\include\rime_typeduck_profile_api.h
 ```
 
-## TypeDuck-Windows Build And T3 Blocker
+## TypeDuck-Windows Build And T3 Resolution
 
 Pinned checkout:
 
