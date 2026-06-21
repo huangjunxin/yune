@@ -25,9 +25,10 @@ named targets are fixture-backed and documented. Future work is Phase 2:
 frontend/product development, ongoing dogfooding, AI productization, and
 additional compatibility targets when a real frontend or schema needs them.
 
-Read [docs/roadmap.md](docs/roadmap.md) for the live milestone state. The web
-dogfood track and Phase 2 Windows plan move quickly, so the roadmap is the
-source of truth for whether a plan is active or archived.
+Read [docs/roadmap.md](docs/roadmap.md) for the live milestone state. The first
+TypeDuck-Web dogfooding batch, M24, is complete and archived; future web
+dogfood reports should start a new scoped plan rather than reopening Phase 1.
+The Phase 2 Windows plan is the next platform/product planning artifact.
 
 ## Compatibility Model
 
@@ -117,7 +118,7 @@ cargo run -p yune-cli -- frontend `
 
 For TypeDuck-Web browser work, read
 [third_party/typeduck-web/e2e/yune-browser-smoke.md](third_party/typeduck-web/e2e/yune-browser-smoke.md)
-and the active or archived plan under `docs/plans/`.
+and the current plan or archived M24 baseline under `docs/plans/`.
 
 ## Key Documentation
 

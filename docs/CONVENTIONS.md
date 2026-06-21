@@ -212,7 +212,10 @@ as a UI product, and do not treat the internal harness as the shipping product.
 `third_party/typeduck-web/source`; the Yune seam is
 `third_party/typeduck-web/yune-integration/` (`adapter.ts`, `assets.ts`, etc.), which
 adapts `@yune-ime/typeduck-runtime` into the upstream app. In-browser validation
-for M9/M13/M16 and M20 runs through this internal harness.
+for M9/M13/M16 and M20 runs through this internal harness. M24 closed the first
+manual dogfooding/demo-hardening batch against this harness; future browser
+dogfood loops should start a new scoped plan and preserve the M24 evidence
+baseline rather than reopening Phase 1.
 
 **Key deps & cross-platform note:** `libc::ctime_r` is used only on
 `all(unix, not(target_os = "emscripten"))`; on Windows + Emscripten/WASM a pure-Rust
@@ -674,16 +677,16 @@ Planning, decisions, and conventions live under `docs/` — there is no external
 **Every doc under `docs/plans/` (and `archive/`) opens with a status banner as its second line, and the banner MUST name the milestone/stage it belongs to** so its scope is clear at a glance:
 
 ```
-> **Status:** <Active|Reopened|Parked|Finished|Superseded> · **Milestone:** M<n> (short name) · **Updated|Closed:** YYYY-MM-DD · **Type:** <execution plan|findings|reference|record>
+> **Status:** <Active|Reopened|Parked|Complete|Finished|Superseded> · **Milestone:** M<n> (short name) · **Updated|Closed:** YYYY-MM-DD · **Type:** <execution plan|findings|reference|record>
 ```
 
 - **`Milestone` is a required field, kept separate from `Status`.** Write `**Status:** Parked · **Milestone:** M10 (…)`, never `**Status:** Parked (M10)`. Append the within-milestone stage where useful, e.g. `**Milestone:** M9 — stage HR-3`.
-- Use `Updated:` for `Active`/`Reopened`/`Parked` docs and `Closed:` for `Finished`/`Superseded` ones.
-- **Plan filenames use `m<two-digit milestone>[-<stage>]-<doc-type>-<short-topic>.md`.** Allowed type tokens are `plan`, `design`, `reference`, `analysis`, `findings`, `record`, and `audit`. Example active names: `m11-design-ai-native.md`, `m14-plan-typeduck-v112-golden-capture.md`, and `m09-reference-typeduck-web-adapter.md`. Archived records follow the same style when created or normalized; older multi-milestone archive records may use a span such as `m05-m07-record-foundation-refactor.md`.
+- Use `Updated:` for `Active`/`Reopened`/`Parked` docs and `Closed:` for `Complete`/`Finished`/`Superseded` ones.
+- **Plan filenames use `m<two-digit milestone>[-<stage>]-<doc-type>-<short-topic>.md` for Phase 1 milestones and `p<phase>-<track><number>-<doc-type>-<short-topic>.md` for Phase 2 product/platform tracks.** Allowed type tokens are `plan`, `design`, `reference`, `analysis`, `findings`, `record`, and `audit`. Example active names: `m11-design-ai-native.md`, `m14-plan-typeduck-v112-golden-capture.md`, `m09-reference-typeduck-web-adapter.md`, and `p2-win01-plan-typeduck-windows-next.md`. Archived records follow the same style when created or normalized; older multi-milestone archive records may use a span such as `m05-m07-record-foundation-refactor.md`.
 - `grep -rn "Status:" docs/plans` is the at-a-glance dashboard of every plan — its milestone/stage and its state.
 - **Finished or superseded plans move to `docs/plans/archive/`** (banner flipped accordingly), never deleted — the trail stays.
 - The milestone → plans → status mapping lives in `docs/roadmap.md`; keep a plan's banner milestone consistent with the roadmap.
 
 ---
 
-*Last reviewed: 2026-06-21 - M17 upstream `luna_pinyin` null-grammar sentence/lattice parity, M19 breadth schemas, M18 deployment/processor depth, and M23 architecture hardening are complete: Yune now has upstream-captured sentence/lattice, `double_pinyin`, `cangjie5`, and `bopomofo` fixtures/tests, public binary dictionary writers, prism Darts support, rebuild execution, and upstream-captured punctuation processor parity while keeping profile-specific TypeDuck tuning gated by named profiles. M13 TypeDuck-Web AI exposure, M14 TypeDuck `jyut6ping3` v1.1.2 capture, M15 dictionary-driven engine parity, and M16 TypeDuck-Web browser validation remain complete; default RimeApi follows upstream 1.17.0. M10 TypeDuck-Windows is complete as a TypeDuck compatibility profile with current profile package/header smoke, upstream-deprecated direct-call coverage, TypeDuck-Windows x64 build/link evidence, packaged-DLL lifecycle evidence, and stock TypeDuckServer/TestTypeDuckIPC real-server IPC smoke through the named profile ABI.*
+*Last reviewed: 2026-06-21 - M0-M24 are complete for the Phase 1 named-target baseline. M17 upstream `luna_pinyin` null-grammar sentence/lattice parity, M19 breadth schemas, M18 deployment/processor depth, and M23 architecture hardening are complete: Yune now has upstream-captured sentence/lattice, `double_pinyin`, `cangjie5`, and `bopomofo` fixtures/tests, public binary dictionary writers, prism Darts support, rebuild execution, and upstream-captured punctuation processor parity while keeping profile-specific TypeDuck tuning gated by named profiles. M24 TypeDuck-Web dogfooding is complete with 13/13 rows closed, browser evidence, Jyutping reverse lookup dogfood, page-size wiring, Cantonese-first UI controls, and a Vite + React + Tailwind + local-components stack with DaisyUI removed. M13 TypeDuck-Web AI exposure, M14 TypeDuck `jyut6ping3` v1.1.2 capture, M15 dictionary-driven engine parity, and M16 TypeDuck-Web browser validation remain complete; default RimeApi follows upstream 1.17.0. M10 TypeDuck-Windows is complete as a TypeDuck compatibility profile with current profile package/header smoke, upstream-deprecated direct-call coverage, TypeDuck-Windows x64 build/link evidence, packaged-DLL lifecycle evidence, and stock TypeDuckServer/TestTypeDuckIPC real-server IPC smoke through the named profile ABI. Phase 2 product/platform work begins with `docs/plans/p2-win01-plan-typeduck-windows-next.md`.*

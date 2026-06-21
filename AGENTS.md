@@ -22,10 +22,10 @@ See `decisions.md` D-24 (oracle precedence) and D-25 (target-driven scope).
 ## Current State
 
 - **Phase 1 engine/basic oracle parity is complete for the named target set.**
-  M0-M23 are complete, including M10 TypeDuck-Windows backend compatibility
-  smoke through the named TypeDuck profile ABI. M24 is the TypeDuck-Web
-  dogfooding/demo-hardening track; check `docs/roadmap.md` for whether the
-  current M24 batch is active or archived.
+  M0-M24 are complete, including M10 TypeDuck-Windows backend compatibility
+  smoke through the named TypeDuck profile ABI and the M24 TypeDuck-Web
+  dogfooding/demo-hardening batch. Future TypeDuck-Web dogfood reports should
+  start a new scoped plan rather than reopening Phase 1.
 - **Phase 2 is product/platform work.** The first Phase 2 planning artifact is
   `docs/plans/p2-win01-plan-typeduck-windows-next.md`, for a Yune-first
   TypeDuck-Windows product/frontend. Phase 2 work must not widen Yune's default
@@ -125,9 +125,9 @@ npm --prefix packages/yune-typeduck-runtime test
 npm --prefix packages/yune-typeduck-runtime run build
 ```
 
-TypeDuck-Web browser work must also follow the active/archived plan and
-`third_party/typeduck-web/e2e/yune-browser-smoke.md`; preserve the real-browser
-evidence gate for user-visible claims.
+TypeDuck-Web browser work must also follow the current plan or archived M24
+baseline and `third_party/typeduck-web/e2e/yune-browser-smoke.md`; preserve the
+real-browser evidence gate for user-visible claims.
 
 The GSD planning system has been retired. Planning, decisions, conventions, and
 requirements now live under `docs/`, not `.planning/`.

@@ -3,12 +3,24 @@
 > **Status:** Complete - **Milestone:** M24 (TypeDuck-Web dogfooding and demo hardening) - **Created:** 2026-06-21 - **Closed:** 2026-06-21 - **Type:** archived execution plan / issue ledger
 >
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+>
+> **Archive note:** This file preserves the original execution checklist. The unchecked task boxes below are historical instructions, not live work. The issue ledger rows marked `Closed`, the evidence under `third_party/typeduck-web/e2e/results/m24-dogfooding/`, and the roadmap/requirements status are the authoritative M24 closeout record. Start a new scoped dogfooding plan for future browser-demo reports instead of editing this archived plan.
 
 **Goal:** Close the first real manual play-testing batch for the internal TypeDuck-Web playground as a tracked, evidence-backed hardening loop without reopening completed parity milestones by accident.
 
 **Architecture:** M24 treated `third_party/typeduck-web/` as the browser dogfooding surface for this closed batch. Browser loading, rendering, and UX defects were fixed with browser evidence; candidate-set, candidate-order, or engine-semantic changes still required pinned oracle evidence from TypeDuck `v1.1.2` or upstream `1.17.0` before changing engine behavior. Each issue was classified first, then implemented in the narrowest owning layer.
 
 **Tech Stack:** TypeDuck-Web React/TypeScript, Vite/Bun, Tailwind CSS, small local React components, Playwright, `@yune-ime/typeduck-runtime`, `yune-rime-api` C ABI, `yune-core`, TypeDuck `v1.1.2` oracle fixtures. M24 explicitly removes DaisyUI from the dogfood demo stack.
+
+---
+
+## Closeout Summary
+
+M24 closed `M24-DOGFOOD-01` through `M24-DOGFOOD-13` and kept the work scoped to the internal TypeDuck-Web dogfood harness. The closed batch includes startup evidence, raw comment-control cleanup, compound-candidate detail layout, pinned TypeDuck `v1.1.2` candidate-order fixture coverage, Cantonese-first settings labels, simplified display-language controls, page-size wiring, horizontal/vertical candidate-menu display, explanatory status badges, real schema names, Jyutping Mandarin-pinyin reverse lookup, the full typeface picker, and DaisyUI removal.
+
+The maintained TypeDuck-Web patch was regenerated at `third_party/typeduck-web/patches/yune-typeduck-runtime.patch`. Browser evidence is stored under `third_party/typeduck-web/e2e/results/m24-dogfooding/`; future browser-demo issues should use a new plan and a new evidence scope unless they are explicitly auditing this archived baseline.
+
+Reported verification for closeout: `cargo fmt`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace`, focused M24 Rust tests, `npm --prefix packages/yune-typeduck-runtime test`, `npm --prefix packages/yune-typeduck-runtime run build`, `npm --prefix third_party/typeduck-web/source run build`, M24 Playwright E2E with 13 passing tests, TypeDuck-Web patch reverse/forward checks, and `git diff --check`.
 
 ---
 
