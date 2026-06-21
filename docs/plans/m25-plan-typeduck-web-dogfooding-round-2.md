@@ -90,6 +90,7 @@ M25 intake began on 2026-06-21 with user-reported browser dogfooding regressions
 | M25-DOGFOOD-07 | Open | UI polish / binary control affordance | Binary settings are currently shown as rounded rectangle pill switches that fill blue when checked. The user finds this unintuitive and wants these binary toggles to be raw checkbox-style controls instead. | User-reported during manual dogfooding on 2026-06-21 with screenshot `codex-clipboard-da4df560-7b7a-49fd-814f-4cfe5cbd6968.png`. Local verification found `Toggle` renders `input type="checkbox"` with `className="yd-switch"` in `Inputs.tsx`, and `.yd-switch` applies the pill styling in `index.css`; `.yd-check` already exists as a square checkbox style. Evidence: `third_party/typeduck-web/e2e/results/m25-dogfooding/M25-DOGFOOD-07/raw-checkbox-binary-controls-report.json`. | `third_party/typeduck-web/source/src/Inputs.tsx`, `third_party/typeduck-web/source/src/index.css`, `third_party/typeduck-web/source/src/App.tsx`, `third_party/typeduck-web/source/src/ThemeSwitcher.tsx`, `third_party/typeduck-web/source/src/Preferences.tsx`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`. | Close when binary dogfood controls render as checkbox-style controls rather than pill switches, checked/unchecked states remain clear and keyboard-accessible, and no settings-panel binary control uses the blue rounded-pill affordance. Decide explicitly whether the app theme toggle remains a specialized icon switch or also moves to checkbox styling. Add Playwright evidence for checked and unchecked states across engine/session/display/frontend settings plus the inspector toggle; regenerate and reverse/forward check `third_party/typeduck-web/patches/yune-typeduck-runtime.patch` if source changed. |
 | M25-DOGFOOD-08 | Open | Browser integration / reverse lookup schema trigger | Jyutping Mandarin reverse lookup currently appears to require `` `p``. The user says this is a mistake and the luna_pinyin reverse-lookup trigger should be the single grave accent `` ` ``. While trying reverse lookup, the app is also slow and can show `執行操作時發生錯誤。如輸入法不能正常運作，請重新載入頁面。 / An error occurred while performing the operation...`; treat that performance/error symptom as related to `M25-DOGFOOD-01`/`M25-DOGFOOD-03` unless a fresh repro proves a distinct reverse-lookup crash. | User-reported during manual dogfooding on 2026-06-21. Local verification found `third_party/typeduck-web/source/schema/jyut6ping3.schema.yaml` and `jyut6ping3_mobile.schema.yaml` set `luna_pinyin` prefix to `` `p`` and alphabet regex ``^`p[a-z']*;?$``; the TypeDuck v1.1.2 captured schema also has `` `p``, so this is a new M25 web dogfood correction request rather than a continuation of the M24 assumption. Evidence: `third_party/typeduck-web/e2e/results/m25-dogfooding/M25-DOGFOOD-08/reverse-lookup-bare-grave-trigger-report.json`. | `third_party/typeduck-web/source/schema/jyut6ping3.schema.yaml`, `third_party/typeduck-web/source/schema/jyut6ping3_mobile.schema.yaml`, `third_party/typeduck-web/source/src/consts.ts`, `crates/yune-rime-api/src/schema_install.rs`, `crates/yune-rime-api/tests/typeduck_web.rs`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`. | Close when the web Jyutping schema uses bare `` ` `` for luna_pinyin reverse lookup, the visible hint changes from `` `pzhe`` to a bare-grave example such as `` `zhe``, browser evidence shows typing `` `zhe`` reaches luna_pinyin reverse lookup without needing `p`, and `` `p...`` is either still handled intentionally or documented as no longer required. Add or update native/schema coverage for the affix translator trigger, capture browser JSON/screenshot evidence, and regenerate plus reverse/forward check `third_party/typeduck-web/patches/yune-typeduck-runtime.patch` if source changed. |
 | M25-DOGFOOD-09 | Open | UI polish / control affordance | The `候選排版 Candidate Menu Layout` setting currently uses a segmented control. The user wants it changed to a radio selection. | User-reported during manual dogfooding on 2026-06-21. Local verification found `Preferences.tsx` maps `CANDIDATE_MENU_LAYOUT_LABELS` into `Segment` controls for `prefs.candidateMenuLayout`; `Inputs.tsx` already provides a `Radio` component. Evidence: `third_party/typeduck-web/e2e/results/m25-dogfooding/M25-DOGFOOD-09/candidate-layout-radio-report.json`. | `third_party/typeduck-web/source/src/Preferences.tsx`, `third_party/typeduck-web/source/src/Inputs.tsx`, `third_party/typeduck-web/source/src/consts.ts`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`. | Close when Candidate Menu Layout renders as radio choices, not a segmented group; both horizontal and vertical options remain labeled, keyboard-accessible, and bound to `candidateMenuLayout`; switching options still changes the candidate panel layout. Add Playwright evidence for selecting both options and capturing the resulting panel layout; regenerate and reverse/forward check `third_party/typeduck-web/patches/yune-typeduck-runtime.patch` if source changed. |
+| M25-DOGFOOD-10 | Open | UI polish / layout alignment | The `輸入法設定 IME Settings` section appears to use a different horizontal margin than the playground section above it. The user wants the settings block aligned with the content above so the page columns share the same left/right edges. | User-reported during manual dogfooding on 2026-06-21. Local verification found `App.tsx` renders the main playground inside `<main className="m-auto p-8 max-w-7xl">`, while `Preferences.tsx` wraps IME Settings in a nested `<section className="mx-auto max-w-6xl">`, making settings narrower than the preceding content stack. Evidence: `third_party/typeduck-web/e2e/results/m25-dogfooding/M25-DOGFOOD-10/ime-settings-margin-alignment-report.json`. | `third_party/typeduck-web/source/src/App.tsx`, `third_party/typeduck-web/source/src/Preferences.tsx`, `third_party/typeduck-web/source/src/index.css`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`. | Close when the IME Settings heading and settings grid align horizontally with the content above on desktop and narrow viewports. Add Playwright evidence comparing bounding boxes for the playground content and IME Settings wrapper; left and right edge differences should be within 2 px unless a documented scrollbar/device-pixel reason requires a slightly wider tolerance. Preserve the settings grid behavior from `M25-DOGFOOD-06` and regenerate plus reverse/forward check `third_party/typeduck-web/patches/yune-typeduck-runtime.patch` if source changed. |
 
 ## Accepted Review Corrections
 
@@ -470,6 +471,43 @@ M25 intake began on 2026-06-21 with user-reported browser dogfooding regressions
   Save desktop and narrow-viewport screenshots plus JSON under `M25-DOGFOOD-09`. Include radio labels, selected value before/after, and candidate panel layout evidence.
 
 - [ ] **Step 6: Regenerate the TypeDuck-Web patch if source changed**
+
+  If any file under `third_party/typeduck-web/source/` changed, regenerate `third_party/typeduck-web/patches/yune-typeduck-runtime.patch`, reverse-check it from `source/`, and forward-check it on a clean source checkout.
+
+### Task 11: M25-DOGFOOD-10 IME Settings Horizontal Alignment
+
+**Files:**
+- Modify: `third_party/typeduck-web/source/src/Preferences.tsx`
+- Modify if shared layout styling is introduced: `third_party/typeduck-web/source/src/App.tsx`
+- Modify if a reusable class is needed: `third_party/typeduck-web/source/src/index.css`
+- Test: `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`
+- Evidence: `third_party/typeduck-web/e2e/results/m25-dogfooding/M25-DOGFOOD-10/`
+
+- [ ] **Step 1: Preserve the alignment baseline**
+
+  Keep `ime-settings-margin-alignment-report.json` as the issue baseline. Current `App.tsx` renders the playground stack directly inside `main.m-auto.p-8.max-w-7xl`, while `Preferences.tsx` adds a nested `mx-auto max-w-6xl` wrapper around `輸入法設定 IME Settings`.
+
+- [ ] **Step 2: Add failing visual-layout coverage**
+
+  Add a Playwright test that loads `/web/` at a desktop viewport, locates the textarea or first stable playground content block above settings, locates the `輸入法設定 IME Settings` wrapper, and compares bounding boxes. Assert `Math.abs(playground.left - settings.left) <= 2` and `Math.abs(playground.right - settings.right) <= 2`.
+
+- [ ] **Step 3: Add narrow-viewport coverage**
+
+  Repeat the bounding-box check at a narrow mobile viewport. Assert the settings wrapper does not introduce extra side margins compared with the textarea/main playground content and that no settings heading text overflows.
+
+- [ ] **Step 4: Remove the nested width mismatch**
+
+  In `Preferences.tsx`, remove the nested `mx-auto max-w-6xl` constraint or replace it with a shared class that inherits the main content width. Prefer the minimal change: make the preferences root use the same available width as the content above, without changing `main` width, section card padding, or the two-column settings grid.
+
+- [ ] **Step 5: Protect adjacent M25 layout changes**
+
+  Run the layout checks added for `M25-DOGFOOD-06`, `M25-DOGFOOD-07`, and `M25-DOGFOOD-09` if they exist by implementation time. If they do not exist yet, capture a JSON note under `M25-DOGFOOD-10` stating that the alignment fix preserved the current section order, checkbox/radio affordances, and settings grid class names.
+
+- [ ] **Step 6: Capture evidence**
+
+  Save desktop and narrow-viewport screenshots plus JSON under `M25-DOGFOOD-10`. Include viewport sizes, left/right bounding-box values for the playground content and IME Settings wrapper, the pixel deltas, and the final preferences root class name.
+
+- [ ] **Step 7: Regenerate the TypeDuck-Web patch if source changed**
 
   If any file under `third_party/typeduck-web/source/` changed, regenerate `third_party/typeduck-web/patches/yune-typeduck-runtime.patch`, reverse-check it from `source/`, and forward-check it on a clean source checkout.
 

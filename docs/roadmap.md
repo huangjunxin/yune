@@ -600,7 +600,8 @@ processor semantics into `yune-core`) lands only when a real non-ABI consumer
   switches with checkbox-style controls; `M25-DOGFOOD-08` corrects the Jyutping
   luna_pinyin reverse-lookup trigger from `` `p`` to bare `` ` ``; and
   `M25-DOGFOOD-09` changes Candidate Menu Layout from a segmented control to
-  radio selection.
+  radio selection; `M25-DOGFOOD-10` aligns IME Settings horizontal margins
+  with the playground content above it.
   The startup row now prioritizes
   release-mode browser WASM and deploy-state reuse before lower-level runtime
   micro-optimization, because current evidence points at a debug Emscripten
