@@ -51,6 +51,7 @@ If a report is ambiguous, classify it as **Needs triage**, capture the screensho
 | M24-DOGFOOD-05 | Open | UI polish / settings localization and help text | Settings and developer controls mix Cantonese/English and many labels are English-only, so a new developer cannot tell what active engine controls or live session controls do. Cantonese should come first for all labels; active engine and live session toggles need short description text. Display controls need Cantonese-first labels but no extra descriptions. | Browser comment on `/web/` settings area: selected controls include `Active engine controls`, `Live session controls`, `Display controls`, `Yune inspector`, `Schema`, and English-only toggle labels such as `ASCII mode`, `Full shape`, `Prediction threshold`, and `Dictionary exclude`. | `third_party/typeduck-web/source/src/Preferences.tsx`, `third_party/typeduck-web/source/src/Inputs.tsx`, `third_party/typeduck-web/source/src/Toolbar.tsx`, `third_party/typeduck-web/source/src/SchemaSwitcher.tsx`, `third_party/typeduck-web/source/src/App.tsx`, `third_party/typeduck-web/source/src/YuneInspector.tsx`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts` | All visible settings/developer labels use Cantonese-first bilingual text; active-engine and live-session toggles show concise helper copy; display controls remain compact without helper paragraphs; before/after screenshots prove the settings page stays readable at desktop and narrow widths. |
 | M24-DOGFOOD-06 | Open | UI polish / display-language control semantics | The display-language fieldset shows both radio buttons and checkboxes, making it unclear whether the radio or checklist controls dictionary/comment language display. The visible UI should be a checklist only. | Browser comment on `/web/` display controls: `Display languages` shows five radio buttons on the left, five checkboxes on the right, and an arrow row for `主要語言 Main Language`. | `third_party/typeduck-web/source/src/Preferences.tsx`, `third_party/typeduck-web/source/src/Inputs.tsx`, `third_party/typeduck-web/source/src/CandidateInfo.ts`, `third_party/typeduck-web/source/src/DictionaryPanel.tsx`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts` | Display-language settings expose only checkboxes; the `主要語言 Main Language` arrow/radio concept is gone from the visible UI; at least one language remains selected; dictionary/detail output still has a deterministic primary definition when multiple languages are checked. |
 | M24-DOGFOOD-07 | Open | Browser integration / customize page-size wiring | The `每頁候選詞數量 No. of Candidates Per Page` slider appears not to control candidate page size; typing after selecting a smaller value still shows more candidates than selected. | Browser comment on `/web/` settings area: user changed the candidate-number control, then typed input whose candidate row clearly exceeded the selected page size. | `third_party/typeduck-web/source/src/Preferences.tsx`, `third_party/typeduck-web/source/src/App.tsx`, `third_party/typeduck-web/source/src/yune-integration/adapter.ts`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`, `crates/yune-rime-api/tests/typeduck_web.rs`, `crates/yune-rime-api/src/typeduck_web.rs`, `crates/yune-rime-api/src/context_api.rs` | Changing the slider to 4, 6, or 10 changes the deployed runtime `context.page_size` and visible candidate count on the next composition; the browser does not render more candidate cells than the selected page size; persistence evidence shows the setting is saved under the key the deployed schema actually reads. |
+| M24-DOGFOOD-08 | Open | UI polish / frontend candidate-menu layout | The playground has no control for horizontal versus vertical candidate menu layout. Users familiar with RIME expect a menu style choice, but this web setting should be clearly grouped as a frontend display preference rather than an engine/schema control. | Browser comment on `/web/` settings area: user requested a horizontal/vertical candidate list control and clearer grouping that distinguishes engine controls from web frontend controls. | `third_party/typeduck-web/source/src/Preferences.tsx`, `third_party/typeduck-web/source/src/types.ts`, `third_party/typeduck-web/source/src/consts.ts`, `third_party/typeduck-web/source/src/CandidatePanel.tsx`, `third_party/typeduck-web/source/src/Candidate.tsx`, `third_party/typeduck-web/source/src/index.css`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts` | Settings expose a Cantonese-first `候選排版 Candidate Menu Layout` segmented control with horizontal and vertical choices under a clearly frontend/display group; switching layout changes only the web candidate panel presentation, not engine output, page size, ranking, or ABI behavior; browser screenshots prove both layouts are readable. |
 
 ---
 
@@ -797,7 +798,181 @@ npx --prefix third_party/typeduck-web/source playwright test third_party/typeduc
 
 Expected: the runtime reports `context.page_size` equal to the selected value, the browser evidence shows no more visible candidates than selected, and the persisted settings JSON records `menu/page_size`.
 
-## Task 9: M24 Regression Sweep And Closeout Discipline
+## Task 9: M24-DOGFOOD-08 Frontend Candidate-Menu Layout Control
+
+**Files:**
+- Modify: `third_party/typeduck-web/source/src/consts.ts`
+- Modify: `third_party/typeduck-web/source/src/types.ts`
+- Modify: `third_party/typeduck-web/source/src/Preferences.tsx`
+- Modify: `third_party/typeduck-web/source/src/CandidatePanel.tsx`
+- Modify: `third_party/typeduck-web/source/src/Candidate.tsx`
+- Modify: `third_party/typeduck-web/source/src/index.css`
+- Test: `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`
+
+- [ ] **Step 1: Capture the current single-layout behavior**
+
+Add a browser characterization that captures the existing horizontal layout before adding the control:
+
+```ts
+test("M24 candidate menu layout can switch between horizontal and vertical", async ({ page }) => {
+  await page.goto(APP_URL, { timeout: TIMEOUT_MS, waitUntil: "domcontentloaded" });
+  await waitForAppReady(page);
+
+  const horizontal = await captureM24Phrase(page, "M24-DOGFOOD-08", "jigaajiusihaa", "而家要思考");
+  await saveM24Json("M24-DOGFOOD-08", "horizontal-before-state.json", horizontal);
+  await takeM24Screenshot(page, "M24-DOGFOOD-08", "horizontal-before");
+});
+```
+
+Expected before the fix: there is no visible menu-layout control and the candidate panel always uses the existing horizontal table presentation.
+
+- [ ] **Step 2: Add a frontend-only layout preference**
+
+Define the preference in the interface layer, not `RimePreferences`, because it must not be sent through `Rime.customize(...)` or treated as schema behavior:
+
+```ts
+export const enum CandidateMenuLayout {
+  Horizontal = "horizontal",
+  Vertical = "vertical",
+}
+
+export const CANDIDATE_MENU_LAYOUT_LABELS: Record<CandidateMenuLayout, string> = {
+  [CandidateMenuLayout.Horizontal]: "橫排 Horizontal",
+  [CandidateMenuLayout.Vertical]: "直排 Vertical",
+};
+```
+
+Add the default:
+
+```ts
+candidateMenuLayout: CandidateMenuLayout.Horizontal,
+```
+
+Add the type field to `InterfacePreferences`:
+
+```ts
+candidateMenuLayout: CandidateMenuLayout;
+```
+
+Do not add this field to `RimePreferences`, `customize(...)`, `yune-integration/adapter.ts`, or any C ABI/runtime response type.
+
+- [ ] **Step 3: Put frontend controls in a visibly separate settings group**
+
+Keep active engine controls and live session controls separate from frontend-only display preferences. In `Preferences.tsx`, rename or structure the display area so the user can see which controls affect the web UI only:
+
+```tsx
+<h4 className="font-semibold text-xl my-2">網頁顯示設定 Web Frontend Controls</h4>
+```
+
+Place `候選排版 Candidate Menu Layout` in this frontend group near page size, Chinese typeface, display languages, candidate Jyutping, reverse-code display, and Cangjie version. Do not move engine-affecting controls such as completion, correction, sentence mode, learning, prediction threshold, dictionary exclude, or live RIME options into this group.
+
+- [ ] **Step 4: Add the segmented layout control**
+
+Use the existing `Segment` pattern:
+
+```tsx
+<li>
+  <div className="label gap-2">
+    <span className="text-lg text-base-content-200">候選排版 Candidate Menu Layout</span>
+    <div className="join">
+      {(Object.entries(CANDIDATE_MENU_LAYOUT_LABELS) as [CandidateMenuLayout, string][]).map(([layout, label]) =>
+        <Segment
+          key={layout}
+          name="candidateMenuLayout"
+          label={label}
+          state={prefs.candidateMenuLayout}
+          setState={prefs.setCandidateMenuLayout}
+          value={layout} />
+      )}
+    </div>
+  </div>
+</li>
+```
+
+The control is intentionally a web preference. It should persist through the existing preference hook like other interface preferences, but it should not trigger deploy or runtime customization.
+
+- [ ] **Step 5: Pass layout into the candidate panel presentation**
+
+Use the interface preference to add stable layout classes:
+
+```tsx
+return inputState && <CaretFollower
+  textArea={textArea}
+  className={`candidate-panel candidate-panel-${prefs.candidateMenuLayout}`}>
+```
+
+Keep candidate selection indices, digit-key selection, pagination, delete behavior, dictionary hover/touch behavior, and AI source badges unchanged.
+
+- [ ] **Step 6: Implement vertical layout in CSS without changing candidate data**
+
+Keep the existing horizontal layout as the default. Add vertical CSS that stacks candidates top-to-bottom while retaining compact candidate rows:
+
+```css
+.candidate-panel-horizontal {
+  @apply flex-row;
+}
+
+.candidate-panel-horizontal .candidates {
+  @apply table;
+}
+
+.candidate-panel-vertical {
+  @apply flex-col whitespace-normal min-w-72 max-w-[min(28rem,calc(100vw-2rem))];
+}
+
+.candidate-panel-vertical .candidates {
+  @apply block;
+}
+
+.candidate-panel-vertical .candidates tbody {
+  @apply block rounded-md;
+}
+
+.candidate-panel-vertical .candidates tr {
+  @apply flex items-baseline gap-2;
+}
+
+.candidate-panel-vertical .candidates td {
+  @apply block;
+}
+```
+
+If screenshots show overlap or clipping, revise only these bounded spacing utilities in this order: change `min-w-72` to `min-w-80`, change `max-w-[min(28rem,calc(100vw-2rem))]` to `max-w-[min(34rem,calc(100vw-2rem))]`, then change `gap-2` to `gap-3`. Keep the behavior constraints: vertical mode stacks candidates; horizontal mode remains visually equivalent to today; neither mode changes candidate order or count.
+
+- [ ] **Step 7: Add browser assertions for both layouts**
+
+Extend the Playwright test to switch the segmented control and assert the class plus visible content:
+
+```ts
+await expect(page.getByText("候選排版 Candidate Menu Layout")).toBeVisible();
+await page.getByLabel("直排 Vertical").check();
+const vertical = await typeCompositionAndWaitForTopCandidate(page, "jigaajiusihaa", "而家要思考");
+await saveM24Json("M24-DOGFOOD-08", "vertical-state.json", vertical);
+await takeM24Screenshot(page, "M24-DOGFOOD-08", "vertical");
+await expect(page.locator(".candidate-panel-vertical")).toBeVisible();
+expect(vertical.candidates.map(candidate => candidate.text)).toEqual(horizontal.candidates.map(candidate => candidate.text));
+
+await page.getByLabel("橫排 Horizontal").check();
+const horizontalAgain = await typeCompositionAndWaitForTopCandidate(page, "jigaajiusihaa", "而家要思考");
+await takeM24Screenshot(page, "M24-DOGFOOD-08", "horizontal-after");
+await expect(page.locator(".candidate-panel-horizontal")).toBeVisible();
+expect(horizontalAgain.candidates.map(candidate => candidate.text)).toEqual(horizontal.candidates.map(candidate => candidate.text));
+```
+
+If the existing `Segment` helper does not expose labels through `getByLabel`, use `getByRole("radio", { name: "直排 Vertical" })` and keep the accessibility label intact.
+
+- [ ] **Step 8: Run focused gates**
+
+Run:
+
+```powershell
+npm.cmd --prefix third_party/typeduck-web/source run build
+npx --prefix third_party/typeduck-web/source playwright test third_party/typeduck-web/e2e/yune-typeduck.spec.ts -g "M24 candidate menu layout"
+```
+
+Expected: both screenshots render clearly, the candidate text order is identical across layouts, and no runtime/customize/persisted engine setting changes are required.
+
+## Task 10: M24 Regression Sweep And Closeout Discipline
 
 **Files:**
 - Modify: this plan as issue rows close
