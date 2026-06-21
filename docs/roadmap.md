@@ -620,8 +620,8 @@ processor semantics into `yune-core`) lands only when a real non-ABI consumer
   `third_party/typeduck-web/e2e/results/m22-remaining-buckets/`. **(3)
   Multi-schema (highest leverage):**
   load three schemas — `jyut6ping3_mobile` + `cangjie5` + `luna_pinyin` — behind a
-  schema-switcher wired to the existing `RimeSelectSchema` ABI (`abi.rs:301`), with
-  reverse lookup on both new schemas; unblocks `show_full_code` and the schema-switch
+  schema-switcher that cleans up and re-initializes the browser runtime with the
+  selected schema, with reverse lookup on both new schemas; unblocks `show_full_code` and the schema-switch
   surface M20 could only mark browser-surface N/A as a single-schema harness, and gives
   M21 a multi-schema surface. M18 removed the dictionary-build blocker, and M22
   records measured M18/M19-derived browser asset sizes for both new schemas.
