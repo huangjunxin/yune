@@ -335,7 +335,7 @@ browser gates and the upstream-first ABI constraints. Browser evidence is under
   new schemas, using generated or provenance-stamped compiled artifacts with
   measured browser asset sizes.
 
-**Follow-on (no requirement IDs):** [`M21`](./plans/m21-plan-typeduck-web-product-comparison.md) is complete as a post-M20 *comparison protocol* and hard-oracle closeout. It compared the Yune harness against the deployed `typeduck.hk/web` product as a behavior/feel target, but the `v1.1.2` fixtures remained the hard oracle. The final gap ledger has no remaining hard-oracle action rows: M21-GAP-01 is closed by `jyut6ping3-m21-sentence-composition.json`, M21-GAP-02 is closed by `jyut6ping3-m21-prediction-ranking.json` plus real `nri` browser before/after evidence, and `jyut6ping3-m21-closeout.json` locks the remaining baseline/fuzzy/sentence/`hk2s`/tone-letter/paging rows including the final `m` and `mgoi` fixes.
+**Follow-on (no requirement IDs):** [`M21`](./plans/archive/m21-plan-typeduck-web-product-comparison.md) is complete as a post-M20 *comparison protocol* and hard-oracle closeout. It compared the Yune harness against the deployed `typeduck.hk/web` product as a behavior/feel target, but the `v1.1.2` fixtures remained the hard oracle. The final gap ledger has no remaining hard-oracle action rows: M21-GAP-01 is closed by `jyut6ping3-m21-sentence-composition.json`, M21-GAP-02 is closed by `jyut6ping3-m21-prediction-ranking.json` plus real `nri` browser before/after evidence, and `jyut6ping3-m21-closeout.json` locks the remaining baseline/fuzzy/sentence/`hk2s`/tone-letter/paging rows including the final `m` and `mgoi` fixes.
 
 ## Out of Scope
 

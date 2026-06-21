@@ -1,6 +1,6 @@
 # M21 — TypeDuck-Web Product Behavioral Comparison Protocol
 
-> **Status:** Complete (hard-oracle gap ledger fully dispositioned; future live-product spot checks are optional feel-target work) · **Milestone:** M21 (TypeDuck-Web product comparison) · **Updated:** 2026-06-20 · **Type:** comparison protocol / closeout reference · **Depends on:** M20 (merged) · **Critical path:** no (qualitative real-world sanity check that feeds the backlog)
+> **Status:** Finished / archived (hard-oracle gap ledger fully dispositioned; future live-product spot checks are optional feel-target work) · **Milestone:** M21 (TypeDuck-Web product comparison) · **Closed:** 2026-06-20 · **Type:** comparison protocol / closeout reference · **Depends on:** M20 (merged) · **Critical path:** no (qualitative real-world sanity check that feeds the backlog)
 
 > **For agentic workers:** This is **not** an engine milestone and produces **no fixes by itself** — it produces a *divergence gap ledger*. It compares Yune's internal harness against the real deployed product as a *behavior/feel* target, **not a hard oracle**. The hard oracle remains the captured TypeDuck `v1.1.2` fixtures. Run this **after M20 merges** (M20 gives the harness the toggles needed to match the product's settings).
 
@@ -11,7 +11,7 @@
 
 so we know **which differences are real engine gaps, which are expected-by-design, and which are pending M17–M19** — without chasing noise.
 
-> **Surface reminder** (see `CONVENTIONS.md` → "Web surface terminology"): `packages/yune-typeduck-runtime/` is the runtime bridge; `third_party/typeduck-web/` is the internal harness compared *here*; the deployed `typeduck.hk/web` is the real product. These are three different things.
+> **Surface reminder** (see `docs/CONVENTIONS.md` → "Web surface terminology"): `packages/yune-typeduck-runtime/` is the runtime bridge; `third_party/typeduck-web/` is the internal harness compared *here*; the deployed `typeduck.hk/web` is the real product. These are three different things.
 
 ## Current status
 
@@ -29,9 +29,9 @@ to a pinned TypeDuck v1.1.2 fixture.
   dispositions, including the final standalone-`m` and `mgoi` abbreviation/fuzzy
   fixes.
 
-Keep this protocol under `docs/plans/` as the reference for any future optional
-live-product spot check. Such checks must still classify differences against a new
-pinned oracle fixture before changing engine behavior.
+Keep this archived protocol as the reference for any future optional live-product
+spot check. Such checks must still classify differences against a new pinned
+oracle fixture before changing engine behavior.
 
 ## Why the deployed product is a target, not an oracle
 
@@ -159,7 +159,7 @@ scope), not the M17 poet/octagram LM*, and it is **asymmetric**: the same-shaped
 userdb** in the M21 snapshot (`run-manifest.json` fresh context). So a flat/chaotic
 result for `loengnincin`/`leoicijyu` is a real anomaly, not merely the
 `do-not-preserve` word-penalty ranking. Mechanically, Yune has no librime
-syllable-graph speller; `sentence_candidate()` ([`translator/mod.rs`](../../crates/yune-core/src/translator/mod.rs))
+syllable-graph speller; `sentence_candidate()` ([`translator/mod.rs`](../../../crates/yune-core/src/translator/mod.rs))
 is a fallback-only Viterbi gated on `candidates.is_empty()` over toneless-aliased
 substring probes — but note the obvious "zero matches / no tone-stripping" theory is
 **false** (the schema's `derive/\d//` adds toneless aliases and `ngohaigo` composes),

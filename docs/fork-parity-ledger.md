@@ -135,7 +135,7 @@ copy the librime or fork implementation shape.
 | — | `PreferUserPhrase` (user-dict not preferred by equal code length alone) | Cantoboard→TD | `d02f26fc`→`76da593b` | `fork-engine-code` | no | done ¹¹ | preserve✓ |
 | — | Per-entry userdb element/full-code pronunciation recovery after commit | TypeDuck | `d057fb75`,`e2c8c4f0`,`124b6836` | `fork-engine-code` | no | done | preserve✓ |
 | — | `全形`/`半形` state labels (vs `全角`/`半角`) | TypeDuck | `5fe09db5` | `fork-schema-data` | no | done ¹² | preserve✓ |
-| — | Reverse lookup always shows schema name | TypeDuck | `578a55c2` | `fork-engine-code` | no | likely done ¹³ | preserve✓ (verify) |
+| — | Reverse lookup always shows schema name | TypeDuck | `578a55c2` | `fork-engine-code` | no | done ¹³ | preserve✓ |
 | — | Mobile corrector keymap (iOS/Android) + no digit autocorrect | Cantoboard→TD | `ac4bddd5`→`8dc9e9c4` | `fork-engine-code` | no | **non-goal** ¹⁴ | non-goal |
 
 **Notes**
@@ -158,7 +158,7 @@ copy the librime or fork implementation shape.
 10. ¹⁰ `enable_correction` is wired independently from `enable_completion` in schema install and core translator behavior.
 11. ¹¹ The weighted `PreferUserPhrase` gate replaced the flat userdb bonus for equal/longer-code ordering.
 12. ¹² Data-driven; no Rust ABI change was needed. The TypeDuck-profile schema asset and goldens carry the Traditional `全形`/`半形` strings.
-13. ¹³ Plausibly covered by the M9/HR-6 reverse-lookup schema-prompt parity; not separately verified. Spot-check before claiming.
+13. ¹³ Covered by the M9/HR-6 TypeDuck v1.1.2 `reverse-lookup-prompt.json` fixture and the active `select_schema_affix_prompt_matches_typeduck_v112_reverse_lookup_fixture_commit_preview` C ABI test.
 14. ¹⁴ Yune has no near-key corrector at all, and a compile-time desktop/mobile keymap is meaningless for a platform-agnostic engine. If ever ported, make it data/config-driven.
 
 ---

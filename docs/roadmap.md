@@ -370,7 +370,7 @@ Live product differences such as `leoicijyu` (`類似於` live vs `類似如` in
 v1.1.2) and `seov` (`eo`/`oe` fuzzy version skew) are recorded as
 expected-by-design unless a future pinned oracle fixture says otherwise.
 
-Detail: [`plans/m21-plan-typeduck-web-product-comparison.md`](./plans/m21-plan-typeduck-web-product-comparison.md)
+Detail: [`plans/archive/m21-plan-typeduck-web-product-comparison.md`](./plans/archive/m21-plan-typeduck-web-product-comparison.md)
 and
 [`third_party/typeduck-web/e2e/results/m21-product-comparison/2026-06-20T0849Z-yune-cdb7bd52-product-manual/gap-ledger.md`](../third_party/typeduck-web/e2e/results/m21-product-comparison/2026-06-20T0849Z-yune-cdb7bd52-product-manual/gap-ledger.md).
 
