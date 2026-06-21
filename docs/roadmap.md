@@ -481,8 +481,10 @@ TypeDuck-Windows remains valuable, but it is no longer the active core-engine
 priority. Its work is parked as a TypeDuck compatibility profile. M19 named the
 ABI surface for the fork-only list-append slots, and the M10 resume now has a
 current TypeDuck-profile package/header smoke plus packaged host-loader
-lifecycle evidence. The real TypeDuck-Windows build/link and frontend smoke are
-still blocked in this environment.
+lifecycle evidence. With ATL/MFC installed, the pinned TypeDuck-Windows checkout
+also builds and links against the Yune package after local frontend handshake
+patches. The real frontend smoke is still blocked at the TypeDuck IPC
+session/key path.
 
 Archived pre-M12 M10 evidence is preserved: Windows test trust, fork-only
 `config_list_append_*` helper behavior, current TypeDuck comment shaping
@@ -493,15 +495,15 @@ upstream-shaped default `rime_api.h` plus `rime_typeduck_profile_api.h`,
 packages upstream-deprecated direct-call declarations for the existing
 TypeDuck-Windows source, loads the packaged DLL, resolves
 `rime_get_typeduck_profile_api()`, verifies the profile append slots, and runs
-the dynamic-loader lifecycle. Remaining TypeDuck-Windows work is blocked by
-T1/T3: Visual Studio 2022 Community and MSBuild are installed, and the pinned
-TypeDuck-Windows checkout now reaches x64 compilation against the Yune package
-plus local Boost. The rime-facing `RimeWithWeasel` static-library target
-compiles with project references disabled, but the full frontend build still
-requires missing ATL/MFC headers (`atlbase.h`, `afxres.h`) and the deployer
-settings path still needs to call the named profile accessor for
-`config_list_append_*`. The real TypeDuck-Windows binary therefore still has
-not built/linked against the Yune package and no real frontend smoke has run.
+the dynamic-loader lifecycle. T1 is now verified: Visual Studio 2022 Community
+MSBuild builds the pinned x64 TypeDuck-Windows solution plus the deployer/server
+projects against the Yune package, with the deployer settings path locally using
+the named profile accessor for `config_list_append_*`. Remaining
+TypeDuck-Windows work is T3: `TypeDuckServer.exe` starts, loads the packaged
+`output\rime.dll`, and deploys schema data, and the same packaged DLL directly
+creates a session and handles `ngohaig` keys, but the TypeDuck IPC
+start-session transaction returns `0` to the client while the server created
+session `1`, so key events do not yet flow through the real frontend IPC path.
 
 Detail: [`typeduck-windows-backend-requirements.md`](./typeduck-windows-backend-requirements.md),
 [`plans/m10-reference-typeduck-windows-contract.md`](./plans/m10-reference-typeduck-windows-contract.md),
@@ -517,7 +519,7 @@ In priority order:
 4. **Keep Track 2 complete and fixture-gated.** M17's upstream `luna_pinyin` null-grammar sentence/lattice path, M18's prism/deployment/processor depth, M19's breadth schemas, and M22's playground build-out are complete. Future upstream-depth work needs a named target and fresh oracle fixtures before implementation.
 5. **Run M24 TypeDuck-Web dogfooding as an active demo-hardening loop.** Treat manual web-demo issues as triaged findings in [`plans/m24-plan-typeduck-web-dogfooding.md`](./plans/m24-plan-typeduck-web-dogfooding.md): classify each report as browser integration, UI polish, engine correctness, unsupported/N/A, or future product integration before changing code.
 6. **Extend the M20 playground only with browser-safe supported features.** Add active controls or guided scenarios for new browser-safe engine behavior, and keep unsupported behavior absent or documented instead of partially exposed.
-7. **Finish TypeDuck-Windows only with a real build and frontend smoke.** The M10 resume reached T2 with a current TypeDuck-profile package/header smoke and packaged DLL lifecycle. M10 stays blocked until a Visual Studio build shell can build/link the pinned TypeDuck-Windows checkout against that package and a real frontend smoke records exact input/output evidence.
+7. **Finish TypeDuck-Windows only with a real frontend smoke.** The M10 resume reached T1/T2 with a current TypeDuck-profile package/header smoke, packaged DLL lifecycle, and pinned TypeDuck-Windows x64 build/link. M10 stays blocked until the TypeDuck IPC/TSF frontend path records exact real key-input/output evidence against the Yune package.
 8. **Add a future TypeDuck-Web product-integration track before changing a separately cloned TypeDuck-Web product checkout.** Treat `TypeDuck-HK/TypeDuck-Web` as the dedicated web IME product, not as the M20 harness or the runtime bridge.
 9. **Add a future iOS keyboard-developer track before TypeDuck iOS work starts.** Treat the Cantoboard/TypeDuck iOS build repositories as platform-integration provenance, not as engine-parity code to port. The track should define Yune-native iOS packaging, Swift/Obj-C host bindings, resource bundling, sandboxed userdb/storage, keyboard-extension lifecycle limits, and mobile-specific configuration hooks.
 

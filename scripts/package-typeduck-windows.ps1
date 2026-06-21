@@ -18,6 +18,68 @@ if ($Profile -ne "release" -and $Profile -ne "debug") {
     throw "unsupported profile '$Profile'; expected 'release' or 'debug'"
 }
 
+function Find-MsvcTool([string]$ToolName) {
+    $command = Get-Command $ToolName -ErrorAction SilentlyContinue
+    if ($command) {
+        return $command.Source
+    }
+
+    $programFiles = @($env:ProgramFiles, ${env:ProgramFiles(x86)}) | Where-Object { $_ }
+    $patterns = foreach ($root in $programFiles) {
+        Join-Path $root "Microsoft Visual Studio\2022\*\VC\Tools\MSVC\*\bin\Hostx64\x64\$ToolName"
+        Join-Path $root "Microsoft Visual Studio\2022\*\VC\Tools\MSVC\*\bin\Hostx86\x64\$ToolName"
+    }
+    foreach ($pattern in $patterns) {
+        $match = Get-ChildItem -Path $pattern -ErrorAction SilentlyContinue |
+            Sort-Object FullName -Descending |
+            Select-Object -First 1
+        if ($match) {
+            return $match.FullName
+        }
+    }
+
+    throw "missing MSVC tool $ToolName; install Visual Studio C++ tools or run from a Developer PowerShell"
+}
+
+function New-RimeImportLibrary([string]$DllPath, [string]$DefPath, [string]$LibPath, [string]$TargetTriple) {
+    $dumpbin = Find-MsvcTool "dumpbin.exe"
+    $lib = Find-MsvcTool "lib.exe"
+    if ($TargetTriple -like "x86_64-*") {
+        $machine = "x64"
+    } elseif ($TargetTriple -like "i686-*") {
+        $machine = "x86"
+    } else {
+        throw "unsupported MSVC import-library machine for target '$TargetTriple'"
+    }
+
+    $exports = & $dumpbin /exports $DllPath |
+        ForEach-Object {
+            if ($_ -match '^\s+\d+\s+[0-9A-Fa-f]+\s+[0-9A-Fa-f]+\s+([A-Za-z_][A-Za-z0-9_@?$]*)\s*$') {
+                $Matches[1]
+            }
+        } |
+        Sort-Object -Unique
+    if (-not $exports -or -not ($exports -contains "rime_get_typeduck_profile_api")) {
+        throw "failed to derive TypeDuck profile exports from $DllPath"
+    }
+
+    Set-Content -LiteralPath $DefPath -Encoding ASCII -Value ((
+        @("LIBRARY rime.dll", "EXPORTS") + ($exports | ForEach-Object { "    $_" })
+    ) -join [Environment]::NewLine)
+    & $lib /nologo "/machine:$machine" "/def:$DefPath" "/out:$LibPath" | Out-Host
+    if ($LASTEXITCODE -ne 0) {
+        throw "failed to generate import library $LibPath"
+    }
+
+    $headers = & $dumpbin /headers $LibPath
+    if (-not ($headers -match 'DLL name\s+:\s+rime\.dll')) {
+        throw "generated import library does not point at rime.dll"
+    }
+    if ($headers -match 'DLL name\s+:\s+yune_rime_api\.dll') {
+        throw "generated import library still points at yune_rime_api.dll"
+    }
+}
+
 if ($OutputDir -eq "") {
     $OutputDir = Join-Path $RepoRoot "target\typeduck-windows-native\$Target"
 }
@@ -97,7 +159,10 @@ New-Item -ItemType Directory -Path $DistLib -Force | Out-Null
 New-Item -ItemType Directory -Path $DistInclude -Force | Out-Null
 
 Copy-Item -LiteralPath $SourceDll -Destination (Join-Path $DistLib "rime.dll") -Force
-Copy-Item -LiteralPath $SourceLib -Destination (Join-Path $DistLib "rime.lib") -Force
+$PackagedDll = Join-Path $DistLib "rime.dll"
+$PackagedLib = Join-Path $DistLib "rime.lib"
+$PackagedDef = Join-Path $DistLib "rime.def"
+New-RimeImportLibrary $PackagedDll $PackagedDef $PackagedLib $Target
 if (Test-Path $SourcePdb) {
     Copy-Item -LiteralPath $SourcePdb -Destination (Join-Path $DistLib "rime.pdb") -Force
 }
@@ -116,7 +181,6 @@ if (-not (Select-String -Path $DistApiHeader -Pattern "rime_api_deprecated.h" -Q
     )
 }
 
-$PackagedDll = Join-Path $DistLib "rime.dll"
 $previousPackageDll = $env:YUNE_TYPEDUCK_PACKAGE_RIME_DLL
 $env:YUNE_TYPEDUCK_PACKAGE_RIME_DLL = $PackagedDll
 try {

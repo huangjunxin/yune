@@ -2657,6 +2657,58 @@ fn maintenance_on_workspace_change_detects_yaml_modifications() {
 }
 
 #[test]
+fn maintenance_on_workspace_change_ignores_installation_metadata_churn() {
+    let _guard = test_guard();
+    RimeCleanupAllSessions();
+    let root = unique_temp_dir("ignore-installation-metadata");
+    let shared = root.join("shared");
+    let user = root.join("user");
+    fs::create_dir_all(&shared).expect("shared dir should be created");
+    fs::create_dir_all(&user).expect("user dir should be created");
+    fs::write(
+        shared.join("default.yaml"),
+        "config_version: test\nschema_list:\n  - schema: default\n",
+    )
+    .expect("default config should be written");
+    fs::write(
+        shared.join("default.schema.yaml"),
+        "schema:\n  schema_id: default\n  name: Default\n",
+    )
+    .expect("default schema should be written");
+    let last_build_time = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("system time should be after epoch")
+        .as_secs();
+    fs::write(
+        user.join("user.yaml"),
+        format!("var:\n  last_build_time: {last_build_time}\n"),
+    )
+    .expect("user config should be written");
+    std::thread::sleep(std::time::Duration::from_secs(2));
+    fs::write(
+        user.join("installation.yaml"),
+        "installation_id: test\ninstall_time: '1'\nupdate_time: '2'\n",
+    )
+    .expect("installation metadata should be written");
+
+    let shared_c = CString::new(shared.to_string_lossy().as_ref()).expect("path should be valid");
+    let user_c = CString::new(user.to_string_lossy().as_ref()).expect("path should be valid");
+    let mut traits = empty_traits();
+    traits.shared_data_dir = shared_c.as_ptr();
+    traits.user_data_dir = user_c.as_ptr();
+
+    // SAFETY: traits points to a valid RimeTraits object with valid strings.
+    unsafe { RimeSetup(&traits) };
+    assert_eq!(RimeStartMaintenanceOnWorkspaceChange(), FALSE);
+    assert!(!user.join("build").exists());
+
+    let reset_traits = empty_traits();
+    // SAFETY: reset traits points to valid storage.
+    unsafe { RimeSetup(&reset_traits) };
+    fs::remove_dir_all(root).expect("temp dirs should be removed");
+}
+
+#[test]
 fn sync_user_data_emits_librime_deploy_notifications() {
     let _guard = test_guard();
     RimeCleanupAllSessions();

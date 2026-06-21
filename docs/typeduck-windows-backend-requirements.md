@@ -5,14 +5,16 @@
 > [`m09-findings-typeduck-web-integration.md`](./plans/archive/m09-findings-typeduck-web-integration.md), which covers the
 > *web* frontend. This M10 contract is parked as a TypeDuck compatibility
 > profile after M12 made upstream `rime/librime 1.17.0` the default core oracle.
-> The M10 resume reached T2 on 2026-06-21: Yune now has a current native
-> TypeDuck-profile package/header smoke and packaged DLL lifecycle gate. The
-> package also exposes upstream-deprecated direct-call declarations for the
-> existing TypeDuck-Windows source without widening default ABI structs or the
-> default `rime_get_api()` table. The Windows frontend build/link and real
-> frontend smoke remain blocked until the TypeDuck-Windows checkout can be built
-> from a Visual Studio toolchain shell and its fork-only settings path is patched
-> to use the profile accessor.
+> The M10 resume reached T1/T2 on 2026-06-21: Yune now has a current native
+> TypeDuck-profile package/header smoke, packaged DLL lifecycle gate, and a
+> pinned TypeDuck-Windows x64 build/link against the Yune package. The package
+> also exposes upstream-deprecated direct-call declarations for the existing
+> TypeDuck-Windows source without widening default ABI structs or the default
+> `rime_get_api()` table. M10 remains blocked at T3 because the real
+> TypeDuck-Windows server starts and deploys with Yune, but the IPC
+> start-session response path returns `0` to the client while the server has
+> created session `1`, so key events do not yet flow through the frontend IPC
+> path.
 >
 > **Source of truth.** The local execution notes are
 > [`plans/m10-reference-typeduck-windows-contract.md`](./plans/m10-reference-typeduck-windows-contract.md)
@@ -139,35 +141,29 @@ The web path is Emscripten/WASM. Windows needs a **native** engine artifact:
 - [x] (4) Native Windows engine artifact (`rime.dll`/`.lib`/headers) current TypeDuck-profile package/header smoke passes through `rime_get_typeduck_profile_api()`.
   - [x] T0 ABI/header decision: package uses upstream-shaped `RimeCandidate` and default `rime_get_api()`, plus `rime_typeduck_profile_api.h`.
   - [x] T2 packaged host-loader lifecycle: packaged `dist/lib/rime.dll` loads, profile append slots round-trip, and the native lifecycle smoke passes.
-  - [ ] T1 TypeDuck-Windows build/link: blocked because the installed Visual Studio 2022 C++ toolchain lacks ATL/MFC headers (`atlbase.h`, `afxres.h`). The updated package headers let `RimeWithWeasel.vcxproj` compile as a static library with project references disabled, but the full frontend build/link still does not pass.
-  - [ ] T3 real TypeDuck-Windows frontend smoke: blocked behind T1; no real frontend binary was built against the Yune package.
+  - [x] T1 TypeDuck-Windows build/link: Visual Studio 2022 Community MSBuild builds the pinned x64 solution plus the deployer/server projects against the Yune package after local profile-accessor and x64 WinSparkle fixes.
+  - [ ] T3 real TypeDuck-Windows frontend smoke: blocked at the IPC session/key path. `TypeDuckServer.exe` starts, loads `output\rime.dll`, deploys schema data, and the same packaged DLL directly creates a session and handles `ngohaig` keys, but `TestTypeDuckIPC.exe /console` receives `StartSession ret=0` while the server created session `1`, and key events are not delivered through IPC.
 
 The real TypeDuck-Windows frontend E2E is still **not** green: a pinned checkout
 was captured under `target/typeduck-windows-e2e/TypeDuck-Windows`. The initial
-M10 resume attempt could not find `msbuild.exe` on PATH, but Visual Studio 2022
-Community was later found and its absolute MSBuild path could compile the x64
-solution after the Yune package was copied into the checkout and Boost 1.84.0
-was built at `C:\b184`. The current T1 attempt is:
+M10 resume attempt could not find `msbuild.exe` on PATH; Visual Studio 2022
+Community was later found, Boost 1.84.0 was built at `C:\b184`, ATL/MFC was
+installed, and the Yune package was copied into the checkout. The current T1
+build command is:
 
 ```powershell
-& 'C:\Program Files\Microsoft Visual Studio\2022\Community\Msbuild\Current\Bin\MSBuild.exe' target\typeduck-windows-e2e\TypeDuck-Windows\weasel.sln /p:Configuration=Release /p:Platform=x64
+& 'C:\Program Files\Microsoft Visual Studio\2022\Community\Msbuild\Current\Bin\MSBuild.exe' target\typeduck-windows-e2e\TypeDuck-Windows\weasel.sln /p:Configuration=Release /p:Platform=x64 /m:1 /v:minimal
 ```
 
-and stops after `WeaselIPC` builds because ATL/MFC are missing:
-
-```text
-WeaselUI\stdafx.h(12,10): error C1083: Cannot open include file: 'atlbase.h': No such file or directory
-WeaselIME.rc(11): fatal error RC1015: cannot open include file 'afxres.h'.
-```
-
-The post-header-fix probe also compiled the rime-facing
-`RimeWithWeasel.vcxproj` static library against the Yune package with project
-references disabled, producing `RimeWithTypeDuck.lib`. That confirms the
-packaged upstream-deprecated declarations cover the frontend's `RimeSetup` /
-`RimeInitialize` style direct calls. It does not complete T1 because the full
-solution still needs ATL/MFC and `WeaselDeployer/TypeDuckSettings.cpp` still
-uses `rime_get_api()->config_list_append_string(...)` instead of the named
-TypeDuck-profile accessor.
+and now succeeds for `TypeDuckIPC.lib`, `TypeDuckUI.lib`, `typeduckx64.dll`,
+and `typeduckx64.ime`. Direct project builds also produce
+`output\TypeDuckDeployer.exe` and `output\TypeDuckServer.exe`. The checkout was
+locally patched so `WeaselDeployer/TypeDuckSettings.cpp` uses
+`rime_get_typeduck_profile_api()` for fork-only `config_list_append_*`, and the
+server links the x64 WinSparkle import library. That confirms the package/header
+shape is viable for the frontend source, but it is still short of a complete
+TypeDuck-Windows frontend smoke because IPC input does not yet flow after
+session startup.
 
 When the real build/link and frontend smoke pass against the M19 profile
 accessor, revisit the current TypeDuck-Windows frontend lifecycle docs or

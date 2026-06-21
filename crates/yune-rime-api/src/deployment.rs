@@ -447,7 +447,15 @@ pub(crate) fn detect_modifications() -> bool {
 fn latest_workspace_modified_time<const N: usize>(data_dirs: [&Path; N]) -> Option<u64> {
     let mut last_modified = 0;
     for data_dir in data_dirs {
-        last_modified = last_modified.max(file_modified_secs(data_dir)?);
+        if !data_dir.exists() {
+            return None;
+        }
+        if data_dir.is_file() {
+            if is_workspace_yaml_file(data_dir) {
+                last_modified = last_modified.max(file_modified_secs(data_dir)?);
+            }
+            continue;
+        }
         if data_dir.is_dir() {
             let entries = fs::read_dir(data_dir).ok()?;
             for entry in entries.filter_map(Result::ok) {
@@ -486,8 +494,13 @@ fn user_last_build_time(user_data_dir: &Path) -> u64 {
 }
 
 fn is_workspace_yaml_file(path: &Path) -> bool {
-    path.extension().and_then(|extension| extension.to_str()) == Some("yaml")
-        && path.file_name().and_then(|file_name| file_name.to_str()) != Some("user.yaml")
+    if path.extension().and_then(|extension| extension.to_str()) != Some("yaml") {
+        return false;
+    }
+    !matches!(
+        path.file_name().and_then(|file_name| file_name.to_str()),
+        Some("installation.yaml" | "user.yaml")
+    )
 }
 
 pub(crate) fn current_log_date_marker() -> String {
