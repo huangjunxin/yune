@@ -105,12 +105,13 @@ staged input-keyed results, `AiContext` snapshots, `AiPrivacyPolicy`, and
 or `--ai-provider local`. M13 exposes the local provider through TypeDuck-Web
 only, default-off, using a provider-free first pass (`yune_typeduck_process_key`)
 and a Rust/WASM second pass (`yune_typeduck_stage_ai`) requested by the browser
-worker after classic rendering. Parked TypeDuck-Windows and other native
-frontends keep AI off. AI context defaults to sensitive, remote providers are
-blocked before invocation under sensitive context, and AI memory writes are
-suppressed under the same policy. AI memory uses `.ai-memory` / `.ai-memory.txt`
-namespace helpers rather than librime `*.userdb` files. Remote model backends
-and additional frontend exposure remain future explicit/default-off work.
+worker after classic rendering. TypeDuck-Windows and other native frontends
+currently keep AI off; native AI exposure is future product work. AI context
+defaults to sensitive, remote providers are blocked before invocation under
+sensitive context, and AI memory writes are suppressed under the same policy. AI
+memory uses `.ai-memory` / `.ai-memory.txt` namespace helpers rather than
+librime `*.userdb` files. Remote model backends and additional frontend
+exposure remain future explicit/default-off work.
 
 **Key data flow (RIME key path):** Frontend obtains the table via `rime_get_api`
 and calls `RimeApi.process_key` (`api_table.rs`, `RimeProcessKey`). `RimeProcessKey`
@@ -593,21 +594,17 @@ contextual translation remain deferred until a named target needs them.
 TypeDuck-derived fixtures remain profile-only unless separate upstream goldens
 prove the same behavior.
 
-**TypeDuck-Windows ABI/package work is parked at T2, not complete.** A pre-M12
-package smoke built `rime.dll`/`rime.lib`/headers and checked a TypeDuck
-fork-only slot, but that smoke is archived evidence only and is not valid
-against the default upstream `rime_get_api()` table. M19 added the named
-`rime_get_typeduck_profile_api()` accessor for the list-append fork slots, and
-the M10 resume produced a current package/header smoke plus packaged DLL
-dynamic-loader lifecycle against that profile accessor. The default table and
-`RimeCandidate` remain upstream-shaped. A later T1 probe found Visual Studio
-2022 Community, built local Boost, and reached x64 TypeDuck-Windows compilation
-against the Yune package. The package now also covers upstream-deprecated
-direct-call declarations, and `RimeWithWeasel.vcxproj` compiles as a static
-library with project references disabled. The full frontend build still lacks
-ATL/MFC headers (`atlbase.h`, `afxres.h`) and the deployer settings path still
-needs the named TypeDuck-profile accessor for `config_list_append_*`. Real
-TypeDuck-Windows/weasel build/link and frontend E2E remain blocked.
+**TypeDuck-Windows ABI/package work is complete as a TypeDuck compatibility
+profile.** A pre-M12 package smoke built `rime.dll`/`rime.lib`/headers and
+checked a TypeDuck fork-only slot, but that old smoke is archived evidence only
+and is not valid against the default upstream `rime_get_api()` table. M19 added
+the named `rime_get_typeduck_profile_api()` accessor for the list-append fork
+slots, and M10 completed the current profile package/header smoke, packaged DLL
+dynamic-loader lifecycle, TypeDuck-Windows x64 build/link evidence, and stock
+TypeDuckServer/TestTypeDuckIPC real-server IPC smoke through that profile
+surface. The default table and `RimeCandidate` remain upstream-shaped. Future
+TypeDuck-Windows modernization is Phase 2 product/frontend work, not a reason
+to widen the default ABI.
 
 **TypeDuck `jyut6ping3` fork-parity arc is closed with explicit browser limits.** HR-6 added
 oracle coverage for the reverse-lookup `"; "` joiner (`comments.join("; ")` in

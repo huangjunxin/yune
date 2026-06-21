@@ -1,121 +1,147 @@
-# Yune / 新韵
+# Yune
 
 Yune is a Rust input-method engine with a librime-compatible C ABI surface.
-It parses RIME schemas and dictionaries, runs a full input processor pipeline,
-and exposes ~60 librime-shaped API functions so existing frontends can drive it
-without code changes.
+It uses librime as a behavioral oracle, not as an implementation template:
+existing RIME schemas and frontends should behave predictably through Yune, but
+the internals stay idiomatic Rust and the long-term product direction is an
+AI-native input engine that librime cannot provide.
 
-新韵是一个 Rust 输入法引擎，提供与 librime 兼容的 C ABI 接口。它解析 RIME
-方案与词典，运行完整的输入处理器管线，并暴露约 60 个与 librime 同形的 API
-函数，现有前端无需修改即可接入。
+## Current Status
 
-## Goals
+Phase 1, the engine build-out and basic oracle-parity effort, is complete for
+the named target set:
 
-- Maintain RIME schema and frontend compatibility as explicit design
-  constraints, validated through fixture-driven testing.
-- Build a clean, modular Rust core with typed translators, filters, and
-  processors instead of cloning librime's C++ internals.
-- Keep every compatibility difference measurable against librime before it is
-  accepted.
-- Provide an AI ranking hook (`CandidateRanker` trait) that can reorder
-  candidates without blocking classic input behavior.
+- upstream `rime/librime 1.17.0` for default core behavior and common-schema
+  compatibility;
+- TypeDuck-HK/librime `v1.1.2` for the TypeDuck `jyut6ping3` compatibility
+  profile;
+- TypeDuck-Web browser integration, including the default-off local AI second
+  pass;
+- TypeDuck-Windows backend compatibility smoke through the named TypeDuck
+  profile ABI.
+
+This does not mean Yune is a bit-for-bit clone of librime. It means the current
+named targets are fixture-backed and documented. Future work is Phase 2:
+frontend/product development, ongoing dogfooding, AI productization, and
+additional compatibility targets when a real frontend or schema needs them.
+
+Read [docs/roadmap.md](docs/roadmap.md) for the live milestone state. The web
+dogfood track and Phase 2 Windows plan move quickly, so the roadmap is the
+source of truth for whether a plan is active or archived.
+
+## Compatibility Model
+
+- The default oracle is upstream `rime/librime 1.17.0`
+  (`33e78140250125871856cdc5b42ddc6a5fcd3cd4`).
+- TypeDuck fork behavior is profile-only, pinned to TypeDuck-HK/librime
+  `v1.1.2` (`74cb52b78fb2411137a7643f6c8bc6517acfde69`).
+- The default `rime_get_api()` table remains upstream-shaped.
+- Fork-only TypeDuck ABI slots live behind the opt-in
+  `rime_get_typeduck_profile_api()` accessor.
+- Oracle fixtures are non-circular: expected bytes come from the upstream or
+  TypeDuck oracle, not from Yune output.
 
 ## Workspace
 
-| Crate | Description |
-|-------|-------------|
-| `yune-core` | Engine, session state, composition, candidates, translators, filters, ranker trait, key parsing, spelling algebra, punctuation, dictionary parsing (YAML source + compiled `.table.bin` / `.prism.bin` / `.reverse.bin`), table encoding, user dictionary. |
-| `yune-rime-api` | Librime-shaped C ABI shim: session registry, runtime paths, config compiler (`__include` / `__patch` / list merge / freshness), deployment, schema installation, 9-processor input pipeline, config/context/candidate/levers APIs, function table (`RimeApi` + `RimeLeversApi`), TypeDuck Web WASM adapter. |
-| `yune-cli` | CLI test harness: run key sequences through core or ABI pipeline, compare output against checked-in JSON fixtures. |
+| Path | Purpose |
+|---|---|
+| `crates/yune-core` | Deterministic Rust engine: schema-driven processors, translators, filters, candidates, UserDB, OpenCC subset, dictionary parsing/writing, spelling algebra, AI staging, and ranking hooks. |
+| `crates/yune-rime-api` | Librime-shaped C ABI: session lifecycle, config/deploy/schema APIs, function tables, TypeDuck profile ABI, native frontend tests, and the TypeDuck-Web WASM-facing API. |
+| `crates/yune-cli` | CLI surrogate for driving core or ABI paths and comparing checked-in fixtures. |
+| `packages/yune-typeduck-runtime` | TypeScript wrapper around the TypeDuck-Web WASM API. |
+| `third_party/typeduck-web` | Internal TypeDuck-Web dogfood playground integration, patch, adapter, browser tests, and evidence. |
+| `docs` | Roadmap, decisions, requirements, conventions, fork-parity ledger, and execution plans. |
 
-## Current Compatibility Surface
+## What Works
 
-1. **Engine core** — typed `Engine` with pluggable translators, filters, and an
-   async-friendly `CandidateRanker` trait. Processes key events, manages
-   composition, produces commits, and integrates with a user dictionary for
-   learning.
+- RIME schema/config handling: `__include`, `__patch`, list merge/append,
+  custom patches, deploy freshness, schema installation, and schema switching.
+- Processor pipeline: speller, selector, navigator, key binder, editor, ASCII
+  composer, chord composer, punctuation, and recognizer.
+- Translators and filters: table/script paths, history, reverse lookup,
+  punctuation, schema list, simplifier/OpenCC subset, charset, uniqueness,
+  dictionary lookup, and TypeDuck-specific profile behavior.
+- Dictionary support: source `.dict.yaml`, imports, table encoder pieces,
+  compiled table/prism/reverse formats, public binary writers, rebuild
+  execution, and fixture-backed ranking behavior for named targets.
+- User data: local user dictionary storage, learning, snapshots, sync, recovery,
+  and profile-safe separation from AI memory.
+- C ABI compatibility: upstream-shaped default `RimeApi`, `RimeLeversApi`,
+  config/context/candidate/session/deploy APIs, dynamic-loader tests, and
+  frontend-shaped lifecycle tests.
+- TypeDuck-Web: Vite/React/Tailwind dogfood app, Yune runtime adapter, browser
+  evidence, multi-schema playground behavior, and default-off local AI rows.
+- TypeDuck-Windows: packaged Yune DLL/header smoke, build/link evidence, and
+  stock TypeDuck server/client IPC smoke through the TypeDuck profile ABI.
 
-2. **Translators** — echo, static table, punctuation, history, reverse lookup,
-   switch, and schema-list translators. Table translator supports
-   `columns`, `import_tables`, BOM-prefixed headers, numeric weight prefixes,
-   and custom column orders.
+## AI-Native Layer
 
-3. **Filters** — charset filter, reverse lookup filter, simplifier,
-   single-character filter, tagged filter, and uniqueness filter.
+The AI foundation is already present, but intentionally conservative:
 
-4. **Input processor pipeline** — 9 schema-loaded processors:
-   speller, selector, navigator, key binder, editor, ascii composer, chord
-   composer, punctuation, and recognizer. Each mirrors librime's processing
-   stages and can be configured through schema YAML.
-
-5. **Dictionary parsing** — reads RIME table dictionary YAML source files and
-   the three compiled binary formats: `Rime::Table/4.0`, `Rime::Prism/4.0`, and
-   `Rime::Reverse/4.0`. Supports checksum validation, spelling maps, correction
-   rules, and reverse lookup entries.
-
-6. **Config compiler** — librime-style `__include`, `__patch`, list
-   append/merge, custom patches, build-info, and timestamp-based freshness
-   handling.
-
-7. **C ABI surface** — ~60 `extern "C"` functions matching the librime API:
-   setup, initialization, finalization, session lifecycle, key processing,
-   context/status/commit reads, config open/read/write/iterate, schema
-   selection, deployment, maintenance, sync, candidate iteration/paging, user
-   dictionary operations, and `RimeApi` / `RimeLeversApi` function tables.
-
-8. **Schema lifecycle** — parse schema YAML → install processors, translators,
-   filters, and segment tags → deploy to workspace → select into sessions.
-
-9. **CLI fixture harness** — deterministic key-sequence replay through both the
-   core engine and the full ABI pipeline, with JSON output compared against
-   checked-in fixtures under `fixtures/`.
-
-10. **Frontend-style tests** — a `frontend_client.rs` integration test drives
-    the `RimeApi` function table like a real frontend would, and a
-    `dynamic_loader.rs` test loads the compiled `cdylib` via `libloading`.
-
-11. **TypeDuck Web adapter** — simplified C API (`yune_typeduck_*`) designed
-    for WASM consumption, with JSON state exchange.
-
-12. **User dictionary** — in-memory store with commit tracking, file-backed
-    persistence, snapshots, sync, and recovery.
+- M11 added the core/CLI AI layer: provider trait, local/mock providers,
+  staged input-keyed results, privacy classification, separate AI memory, and
+  no classic-path auto-commit.
+- M13 exposes that layer in TypeDuck-Web as a default-off, local-only,
+  second-pass `stage_ai` flow. Classic candidates render first; AI rows are
+  source-labeled and never become the default commit.
+- Remote providers, richer contextual translation, native frontend AI exposure,
+  and product UX are Phase 2 work, not Phase 1 parity requirements.
 
 ## Quick Start
 
-```sh
-# Build everything
+```powershell
+# Build Rust workspace
 cargo build
 
-# Run all tests (unit + integration + frontend ABI)
+# Run all Rust tests
 cargo test --workspace
 
-# Quality gate
+# Rust quality gate
+cargo fmt --check
 cargo clippy --workspace --all-targets -- -D warnings
+
+# TypeScript runtime tests/build
+npm --prefix packages/yune-typeduck-runtime test
+npm --prefix packages/yune-typeduck-runtime run build
 
 # Run a key sequence through the core engine
 cargo run -p yune-cli -- run "nihao "
 
-# Check core output against a fixture
-cargo run -p yune-cli -- check fixtures/sample-nihao.json
-
-# Run through the full ABI pipeline
-cargo run -p yune-cli -- frontend \
-  --shared-data-dir /path/to/rime-data \
-  --user-data-dir /tmp/yune-user \
-  --schema luna_pinyin \
+# Run through the ABI-shaped frontend surrogate
+cargo run -p yune-cli -- frontend `
+  --shared-data-dir C:\path\to\rime-data `
+  --user-data-dir C:\temp\yune-user `
+  --schema luna_pinyin `
   --sequence "nihao "
 ```
 
-## Not Yet Implemented
+For TypeDuck-Web browser work, read
+[third_party/typeduck-web/e2e/yune-browser-smoke.md](third_party/typeduck-web/e2e/yune-browser-smoke.md)
+and the active or archived plan under `docs/plans/`.
 
-- **AI/ML ranking** — the `CandidateRanker` trait and `MockAiRanker` exist, but
-  no real model is integrated.
-- **OpenCC conversion** — simplified/traditional Chinese conversion is not yet
-  wired in.
-- **Spelling algebra / prism compiler** — compiled prisms can be read but not
-  generated from source.
-- **Binary dictionary writing** — compiled formats are read-only.
-- **C++ plugin ABI** — out of scope for the current milestone.
+## Key Documentation
+
+- [docs/CONVENTIONS.md](docs/CONVENTIONS.md) - architecture, coding rules,
+  testing conventions, ABI rules, integrations, and current risks.
+- [docs/roadmap.md](docs/roadmap.md) - phase status, completed milestones,
+  active work, and Phase 2 direction.
+- [docs/decisions.md](docs/decisions.md) - decision log and standing
+  principles.
+- [docs/requirements.md](docs/requirements.md) - requirement IDs and status.
+- [docs/fork-parity-ledger.md](docs/fork-parity-ledger.md) - Cantoboard and
+  TypeDuck fork deltas versus upstream.
+- [docs/plans/](docs/plans/) - active plans and archived execution records.
+
+## Non-Goals And Deferred Work
+
+- Bit-for-bit librime internals or full C++ plugin ABI compatibility.
+- Widening the default upstream `RimeApi` for TypeDuck-only behavior.
+- Cloud inference as a hard dependency.
+- Remote AI providers without explicit privacy/product gates.
+- Native frontend AI exposure before a named platform track proves the UX and
+  safety model.
+- Treating TypeDuck-Web, TypeDuck-Windows, iOS, or other frontend repos as
+  engine semantics. They are product/platform tracks that consume Yune.
 
 ## License
 
