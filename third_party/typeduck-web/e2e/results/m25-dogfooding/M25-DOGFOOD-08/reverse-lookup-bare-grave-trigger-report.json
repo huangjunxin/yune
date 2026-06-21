@@ -24,7 +24,9 @@
       "file": "third_party/typeduck-web/source/src/consts.ts",
       "jyutping_reverse_lookup_hint": "`pzhe -> 這（普通話反查）"
     },
-    "typeduck_v1_1_2_note": "The captured TypeDuck v1.1.2 jyut6ping3 schema copy also uses prefix `p for luna_pinyin. M25-DOGFOOD-08 is therefore a new web dogfooding correction request, not a silent continuation of the M24 `p... assumption."
+    "typeduck_v1_1_2_note": "The captured TypeDuck v1.1.2 jyut6ping3 schema copy also uses prefix `p for luna_pinyin. M25-DOGFOOD-08 is therefore a new web dogfooding correction request, not a silent continuation of the M24 `p... assumption.",
+    "external_review_collision_note": "Claude review pointed out the current desktop schema has reverse_lookup on bare ` while luna_pinyin is on `p, so changing luna_pinyin to bare ` without moving reverse_lookup would collide.",
+    "user_clarification": "The intended M25 behavior is that bare ` typed inside the jyut6ping3 schema triggers luna_pinyin reverse lookup. The existing bare-grave reverse_lookup namespace is not the desired owner; if retained, it should move to a non-colliding prefix such as `r, `x, or `v."
   },
-  "plan_change": "Track as M25-DOGFOOD-08. The implementation should change the TypeDuck-Web Jyutping luna_pinyin reverse-lookup trigger to bare `, update visible hints, capture browser evidence for `zhe, and keep the slow/error symptom linked to M25-DOGFOOD-01/M25-DOGFOOD-03 unless repro proves a distinct reverse-lookup failure."
+  "plan_change": "Track as M25-DOGFOOD-08. The implementation should change the TypeDuck-Web Jyutping luna_pinyin reverse-lookup trigger to bare `, move or retire the current bare-grave reverse_lookup namespace so it cannot shadow luna_pinyin, update visible hints, capture browser evidence for `zhe, and keep the slow/error symptom linked to M25-DOGFOOD-01/M25-DOGFOOD-03 unless repro proves a distinct reverse-lookup failure."
 }
