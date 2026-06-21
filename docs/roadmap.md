@@ -596,7 +596,8 @@ processor semantics into `yune-core`) lands only when a real non-ABI consumer
   schema switcher layout row and the `luna_pinyin` visible-name correction;
   `M25-DOGFOOD-05` moves the Cangjie version control into that same top-control
   area; `M25-DOGFOOD-06` swaps Display controls above Live session controls in
-  the settings grid.
+  the settings grid; `M25-DOGFOOD-07` replaces unintuitive pill-style binary
+  switches with checkbox-style controls.
   The startup row now prioritizes
   release-mode browser WASM and deploy-state reuse before lower-level runtime
   micro-optimization, because current evidence points at a debug Emscripten

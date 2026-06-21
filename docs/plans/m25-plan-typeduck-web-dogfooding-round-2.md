@@ -87,6 +87,7 @@ M25 intake began on 2026-06-21 with user-reported browser dogfooding regressions
 | M25-DOGFOOD-04 | Open | UI polish / schema switcher layout | The schema list sits in its own vertical block below the three mode buttons, wasting vertical space. The user wants the schema list moved into the same top row as the three buttons. The `luna_pinyin` option is also currently shown as `普通話`, but the user expects the schema name `朙月拼音`. | User-reported during manual dogfooding on 2026-06-21. Local verification found upstream `1.17.0` `luna_pinyin.schema.yaml` uses `朙月拼音`, while the current TypeDuck-Web source and TypeDuck v1.1.2 captured schema use `普通話`. Evidence: `third_party/typeduck-web/e2e/results/m25-dogfooding/M25-DOGFOOD-04/schema-switcher-toolbar-and-luna-name-report.json`. | `third_party/typeduck-web/source/src/App.tsx`, `third_party/typeduck-web/source/src/Toolbar.tsx`, `third_party/typeduck-web/source/src/SchemaSwitcher.tsx`, `third_party/typeduck-web/source/src/consts.ts`, `third_party/typeduck-web/source/src/Inputs.tsx`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`. | Close when the schema selector is part of the top control row with the three mode buttons on desktop, wraps within the same compact control band on narrow screens, and `luna_pinyin` is labeled `朙月拼音` as the primary user-facing schema name unless the row is explicitly revised with TypeDuck-v1.1.2-specific rationale. Add Playwright evidence covering desktop and mobile layout, active schema switching, and the visible Luna label; regenerate and reverse/forward check `third_party/typeduck-web/patches/yune-typeduck-runtime.patch` if source changed. |
 | M25-DOGFOOD-05 | Open | UI polish / top controls layout | The `倉頡版本 Cangjie version` control currently lives in a separate lower `Web Frontend Controls` section, but it is tightly related to schema choice. The user wants it moved to the top beside the schema selection so the page does not spend vertical space on a one-control section. | User-reported during manual dogfooding on 2026-06-21. Local verification found the control in `third_party/typeduck-web/source/src/Preferences.tsx` under `Web Frontend Controls`, using `prefs.isCangjie5` with `三代 Version 3` and `五代 Version 5` segments. Evidence: `third_party/typeduck-web/e2e/results/m25-dogfooding/M25-DOGFOOD-05/cangjie-version-top-controls-report.json`. | `third_party/typeduck-web/source/src/App.tsx`, `third_party/typeduck-web/source/src/Toolbar.tsx`, `third_party/typeduck-web/source/src/SchemaSwitcher.tsx`, `third_party/typeduck-web/source/src/Preferences.tsx`, `third_party/typeduck-web/source/src/Inputs.tsx`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`. | Close when the Cangjie version segmented control is colocated with the schema selector in the top control band on desktop and wraps within that same compact band on narrow screens, the lower `Web Frontend Controls` section is removed if it has no remaining controls, and changing 三代/五代 still updates the `isCangjie5` customize path. Add Playwright evidence for layout and both Cangjie version values; regenerate and reverse/forward check `third_party/typeduck-web/patches/yune-typeduck-runtime.patch` if source changed. |
 | M25-DOGFOOD-06 | Open | UI polish / settings section order | The `顯示設定 Display controls` section is currently in the second-row right column. The user wants it in the top-row right column, meaning `顯示設定 Display controls` and `即時狀態 Live session controls` should exchange positions. | User-reported during manual dogfooding on 2026-06-21. Local verification found `Preferences.tsx` renders `即時狀態 Live session controls` before `顯示設定 Display controls`, causing Display controls to land below the top-right slot in the two-column settings grid. Evidence: `third_party/typeduck-web/e2e/results/m25-dogfooding/M25-DOGFOOD-06/display-live-section-order-report.json`. | `third_party/typeduck-web/source/src/Preferences.tsx`, `third_party/typeduck-web/source/src/Inputs.tsx`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`. | Close when Display controls render before Live session controls in the settings grid, occupy the top-right column on desktop, and Live session controls move to the position Display controls previously occupied. Preserve all existing control labels, state bindings, and live-option behavior. Add Playwright desktop and narrow-viewport evidence for the section order and bounding boxes; regenerate and reverse/forward check `third_party/typeduck-web/patches/yune-typeduck-runtime.patch` if source changed. |
+| M25-DOGFOOD-07 | Open | UI polish / binary control affordance | Binary settings are currently shown as rounded rectangle pill switches that fill blue when checked. The user finds this unintuitive and wants these binary toggles to be raw checkbox-style controls instead. | User-reported during manual dogfooding on 2026-06-21 with screenshot `codex-clipboard-da4df560-7b7a-49fd-814f-4cfe5cbd6968.png`. Local verification found `Toggle` renders `input type="checkbox"` with `className="yd-switch"` in `Inputs.tsx`, and `.yd-switch` applies the pill styling in `index.css`; `.yd-check` already exists as a square checkbox style. Evidence: `third_party/typeduck-web/e2e/results/m25-dogfooding/M25-DOGFOOD-07/raw-checkbox-binary-controls-report.json`. | `third_party/typeduck-web/source/src/Inputs.tsx`, `third_party/typeduck-web/source/src/index.css`, `third_party/typeduck-web/source/src/App.tsx`, `third_party/typeduck-web/source/src/ThemeSwitcher.tsx`, `third_party/typeduck-web/source/src/Preferences.tsx`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`. | Close when binary dogfood controls render as checkbox-style controls rather than pill switches, checked/unchecked states remain clear and keyboard-accessible, and no settings-panel binary control uses the blue rounded-pill affordance. Decide explicitly whether the app theme toggle remains a specialized icon switch or also moves to checkbox styling. Add Playwright evidence for checked and unchecked states across engine/session/display/frontend settings plus the inspector toggle; regenerate and reverse/forward check `third_party/typeduck-web/patches/yune-typeduck-runtime.patch` if source changed. |
 
 ## Accepted Review Corrections
 
@@ -357,6 +358,44 @@ M25 intake began on 2026-06-21 with user-reported browser dogfooding regressions
   Save desktop and narrow-viewport screenshots plus a JSON summary under `M25-DOGFOOD-06`. The JSON should include viewport size, section heading order, bounding boxes for Display controls and Live session controls, and the toggled control state checked in Step 4.
 
 - [ ] **Step 6: Regenerate the TypeDuck-Web patch if source changed**
+
+  If any file under `third_party/typeduck-web/source/` changed, regenerate `third_party/typeduck-web/patches/yune-typeduck-runtime.patch`, reverse-check it from `source/`, and forward-check it on a clean source checkout.
+
+### Task 8: M25-DOGFOOD-07 Checkbox Affordance For Binary Controls
+
+**Files:**
+- Modify: `third_party/typeduck-web/source/src/Inputs.tsx`
+- Modify: `third_party/typeduck-web/source/src/index.css`
+- Modify: `third_party/typeduck-web/source/src/App.tsx`
+- Modify if the theme toggle is included in the change: `third_party/typeduck-web/source/src/ThemeSwitcher.tsx`
+- Test: `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`
+- Evidence: `third_party/typeduck-web/e2e/results/m25-dogfooding/M25-DOGFOOD-07/`
+
+- [ ] **Step 1: Preserve the binary-control baseline**
+
+  Keep `raw-checkbox-binary-controls-report.json` as the issue baseline. The current shared `Toggle` component in `Inputs.tsx` renders `input type="checkbox"` with `className="yd-switch"`, and `.yd-switch` in `index.css` creates the rounded pill switch shown in the user screenshot. `.yd-check` already exists as the square checkbox styling used by checklist controls.
+
+- [ ] **Step 2: Add failing browser affordance coverage**
+
+  Add a Playwright test that loads `/web/`, finds representative binary settings in the preferences area, and asserts they do not use the rounded pill visual dimensions. Cover at least one engine/session toggle, one live-session toggle, one display/settings toggle if present after `M25-DOGFOOD-06`, and the Yune inspector toggle. The test should record each control's label, checked state, class list, bounding box, and computed border radius.
+
+- [ ] **Step 3: Change the shared `Toggle` presentation to checkbox style**
+
+  Update `Toggle` in `Inputs.tsx` to render the binary control with the checkbox-style class used by raw checkboxes, or rename the shared class so both `Toggle` and `Checkbox` use the same square checkbox affordance. Keep semantic `input type="checkbox"`, label click behavior, checked binding, `NO_AUTO_FILL`, and focus-ring accessibility. Do not change `Radio`, `Segment`, or `Range` controls.
+
+- [ ] **Step 4: Retire or narrow `yd-switch` usage**
+
+  Remove the rounded-pill styling from settings-panel binary controls. Update the Yune inspector toggle in `App.tsx` to use the same checkbox affordance. Decide explicitly in the row evidence whether `ThemeSwitcher.tsx` remains a specialized icon switch because it overlays sun/moon icons, or whether it also becomes a checkbox-style control. If the theme toggle remains specialized, rename its class or add a comment so `yd-switch` no longer means generic binary setting.
+
+- [ ] **Step 5: Prove checked and unchecked states remain obvious**
+
+  In Playwright, toggle representative controls on and off and assert both states are visible through the checkbox mark/fill, not only through surrounding text. Verify keyboard focus still lands on the input and Space toggles the checked state.
+
+- [ ] **Step 6: Capture visual evidence**
+
+  Save desktop and narrow-viewport screenshots plus a JSON summary under `M25-DOGFOOD-07`. The JSON should include the class names and computed styles for each checked control, unchecked control, and any explicitly exempted theme toggle.
+
+- [ ] **Step 7: Regenerate the TypeDuck-Web patch if source changed**
 
   If any file under `third_party/typeduck-web/source/` changed, regenerate `third_party/typeduck-web/patches/yune-typeduck-runtime.patch`, reverse-check it from `source/`, and forward-check it on a clean source checkout.
 
