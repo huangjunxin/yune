@@ -54,6 +54,7 @@ If a report is ambiguous, classify it as **Needs triage**, capture the screensho
 | M24-DOGFOOD-08 | Open | UI polish / frontend candidate-menu layout | The playground has no control for horizontal versus vertical candidate menu layout. Users familiar with RIME expect a menu style choice, but this web setting should be clearly grouped as a frontend display preference rather than an engine/schema control. | Browser comment on `/web/` settings area: user requested a horizontal/vertical candidate list control and clearer grouping that distinguishes engine controls from web frontend controls. | `third_party/typeduck-web/source/src/Preferences.tsx`, `third_party/typeduck-web/source/src/types.ts`, `third_party/typeduck-web/source/src/consts.ts`, `third_party/typeduck-web/source/src/CandidatePanel.tsx`, `third_party/typeduck-web/source/src/Candidate.tsx`, `third_party/typeduck-web/source/src/index.css`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts` | Settings expose a Cantonese-first `候選排版 Candidate Menu Layout` segmented control with horizontal and vertical choices under a clearly frontend/display group; switching layout changes only the web candidate panel presentation, not engine output, page size, ranking, or ABI behavior; browser screenshots prove both layouts are readable. |
 | M24-DOGFOOD-09 | Open | UI polish / engine status strip explanation | The status strip under the schema switcher shows raw badges such as `jyut6ping3_mobile`, `enabled`, `not traditional`, and `Chinese` with no hint explaining what the strip is or what each value means. | Browser comment on `/web/` status strip: selected `jyut6ping3_mobile enabled not traditional Chinese`; user requested a UI hint for what this is. | `third_party/typeduck-web/source/src/YuneStatusStrip.tsx`, `third_party/typeduck-web/source/src/App.tsx`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`, `third_party/typeduck-web/source/src/index.css` | Status strip has a Cantonese-first label and one-line hint; badges use labeled, user-readable text instead of raw booleans; existing `data-yune-status-*` attributes remain for tests; before/after screenshots prove the hint is clear without crowding the toolbar/schema area. |
 | M24-DOGFOOD-10 | Open | UI polish / schema switcher names | The schema switcher uses English-ish labels such as `Jyutping`, `Cangjie 5`, and `Luna Pinyin`, even though the bundled schema YAML has real names: `粵語拼音`, `倉頡五代`, and `普通話`. The UI should show the real schema names where possible, with romanized/English helper text only as secondary text. | Browser comment on `/web/` schema switcher: user asked whether the real names should be `粵拼` / `倉頡五代` instead of English spellings. Local schema check: `jyut6ping3_mobile.schema.yaml` has `schema/name: 粵語拼音`, `cangjie5.schema.yaml` has `schema/name: 倉頡五代`, and `luna_pinyin.schema.yaml` has `schema/name: 普通話`. | `third_party/typeduck-web/source/src/consts.ts`, `third_party/typeduck-web/source/src/SchemaSwitcher.tsx`, `third_party/typeduck-web/source/schema/*.schema.yaml`, `third_party/typeduck-web/source/src/YuneStatusStrip.tsx`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts` | Schema switcher labels are Cantonese/Chinese-first and checked against bundled `schema/name` values; schema IDs are not the primary visible labels; the status strip and switcher agree on the selected schema name; browser screenshots prove the schema selector remains readable. |
+| M24-DOGFOOD-11 | Open | Browser integration / reverse lookup dogfood | The web dogfood does not visibly support the expected Jyutping reverse-lookup flow: with Jyutping active, typing Mandarin pinyin after a backtick, for example `` `zhe ``, should use the `luna_pinyin` lookup path and offer `這` as a candidate. | User feedback on `/web/`: expected `` `zhe `` to show `這`. Local code check: core and ABI have reverse-lookup translator/filter tests; `typeduck_web.rs` already proves browser app assets can reverse lookup for Cangjie/Luna schemas, but the visible Jyutping option is `jyut6ping3_mobile`, whose source schema does not declare the full reverse-lookup recognizer/translator path from `jyut6ping3.schema.yaml`. | `third_party/typeduck-web/source/schema/jyut6ping3_mobile.schema.yaml`, `third_party/typeduck-web/source/schema/jyut6ping3.schema.yaml`, `third_party/typeduck-web/source/schema/luna_pinyin.*`, `third_party/typeduck-web/source/src/consts.ts`, `third_party/typeduck-web/source/src/App.tsx`, `third_party/typeduck-web/source/src/yune-integration/adapter.ts`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`, `crates/yune-rime-api/tests/typeduck_web.rs`, `crates/yune-rime-api/src/typeduck_web.rs`, `crates/yune-rime-api/src/schema_install.rs` | With the visible Jyutping schema active, typing `` `zhe `` produces a candidate page containing `這`; the UI exposes a Cantonese-first reverse-lookup hint/example; normal `nei` / `jigaajiusihaa` Jyutping composition remains unchanged; native `typeduck_web` and browser Playwright evidence prove the path uses packaged browser assets, not an ad hoc frontend mock. |
 
 ---
 
@@ -1207,7 +1208,189 @@ npx --prefix third_party/typeduck-web/source playwright test third_party/typeduc
 
 Expected: the schema switcher uses checked real schema names, the selected schema is still controllable, the status strip remains diagnostic-friendly, and the screenshot shows readable labels at the existing desktop width.
 
-## Task 12: M24 Regression Sweep And Closeout Discipline
+## Task 12: M24-DOGFOOD-11 Add Jyutping Reverse Lookup To The Web Dogfood
+
+**Files:**
+- Modify: `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`
+- Modify: `crates/yune-rime-api/tests/typeduck_web.rs`
+- Modify after the failing native/browser tests identify the gap: `third_party/typeduck-web/source/schema/jyut6ping3_mobile.schema.yaml`
+- Inspect before modifying schema behavior: `third_party/typeduck-web/source/schema/jyut6ping3.schema.yaml`, `third_party/typeduck-web/source/schema/luna_pinyin.schema.yaml`, `third_party/typeduck-web/source/schema/luna_pinyin.dict.yaml`
+- Modify only for visible examples/help text: `third_party/typeduck-web/source/src/consts.ts`, `third_party/typeduck-web/source/src/App.tsx`
+- Modify only if runtime routing drops the tagged segment or assets: `third_party/typeduck-web/source/src/yune-integration/adapter.ts`, `crates/yune-rime-api/src/typeduck_web.rs`, `crates/yune-rime-api/src/schema_install.rs`
+
+- [ ] **Step 1: Add a failing browser test for the user-visible Jyutping flow**
+
+The test should use the visible Jyutping schema, type the same backtick flow a user would type, and assert only the behavior we know from the report: `這` is present somewhere on the page.
+
+```ts
+test("M24 Jyutping reverse lookup accepts Mandarin pinyin", async ({ page }) => {
+  await selectSchema(page, /Jyutping|粵語拼音/);
+
+  const inputField = page.locator("input[type='text'], textarea").first();
+  await clearComposition(page);
+  await inputField.focus();
+  await inputField.type("`zhe", { delay: 120 });
+
+  await expect.poll(async () => {
+    const state = await readCandidatePanelSnapshot(page, false);
+    return state.candidates.map((candidate) => candidate.text);
+  }, { timeout: 10000 }).toContain("這");
+
+  const state = await readCandidatePanelSnapshot(page, false);
+  await saveM24Json("M24-DOGFOOD-11", "jyutping-reverse-lookup-zhe.json", state);
+  await takeM24Screenshot(page, "M24-DOGFOOD-11", "jyutping-reverse-lookup-zhe");
+});
+```
+
+Expected before the fix: this fails because the visible Jyutping schema does not produce `這` for `` `zhe `` in the browser dogfood.
+
+- [ ] **Step 2: Add a native `typeduck_web` bridge test for the same packaged-assets path**
+
+Add this next to `typeduck_adapter_browser_app_assets_load_m22_schemas_and_reverse_lookup()` so the browser failure is not hidden by React rendering:
+
+```rust
+#[test]
+fn typeduck_adapter_browser_app_assets_load_jyutping_mandarin_reverse_lookup() {
+    let _guard = test_guard();
+    let runtime =
+        TypeDuckRuntime::create_with_schema("browser-app-jyutping-reverse-lookup", "jyut6ping3_mobile");
+    runtime.write_browser_app_assets();
+
+    let state = unsafe {
+        yune_typeduck_init(
+            runtime.shared_c.as_ptr(),
+            runtime.user_c.as_ptr(),
+            runtime.schema_id_c.as_ptr(),
+        )
+    };
+    assert!(!state.is_null(), "jyut6ping3_mobile should initialize from browser app assets");
+
+    assert_eq!(unsafe { yune_typeduck_deploy(state) }, TRUE);
+    let reverse = process_input(state, "`zhe");
+    let texts = reverse["context"]["candidates"]
+        .as_array()
+        .expect("candidate list should be an array")
+        .iter()
+        .map(|candidate| candidate["text"].as_str().unwrap_or_default())
+        .collect::<Vec<_>>();
+    assert!(
+        texts.contains(&"這"),
+        "jyut6ping3_mobile reverse lookup should expose 這 for `zhe, got {texts:?}"
+    );
+
+    drop(response_json(unsafe {
+        yune_typeduck_process_key(state, 0xff1b, 0)
+    }));
+    let normal = process_input(state, "nei");
+    assert_eq!(
+        normal["context"]["candidates"][0]["text"],
+        serde_json::Value::String("你".to_owned()),
+        "normal Jyutping composition must stay intact"
+    );
+
+    unsafe { yune_typeduck_cleanup(state) };
+    runtime.remove();
+}
+```
+
+Run the native test before implementation:
+
+```powershell
+cargo test -p yune-rime-api --test typeduck_web typeduck_adapter_browser_app_assets_load_jyutping_mandarin_reverse_lookup
+```
+
+Expected before the fix: the test fails on the `texts.contains(&"這")` assertion, while the existing Cangjie/Luna reverse-lookup test documents that the lower-level browser assets can already support reverse lookup.
+
+- [ ] **Step 3: Wire reverse lookup into the visible Jyutping web schema without changing normal composition**
+
+Keep `jyut6ping3_mobile` as the visible Jyutping schema unless a fresh TypeDuck `v1.1.2` fixture proves the product uses a different schema for the web dogfood. Extend only the backtick path by borrowing the full Jyutping reverse-lookup declarations:
+
+```yaml
+schema:
+  schema_id: jyut6ping3_mobile
+  name: 粵語拼音
+  dependencies:
+    - luna_pinyin
+
+engine:
+  segmentors:
+    - ascii_segmentor
+    - matcher
+    - affix_segmentor@reverse_lookup
+    - abc_segmentor
+    - punct_segmentor
+    - fallback_segmentor
+  translators:
+    - punct_translator
+    - script_translator
+    - reverse_lookup_translator
+  filters:
+    - dictionary_lookup_filter
+    - simplifier
+
+reverse_lookup:
+  tag: reverse_lookup
+  dictionary: luna_pinyin
+  target: translator
+  prefix: "`"
+  suffix: ""
+  tips: 〔普通話反查〕
+  enable_completion: true
+```
+
+Preserve the existing `translator` block, `menu` patch, and mobile patches in `jyut6ping3_mobile.schema.yaml`. If the deployed/generated schema already defines `engine` through `template:/`, place the added segmentor/translator items in the source YAML and verify the deployed schema includes them after build.
+
+- [ ] **Step 4: Make the visible web UI teach the feature**
+
+Update the Jyutping schema option and the quick example controls so users can discover the feature:
+
+```ts
+{
+  id: "jyut6ping3_mobile",
+  label: "粵語拼音 Jyutping",
+  reverseLookup: "`zhe -> 這（普通話反查）",
+}
+```
+
+If M24-DOGFOOD-10 has already expanded `SchemaOption`, keep the same fields and only update the Jyutping `reverseLookup` text. Add a small Cantonese-first example button near the existing examples:
+
+```tsx
+<button type="button" className="btn btn-sm btn-outline" onClick={() => runScenario("`zhe")}>
+  反查 `zhe
+</button>
+```
+
+Use the existing scenario helper used by the `nei`, `ngo`, `santai`, `m`, `mgoi`, `tone letters`, and `AI trigger` buttons. Do not add a second input path.
+
+- [ ] **Step 5: Prove normal Jyutping behavior did not regress**
+
+Extend the browser test after the reverse lookup assertion:
+
+```ts
+await clearComposition(page);
+const normal = await typeCompositionAndWaitForTopCandidate(page, "nei", "你");
+expect(normal.candidates[0].text).toBe("你");
+
+await clearComposition(page);
+const phrase = await typeCompositionAndWaitForTopCandidate(page, "jigaajiusihaa", "而家要思考");
+expect(phrase.candidates[0].text).toBe("而家要思考");
+```
+
+This is a regression guard for the visible dogfood path. Ranking questions beyond the top preserved phrase remain owned by M24-DOGFOOD-04.
+
+- [ ] **Step 6: Run focused gates**
+
+Run:
+
+```powershell
+cargo test -p yune-rime-api --test typeduck_web typeduck_adapter_browser_app_assets_load_jyutping_mandarin_reverse_lookup
+npm.cmd --prefix third_party/typeduck-web/source run build
+npx --prefix third_party/typeduck-web/source playwright test third_party/typeduck-web/e2e/yune-typeduck.spec.ts -g "M24 Jyutping reverse lookup"
+```
+
+Expected: `jyut6ping3_mobile` still initializes from the browser app assets, `` `zhe `` exposes `這`, normal Jyutping composition stays green, and the screenshot under `M24-DOGFOOD-11` shows the reverse-lookup candidate in the real web panel.
+
+## Task 13: M24 Regression Sweep And Closeout Discipline
 
 **Files:**
 - Modify: this plan as issue rows close
