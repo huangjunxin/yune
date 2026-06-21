@@ -77,12 +77,13 @@ Before closing any row that changes TypeDuck-Web source:
 
 ## Running Issue Ledger
 
-M25 intake began on 2026-06-21 with two user-reported browser dogfooding regressions. Keep adding one row per distinct user-visible symptom using the next `M25-DOGFOOD-XX` id.
+M25 intake began on 2026-06-21 with user-reported browser dogfooding regressions. Keep adding one row per distinct user-visible symptom using the next `M25-DOGFOOD-XX` id.
 
 | ID | Status | Classification | User-visible issue | First repro / evidence | Owning surfaces to inspect first | Close criteria |
 |---|---|---|---|---|---|---|
 | M25-DOGFOOD-01 | Open | Browser integration / performance | Refreshing `http://localhost:5173/web/` still leaves `載入中 Loading...` visible for too long; the user sees no practical improvement compared with the pre-M24 app and considers this unacceptable for real users. | Reproduced in the in-app browser on 2026-06-21: reload took `47.752s`; startup marker reported `totalMs=47331`, with `runtime:initialized` consuming nearly the entire delay after assets loaded. Evidence: `third_party/typeduck-web/e2e/results/m25-dogfooding/M25-DOGFOOD-01/reload-startup-repro.json`. | `third_party/typeduck-web/source/src/worker.ts`, `third_party/typeduck-web/source/src/yune-integration/adapter.ts`, `third_party/typeduck-web/source/src/yune-integration/assets.ts`, `packages/yune-typeduck-runtime/src/typeduck.ts`, `packages/yune-typeduck-runtime/src/module.ts`, `packages/yune-typeduck-runtime/src/filesystem.ts`, `crates/yune-rime-api/src/typeduck_web.rs`, schema deploy/init paths under `crates/yune-rime-api/src/`. | Close only after a measured startup optimization lands. Add a Playwright startup budget test that records phase timings, preserve `startup:complete` diagnostics, and capture before/after evidence under this issue id. Target: interactive shell visible quickly and warm reload IME readiness materially below the current ~47s baseline; any chosen budget must be written into the test and justified by local evidence. |
 | M25-DOGFOOD-02 | Open | Browser integration / settings and candidate pagination | The page-size control is hard to find after M24 UI changes, its allowed range is wrong for the requested behavior, and changing it still does not cap the rendered candidate list. The user expects a visible slider/control allowing 3-10 candidates, where setting 9 shows exactly 9 visible candidates. | User screenshot showed `hai` rendering far more than 10 rows. Reproduced in the in-app browser on 2026-06-21: DOM had page-size slider `min=4`, `max=10`, `value=6`, but typing `hai` rendered `50` visible candidate rows. Evidence: `third_party/typeduck-web/e2e/results/m25-dogfooding/M25-DOGFOOD-02/page-size-hai-repro.json`. | `third_party/typeduck-web/source/src/Preferences.tsx`, `third_party/typeduck-web/source/src/Inputs.tsx`, `third_party/typeduck-web/source/src/CandidatePanel.tsx`, `third_party/typeduck-web/source/src/App.tsx`, `third_party/typeduck-web/source/src/yune-integration/adapter.ts`, `crates/yune-rime-api/src/typeduck_web.rs`, `crates/yune-rime-api/src/context_api.rs`, `crates/yune-rime-api/tests/typeduck_web.rs`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`. | Close when the UI exposes an obvious 3-10 page-size control and the rendered candidate panel never exceeds the configured page size. Add/extend native `typeduck_web` coverage for `menu/page_size` at 3 and 9, add Playwright coverage that sets 3/9/10 and types `hai`, verify page navigation still works, regenerate and reverse/forward check `third_party/typeduck-web/patches/yune-typeduck-runtime.patch`, and capture browser JSON/screenshot evidence under this issue id. |
+| M25-DOGFOOD-03 | Open | Browser integration / typing responsiveness | Typing in the textbox can still show the global `è¼‰å…¥ä¸­ Loading...` state and can stall for about a second when entering a character. This makes the dogfood IME feel blocked even after the page becomes visible. | User-reported during manual dogfooding on 2026-06-21. Evidence placeholder with exact report: `third_party/typeduck-web/e2e/results/m25-dogfooding/M25-DOGFOOD-03/typing-latency-user-report.json`. Needs measured browser repro with keydown-to-candidate timing. | `third_party/typeduck-web/source/src/CandidatePanel.tsx`, `third_party/typeduck-web/source/src/rime.ts`, `third_party/typeduck-web/source/src/worker.ts`, `third_party/typeduck-web/source/src/App.tsx`, `third_party/typeduck-web/source/src/Toolbar.tsx`, `third_party/typeduck-web/source/src/yune-integration/adapter.ts`, `packages/yune-typeduck-runtime/src/typeduck.ts`, `crates/yune-rime-api/src/typeduck_web.rs`, `crates/yune-core/src/engine.rs`. | Close only after per-key latency is measured and improved. Add Playwright instrumentation for keydown-to-candidate update latency on `hai`, `nei`, and a long phrase; split queue wait, worker roundtrip, Rust `process_key`, and React render time; remove global loading from normal per-key composition; ensure typing remains responsive while startup/deploy/customize is in flight; save before/after latency JSON under this issue id. |
 
 ## Intake Task
 
@@ -141,15 +142,19 @@ M25 intake began on 2026-06-21 with two user-reported browser dogfooding regress
 
   The current marker only says `runtime:initialized` takes ~47s. Add nested markers around `TypeDuckRuntime.init`, filesystem mount/sync, schema deploy, default schema selection, dictionary/table loading, and any persistence sync. The next evidence file must show which sub-phase owns the delay.
 
-- [ ] **Step 3: Implement the narrowest optimization proven by the trace**
+- [ ] **Step 3: Keep startup latency separate from typing latency**
+
+  Startup optimization must not hide the separate typing-stutter problem. If typing is still blocked while startup continues, keep `M25-DOGFOOD-03` open and measure it separately instead of claiming startup fixed the perceived performance problem.
+
+- [ ] **Step 4: Implement the narrowest optimization proven by the trace**
 
   Prefer optimizations that keep behavior unchanged: avoid redundant deploy/init on reload, cache stable prepared resources, skip unnecessary schema rebuilds when `assetVersion` is unchanged, or make the visible app shell interactive while IME initialization continues in the worker. Do not remove real schema assets or weaken M24 startup correctness checks just to reduce the number.
 
-- [ ] **Step 4: Prove the improvement**
+- [ ] **Step 5: Prove the improvement**
 
   Re-run the startup test, save `startup-after.json`, and compare `startup:complete.totalMs` and the user-visible loading duration against `reload-startup-repro.json`. The final row update must state the before/after timings and the remaining bottleneck if startup is still above the chosen budget.
 
-- [ ] **Step 5: Regenerate the TypeDuck-Web patch if source changed**
+- [ ] **Step 6: Regenerate the TypeDuck-Web patch if source changed**
 
   If any file under `third_party/typeduck-web/source/` changed, regenerate `third_party/typeduck-web/patches/yune-typeduck-runtime.patch`, reverse-check it from `source/`, and forward-check it on a clean source checkout.
 
@@ -186,6 +191,48 @@ M25 intake began on 2026-06-21 with two user-reported browser dogfooding regress
   The browser test must verify first-page row count, next/previous page behavior, and digit selection after the cap is applied. Save JSON and screenshots under `M25-DOGFOOD-02`.
 
 - [ ] **Step 6: Regenerate the TypeDuck-Web patch if source changed**
+
+  If any file under `third_party/typeduck-web/source/` changed, regenerate `third_party/typeduck-web/patches/yune-typeduck-runtime.patch`, reverse-check it from `source/`, and forward-check it on a clean source checkout.
+
+### Task 4: M25-DOGFOOD-03 Typing Responsiveness And Loading-State Separation
+
+**Files:**
+- Modify: `third_party/typeduck-web/source/src/CandidatePanel.tsx`
+- Modify: `third_party/typeduck-web/source/src/rime.ts`
+- Modify: `third_party/typeduck-web/source/src/worker.ts`
+- Modify: `third_party/typeduck-web/source/src/App.tsx`
+- Modify: `third_party/typeduck-web/source/src/Toolbar.tsx`
+- Modify if profiling points there: `third_party/typeduck-web/source/src/yune-integration/adapter.ts`
+- Modify if profiling points there: `packages/yune-typeduck-runtime/src/typeduck.ts`
+- Modify if profiling points there: `crates/yune-rime-api/src/typeduck_web.rs`
+- Test: `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`
+- Evidence: `third_party/typeduck-web/e2e/results/m25-dogfooding/M25-DOGFOOD-03/`
+
+- [ ] **Step 1: Add keypress latency instrumentation**
+
+  Add temporary or permanent diagnostics that record `keydown` time, `Rime.processKey` queued time, worker receive time, Rust response time, page receive time, and candidate-panel render time. Save a browser JSON baseline for `h`, `ha`, `hai`, `nei`, and `jigaajiusihaa` under `M25-DOGFOOD-03`.
+
+- [ ] **Step 2: Add a failing Playwright responsiveness test**
+
+  Add a Playwright test that types into the real textarea using actual keypresses and asserts an explicit latency budget for keydown-to-candidate update. The first version should fail or record the current bad p95/p99 latency so the implementation has a hard target.
+
+- [ ] **Step 3: Separate global loading state from normal composition**
+
+  `è¼‰å…¥ä¸­ Loading...` should mean startup, schema deploy, or settings redeploy, not ordinary per-key composition. Split loading state in `App.tsx`/`Toolbar.tsx`/`rime.ts` so normal `processKey`, `stageAi`, page flip, and candidate selection do not keep the global loading indicator active. If an action needs a local pending state, show it near that control instead of blocking the textbox.
+
+- [ ] **Step 4: Avoid queueing keystrokes behind long non-key actions**
+
+  Inspect the `rime.ts` single-message queue. If `processKey` messages wait behind startup/customize/deploy, split high-priority key events from low-priority settings work, coalesce stale option/customize calls, or block typing until the IME is truly ready with an explicit disabled state. Do not let the user type into an apparently live IME while key events are silently delayed.
+
+- [ ] **Step 5: Reduce the slowest measured per-key path**
+
+  If latency is dominated by Rust `process_key`, profile `yune_typeduck_process_key` and candidate serialization. If latency is dominated by rendering, cap rendered rows through `M25-DOGFOOD-02` and avoid rebuilding expensive dictionary/detail data for every row. If latency is dominated by AI staging, ensure AI remains second-pass, cancellable/stale-result guarded, and default-off.
+
+- [ ] **Step 6: Prove typing responsiveness after the fix**
+
+  Re-run the browser responsiveness test and save `typing-latency-after.json` with before/after p50/p95/p99 timings. The final evidence must show the textbox accepts keypresses without a visible one-second stall and the global loading indicator does not appear for normal composition.
+
+- [ ] **Step 7: Regenerate the TypeDuck-Web patch if source changed**
 
   If any file under `third_party/typeduck-web/source/` changed, regenerate `third_party/typeduck-web/patches/yune-typeduck-runtime.patch`, reverse-check it from `source/`, and forward-check it on a clean source checkout.
 

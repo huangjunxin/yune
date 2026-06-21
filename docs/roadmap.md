@@ -590,8 +590,9 @@ processor semantics into `yune-core`) lands only when a real non-ABI consumer
 - **M25 - TypeDuck-Web dogfooding round 2 (intake)** - captures the next manual
   play-testing batch for the internal `third_party/typeduck-web/` playground.
   The first open rows are `M25-DOGFOOD-01` for slow reload/startup
-  performance and `M25-DOGFOOD-02` for page-size slider discoverability plus
-  candidate pagination correctness. Browser evidence goes under
+  performance, `M25-DOGFOOD-02` for page-size slider discoverability plus
+  candidate pagination correctness, and `M25-DOGFOOD-03` for per-key typing
+  responsiveness and loading-state separation. Browser evidence goes under
   `third_party/typeduck-web/e2e/results/m25-dogfooding/`, and any
   engine-output/ranking change remains fixture-gated against TypeDuck `v1.1.2`
   or upstream `1.17.0`. Detail:

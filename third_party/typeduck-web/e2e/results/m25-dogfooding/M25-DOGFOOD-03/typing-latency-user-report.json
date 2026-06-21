@@ -1,0 +1,12 @@
+{
+  "captured_at": "2026-06-21T22:05:00Z",
+  "app_url": "http://localhost:5173/web/",
+  "source": "manual dogfooding feedback",
+  "reported_symptom": "While typing in the textbox, the app still showed the loading state, and typing a character could stall for about a second.",
+  "classification": "Browser integration / typing responsiveness",
+  "relationship_to_other_rows": {
+    "M25-DOGFOOD-01": "Slow startup and reload readiness.",
+    "M25-DOGFOOD-03": "Interactive typing latency and global loading behavior while the app is busy."
+  },
+  "triage_note": "This must be measured separately from startup. A future implementation should capture keydown-to-candidate latency, worker queue wait time, worker processKey roundtrip, and React render/update time."
+}
