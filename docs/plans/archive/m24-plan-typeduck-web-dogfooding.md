@@ -20,6 +20,8 @@ M24 closed `M24-DOGFOOD-01` through `M24-DOGFOOD-13` and kept the work scoped to
 
 The maintained TypeDuck-Web patch was regenerated at `third_party/typeduck-web/patches/yune-typeduck-runtime.patch`. Browser evidence is stored under `third_party/typeduck-web/e2e/results/m24-dogfooding/`; future browser-demo issues should use a new plan and a new evidence scope unless they are explicitly auditing this archived baseline.
 
+Screenshot evidence is a visual audit trail, while behavior is proved by the JSON/state snapshots, Rust fixture tests, runtime tests, and Playwright assertions named in each closed row. Do not treat a screenshot filename alone as proof of a distinct browser state.
+
 Reported verification for closeout: `cargo fmt`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace`, focused M24 Rust tests, `npm --prefix packages/yune-typeduck-runtime test`, `npm --prefix packages/yune-typeduck-runtime run build`, `npm --prefix third_party/typeduck-web/source run build`, M24 Playwright E2E with 13 passing tests, TypeDuck-Web patch reverse/forward checks, and `git diff --check`.
 
 ---

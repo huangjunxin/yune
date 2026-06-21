@@ -15,6 +15,11 @@
 > `output\rime.dll` and stock `TestTypeDuckIPC.exe /console` returning a
 > nonzero session, sending `ngohaig` key events, and receiving
 > `status.schema_id=jyut6ping3` plus candidate/context data.
+> Tracked evidence lives under
+> [`plans/archive/m10-evidence/t3-stock-real-server/`](./plans/archive/m10-evidence/t3-stock-real-server/).
+> This is a stock server/client IPC smoke, not an interactive TSF typing or
+> visible candidate-panel rendering smoke; those are Phase 2 Windows
+> product/frontend acceptance gates.
 >
 > **Source of truth.** The local execution notes are
 > [`plans/m10-reference-typeduck-windows-contract.md`](./plans/m10-reference-typeduck-windows-contract.md)
@@ -142,9 +147,9 @@ The web path is Emscripten/WASM. Windows needs a **native** engine artifact:
   - [x] T0 ABI/header decision: package uses upstream-shaped `RimeCandidate` and default `rime_get_api()`, plus `rime_typeduck_profile_api.h`.
   - [x] T2 packaged host-loader lifecycle: packaged `dist/lib/rime.dll` loads, profile append slots round-trip, and the native lifecycle smoke passes.
   - [x] T1 TypeDuck-Windows build/link: Visual Studio 2022 Community MSBuild builds the pinned x64 solution plus the deployer/server projects against the Yune package after local profile-accessor and x64 WinSparkle fixes.
-  - [x] T3 real TypeDuck-Windows frontend smoke: stock `TypeDuckServer.exe` starts from `output\`, loads packaged Yune `output\rime.dll`, and stock `TestTypeDuckIPC.exe /console` returns a nonzero session, sends `ngohaig` key events, and receives `status.schema_id=jyut6ping3` plus candidate/context data. Evidence: `target\typeduck-windows-e2e\evidence\m10-t3-20260621-100337-stock-real-server`.
+  - [x] T3 stock TypeDuck-Windows real-server IPC smoke: stock `TypeDuckServer.exe` starts from `output\`, loads packaged Yune `output\rime.dll`, and stock `TestTypeDuckIPC.exe /console` returns a nonzero session, sends `ngohaig` key events, and receives `status.schema_id=jyut6ping3` plus candidate/context data. Tracked evidence: [`plans/archive/m10-evidence/t3-stock-real-server/`](./plans/archive/m10-evidence/t3-stock-real-server/). Interactive TSF typing and visible candidate-window rendering are deferred to Phase 2.
 
-The real TypeDuck-Windows stock server IPC smoke is green: a pinned checkout was
+The stock TypeDuck-Windows server IPC smoke is green: a pinned checkout was
 captured under `target/typeduck-windows-e2e/TypeDuck-Windows`. The initial M10
 resume attempt could not find `msbuild.exe` on PATH; Visual Studio 2022
 Community was later found, Boost 1.84.0 was built at `C:\b184`, ATL/MFC was
@@ -165,7 +170,9 @@ starts `TypeDuckServer.exe` from `output\`, points
 `HKCU\Software\Rime\TypeDuck\RimeUserDir` at an isolated deployed user data
 directory, runs `TestTypeDuckIPC.exe /console` with `ngohaig`, and records
 handled key replies, `status.schema_id=jyut6ping3`, `ctx.preedit=ngohaig`, and
-candidate data.
+candidate data. This is enough to close the M10 engine/backend contract, but it
+is not a substitute for a Phase 2 interactive IME smoke in Notepad or another
+real text field.
 
 The engine swap behind the M19 profile ABI is now a contained compatibility
 path. Future full TSF automation or frontend modernization can proceed

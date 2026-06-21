@@ -481,9 +481,11 @@ clean-checkout byte-parity guarantee is still
 `cargo test -p yune-core --test cantonese_parity`.
 
 **`#[ignore]` must carry a documented blocker.** A blocked behavior gets a *named* test
-marked `#[ignore = "blocked: <what is missing>"]` whose body `panic!()`s — never silently
-drop a slice. The reason names the precise blocker (usually a missing oracle fixture). See the
-5 ignored parity tests in `cantonese_parity.rs`.
+marked `#[ignore = "blocked: <what is missing>"]` whose body `panic!()`s - never silently
+drop a slice. The reason names the precise blocker, usually a missing oracle fixture. As of
+M24, `cantonese_parity.rs` has no ignored cases; the remaining ignored parity blockers live in
+the M19 breadth tests such as `upstream_cangjie_parity.rs`,
+`upstream_double_pinyin_parity.rs`, and `upstream_zhuyin_parity.rs`.
 
 **Tests exercise the public surface, not internals.** ABI/frontend tests obtain the table via
 `rime_get_api()` and call its members, or call the exported `yune_typeduck_*` functions — the
@@ -509,10 +511,11 @@ same surface a real frontend uses. `dynamic_loader.rs` `dlopen`s the built cdyli
 typeduck_web` so the WASM adapter contract is still validated without browser tooling.
 Real-browser M9 validation is the web-first goal beyond this fallback.
 
-**Fork-only ABI helper tests.** `tests/config_api.rs` guards the parked
-TypeDuck-profile list-append helper behavior (`config_list_append_*`
-round-trips). The default `rime_get_api()` table no longer exposes those
-fork-only slots; its config-list contract is upstream `1.17.0`.
+**Fork-only ABI helper tests.** `tests/config_api.rs` guards the TypeDuck-profile
+list-append helper behavior (`config_list_append_*` round-trips), which M19 named
+and M10 consumed through `rime_get_typeduck_profile_api()`. The default
+`rime_get_api()` table does not expose those fork-only slots; its config-list
+contract is upstream `1.17.0`.
 
 No coverage tooling/threshold is configured. Browser-level E2E for TypeDuck-Web is the M9 goal;
 until then the `typeduck_web` ABI tests + native fallback + Vitest suite are the safety net.

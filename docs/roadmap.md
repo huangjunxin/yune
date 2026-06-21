@@ -487,7 +487,7 @@ behavior, broader Cangjie phrase/table-encoder interleave, and schema-speller
 digit/space key routing remain explicit ignored blockers instead of hidden
 claims.
 
-M19 also named the TypeDuck profile ABI surface for the parked Windows backend:
+M19 also named the TypeDuck profile ABI surface for the Windows backend:
 `rime_get_typeduck_profile_api()` exposes the fork-only
 `config_list_append_{bool,int,double,string}` slots through a non-default
 profile table, while the default `rime_get_api()` table remains upstream
@@ -527,8 +527,10 @@ the named profile accessor for `config_list_append_*`. T3 is also verified:
 stock `TypeDuckServer.exe` starts from `output\`, loads packaged
 `output\rime.dll`, and stock `TestTypeDuckIPC.exe /console` returns a nonzero
 session, sends `ngohaig` key events, and receives `status.schema_id=jyut6ping3`
-plus candidate/context data. The closeout evidence is under
-`target\typeduck-windows-e2e\evidence\m10-t3-20260621-100337-stock-real-server`.
+plus candidate/context data. The tracked closeout evidence is under
+[`plans/archive/m10-evidence/t3-stock-real-server/`](./plans/archive/m10-evidence/t3-stock-real-server/).
+This is a stock server/client IPC smoke; interactive TSF typing and visible
+candidate-window rendering are Phase 2 Windows product/frontend gates.
 
 Detail: [`typeduck-windows-backend-requirements.md`](./typeduck-windows-backend-requirements.md),
 [`plans/m10-reference-typeduck-windows-contract.md`](./plans/m10-reference-typeduck-windows-contract.md),
@@ -643,7 +645,7 @@ processor semantics into `yune-core`) lands only when a real non-ABI consumer
   — adding only the per-schema gaps a captured oracle case proves; sentence/lattice
   cases outside the M17-owned `luna_pinyin` fixtures need their own future oracle
   evidence before implementation. In parallel M19 *names* (does not
-  package) the TypeDuck-profile ABI surface the parked M10 needs: the fork-only
+  package) the TypeDuck-profile ABI surface M10 later used: the fork-only
   `config_list_append_{string,bool,int,double}` slots already exist as `#[no_mangle]`
   symbols in `config_api.rs` but are absent from the default `rime_get_api()` table, so
   M19 exposes them through an explicitly named opt-in profile accessor while keeping the
