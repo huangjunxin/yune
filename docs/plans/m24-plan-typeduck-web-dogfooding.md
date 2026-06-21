@@ -8,7 +8,7 @@
 
 **Architecture:** M24 treats `third_party/typeduck-web/` as the active browser dogfooding surface. Browser loading, rendering, and UX defects can be fixed with browser evidence; candidate-set, candidate-order, or engine-semantic changes still require pinned oracle evidence from TypeDuck `v1.1.2` or upstream `1.17.0` before changing engine behavior. Each issue is classified first, then implemented in the narrowest owning layer.
 
-**Tech Stack:** TypeDuck-Web React/TypeScript, Vite/Bun, Playwright, `@yune-ime/typeduck-runtime`, `yune-rime-api` C ABI, `yune-core`, TypeDuck `v1.1.2` oracle fixtures.
+**Tech Stack:** TypeDuck-Web React/TypeScript, Vite/Bun, Tailwind CSS, small local React components, Playwright, `@yune-ime/typeduck-runtime`, `yune-rime-api` C ABI, `yune-core`, TypeDuck `v1.1.2` oracle fixtures. M24 explicitly removes DaisyUI from the dogfood demo stack.
 
 ---
 
@@ -18,7 +18,28 @@ M24 is an active dogfooding and hardening loop for the internal browser playgrou
 
 - **In scope:** first-load performance, visible loading state, candidate panel layout, comment rendering, dictionary panel ergonomics, browser schema-switch behavior, TypeDuck-Web runtime integration bugs, and browser evidence for user-visible fixes.
 - **In scope with oracle evidence:** candidate set, candidate order, phrase/sentence fallback, correction, prediction, dictionary lookup payloads, and any behavior that changes engine output.
-- **Out of scope:** changing the separately cloned or deployed `TypeDuck-HK/TypeDuck-Web` product; claiming live-site behavior as the hard oracle; widening default `RimeApi` or `RimeCandidate`; exposing unsupported controls as working toggles.
+- **In scope for frontend stack hardening:** keep the dogfood demo on Vite + React + Tailwind CSS + small local components only; remove DaisyUI and do not add a replacement UI framework.
+- **Out of scope:** changing the separately cloned or deployed `TypeDuck-HK/TypeDuck-Web` product; claiming live-site behavior as the hard oracle; widening default `RimeApi` or `RimeCandidate`; exposing unsupported controls as working toggles; turning the dogfood demo into a product site or design-system project.
+
+## Execution Order
+
+The issue ledger is append-only, but implementation should follow this order unless a fresh blocker makes a different sequence necessary:
+
+1. **Evidence harness first:** Task 1. All later browser fixes must use the same M24 evidence directory and helper path.
+2. **Browser/runtime correctness:** Tasks 2, 3, 5, 8, and 12 (`M24-DOGFOOD-01`, `02`, `04`, `07`, `11`). These either affect loading, rendered candidate data, runtime settings, or candidate output and should establish the honest baseline before broad UI work.
+3. **Shared settings and display structure:** Tasks 6, 7, 9, and 14 (`M24-DOGFOOD-05`, `06`, `08`, `13`). These reshape common controls, grouping, and local component primitives; doing them before smaller polish avoids repeated UI churn.
+4. **Focused display polish:** Tasks 4, 10, 11, and 13 (`M24-DOGFOOD-03`, `09`, `10`, `12`). These can land after the broader settings/component structure is stable.
+5. **Final regression and docs closeout:** Task 15. Do not archive M24 until the current dogfooding batch is intentionally closed.
+
+## Worker Guardrails
+
+- Keep the web dogfood stack simple: **Vite + React + Tailwind CSS + small local components**.
+- Do not add shadcn, MUI, Radix, another Tailwind component kit, a router framework, a CSS-in-JS stack, or a broad design system.
+- Remove DaisyUI in `M24-DOGFOOD-13`; until that task lands, avoid adding new DaisyUI-specific classes to new work.
+- Reuse and improve local components in `third_party/typeduck-web/source/src/Inputs.tsx` and local CSS in `third_party/typeduck-web/source/src/index.css`.
+- Browser-visible claims require Playwright screenshots or JSON evidence from the real `/web/` app.
+- Engine-output changes require pinned oracle fixture evidence. Do not use the live deployed TypeDuck site as the hard oracle.
+- Commit in small slices. Keep implementation commits scoped to the issue being closed.
 
 ## Evidence Rules
 
@@ -56,6 +77,7 @@ If a report is ambiguous, classify it as **Needs triage**, capture the screensho
 | M24-DOGFOOD-10 | Open | UI polish / schema switcher names | The schema switcher uses English-ish labels such as `Jyutping`, `Cangjie 5`, and `Luna Pinyin`, even though the bundled schema YAML has real names: `粵語拼音`, `倉頡五代`, and `普通話`. The UI should show the real schema names where possible, with romanized/English helper text only as secondary text. | Browser comment on `/web/` schema switcher: user asked whether the real names should be `粵拼` / `倉頡五代` instead of English spellings. Local schema check: `jyut6ping3_mobile.schema.yaml` has `schema/name: 粵語拼音`, `cangjie5.schema.yaml` has `schema/name: 倉頡五代`, and `luna_pinyin.schema.yaml` has `schema/name: 普通話`. | `third_party/typeduck-web/source/src/consts.ts`, `third_party/typeduck-web/source/src/SchemaSwitcher.tsx`, `third_party/typeduck-web/source/schema/*.schema.yaml`, `third_party/typeduck-web/source/src/YuneStatusStrip.tsx`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts` | Schema switcher labels are Cantonese/Chinese-first and checked against bundled `schema/name` values; schema IDs are not the primary visible labels; the status strip and switcher agree on the selected schema name; browser screenshots prove the schema selector remains readable. |
 | M24-DOGFOOD-11 | Open | Browser integration / reverse lookup dogfood | The web dogfood does not visibly support the expected Jyutping reverse-lookup flow: with Jyutping active, typing Mandarin pinyin after a backtick, for example `` `zhe ``, should use the `luna_pinyin` lookup path and offer `這` as a candidate. | User feedback on `/web/`: expected `` `zhe `` to show `這`. Local code check: core and ABI have reverse-lookup translator/filter tests; `typeduck_web.rs` already proves browser app assets can reverse lookup for Cangjie/Luna schemas, but the visible Jyutping option is `jyut6ping3_mobile`, whose source schema does not declare the full reverse-lookup recognizer/translator path from `jyut6ping3.schema.yaml`. | `third_party/typeduck-web/source/schema/jyut6ping3_mobile.schema.yaml`, `third_party/typeduck-web/source/schema/jyut6ping3.schema.yaml`, `third_party/typeduck-web/source/schema/luna_pinyin.*`, `third_party/typeduck-web/source/src/consts.ts`, `third_party/typeduck-web/source/src/App.tsx`, `third_party/typeduck-web/source/src/yune-integration/adapter.ts`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`, `crates/yune-rime-api/tests/typeduck_web.rs`, `crates/yune-rime-api/src/typeduck_web.rs`, `crates/yune-rime-api/src/schema_install.rs` | With the visible Jyutping schema active, typing `` `zhe `` produces a candidate page containing `這`; the UI exposes a Cantonese-first reverse-lookup hint/example; normal `nei` / `jigaajiusihaa` Jyutping composition remains unchanged; native `typeduck_web` and browser Playwright evidence prove the path uses packaged browser assets, not an ad hoc frontend mock. |
 | M24-DOGFOOD-12 | Open | UI polish / Chinese typeface picker | The `中文字體 Chinese Typeface` control is a two-button `宋體 Sung` / `黑體 Hei` toggle backed by `isHeiTypeface`, which is ambiguous and hides the actual font family. It should become a radio list using full font family names. | Browser comment on `/web/` display controls: user selected `中文字體 Chinese Typeface 宋體 Sung 黑體 Hei` and requested a radio list with full names. Official Google Fonts pages confirm the requested family names: Chocolate Classical Sans, Iansui, LXGW WenKai Mono TC, LXGW WenKai TC, WDXL Lubrifont TC, Chiron GoRound TC, Chiron Hei HK, and Chiron Sung HK. | `third_party/typeduck-web/source/src/types.ts`, `third_party/typeduck-web/source/src/consts.ts`, `third_party/typeduck-web/source/src/hooks.ts`, `third_party/typeduck-web/source/src/Preferences.tsx`, `third_party/typeduck-web/source/src/App.tsx`, `third_party/typeduck-web/source/src/Candidate.tsx`, `third_party/typeduck-web/source/src/DictionaryPanel.tsx`, `third_party/typeduck-web/source/src/index.css`, `third_party/typeduck-web/source/tailwind.config.ts`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts` | The display controls expose a Cantonese-first `中文字款 Chinese Typeface` radio list with the eight full family names; the selected family applies consistently to textarea, candidate rows, and dictionary panel text; the old `宋體 Sung` / `黑體 Hei` segmented toggle is gone; legacy `isHeiTypeface` storage maps to Chiron Sung HK / Chiron Hei HK; font loading does not block IME initialization. |
+| M24-DOGFOOD-13 | Open | UI stack simplification / DaisyUI removal | The dogfood demo still depends on DaisyUI even though the intended stack is Vite + React + Tailwind CSS + small local components. DaisyUI classes such as `btn`, `toggle`, `radio`, `textarea`, `badge`, and `join` are used across the UI, and `tailwind.config.ts` imports the DaisyUI plugin. | User confirmed the desired stack should be simple because this is a debugging and stress-testing dogfood demo, not a large product site. Local code check: `third_party/typeduck-web/source/package.json` lists `daisyui`, `tailwind.config.ts` imports and configures it, and local components currently wrap DaisyUI classes. | `third_party/typeduck-web/source/package.json`, `third_party/typeduck-web/source/tailwind.config.ts`, `third_party/typeduck-web/source/src/Inputs.tsx`, `third_party/typeduck-web/source/src/index.css`, `third_party/typeduck-web/source/src/Toolbar.tsx`, `third_party/typeduck-web/source/src/ThemeSwitcher.tsx`, `third_party/typeduck-web/source/src/YuneFeatureShowcase.tsx`, `third_party/typeduck-web/source/src/App.tsx`, `third_party/typeduck-web/source/src/Preferences.tsx`, `third_party/typeduck-web/source/src/CandidatePanel.tsx`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts` | `daisyui` is removed from package metadata and Tailwind config; no `btn`, `toggle`, `radio`, `checkbox`, `range`, `textarea`, `badge`, `join`, or DaisyUI theme-controller classes remain in `src`; local Tailwind components preserve the existing controls, dark/light theme, keyboard accessibility, and Playwright-visible behavior; `npm.cmd --prefix third_party/typeduck-web/source run build` passes without DaisyUI. |
 
 ---
 
@@ -1706,7 +1728,353 @@ npx --prefix third_party/typeduck-web/source playwright test third_party/typeduc
 
 Expected: the picker lists all eight full family names, selecting `Iansui` changes the computed textarea font and candidate/dictionary `data-chinese-typeface` markers, the old Sung/Hei toggle is absent, and the screenshot under `M24-DOGFOOD-12` proves the control is readable.
 
-## Task 14: M24 Regression Sweep And Closeout Discipline
+## Task 14: M24-DOGFOOD-13 Remove DaisyUI And Keep Local Tailwind Components Only
+
+**Files:**
+- Modify: `third_party/typeduck-web/source/package.json`
+- Modify: `third_party/typeduck-web/source/tailwind.config.ts`
+- Modify: `third_party/typeduck-web/source/src/index.css`
+- Modify: `third_party/typeduck-web/source/src/Inputs.tsx`
+- Modify: `third_party/typeduck-web/source/src/Toolbar.tsx`
+- Modify: `third_party/typeduck-web/source/src/ThemeSwitcher.tsx`
+- Modify: `third_party/typeduck-web/source/src/YuneFeatureShowcase.tsx`
+- Modify when shared component replacement touches callers: `third_party/typeduck-web/source/src/App.tsx`, `third_party/typeduck-web/source/src/Preferences.tsx`, `third_party/typeduck-web/source/src/CandidatePanel.tsx`, `third_party/typeduck-web/source/src/Candidate.tsx`, `third_party/typeduck-web/source/src/DictionaryPanel.tsx`, `third_party/typeduck-web/source/src/YuneStatusStrip.tsx`, `third_party/typeduck-web/source/src/YuneInspector.tsx`
+- Test: `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`
+
+- [ ] **Step 1: Add a failing stack-boundary test**
+
+Add a Playwright test that checks package metadata, Tailwind config, source class strings, and basic UI availability:
+
+```ts
+test("M24 dogfood UI uses only local Tailwind components", async ({ page }) => {
+  const packageJson = JSON.parse(await readRepoText("third_party/typeduck-web/source/package.json")) as {
+    dependencies?: Record<string, string>;
+    devDependencies?: Record<string, string>;
+  };
+  expect(packageJson.dependencies?.daisyui).toBeUndefined();
+  expect(packageJson.devDependencies?.daisyui).toBeUndefined();
+
+  const tailwindConfig = await readRepoText("third_party/typeduck-web/source/tailwind.config.ts");
+  expect(tailwindConfig).not.toMatch(/\bdaisyui\b/i);
+  expect(tailwindConfig).not.toContain("DaisyUIConfig");
+
+  const filesToScan = [
+    "third_party/typeduck-web/source/src/Inputs.tsx",
+    "third_party/typeduck-web/source/src/Toolbar.tsx",
+    "third_party/typeduck-web/source/src/ThemeSwitcher.tsx",
+    "third_party/typeduck-web/source/src/YuneFeatureShowcase.tsx",
+    "third_party/typeduck-web/source/src/App.tsx",
+    "third_party/typeduck-web/source/src/Preferences.tsx",
+    "third_party/typeduck-web/source/src/CandidatePanel.tsx",
+    "third_party/typeduck-web/source/src/Candidate.tsx",
+    "third_party/typeduck-web/source/src/DictionaryPanel.tsx",
+    "third_party/typeduck-web/source/src/YuneStatusStrip.tsx",
+    "third_party/typeduck-web/source/src/YuneInspector.tsx",
+    "third_party/typeduck-web/source/src/index.css",
+  ];
+  const forbiddenDaisyUiClasses = /\b(btn|toggle|radio|checkbox|range|textarea|badge|join|tooltip|link|loading)(?:-[A-Za-z0-9_:[\]/.%#]+)?\b/;
+  for (const file of filesToScan) {
+    const source = await readRepoText(file);
+    const classSnippets = source.match(/className\s*=\s*(?:"[^"]*"|'[^']*'|`[^`]*`|\{`[^`]*`\}|\{"[^"]*"\}|\{'[^']*'\})/g) ?? [];
+    for (const snippet of classSnippets) {
+      expect(snippet, `${file}: ${snippet}`).not.toMatch(forbiddenDaisyUiClasses);
+    }
+  }
+
+  await expect(page.getByRole("button", { name: /ASCII mode|中/ })).toBeVisible();
+  await expect(page.locator("[data-yune-schema-switcher]")).toBeVisible();
+  await expect(page.locator("[data-yune-status]")).toBeVisible({ timeout: 10000 });
+  await focusInputAndType(page, "nei", "你");
+  await expect(page.locator(".candidate-panel")).toBeVisible();
+  await takeM24Screenshot(page, "M24-DOGFOOD-13", "local-tailwind-components");
+});
+```
+
+Expected before the fix: this fails because `package.json` lists `daisyui`, `tailwind.config.ts` imports/configures it, and source files contain DaisyUI class names.
+
+- [ ] **Step 2: Move DaisyUI theme tokens into local Tailwind/CSS**
+
+In `tailwind.config.ts`, remove:
+
+```ts
+import daisyui from "daisyui";
+import type { Config as DaisyUIConfig } from "daisyui";
+plugins: [daisyui],
+daisyui: { /* themes */ } satisfies DaisyUIConfig,
+```
+
+Replace the theme color surface with local CSS-variable-backed colors:
+
+```ts
+theme: {
+  fontFamily: {
+    "serif": ["var(--font-serif)", "var(--font-emoji)"],
+    "sans": ["var(--font-sans)", "var(--font-emoji)"],
+    "geometric": ["var(--font-geometric)", "var(--font-sans)", "var(--font-emoji)"],
+    "sung": ["var(--font-sung)", "var(--font-serif)", "var(--font-emoji)"],
+    "hei": ["var(--font-hei)", "var(--font-sans)", "var(--font-emoji)"],
+    "kai-fallback-sung": ["var(--font-kai)", "var(--font-sung)", "var(--font-serif)", "var(--font-emoji)"],
+    "kai-fallback-hei": ["var(--font-kai)", "var(--font-hei)", "var(--font-sans)", "var(--font-emoji)"],
+    "devanagari": ["var(--font-devanagari)", "var(--font-sans)", "var(--font-emoji)"],
+    "arabic": ["var(--font-arabic)", "var(--font-sans)", "var(--font-emoji)"],
+  },
+  colors: {
+    transparent: "transparent",
+    current: "currentColor",
+    primary: "rgb(var(--primary) / <alpha-value>)",
+    "primary-content": "rgb(var(--primary-content) / <alpha-value>)",
+    "primary-content-200": "rgb(var(--primary-content-200) / <alpha-value>)",
+    "primary-content-300": "rgb(var(--primary-content-300) / <alpha-value>)",
+    "primary-content-400": "rgb(var(--primary-content-400) / <alpha-value>)",
+    "primary-content-500": "rgb(var(--primary-content-500) / <alpha-value>)",
+    secondary: "rgb(var(--secondary) / <alpha-value>)",
+    "secondary-content": "rgb(var(--secondary-content) / <alpha-value>)",
+    accent: "rgb(var(--accent) / <alpha-value>)",
+    "accent-content": "rgb(var(--accent-content) / <alpha-value>)",
+    neutral: "rgb(var(--neutral) / <alpha-value>)",
+    "neutral-content": "rgb(var(--neutral-content) / <alpha-value>)",
+    "base-100": "rgb(var(--base-100) / <alpha-value>)",
+    "base-200": "rgb(var(--base-200) / <alpha-value>)",
+    "base-300": "rgb(var(--base-300) / <alpha-value>)",
+    "base-400": "rgb(var(--base-400) / <alpha-value>)",
+    "base-500": "rgb(var(--base-500) / <alpha-value>)",
+    "base-content": "rgb(var(--base-content) / <alpha-value>)",
+    "base-content-200": "rgb(var(--base-content-200) / <alpha-value>)",
+    "base-content-300": "rgb(var(--base-content-300) / <alpha-value>)",
+    "base-content-400": "rgb(var(--base-content-400) / <alpha-value>)",
+  },
+},
+plugins: [],
+```
+
+In `index.css`, define the theme variables DaisyUI used to supply:
+
+```css
+:root,
+:root[data-theme="light"] {
+  color-scheme: light;
+  --primary: 10 130 250;
+  --primary-content: 248 251 255;
+  --primary-content-200: 229 240 255;
+  --primary-content-300: 212 230 255;
+  --primary-content-400: 202 225 255;
+  --primary-content-500: 135 195 255;
+  --secondary: 212 235 255;
+  --secondary-content: 6 89 167;
+  --accent: 199 227 255;
+  --accent-content: 5 65 125;
+  --neutral: 229 235 241;
+  --neutral-content: 33 67 97;
+  --base-100: 255 255 255;
+  --base-200: 249 250 251;
+  --base-300: 236 238 241;
+  --base-400: 222 225 227;
+  --base-500: 181 183 185;
+  --base-content: 0 22 53;
+  --base-content-200: 75 88 105;
+  --base-content-300: 67 89 117;
+  --base-content-400: 47 82 120;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --primary: 4 101 198;
+  --primary-content: 248 251 255;
+  --primary-content-200: 229 240 255;
+  --primary-content-300: 212 230 255;
+  --primary-content-400: 202 225 255;
+  --primary-content-500: 69 141 213;
+  --secondary: 16 63 106;
+  --secondary-content: 211 224 236;
+  --accent: 16 75 138;
+  --accent-content: 221 236 255;
+  --neutral: 38 50 62;
+  --neutral-content: 197 207 211;
+  --base-100: 11 18 31;
+  --base-200: 28 35 42;
+  --base-300: 52 58 68;
+  --base-400: 70 77 87;
+  --base-500: 116 122 129;
+  --base-content: 255 255 255;
+  --base-content-200: 214 224 235;
+  --base-content-300: 207 219 232;
+  --base-content-400: 197 212 228;
+}
+```
+
+- [ ] **Step 3: Replace DaisyUI classes with local component classes**
+
+In `index.css`, add local component classes under `@layer components`:
+
+```css
+@layer components {
+  .yd-anchor {
+    @apply text-primary no-underline transition-colors hover:underline;
+  }
+  .yd-button {
+    @apply inline-flex items-center justify-center rounded border border-primary px-3 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-accent focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-base-100 disabled:pointer-events-none disabled:opacity-50;
+  }
+  .yd-button-active {
+    @apply bg-primary text-primary-content hover:bg-primary;
+  }
+  .yd-icon-button {
+    @apply inline-flex size-10 items-center justify-center rounded border border-base-300 bg-base-300 text-xl text-base-content transition-colors hover:border-base-400 hover:bg-base-400 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-base-100;
+  }
+  .yd-segment-group {
+    @apply inline-flex overflow-hidden rounded border border-primary;
+  }
+  .yd-segment {
+    @apply inline-flex items-center justify-center border-r border-primary px-3 py-1.5 text-sm font-medium text-primary last:border-r-0 hover:bg-accent focus-within:outline focus-within:outline-2 focus-within:outline-primary;
+  }
+  .yd-segment-active {
+    @apply bg-primary text-primary-content hover:bg-primary;
+  }
+  .yd-switch {
+    @apply h-5 w-9 cursor-pointer appearance-none rounded-full border border-base-500 bg-base-300 transition-colors checked:border-primary checked:bg-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-base-100;
+  }
+  .yd-choice {
+    @apply size-5 cursor-pointer appearance-none rounded-full border border-primary bg-transparent checked:border-[0.35rem] checked:bg-base-100 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-base-100;
+  }
+  .yd-check {
+    @apply size-5 cursor-pointer appearance-none rounded border border-primary bg-transparent checked:bg-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-base-100;
+  }
+  .yd-slider {
+    @apply h-2 w-full cursor-pointer appearance-none rounded-full bg-base-300 accent-primary;
+  }
+  .yd-input-area {
+    @apply block w-full rounded border border-base-300 bg-base-100 text-base-content shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary;
+  }
+  .yd-pill {
+    @apply inline-flex min-w-6 items-center justify-center rounded-full border border-base-400 px-2 py-0.5 text-xs text-base-content;
+  }
+}
+```
+
+Then update `Inputs.tsx`:
+
+```tsx
+export function Toggle({ label, checked, setChecked }: CheckboxProps) {
+  return <label className="flex cursor-pointer items-center gap-2 py-1">
+    <span className="flex-1 text-lg text-base-content-200">{label}</span>
+    <input
+      type="checkbox"
+      className="yd-switch"
+      {...NO_AUTO_FILL}
+      checked={checked}
+      onChange={event => setChecked(event.target.checked)} />
+  </label>;
+}
+
+export function Radio<T>({ name, label, state, setState, value }: RadioProps<T>) {
+  return <label className="flex cursor-pointer items-center gap-2 py-1">
+    <input
+      type="radio"
+      name={name}
+      className="yd-choice"
+      {...NO_AUTO_FILL}
+      checked={state === value}
+      onChange={() => setState(value)} />
+    <span className="flex-1 text-lg text-base-content-200">{label}</span>
+  </label>;
+}
+
+export function Segment<T>({ name, label, state, setState, value }: RadioProps<T>) {
+  const active = state === value;
+  return <label className={`yd-segment${active ? " yd-segment-active" : ""}`}>
+    <input
+      type="radio"
+      className="sr-only"
+      name={name}
+      {...NO_AUTO_FILL}
+      checked={active}
+      onChange={() => setState(value)} />
+    {label}
+  </label>;
+}
+```
+
+Apply the same local classes to `Range` and `RadioCheckbox`: use `yd-pill`, `yd-slider`, `yd-choice`, and `yd-check`.
+
+- [ ] **Step 4: Update callers that currently depend on DaisyUI class composition**
+
+Replace these common patterns:
+
+```tsx
+<div className="join">...</div>
+```
+
+with:
+
+```tsx
+<div className="yd-segment-group">...</div>
+```
+
+Replace:
+
+```tsx
+className="btn-toolbar join-item"
+```
+
+with:
+
+```tsx
+className="yd-icon-button"
+```
+
+Replace:
+
+```tsx
+className="btn btn-outline btn-primary btn-sm join-item"
+```
+
+with:
+
+```tsx
+className="yd-button"
+```
+
+Replace the textarea classes in `App.tsx`:
+
+```tsx
+className={`yd-input-area min-h-64 my-6 px-3 text-lg ${chineseTypefaceClass}`}
+```
+
+Update `ThemeSwitcher.tsx` to remove the DaisyUI attribution comment and use the local toggle class:
+
+```tsx
+<input
+  type="checkbox"
+  checked={theme === "dark"}
+  onChange={() => setTheme(theme === "dark" ? "light" : "dark")}
+  className="yd-switch row-start-1 col-start-1 col-span-2" />
+```
+
+Keep existing ARIA labels and input types. This task is a dependency and class replacement, not a redesign.
+
+- [ ] **Step 5: Remove the dependency and verify no DaisyUI identifiers remain**
+
+Remove `daisyui` from `devDependencies` in `third_party/typeduck-web/source/package.json`.
+
+Run:
+
+```powershell
+rg -n "\bdaisyui\b|DaisyUIConfig|\b(btn|toggle|radio|checkbox|range|textarea|badge|join|tooltip|link|loading)(-[A-Za-z0-9_:[\]/.%#]+)?\b" third_party/typeduck-web/source/package.json third_party/typeduck-web/source/tailwind.config.ts third_party/typeduck-web/source/src
+```
+
+Expected: no DaisyUI dependency/config/imports and no DaisyUI class tokens remain. If this search catches native HTML words in prose or `type="radio"`, narrow the check in the Playwright test to class strings, but keep the command output reviewed manually.
+
+- [ ] **Step 6: Run focused gates**
+
+Run:
+
+```powershell
+npm.cmd --prefix third_party/typeduck-web/source run build
+npx --prefix third_party/typeduck-web/source playwright test third_party/typeduck-web/e2e/yune-typeduck.spec.ts -g "M24 dogfood UI uses only local Tailwind components"
+```
+
+Expected: the app builds without DaisyUI, the smoke UI remains visible, candidate composition still works, and the screenshot under `M24-DOGFOOD-13` proves the local Tailwind components render correctly.
+
+## Task 15: M24 Regression Sweep And Closeout Discipline
 
 **Files:**
 - Modify: this plan as issue rows close

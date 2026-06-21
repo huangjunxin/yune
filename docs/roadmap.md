@@ -579,7 +579,9 @@ processor semantics into `yune-core`) lands only when a real non-ABI consumer
   Mandarin pinyin probe such as `` `zhe `` should show `這` from packaged browser
   assets without regressing normal Jyutping composition, and a full Chinese
   typeface radio picker replacing the ambiguous Sung/Hei toggle with named
-  Google Fonts families.
+  Google Fonts families. The dogfood frontend stack is intentionally Vite +
+  React + Tailwind CSS + small local components; M24 removes DaisyUI instead of
+  adding or leaning on a component framework.
   Detail: [`plans/m24-plan-typeduck-web-dogfooding.md`](./plans/m24-plan-typeduck-web-dogfooding.md).
 - **M17 — Upstream sentence / language model (poet) (complete)** — implements the upstream
   `1.17.0` statistical sentence path so `luna_pinyin` SENTENCE + full-page LATTICE
