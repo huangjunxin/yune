@@ -321,6 +321,14 @@ function candidateTexts(state: CandidatePanelSnapshot): (string | null)[] {
   return state.candidates.map((candidate) => candidate.text);
 }
 
+function classicCandidateSignature(state: CandidatePanelSnapshot): { text: string | null; note: string | null; rowText: string }[] {
+  return state.candidates.map((candidate) => ({
+    text: candidate.text,
+    note: candidate.note,
+    rowText: candidate.rowText,
+  }));
+}
+
 async function expectNoToasts(page: Page): Promise<void> {
   await expect(page.locator(".Toastify__toast")).toHaveCount(0, { timeout: 1000 });
 }
@@ -353,6 +361,17 @@ async function clearComposition(page: Page): Promise<void> {
   const inputField = page.locator("input[type='text'], textarea").first();
   if (await page.locator(".candidate-panel").count() > 0) {
     await page.keyboard.press("Escape").catch(() => undefined);
+  }
+  await inputField.fill("");
+  await expect(page.locator(".candidate-panel")).toHaveCount(0, { timeout: 5000 });
+}
+
+async function clearCompositionThroughInput(page: Page): Promise<void> {
+  const inputField = page.locator("input[type='text'], textarea").first();
+  await inputField.focus();
+  for (let attempts = 0; attempts < 12 && await page.locator(".candidate-panel").count() > 0; attempts += 1) {
+    await page.keyboard.press("Backspace");
+    await page.waitForTimeout(120);
   }
   await inputField.fill("");
   await expect(page.locator(".candidate-panel")).toHaveCount(0, { timeout: 5000 });
@@ -642,6 +661,53 @@ test.describe("TypeDuck-Web Browser E2E", () => {
     await saveJsonEvidence("m13-ai-disabled-state.json", disabledState);
     await takeEvidenceScreenshot(page, "m13-ai-disabled");
     expect(consoleErrors).toEqual([]);
+  });
+
+  test("M22 Bucket 2 inspector preserves classic candidate output @smoke", async ({ page }) => {
+    await expect(page.locator('[data-yune-inspector="panel"]')).toHaveCount(0);
+
+    await focusInputAndType(page, "nei");
+    const offState = await readCandidatePanelSnapshot(page, false);
+    const offClassic = classicCandidateSignature(offState);
+    expect(offState.candidates.length).toBeGreaterThan(0);
+    expect(offState.candidates.every((candidate) => candidate.source === null)).toBe(true);
+
+    await clearCompositionThroughInput(page);
+    await page.getByLabel("Yune inspector").check();
+    await expect(page.locator('[data-yune-inspector="panel"]')).toBeVisible({ timeout: 5000 });
+    await waitForAppReady(page);
+    await page.waitForTimeout(250);
+    const inputField = page.locator("input[type='text'], textarea").first();
+    await inputField.focus();
+    await page.keyboard.type("nei", { delay: 250 });
+    await expect(page.locator(".candidate-panel .candidates tbody").first()).toBeVisible({ timeout: 5000 });
+    await expect.poll(async () => {
+      const state = await readCandidatePanelSnapshot(page, false);
+      return state.candidates[0]?.text ?? null;
+    }, { timeout: 10000 }).toBe(offState.candidates[0].text);
+    await expect(page.locator("[data-yune-inspector-source]").first()).toHaveText(/table|completion|sentence/, { timeout: 5000 });
+
+    const onState = await readCandidatePanelSnapshot(page, false);
+    const onClassic = classicCandidateSignature(onState);
+
+    const inspectorText = await page.locator('[data-yune-inspector="panel"]').innerText();
+    expect(inspectorText).toContain("Spelling algebra");
+    expect(inspectorText).toContain("Prediction");
+    await saveJsonEvidence("m22-bucket2-inspector-identity-state.json", {
+      offClassic,
+      onClassic,
+      offInputValue: offState.inputValue,
+      onInputValue: onState.inputValue,
+      offSources: offState.candidates.map((candidate) => candidate.source),
+      onSources: onState.candidates.map((candidate) => candidate.source),
+      inspectorText,
+    });
+    expect(onClassic).toEqual(offClassic);
+    expect(onState.candidates.some((candidate) => candidate.source !== null)).toBe(true);
+    await takeEvidenceScreenshot(page, "m22-bucket2-inspector-on");
+
+    await page.getByLabel("Yune inspector").uncheck();
+    await expect(page.locator('[data-yune-inspector="panel"]')).toHaveCount(0, { timeout: 5000 });
   });
 
   test("M13 AI commit safety", async ({ page }) => {

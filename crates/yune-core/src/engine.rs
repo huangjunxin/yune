@@ -7,9 +7,10 @@ use crate::punctuation::{
 use crate::AiContext;
 use crate::{
     parse_key_sequence, AiDecision, AiResult, Candidate, CandidateFilter, CandidateRanker,
-    CandidateSource, CommitRecord, Composition, Context, EchoTranslator, KeyCode, KeyEvent,
-    KeyModifiers, KeySequenceParseError, MemoryStore, RerankResult, Snapshot, StagedAiCandidates,
-    Status, Translator, UserDb, UserDbCommitMetadata, UserDbLookupRequest, UserDbLookupResult,
+    CandidateSource, CommitRecord, Composition, Context, EchoTranslator, EngineInspectorSnapshot,
+    FilterAuditRecord, KeyCode, KeyEvent, KeyModifiers, KeySequenceParseError, MemoryStore,
+    RerankResult, SegmentDebug, Snapshot, StagedAiCandidates, Status, Translator, UserDb,
+    UserDbCommitMetadata, UserDbLookupRequest, UserDbLookupResult,
 };
 
 pub struct Engine {
@@ -20,6 +21,7 @@ pub struct Engine {
     translators: Vec<Box<dyn Translator>>,
     punctuation_processor: Option<PunctuationProcessor>,
     filters: Vec<Box<dyn CandidateFilter>>,
+    last_filter_audit: Vec<FilterAuditRecord>,
     rankers: Vec<Box<dyn CandidateRanker>>,
     staged_ai_result: Option<StagedAiCandidates>,
     ai_memory: MemoryStore,
@@ -130,6 +132,7 @@ impl Default for Engine {
             translators: vec![Box::new(EchoTranslator)],
             punctuation_processor: None,
             filters: Vec::new(),
+            last_filter_audit: Vec::new(),
             rankers: Vec::new(),
             staged_ai_result: None,
             ai_memory: MemoryStore::default(),
@@ -909,6 +912,55 @@ impl Engine {
         }
     }
 
+    #[must_use]
+    pub fn inspector_snapshot(&self) -> EngineInspectorSnapshot {
+        let input = &self.context.composition.input;
+        let segment_tags = self.context.segment_tags.clone();
+        let segments = if input.is_empty() {
+            Vec::new()
+        } else {
+            segment_tags
+                .iter()
+                .map(|tag| SegmentDebug {
+                    start: 0,
+                    end: input.len(),
+                    tag: tag.clone(),
+                    source: "context.segment_tags".to_owned(),
+                })
+                .collect()
+        };
+        let filter_pipeline = self
+            .filters
+            .iter()
+            .map(|filter| filter.name().to_owned())
+            .collect();
+        let spelling_algebra = self
+            .translators
+            .iter()
+            .filter_map(|translator| translator.spelling_algebra_debug(input))
+            .collect();
+        let prediction_weight_threshold = self
+            .translators
+            .iter()
+            .find_map(|translator| translator.prediction_weight_threshold());
+
+        EngineInspectorSnapshot {
+            segment_tags,
+            segments,
+            filter_pipeline,
+            filter_audit: self.last_filter_audit.clone(),
+            spelling_algebra,
+            prediction_weight_threshold,
+            ai_staging: crate::AiStagingDebug {
+                state: self.ai_decision_for_current_input().as_str().to_owned(),
+                for_input: self
+                    .staged_ai_result
+                    .as_ref()
+                    .map(|staged| staged.for_input.clone()),
+            },
+        }
+    }
+
     fn backspace(&mut self) -> Option<String> {
         let previous = previous_char_boundary(
             &self.context.composition.input,
@@ -1080,9 +1132,17 @@ impl Engine {
                 .lookup(&UserDbLookupRequest::new(input.as_str()).with_predictive(true)),
             self.prediction_never_first,
         );
+        let mut filter_audit = Vec::with_capacity(self.filters.len());
         for filter in &self.filters {
+            let before_count = candidates.len();
             filter.apply_with_context(&mut candidates, &self.options, &self.context);
+            filter_audit.push(FilterAuditRecord {
+                name: filter.name().to_owned(),
+                before_count,
+                after_count: candidates.len(),
+            });
         }
+        self.last_filter_audit = filter_audit;
         for ranker in &self.rankers {
             if let RerankResult::Ready(ranked) = ranker.try_rerank(&self.context, &candidates) {
                 candidates = ranked;

@@ -1,0 +1,73 @@
+{
+  "offClassic": [
+    {
+      "text": "你",
+      "note": null,
+      "rowText": "1.nei5你you (singular)ⓘ"
+    },
+    {
+      "text": "呢",
+      "note": null,
+      "rowText": "2.ne1呢(how about)ⓘ"
+    },
+    {
+      "text": "尼",
+      "note": null,
+      "rowText": "3.nei4尼nunⓘ"
+    },
+    {
+      "text": "妮",
+      "note": null,
+      "rowText": "4.nei4妮little girlⓘ"
+    },
+    {
+      "text": "彌",
+      "note": null,
+      "rowText": "5.nei4彌full; fillⓘ"
+    }
+  ],
+  "onClassic": [
+    {
+      "text": "你",
+      "note": null,
+      "rowText": "1.nei5你you (singular)ⓘ"
+    },
+    {
+      "text": "呢",
+      "note": null,
+      "rowText": "2.ne1呢(how about)ⓘ"
+    },
+    {
+      "text": "尼",
+      "note": null,
+      "rowText": "3.nei4尼nunⓘ"
+    },
+    {
+      "text": "妮",
+      "note": null,
+      "rowText": "4.nei4妮little girlⓘ"
+    },
+    {
+      "text": "彌",
+      "note": null,
+      "rowText": "5.nei4彌full; fillⓘ"
+    }
+  ],
+  "offInputValue": "",
+  "onInputValue": "",
+  "offSources": [
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
+  "onSources": [
+    "table",
+    "table",
+    "table",
+    "table",
+    "table"
+  ],
+  "inspectorText": "Yune inspector\nAI off\nSegments\nabc 0-3\nFilters\ndictionary_lookup_filter\t5178 -> 5178\nsimplifier\t5178 -> 5178\nSpelling algebra\nstatic_table_translator\nnei\nPrediction\nSource\tText\tQuality\ntable\t你\t5179\ntable\t呢\t5178\ntable\t尼\t5177\ntable\t妮\t5176\ntable\t彌\t5175\ntable\t妳\t5174\ntable\t您\t5173\ntable\t膩\t5172"
+}

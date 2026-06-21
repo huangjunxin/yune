@@ -201,6 +201,47 @@ impl AiContext {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub struct SegmentDebug {
+    pub start: usize,
+    pub end: usize,
+    pub tag: String,
+    pub source: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct FilterAuditRecord {
+    pub name: String,
+    pub before_count: usize,
+    pub after_count: usize,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct SpellingAlgebraDebug {
+    pub translator: String,
+    pub input: String,
+    pub lookup_code: Option<String>,
+    pub formulas: Vec<String>,
+    pub expanded_codes: Vec<String>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AiStagingDebug {
+    pub state: String,
+    pub for_input: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct EngineInspectorSnapshot {
+    pub segment_tags: Vec<String>,
+    pub segments: Vec<SegmentDebug>,
+    pub filter_pipeline: Vec<String>,
+    pub filter_audit: Vec<FilterAuditRecord>,
+    pub spelling_algebra: Vec<SpellingAlgebraDebug>,
+    pub prediction_weight_threshold: Option<f32>,
+    pub ai_staging: AiStagingDebug,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CommitRecord {
     pub candidate_type: String,
     pub text: String,

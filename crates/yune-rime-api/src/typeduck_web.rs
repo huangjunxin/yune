@@ -6,7 +6,7 @@ use std::{
     time::Duration,
 };
 
-use serde_json::json;
+use serde_json::{json, Value as JsonValue};
 use serde_yaml::Value;
 use yune_core::{
     AiCandidateProvider, AiConfidence, AiOffReason, AiPrivacyPolicy, AiResult, CandidateSource,
@@ -18,10 +18,11 @@ use crate::{
     RimeContext, RimeLeversApi, RimeMenu, RimeSessionId, RimeStatus, RimeTraits, FALSE, TRUE,
 };
 
-use crate::session::{session_candidates_snapshot, with_session};
+use crate::session::{session_candidates_snapshot, session_inspector_snapshot, with_session};
 
 const AI_BUDGET: Duration = Duration::from_millis(25);
 const LOCAL_AI_SOURCE_LABEL: &str = "ai:local";
+const INSPECTOR_OPTION: &str = "yune_inspector";
 
 #[repr(C)]
 pub struct YuneTypeDuckState {
@@ -32,6 +33,7 @@ pub struct YuneTypeDuckState {
     initialized: bool,
     ai_enabled: bool,
     ai_provider: Option<LocalModelProvider>,
+    inspector_enabled: bool,
 }
 
 #[repr(C)]
@@ -103,6 +105,7 @@ pub unsafe extern "C" fn yune_typeduck_init(
         initialized: true,
         ai_enabled: false,
         ai_provider: None,
+        inspector_enabled: false,
     }))
 }
 
@@ -114,7 +117,7 @@ pub unsafe extern "C" fn yune_typeduck_process_key(
     keycode: c_int,
     mask: c_int,
 ) -> *mut YuneTypeDuckResponse {
-    operate(state, |api, session_id| {
+    operate(state, |api, state| {
         let Some(process_key) = api.process_key else {
             return response(
                 FALSE,
@@ -124,8 +127,9 @@ pub unsafe extern "C" fn yune_typeduck_process_key(
                 Some("process_key API unavailable"),
             );
         };
+        let session_id = state.session_id;
         let handled = process_key(session_id, keycode, mask);
-        response_from_session(api, session_id, handled, None)
+        response_from_session(api, session_id, handled, None, state.inspector_enabled)
     })
 }
 
@@ -136,7 +140,7 @@ pub unsafe extern "C" fn yune_typeduck_select_candidate(
     state: *mut YuneTypeDuckState,
     index: usize,
 ) -> *mut YuneTypeDuckResponse {
-    operate(state, |api, session_id| {
+    operate(state, |api, state| {
         let Some(select_candidate) = api.select_candidate_on_current_page else {
             return response(
                 FALSE,
@@ -146,8 +150,9 @@ pub unsafe extern "C" fn yune_typeduck_select_candidate(
                 Some("select_candidate_on_current_page API unavailable"),
             );
         };
+        let session_id = state.session_id;
         let handled = select_candidate(session_id, index);
-        response_from_session(api, session_id, handled, None)
+        response_from_session(api, session_id, handled, None, state.inspector_enabled)
     })
 }
 
@@ -158,7 +163,7 @@ pub unsafe extern "C" fn yune_typeduck_delete_candidate(
     state: *mut YuneTypeDuckState,
     index: usize,
 ) -> *mut YuneTypeDuckResponse {
-    operate(state, |api, session_id| {
+    operate(state, |api, state| {
         let Some(delete_candidate) = api.delete_candidate_on_current_page else {
             return response(
                 FALSE,
@@ -168,8 +173,9 @@ pub unsafe extern "C" fn yune_typeduck_delete_candidate(
                 Some("delete_candidate_on_current_page API unavailable"),
             );
         };
+        let session_id = state.session_id;
         let handled = delete_candidate(session_id, index);
-        response_from_session(api, session_id, handled, None)
+        response_from_session(api, session_id, handled, None, state.inspector_enabled)
     })
 }
 
@@ -180,7 +186,7 @@ pub unsafe extern "C" fn yune_typeduck_flip_page(
     state: *mut YuneTypeDuckState,
     backward: Bool,
 ) -> *mut YuneTypeDuckResponse {
-    operate(state, |api, session_id| {
+    operate(state, |api, state| {
         let Some(change_page) = api.change_page else {
             return response(
                 FALSE,
@@ -190,8 +196,9 @@ pub unsafe extern "C" fn yune_typeduck_flip_page(
                 Some("change_page API unavailable"),
             );
         };
+        let session_id = state.session_id;
         let handled = change_page(session_id, backward);
-        response_from_session(api, session_id, handled, None)
+        response_from_session(api, session_id, handled, None, state.inspector_enabled)
     })
 }
 
@@ -300,16 +307,20 @@ pub unsafe extern "C" fn yune_typeduck_set_option(
     let Some(option) = cstring_from_ptr(option) else {
         return FALSE;
     };
+    let state = unsafe { &mut *state };
+    if !state.initialized || state.session_id == 0 {
+        return FALSE;
+    }
+    if option.as_c_str().to_str().ok() == Some(INSPECTOR_OPTION) {
+        state.inspector_enabled = value != FALSE;
+        return TRUE;
+    }
     let Some(api) = api_table() else {
         return FALSE;
     };
     let Some(set_option) = api.set_option else {
         return FALSE;
     };
-    let state = unsafe { &*state };
-    if !state.initialized || state.session_id == 0 {
-        return FALSE;
-    }
     unsafe {
         set_option(
             state.session_id,
@@ -376,7 +387,7 @@ pub unsafe extern "C" fn yune_typeduck_stage_ai(
     }
     let session_id = state.session_id;
     if !state.ai_enabled {
-        return response_from_session(api, session_id, TRUE, None);
+        return response_from_session(api, session_id, TRUE, None, state.inspector_enabled);
     }
 
     let provider = state
@@ -397,7 +408,7 @@ pub unsafe extern "C" fn yune_typeduck_stage_ai(
         return response(FALSE, vec![], None, None, Some("session unavailable"));
     }
 
-    response_from_session(api, session_id, TRUE, None)
+    response_from_session(api, session_id, TRUE, None, state.inspector_enabled)
 }
 
 /// # Safety
@@ -415,6 +426,7 @@ pub unsafe extern "C" fn yune_typeduck_cleanup(state: *mut YuneTypeDuckState) {
             state.initialized = false;
             state.ai_enabled = false;
             state.ai_provider = None;
+            state.inspector_enabled = false;
         }
     }
 }
@@ -454,7 +466,7 @@ pub unsafe extern "C" fn yune_typeduck_free_response(response: *mut YuneTypeDuck
 
 fn operate(
     state: *mut YuneTypeDuckState,
-    operation: impl FnOnce(&crate::RimeApi, RimeSessionId) -> *mut YuneTypeDuckResponse,
+    operation: impl FnOnce(&crate::RimeApi, &YuneTypeDuckState) -> *mut YuneTypeDuckResponse,
 ) -> *mut YuneTypeDuckResponse {
     if state.is_null() {
         return ptr::null_mut();
@@ -472,7 +484,7 @@ fn operate(
             Some("TypeDuck state is not initialized"),
         );
     }
-    operation(api, state.session_id)
+    operation(api, state)
 }
 
 fn response_from_session(
@@ -480,11 +492,15 @@ fn response_from_session(
     session_id: RimeSessionId,
     handled: Bool,
     error: Option<&str>,
+    inspector_enabled: bool,
 ) -> *mut YuneTypeDuckResponse {
     let commits = capture_commits(api, session_id).unwrap_or_default();
     let mut context = capture_context(api, session_id).ok();
     if let Some(context) = context.as_mut() {
-        attach_candidate_sources(session_id, context);
+        attach_candidate_sources(session_id, context, inspector_enabled);
+        if inspector_enabled {
+            attach_inspector_debug(session_id, context);
+        }
     }
     let status = capture_status(api, session_id).ok();
     response(handled, commits, context, status, error)
@@ -493,8 +509,8 @@ fn response_from_session(
 fn response(
     handled: Bool,
     commits: Vec<String>,
-    context: Option<serde_json::Value>,
-    status: Option<serde_json::Value>,
+    context: Option<JsonValue>,
+    status: Option<JsonValue>,
     error: Option<&str>,
 ) -> *mut YuneTypeDuckResponse {
     let mut payload = json!({
@@ -530,10 +546,7 @@ fn capture_commits(api: &crate::RimeApi, session_id: RimeSessionId) -> Result<Ve
     Ok(commits)
 }
 
-fn capture_context(
-    api: &crate::RimeApi,
-    session_id: RimeSessionId,
-) -> Result<serde_json::Value, ()> {
+fn capture_context(api: &crate::RimeApi, session_id: RimeSessionId) -> Result<JsonValue, ()> {
     let get_input = api.get_input.ok_or(())?;
     let get_context = api.get_context.ok_or(())?;
     let free_context = api.free_context.ok_or(())?;
@@ -549,7 +562,7 @@ fn capture_context(
     Ok(captured)
 }
 
-fn copy_context(context: &RimeContext, input: String) -> serde_json::Value {
+fn copy_context(context: &RimeContext, input: String) -> JsonValue {
     let candidates = copy_candidates(context);
     json!({
         "input": input,
@@ -569,7 +582,7 @@ fn copy_context(context: &RimeContext, input: String) -> serde_json::Value {
     })
 }
 
-fn copy_candidates(context: &RimeContext) -> Vec<serde_json::Value> {
+fn copy_candidates(context: &RimeContext) -> Vec<JsonValue> {
     if context.menu.candidates.is_null() || context.menu.num_candidates <= 0 {
         return Vec::new();
     }
@@ -579,14 +592,18 @@ fn copy_candidates(context: &RimeContext) -> Vec<serde_json::Value> {
     candidates.iter().map(copy_candidate).collect()
 }
 
-fn copy_candidate(candidate: &RimeCandidate) -> serde_json::Value {
+fn copy_candidate(candidate: &RimeCandidate) -> JsonValue {
     json!({
         "text": c_string_from_mut(candidate.text),
         "comment": c_string_from_mut(candidate.comment),
     })
 }
 
-fn attach_candidate_sources(session_id: RimeSessionId, context: &mut serde_json::Value) {
+fn attach_candidate_sources(
+    session_id: RimeSessionId,
+    context: &mut JsonValue,
+    inspector_enabled: bool,
+) {
     let Some(engine_candidates) = session_candidates_snapshot(session_id) else {
         return;
     };
@@ -612,20 +629,85 @@ fn attach_candidate_sources(session_id: RimeSessionId, context: &mut serde_json:
         let Some(engine_candidate) = engine_candidates.get(full_index) else {
             continue;
         };
-        if let Some(source) = source_label(&engine_candidate.source) {
+        if let Some(source) = source_label(&engine_candidate.source, inspector_enabled) {
             candidate["source"] = json!(source);
+        }
+        if inspector_enabled {
+            candidate["quality"] = json!(engine_candidate.quality);
+            if let Some(preedit) = &engine_candidate.preedit {
+                candidate["preedit"] = json!(preedit);
+            }
+            if let Some(confidence) = engine_candidate.source.ai_confidence() {
+                candidate["ai_confidence"] = json!(confidence.as_score());
+            }
         }
     }
 }
 
-fn source_label(source: &CandidateSource) -> Option<&'static str> {
+fn attach_inspector_debug(session_id: RimeSessionId, context: &mut JsonValue) {
+    let Some((snapshot, candidates)) = session_inspector_snapshot(session_id) else {
+        return;
+    };
+    let threshold = snapshot.prediction_weight_threshold;
+    let prediction_candidates = candidates
+        .iter()
+        .enumerate()
+        .map(|(index, candidate)| {
+            json!({
+                "index": index,
+                "text": candidate.text.as_str(),
+                "source": inspector_source_label(&candidate.source),
+                "quality": candidate.quality,
+                "threshold": threshold,
+                "above_threshold": threshold.map(|threshold| candidate.quality >= threshold),
+            })
+        })
+        .collect::<Vec<_>>();
+    context["debug"] = json!({
+        "segment_tags": snapshot.segment_tags,
+        "segments": snapshot.segments.into_iter().map(|segment| json!({
+            "start": segment.start,
+            "end": segment.end,
+            "tag": segment.tag,
+            "source": segment.source,
+        })).collect::<Vec<_>>(),
+        "filter_pipeline": snapshot.filter_pipeline,
+        "filter_audit": snapshot.filter_audit.into_iter().map(|record| json!({
+            "name": record.name,
+            "before_count": record.before_count,
+            "after_count": record.after_count,
+        })).collect::<Vec<_>>(),
+        "spelling_algebra": snapshot.spelling_algebra.into_iter().map(|algebra| json!({
+            "translator": algebra.translator,
+            "input": algebra.input,
+            "lookup_code": algebra.lookup_code,
+            "formulas": algebra.formulas,
+            "expanded_codes": algebra.expanded_codes,
+        })).collect::<Vec<_>>(),
+        "prediction": {
+            "weight_threshold": threshold,
+            "candidates": prediction_candidates,
+        },
+        "ai_staging": {
+            "state": snapshot.ai_staging.state,
+            "for_input": snapshot.ai_staging.for_input,
+        },
+    });
+}
+
+fn source_label(source: &CandidateSource, inspector_enabled: bool) -> Option<&'static str> {
     match source {
         CandidateSource::Ai { provider, .. } if provider == LOCAL_MODEL_PROVIDER_NAME => {
             Some(LOCAL_AI_SOURCE_LABEL)
         }
         CandidateSource::Ai { .. } => Some("ai"),
+        _ if inspector_enabled => Some(source.as_str()),
         _ => None,
     }
+}
+
+fn inspector_source_label(source: &CandidateSource) -> &'static str {
+    source_label(source, true).unwrap_or_else(|| source.as_str())
 }
 
 fn copy_select_labels(context: &RimeContext) -> Vec<String> {
@@ -640,10 +722,7 @@ fn copy_select_labels(context: &RimeContext) -> Vec<String> {
         .collect()
 }
 
-fn capture_status(
-    api: &crate::RimeApi,
-    session_id: RimeSessionId,
-) -> Result<serde_json::Value, ()> {
+fn capture_status(api: &crate::RimeApi, session_id: RimeSessionId) -> Result<JsonValue, ()> {
     let get_status = api.get_status.ok_or(())?;
     let free_status = api.free_status.ok_or(())?;
     let mut status = empty_status();

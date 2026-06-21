@@ -67,6 +67,64 @@ describe("readTypeDuckResponse", () => {
     expect(fake.freedResponses()).toEqual([ptr]);
   });
 
+  it("parses opt-in inspector debug fields", () => {
+    const fake = new FakeTypeDuckModule();
+    const payload = responsePayload({
+      context: {
+        ...responsePayload().context,
+        candidates: [
+          {
+            text: "nei",
+            comment: "nei",
+            source: "table",
+            quality: 10,
+            preedit: "nei",
+          },
+          {
+            text: "nei aa",
+            comment: "ai",
+            source: "ai:local",
+            quality: 0.83,
+            ai_confidence: 0.83,
+          },
+        ],
+        debug: {
+          segment_tags: ["abc"],
+          segments: [{ start: 0, end: 3, tag: "abc", source: "context.segment_tags" }],
+          filter_pipeline: ["uniquifier"],
+          filter_audit: [{ name: "uniquifier", before_count: 3, after_count: 2 }],
+          spelling_algebra: [
+            {
+              translator: "static_table_translator",
+              input: "nei",
+              lookup_code: "nei",
+              formulas: ["derive/\\d//"],
+              expanded_codes: ["nei"],
+            },
+          ],
+          prediction: {
+            weight_threshold: 0,
+            candidates: [
+              {
+                index: 0,
+                text: "nei",
+                source: "table",
+                quality: 10,
+                threshold: 0,
+                above_threshold: true,
+              },
+            ],
+          },
+          ai_staging: { state: "off", for_input: null },
+        },
+      },
+    });
+    const ptr = fake.response(payload, true);
+
+    expect(readTypeDuckResponse(ptr, bindings(fake))).toEqual(payload);
+    expect(fake.freedResponses()).toEqual([ptr]);
+  });
+
   it("treats null candidate source labels as classic candidates", () => {
     const fake = new FakeTypeDuckModule();
     const payload = responsePayload({

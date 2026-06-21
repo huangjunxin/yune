@@ -6,8 +6,9 @@ use crate::dictionary::normalize_table_code;
 use crate::filter::contains_extended_cjk;
 use crate::spelling_algebra::{ExpandedSpellingEntry, SpellingAlgebra};
 use crate::{
-    Candidate, CandidateSource, Context, RimeCorrectionEntry, RimeToleranceRule, Status,
-    TableDictionary, TableDictionaryParseError, TableEntry, Translator,
+    Candidate, CandidateSource, Context, RimeCorrectionEntry, RimeToleranceRule,
+    SpellingAlgebraDebug, Status, TableDictionary, TableDictionaryParseError, TableEntry,
+    Translator,
 };
 
 const TYPEDUCK_CORRECTION_CREDIBILITY: f32 = -16.118_095; // log(1e-7)
@@ -129,6 +130,7 @@ pub struct StaticTableTranslator {
     prediction_candidate_limit: Option<usize>,
     prefix_fallback: bool,
     sentence_word_penalty: f32,
+    spelling_algebra_formulas: Vec<String>,
 }
 
 impl StaticTableTranslator {
@@ -182,6 +184,7 @@ impl StaticTableTranslator {
             prediction_candidate_limit: None,
             prefix_fallback: false,
             sentence_word_penalty: DEFAULT_SENTENCE_WORD_PENALTY,
+            spelling_algebra_formulas: Vec::new(),
         }
     }
 
@@ -234,6 +237,7 @@ impl StaticTableTranslator {
             prediction_candidate_limit: None,
             prefix_fallback: false,
             sentence_word_penalty: DEFAULT_SENTENCE_WORD_PENALTY,
+            spelling_algebra_formulas: Vec::new(),
         }
     }
 
@@ -387,6 +391,7 @@ impl StaticTableTranslator {
 
     #[must_use]
     pub fn with_spelling_algebra(mut self, formulas: &[String]) -> Self {
+        self.spelling_algebra_formulas = formulas.to_vec();
         let algebra = SpellingAlgebra::parse(formulas);
         if !algebra.is_empty() {
             let (entries, normal_codes, has_single_letter_abbreviations) =
@@ -1364,6 +1369,34 @@ impl Translator for StaticTableTranslator {
             filter_by_charset,
             Some(&context.segment_tags),
         )
+    }
+
+    fn spelling_algebra_debug(&self, input: &str) -> Option<SpellingAlgebraDebug> {
+        if self.spelling_algebra_formulas.is_empty() {
+            return None;
+        }
+        let lookup_code = (!input.is_empty())
+            .then(|| self.lookup_code(input).map(ToOwned::to_owned))
+            .flatten();
+        let mut expanded_codes = lookup_code.as_deref().map_or_else(Vec::new, |code| {
+            self.expanded_lookup_specs(code)
+                .into_iter()
+                .map(|spec| spec.code)
+                .collect::<Vec<_>>()
+        });
+        expanded_codes.sort();
+        expanded_codes.dedup();
+        Some(SpellingAlgebraDebug {
+            translator: self.name().to_owned(),
+            input: input.to_owned(),
+            lookup_code,
+            formulas: self.spelling_algebra_formulas.clone(),
+            expanded_codes,
+        })
+    }
+
+    fn prediction_weight_threshold(&self) -> Option<f32> {
+        self.prediction_weight_threshold
     }
 }
 

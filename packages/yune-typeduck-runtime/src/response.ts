@@ -4,6 +4,55 @@ export interface TypeDuckCandidate {
   text: string;
   comment: string;
   source?: string;
+  quality?: number;
+  preedit?: string;
+  ai_confidence?: number;
+}
+
+export interface TypeDuckInspectorSegment {
+  start: number;
+  end: number;
+  tag: string;
+  source: string;
+}
+
+export interface TypeDuckFilterAuditRecord {
+  name: string;
+  before_count: number;
+  after_count: number;
+}
+
+export interface TypeDuckSpellingAlgebraDebug {
+  translator: string;
+  input: string;
+  lookup_code: string | null;
+  formulas: string[];
+  expanded_codes: string[];
+}
+
+export interface TypeDuckPredictionCandidateDebug {
+  index: number;
+  text: string;
+  source: string;
+  quality: number;
+  threshold: number | null;
+  above_threshold: boolean | null;
+}
+
+export interface TypeDuckInspectorDebug {
+  segment_tags: string[];
+  segments: TypeDuckInspectorSegment[];
+  filter_pipeline: string[];
+  filter_audit: TypeDuckFilterAuditRecord[];
+  spelling_algebra: TypeDuckSpellingAlgebraDebug[];
+  prediction: {
+    weight_threshold: number | null;
+    candidates: TypeDuckPredictionCandidateDebug[];
+  };
+  ai_staging: {
+    state: string;
+    for_input: string | null;
+  };
 }
 
 export interface TypeDuckContext {
@@ -17,6 +66,7 @@ export interface TypeDuckContext {
   select_keys: string | null;
   select_labels: string[];
   candidates: TypeDuckCandidate[];
+  debug?: TypeDuckInspectorDebug;
 }
 
 export interface TypeDuckStatus {
@@ -106,7 +156,7 @@ function parseTypeDuckResponse(value: unknown): TypeDuckResponse {
 
 function parseTypeDuckContext(value: unknown): TypeDuckContext {
   const object = expectRecord(value, "TypeDuck context must be an object");
-  return {
+  const context: TypeDuckContext = {
     input: expectString(object.input, "TypeDuck context input must be a string"),
     preedit: expectString(object.preedit, "TypeDuck context preedit must be a string"),
     caret: expectNumber(object.caret, "TypeDuck context caret must be a number"),
@@ -118,6 +168,11 @@ function parseTypeDuckContext(value: unknown): TypeDuckContext {
     select_labels: expectStringArray(object.select_labels, "TypeDuck context select_labels must be a string array"),
     candidates: parseCandidates(object.candidates),
   };
+  const debug = parseOptional(object.debug, parseInspectorDebug);
+  if (debug !== undefined) {
+    context.debug = debug;
+  }
+  return context;
 }
 
 function parseTypeDuckStatus(value: unknown): TypeDuckStatus {
@@ -148,8 +203,90 @@ function parseCandidates(value: unknown): TypeDuckCandidate[] {
     if (object.source !== undefined && object.source !== null) {
       parsed.source = expectString(object.source, "TypeDuck candidate source must be a string");
     }
+    if (object.quality !== undefined && object.quality !== null) {
+      parsed.quality = expectNumber(object.quality, "TypeDuck candidate quality must be a number");
+    }
+    if (object.preedit !== undefined && object.preedit !== null) {
+      parsed.preedit = expectString(object.preedit, "TypeDuck candidate preedit must be a string");
+    }
+    if (object.ai_confidence !== undefined && object.ai_confidence !== null) {
+      parsed.ai_confidence = expectNumber(object.ai_confidence, "TypeDuck candidate ai_confidence must be a number");
+    }
     return parsed;
   });
+}
+
+function parseInspectorDebug(value: unknown): TypeDuckInspectorDebug {
+  const object = expectRecord(value, "TypeDuck inspector debug must be an object");
+  const prediction = expectRecord(object.prediction, "TypeDuck inspector prediction must be an object");
+  const aiStaging = expectRecord(object.ai_staging, "TypeDuck inspector AI staging must be an object");
+  return {
+    segment_tags: expectStringArray(object.segment_tags, "TypeDuck inspector segment_tags must be a string array"),
+    segments: parseArray(object.segments, parseInspectorSegment, "TypeDuck inspector segments must be an array"),
+    filter_pipeline: expectStringArray(object.filter_pipeline, "TypeDuck inspector filter_pipeline must be a string array"),
+    filter_audit: parseArray(object.filter_audit, parseFilterAuditRecord, "TypeDuck inspector filter_audit must be an array"),
+    spelling_algebra: parseArray(object.spelling_algebra, parseSpellingAlgebraDebug, "TypeDuck inspector spelling_algebra must be an array"),
+    prediction: {
+      weight_threshold: parseNullable(prediction.weight_threshold, (item) => expectNumber(item, "TypeDuck inspector prediction weight_threshold must be a number"), "TypeDuck inspector prediction weight_threshold field is required"),
+      candidates: parseArray(prediction.candidates, parsePredictionCandidateDebug, "TypeDuck inspector prediction candidates must be an array"),
+    },
+    ai_staging: {
+      state: expectString(aiStaging.state, "TypeDuck inspector AI staging state must be a string"),
+      for_input: parseNullable(aiStaging.for_input, (item) => expectString(item, "TypeDuck inspector AI staging for_input must be a string"), "TypeDuck inspector AI staging for_input field is required"),
+    },
+  };
+}
+
+function parseInspectorSegment(value: unknown): TypeDuckInspectorSegment {
+  const object = expectRecord(value, "TypeDuck inspector segment must be an object");
+  return {
+    start: expectNumber(object.start, "TypeDuck inspector segment start must be a number"),
+    end: expectNumber(object.end, "TypeDuck inspector segment end must be a number"),
+    tag: expectString(object.tag, "TypeDuck inspector segment tag must be a string"),
+    source: expectString(object.source, "TypeDuck inspector segment source must be a string"),
+  };
+}
+
+function parseFilterAuditRecord(value: unknown): TypeDuckFilterAuditRecord {
+  const object = expectRecord(value, "TypeDuck inspector filter audit record must be an object");
+  return {
+    name: expectString(object.name, "TypeDuck inspector filter audit name must be a string"),
+    before_count: expectNumber(object.before_count, "TypeDuck inspector filter audit before_count must be a number"),
+    after_count: expectNumber(object.after_count, "TypeDuck inspector filter audit after_count must be a number"),
+  };
+}
+
+function parseSpellingAlgebraDebug(value: unknown): TypeDuckSpellingAlgebraDebug {
+  const object = expectRecord(value, "TypeDuck inspector spelling algebra must be an object");
+  return {
+    translator: expectString(object.translator, "TypeDuck inspector spelling algebra translator must be a string"),
+    input: expectString(object.input, "TypeDuck inspector spelling algebra input must be a string"),
+    lookup_code: parseNullable(object.lookup_code, (item) => expectString(item, "TypeDuck inspector spelling algebra lookup_code must be a string"), "TypeDuck inspector spelling algebra lookup_code field is required"),
+    formulas: expectStringArray(object.formulas, "TypeDuck inspector spelling algebra formulas must be a string array"),
+    expanded_codes: expectStringArray(object.expanded_codes, "TypeDuck inspector spelling algebra expanded_codes must be a string array"),
+  };
+}
+
+function parsePredictionCandidateDebug(value: unknown): TypeDuckPredictionCandidateDebug {
+  const object = expectRecord(value, "TypeDuck inspector prediction candidate must be an object");
+  return {
+    index: expectNumber(object.index, "TypeDuck inspector prediction candidate index must be a number"),
+    text: expectString(object.text, "TypeDuck inspector prediction candidate text must be a string"),
+    source: expectString(object.source, "TypeDuck inspector prediction candidate source must be a string"),
+    quality: expectNumber(object.quality, "TypeDuck inspector prediction candidate quality must be a number"),
+    threshold: parseNullable(object.threshold, (item) => expectNumber(item, "TypeDuck inspector prediction candidate threshold must be a number"), "TypeDuck inspector prediction candidate threshold field is required"),
+    above_threshold: parseNullable(object.above_threshold, (item) => expectBoolean(item, "TypeDuck inspector prediction candidate above_threshold must be boolean"), "TypeDuck inspector prediction candidate above_threshold field is required"),
+  };
+}
+
+function parseOptional<T>(
+  value: unknown,
+  parser: (value: unknown) => T,
+): T | undefined {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+  return parser(value);
 }
 
 function parseNullable<T>(
@@ -164,6 +301,17 @@ function parseNullable<T>(
     return null;
   }
   return parser(value);
+}
+
+function parseArray<T>(
+  value: unknown,
+  parser: (value: unknown) => T,
+  message: string,
+): T[] {
+  if (!Array.isArray(value)) {
+    throw new TypeDuckResponseError(message);
+  }
+  return value.map(parser);
 }
 
 function expectRecord(value: unknown, message: string): Record<string, unknown> {

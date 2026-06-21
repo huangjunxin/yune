@@ -45,8 +45,9 @@ pub use filter::{
 pub use key::{parse_key_sequence, KeyCode, KeyEvent, KeyModifiers, KeySequenceParseError};
 pub use punctuation::{PunctuationDefinition, PunctuationProcessor, PunctuationTranslator};
 pub use state::{
-    AiConfidence, AiContext, Candidate, CandidateSource, CommitRecord, Composition, Context,
-    PrivacyClass, Snapshot, Status,
+    AiConfidence, AiContext, AiStagingDebug, Candidate, CandidateSource, CommitRecord, Composition,
+    Context, EngineInspectorSnapshot, FilterAuditRecord, PrivacyClass, SegmentDebug, Snapshot,
+    SpellingAlgebraDebug, Status,
 };
 pub use translator::{
     EchoTranslator, FoldedSwitchOptions, HistoryTranslator, ReverseLookupTranslator,
@@ -84,6 +85,14 @@ pub trait Translator: Send + Sync {
         _context: &Context,
     ) -> Vec<Candidate> {
         self.translate_with_state(input, status, options)
+    }
+
+    fn spelling_algebra_debug(&self, _input: &str) -> Option<SpellingAlgebraDebug> {
+        None
+    }
+
+    fn prediction_weight_threshold(&self) -> Option<f32> {
+        None
     }
 }
 

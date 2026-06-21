@@ -489,6 +489,82 @@ fn typeduck_adapter_set_option_updates_session_status() {
 }
 
 #[test]
+fn typeduck_adapter_inspector_is_opt_in_and_preserves_classic_candidate_output() {
+    let _guard = test_guard();
+    let runtime = TypeDuckRuntime::create("inspector-opt-in");
+    runtime.write_mobile_schema_with_dictionary("jyut6ping3");
+    runtime.write_cantonese_dictionary();
+    let state = unsafe {
+        yune_typeduck_init(
+            runtime.shared_c.as_ptr(),
+            runtime.user_c.as_ptr(),
+            runtime.schema_id_c.as_ptr(),
+        )
+    };
+    assert!(!state.is_null());
+
+    let inspector = CString::new("yune_inspector").expect("option should be valid");
+    let inspector_off = process_input(state, "nei");
+    assert!(inspector_off["context"].get("debug").is_none());
+    assert!(inspector_off["context"]["candidates"]
+        .as_array()
+        .expect("off candidates should be an array")
+        .iter()
+        .all(|candidate| candidate.get("quality").is_none()));
+    let off_classic_bytes = serde_json::to_vec(&classic_candidate_projection(&inspector_off))
+        .expect("classic projection should serialize");
+
+    unsafe { yune_typeduck_cleanup(state) };
+
+    let state = unsafe {
+        yune_typeduck_init(
+            runtime.shared_c.as_ptr(),
+            runtime.user_c.as_ptr(),
+            runtime.schema_id_c.as_ptr(),
+        )
+    };
+    assert!(!state.is_null());
+    assert_eq!(
+        unsafe { yune_typeduck_set_option(state, inspector.as_ptr(), TRUE) },
+        TRUE
+    );
+
+    let inspector_on = process_input(state, "nei");
+    let on_classic_bytes = serde_json::to_vec(&classic_candidate_projection(&inspector_on))
+        .expect("classic projection should serialize");
+    assert_eq!(
+        on_classic_bytes, off_classic_bytes,
+        "inspector must not change classic candidate text/comment output"
+    );
+    assert_eq!(
+        inspector_on["context"]["candidates"][0]["source"],
+        Value::String("table".to_owned())
+    );
+    assert!(
+        inspector_on["context"]["candidates"][0]["quality"].is_number(),
+        "inspector candidates should expose debug quality only when opted in"
+    );
+    assert_eq!(
+        inspector_on["context"]["debug"]["segment_tags"],
+        Value::Array(vec![Value::String("abc".to_owned())])
+    );
+    assert_eq!(
+        inspector_on["context"]["debug"]["ai_staging"]["state"],
+        Value::String("off".to_owned())
+    );
+    assert!(inspector_on["context"]["debug"]["spelling_algebra"]
+        .as_array()
+        .expect("spelling algebra debug should be an array")
+        .iter()
+        .any(|algebra| algebra["expanded_codes"]
+            .as_array()
+            .is_some_and(|codes| codes.contains(&Value::String("nei".to_owned())))));
+
+    unsafe { yune_typeduck_cleanup(state) };
+    runtime.remove();
+}
+
+#[test]
 fn typeduck_adapter_stage_ai_is_default_off_and_second_pass_source_labeled() {
     let _guard = test_guard();
     let runtime = TypeDuckRuntime::create("stage-ai-second-pass");
@@ -723,6 +799,22 @@ fn response_json(response: *mut yune_rime_api::YuneTypeDuckResponse) -> Value {
     let value: Value = serde_json::from_str(&text).expect("adapter response should parse as JSON");
     assert_eq!(value["handled"].as_bool(), Some(handled == TRUE));
     value
+}
+
+fn classic_candidate_projection(response: &Value) -> Value {
+    Value::Array(
+        response["context"]["candidates"]
+            .as_array()
+            .expect("candidate list should be an array")
+            .iter()
+            .map(|candidate| {
+                serde_json::json!({
+                    "text": candidate["text"],
+                    "comment": candidate["comment"],
+                })
+            })
+            .collect(),
+    )
 }
 
 fn config_bool_like(value: &Value) -> Option<bool> {

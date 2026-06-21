@@ -266,6 +266,22 @@ pub(crate) fn session_candidates_snapshot(
     Some(session.engine.context().candidates.clone())
 }
 
+pub(crate) fn session_inspector_snapshot(
+    session_id: RimeSessionId,
+) -> Option<(
+    yune_core::EngineInspectorSnapshot,
+    Vec<yune_core::Candidate>,
+)> {
+    let mut registry = sessions()
+        .lock()
+        .expect("session registry should not be poisoned");
+    let session = registry.get_session_mut(session_id)?;
+    Some((
+        session.engine.inspector_snapshot(),
+        session.engine.context().candidates.clone(),
+    ))
+}
+
 #[cfg(test)]
 pub(crate) fn remaining_gear_deferrals_snapshot(
     session_id: RimeSessionId,
