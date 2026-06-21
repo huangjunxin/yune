@@ -594,9 +594,10 @@ processor semantics into `yune-core`) lands only when a real non-ABI consumer
     reload/startup and `M25-DOGFOOD-03` per-key typing responsiveness.
   - Candidate/settings correctness: `M25-DOGFOOD-02` page-size slider plus
     rendered candidate cap and `M25-DOGFOOD-08` Jyutping luna_pinyin
-    reverse-lookup trigger from `` `p`` to bare `` ` ``, with any current
-    bare-grave `reverse_lookup` namespace moved or retired instead of shadowing
-    `luna_pinyin`.
+    reverse-lookup trigger from `` `p`` to bare `` ` ``, with the vestigial
+    bare-grave `reverse_lookup` slot removed unless a real consumer is proven,
+    retained secondary lookups moved to explicit non-bare triggers such as
+    `` `vl`` / `` `vc``, and the web UI listing the trigger map per schema.
   - Top-control and settings layout: `M25-DOGFOOD-04` compact schema switcher
     plus `luna_pinyin` visible-name correction, `M25-DOGFOOD-05` Cangjie
     version in top controls, `M25-DOGFOOD-06` Display controls above Live
