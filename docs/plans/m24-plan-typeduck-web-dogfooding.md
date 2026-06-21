@@ -50,6 +50,7 @@ If a report is ambiguous, classify it as **Needs triage**, capture the screensho
 | M24-DOGFOOD-04 | Open | Engine correctness / oracle recheck | For `jigaajiusihaa`, after the first compound candidate the next candidates are single characters, while the user-observed live TypeDuck behavior appears to prefer word entries such as `而家`, `依家`, `宜家` before single characters. | User compared the internal playground with `https://www.typeduck.hk/web/`; live product appears to show word candidates in positions 2-3. | `scripts/capture-typeduck-jyutping.ps1`, `crates/yune-core/tests/cantonese_parity.rs`, `crates/yune-core/src/translator/mod.rs`, `crates/yune-core/src/dictionary/`, `crates/yune-rime-api/tests/typeduck_web.rs`, M21 source-aware evidence under `third_party/typeduck-web/e2e/results/m21-product-comparison/` | A pinned TypeDuck `v1.1.2` fixture or a documented version-skew decision determines the expected row order; Yune either matches the fixture with active tests or records the live-site behavior as non-oracle product skew. |
 | M24-DOGFOOD-05 | Open | UI polish / settings localization and help text | Settings and developer controls mix Cantonese/English and many labels are English-only, so a new developer cannot tell what active engine controls or live session controls do. Cantonese should come first for all labels; active engine and live session toggles need short description text. Display controls need Cantonese-first labels but no extra descriptions. | Browser comment on `/web/` settings area: selected controls include `Active engine controls`, `Live session controls`, `Display controls`, `Yune inspector`, `Schema`, and English-only toggle labels such as `ASCII mode`, `Full shape`, `Prediction threshold`, and `Dictionary exclude`. | `third_party/typeduck-web/source/src/Preferences.tsx`, `third_party/typeduck-web/source/src/Inputs.tsx`, `third_party/typeduck-web/source/src/Toolbar.tsx`, `third_party/typeduck-web/source/src/SchemaSwitcher.tsx`, `third_party/typeduck-web/source/src/App.tsx`, `third_party/typeduck-web/source/src/YuneInspector.tsx`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts` | All visible settings/developer labels use Cantonese-first bilingual text; active-engine and live-session toggles show concise helper copy; display controls remain compact without helper paragraphs; before/after screenshots prove the settings page stays readable at desktop and narrow widths. |
 | M24-DOGFOOD-06 | Open | UI polish / display-language control semantics | The display-language fieldset shows both radio buttons and checkboxes, making it unclear whether the radio or checklist controls dictionary/comment language display. The visible UI should be a checklist only. | Browser comment on `/web/` display controls: `Display languages` shows five radio buttons on the left, five checkboxes on the right, and an arrow row for `主要語言 Main Language`. | `third_party/typeduck-web/source/src/Preferences.tsx`, `third_party/typeduck-web/source/src/Inputs.tsx`, `third_party/typeduck-web/source/src/CandidateInfo.ts`, `third_party/typeduck-web/source/src/DictionaryPanel.tsx`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts` | Display-language settings expose only checkboxes; the `主要語言 Main Language` arrow/radio concept is gone from the visible UI; at least one language remains selected; dictionary/detail output still has a deterministic primary definition when multiple languages are checked. |
+| M24-DOGFOOD-07 | Open | Browser integration / customize page-size wiring | The `每頁候選詞數量 No. of Candidates Per Page` slider appears not to control candidate page size; typing after selecting a smaller value still shows more candidates than selected. | Browser comment on `/web/` settings area: user changed the candidate-number control, then typed input whose candidate row clearly exceeded the selected page size. | `third_party/typeduck-web/source/src/Preferences.tsx`, `third_party/typeduck-web/source/src/App.tsx`, `third_party/typeduck-web/source/src/yune-integration/adapter.ts`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`, `crates/yune-rime-api/tests/typeduck_web.rs`, `crates/yune-rime-api/src/typeduck_web.rs`, `crates/yune-rime-api/src/context_api.rs` | Changing the slider to 4, 6, or 10 changes the deployed runtime `context.page_size` and visible candidate count on the next composition; the browser does not render more candidate cells than the selected page size; persistence evidence shows the setting is saved under the key the deployed schema actually reads. |
 
 ---
 
@@ -665,7 +666,138 @@ This checks Hindi first, then unchecks English, so the at-least-one-language gua
 
 Save after screenshots under `third_party/typeduck-web/e2e/results/m24-dogfooding/M24-DOGFOOD-06/` for desktop and narrow viewports. The fieldset should show one checkbox column/list only, with no radio column, no arrow row, and no ambiguous "main language" hint.
 
-## Task 8: M24 Regression Sweep And Closeout Discipline
+## Task 8: M24-DOGFOOD-07 Candidate Page-Size Control Wiring
+
+**Files:**
+- Modify: `third_party/typeduck-web/source/src/yune-integration/adapter.ts`
+- Inspect first, then modify only if the React state/effect is not firing: `third_party/typeduck-web/source/src/App.tsx`
+- Inspect first, then modify only if the slider emits the wrong value: `third_party/typeduck-web/source/src/Preferences.tsx`
+- Modify: `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`
+- Modify: `crates/yune-rime-api/tests/typeduck_web.rs`
+- Inspect first, then modify only if the bridge cannot customize the deployed key correctly: `crates/yune-rime-api/src/typeduck_web.rs`
+- Inspect first, then modify only if the deployed context ignores the customized key: `crates/yune-rime-api/src/context_api.rs`
+
+- [ ] **Step 1: Capture the browser failure against the real settings control**
+
+Add a focused Playwright test that sets the slider to 4, types an input with more than four candidates, and records both the visible candidate rows and the runtime context:
+
+```ts
+test("M24 candidate page-size slider limits the visible candidate page", async ({ page }) => {
+  await page.goto(APP_URL, { timeout: TIMEOUT_MS, waitUntil: "domcontentloaded" });
+  await waitForAppReady(page);
+  await setPreferenceRange(page, /No\. of Candidates Per Page|每頁候選詞數量/, 4);
+  await waitForPersistedSettings(page, { "menu/page_size": "4" });
+
+  const state = await captureM24Phrase(page, "M24-DOGFOOD-07", "jigaajiusihaa", "而家要思考");
+  await saveM24Json("M24-DOGFOOD-07", "page-size-4-state.json", state);
+  await takeM24Screenshot(page, "M24-DOGFOOD-07", "page-size-4-candidates");
+
+  expect(state.candidates.length).toBeLessThanOrEqual(4);
+});
+```
+
+Expected before the fix: either `waitForPersistedSettings` cannot find `menu/page_size: "4"`, or the captured candidate list contains more than four visible rows.
+
+- [ ] **Step 2: Add a runtime bridge regression before changing browser code**
+
+In `crates/yune-rime-api/tests/typeduck_web.rs`, add a real-assets test that proves the TypeDuck-Web bridge can customize the same deployed key the context reader uses:
+
+```rust
+#[test]
+fn typeduck_adapter_real_assets_page_size_customize_limits_context_page() {
+    let _guard = test_guard();
+    let runtime =
+        TypeDuckRuntime::create_with_schema("browser-real-page-size-customize", "jyut6ping3_mobile");
+    runtime.write_browser_real_assets();
+
+    let state = unsafe {
+        yune_typeduck_init(
+            runtime.shared_c.as_ptr(),
+            runtime.user_c.as_ptr(),
+            runtime.schema_id_c.as_ptr(),
+        )
+    };
+    assert!(!state.is_null());
+
+    let config_id = CString::new("jyut6ping3_mobile.schema").expect("config id should be valid");
+    let key = CString::new("menu/page_size").expect("custom key should be valid");
+    let value = CString::new("4").expect("custom value should be valid");
+    assert_eq!(
+        unsafe { yune_typeduck_customize(state, config_id.as_ptr(), key.as_ptr(), value.as_ptr()) },
+        TRUE
+    );
+    assert_eq!(unsafe { yune_typeduck_deploy(state) }, TRUE);
+
+    let composing = process_input(state, "jigaajiusihaa");
+    assert_eq!(composing["context"]["page_size"], Value::from(4));
+    let candidates = composing["context"]["candidates"]
+        .as_array()
+        .expect("candidate page should be an array");
+    assert!(
+        candidates.len() <= 4,
+        "customized page size should limit candidates, got {}",
+        candidates.len()
+    );
+
+    unsafe { yune_typeduck_cleanup(state) };
+    runtime.remove();
+}
+```
+
+Run:
+
+```powershell
+cargo test -p yune-rime-api --test typeduck_web typeduck_adapter_real_assets_page_size_customize_limits_context_page
+```
+
+Expected before the fix: this should pass if the bridge already supports `menu/page_size`; if it fails, fix the bridge/runtime before changing the browser adapter.
+
+- [ ] **Step 3: Use the deployed schema key from the browser adapter**
+
+`context_menu_settings(...)` reads `menu/page_size` from the deployed schema. The browser adapter currently maps page size through `customizeSetting("page_size", ...)`; update it to customize the deployed path:
+
+```ts
+if (preferences.pageSize !== undefined) {
+  customizeSetting("menu/page_size", String(preferences.pageSize));
+}
+```
+
+Do not change unrelated customization keys in the same slice. If the older flat `page_size` key is still needed for compatibility with a different frontend, support both explicitly and prove which one the current browser uses with persisted-settings evidence.
+
+- [ ] **Step 4: Verify customize, deploy, and fresh composition ordering**
+
+The React effect in `App.tsx` already calls `Rime.customize(...)` and then `Rime.deploy()`. Verify the M24 browser test waits for deploy completion before typing. If the test is flaky because composition starts before deploy finishes, add a page-visible or worker diagnostic wait that observes the customize/deploy completion used by existing `waitForPersistedSettings(...)` helpers.
+
+Do not make the candidate renderer slice the full candidate array as the main fix. The runtime context should already expose only the current page. UI slicing is acceptable only as a defensive assertion after runtime `context.page_size` is correct.
+
+- [ ] **Step 5: Add page-size roundtrip coverage for multiple values**
+
+Extend the Playwright test to cover at least 4 and 10:
+
+```ts
+for (const pageSize of [4, 10] as const) {
+  await setPreferenceRange(page, /No\. of Candidates Per Page|每頁候選詞數量/, pageSize);
+  await waitForPersistedSettings(page, { "menu/page_size": String(pageSize) });
+  const state = await typeCompositionAndWaitForTopCandidate(page, "jigaajiusihaa", "而家要思考");
+  await saveM24Json("M24-DOGFOOD-07", `page-size-${pageSize}-state.json`, state);
+  await takeM24Screenshot(page, "M24-DOGFOOD-07", `page-size-${pageSize}-candidates`);
+  expect(state.candidates.length).toBeLessThanOrEqual(pageSize);
+}
+```
+
+- [ ] **Step 6: Run focused gates**
+
+Run:
+
+```powershell
+cargo test -p yune-rime-api --test typeduck_web typeduck_adapter_real_assets_page_size_customize_limits_context_page
+npm.cmd --prefix third_party/typeduck-web/source run build
+npx --prefix third_party/typeduck-web/source playwright test third_party/typeduck-web/e2e/yune-typeduck.spec.ts -g "M24 candidate page-size"
+```
+
+Expected: the runtime reports `context.page_size` equal to the selected value, the browser evidence shows no more visible candidates than selected, and the persisted settings JSON records `menu/page_size`.
+
+## Task 9: M24 Regression Sweep And Closeout Discipline
 
 **Files:**
 - Modify: this plan as issue rows close
