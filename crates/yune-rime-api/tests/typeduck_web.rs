@@ -444,6 +444,55 @@ fn typeduck_adapter_deploy_and_customize_are_explicit() {
 }
 
 #[test]
+fn typeduck_adapter_customizes_dictionary_exclude_as_yaml_list() {
+    let _guard = test_guard();
+    let runtime = TypeDuckRuntime::create("dictionary-exclude-customize");
+    runtime.write_schema();
+    let state = unsafe {
+        yune_typeduck_init(
+            runtime.shared_c.as_ptr(),
+            runtime.user_c.as_ptr(),
+            runtime.schema_id_c.as_ptr(),
+        )
+    };
+    assert!(!state.is_null());
+
+    assert_eq!(unsafe { yune_typeduck_deploy(state) }, TRUE);
+    let before = process_input(state, "ba");
+    assert_eq!(
+        before["context"]["candidates"][0]["text"],
+        Value::String("八".to_owned())
+    );
+
+    let config_id = CString::new("typeduck_luna.schema").expect("config id should be valid");
+    let key = CString::new("translator/dictionary_exclude").expect("custom key should be valid");
+    let value = CString::new(r#"["八"]"#).expect("custom value should be valid");
+    assert_eq!(
+        unsafe { yune_typeduck_customize(state, config_id.as_ptr(), key.as_ptr(), value.as_ptr()) },
+        TRUE
+    );
+
+    let saved = fs::read_to_string(runtime.user.join("typeduck_luna.custom.yaml"))
+        .expect("customized schema patch should be saved");
+    let saved_yaml: serde_yaml::Value =
+        serde_yaml::from_str(&saved).expect("customized schema patch should be valid YAML");
+    assert_eq!(
+        saved_yaml["patch"]["translator/dictionary_exclude"],
+        serde_yaml::Value::Sequence(vec![serde_yaml::Value::String("八".to_owned())])
+    );
+
+    assert_eq!(unsafe { yune_typeduck_deploy(state) }, TRUE);
+    let after = process_input(state, "ba");
+    assert_eq!(
+        after["context"]["candidates"][0]["text"],
+        Value::String("吧".to_owned())
+    );
+
+    unsafe { yune_typeduck_cleanup(state) };
+    runtime.remove();
+}
+
+#[test]
 fn typeduck_adapter_set_option_updates_session_status() {
     let _guard = test_guard();
     let runtime = TypeDuckRuntime::create("set-option");
@@ -1046,7 +1095,12 @@ schema:\n  schema_id: typeduck_luna\n  name: TypeDuck Luna\nmenu:\n  page_size: 
         copy_asset(&schema_root, &self.shared, "jyut6ping3_mobile.schema.yaml");
         copy_asset(&schema_root, &self.shared, "jyut6ping3.dict.yaml");
         let staging = self.user.join("build");
-        for file_name in ["default.yaml", "jyut6ping3_mobile.schema.yaml"] {
+        for file_name in [
+            "default.yaml",
+            "jyut6ping3_mobile.schema.yaml",
+            "cangjie5.schema.yaml",
+            "luna_pinyin.schema.yaml",
+        ] {
             fs::copy(
                 schema_root.join("build").join(file_name),
                 staging.join(file_name),
@@ -1088,6 +1142,12 @@ schema:\n  schema_id: typeduck_luna\n  name: TypeDuck Luna\nmenu:\n  page_size: 
             "jyut6ping3_scolar.table.bin",
             "jyut6ping3_scolar.reverse.bin",
             "jyut6ping3_scolar.prism.bin",
+            "cangjie5.table.bin",
+            "cangjie5.reverse.bin",
+            "cangjie5.prism.bin",
+            "luna_pinyin.table.bin",
+            "luna_pinyin.reverse.bin",
+            "luna_pinyin.prism.bin",
         ] {
             copy_asset(&schema_root, &self.shared, file_name);
         }
@@ -1260,6 +1320,64 @@ fn typeduck_adapter_real_assets_browser_defaults_keep_correction_nri_first() {
 
     unsafe { yune_typeduck_cleanup(state) };
     runtime.remove();
+}
+
+#[test]
+fn typeduck_adapter_browser_app_assets_load_m22_schemas_and_reverse_lookup() {
+    let _guard = test_guard();
+    for (label, schema_id, input, expected_text, reverse_input, reverse_text) in [
+        (
+            "browser-app-cangjie5",
+            "cangjie5",
+            "a",
+            "\u{65e5}",
+            "`nei;",
+            "\u{4f60}",
+        ),
+        (
+            "browser-app-luna-pinyin",
+            "luna_pinyin",
+            "hao",
+            "\u{4fb4}",
+            "`a;",
+            "\u{65e5}",
+        ),
+    ] {
+        let runtime = TypeDuckRuntime::create_with_schema(label, schema_id);
+        runtime.write_browser_app_assets();
+
+        let state = unsafe {
+            yune_typeduck_init(
+                runtime.shared_c.as_ptr(),
+                runtime.user_c.as_ptr(),
+                runtime.schema_id_c.as_ptr(),
+            )
+        };
+        assert!(
+            !state.is_null(),
+            "{schema_id} should initialize from browser app assets"
+        );
+
+        assert_eq!(unsafe { yune_typeduck_deploy(state) }, TRUE);
+        let composing = process_input(state, input);
+        assert_eq!(
+            composing["context"]["candidates"][0]["text"],
+            Value::String(expected_text.to_owned()),
+            "{schema_id} should compose {input}"
+        );
+        drop(response_json(unsafe {
+            yune_typeduck_process_key(state, 0xff1b, 0)
+        }));
+        let reverse = process_input(state, reverse_input);
+        assert_eq!(
+            reverse["context"]["candidates"][0]["text"],
+            Value::String(reverse_text.to_owned()),
+            "{schema_id} should reverse-lookup {reverse_input}"
+        );
+
+        unsafe { yune_typeduck_cleanup(state) };
+        runtime.remove();
+    }
 }
 
 #[test]

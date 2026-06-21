@@ -298,7 +298,7 @@ behavior already proven by M9, M13, M14-M16, and the FORK-PARITY backlog. It is 
 **separate web/demo track**,
 not a reopened M13: M13 remains the completed default-off AI frontend exposure
 milestone, while M20 made the browser demo highly controllable, honest,
-inspectable, and useful for manual dogfooding before the remaining M22/M17 work.
+inspectable, and useful for manual dogfooding before future M17 and frontend work.
 
 This is not the same surface as a separately cloned `TypeDuck-HK/TypeDuck-Web`
 product checkout. `packages/yune-typeduck-runtime/` remains the reusable Yune
@@ -420,20 +420,33 @@ punctuation fixture is captured by `scripts/capture-upstream-m18-punctuation.ps1
 The completed plan is archived at
 [`plans/archive/m18-plan-deployment-and-processor-depth.md`](./plans/archive/m18-plan-deployment-and-processor-depth.md).
 
-### M22 Bucket 2: Read-only debug inspector
+### M22: Web playground feature-completeness
 
-The read-only debug inspector bucket of M22 is complete. The inspector is
-opt-in/off by default, adds debug JSON and a browser panel for segment tags,
-candidate source/quality/preedit/comment details, spelling-algebra expansion,
-prediction score/threshold data, filter audit, and AI staging state, and
-preserves classic candidate output identity when disabled. The default
-`RimeApi` table, `RimeCandidate`, and ABI layout files remain unchanged.
+M22 is complete. The internal TypeDuck-Web playground now keeps the Bucket 2
+read-only inspector off by default and identity-preserving, and it completes the
+remaining playground buckets without changing the default `RimeApi` table,
+`RimeCandidate`, or ABI layout files.
+
+Bucket 1 exposes only browser-honest controls: `dictionary_exclude` is a
+deploy-time customization with persisted-config and candidate-removal evidence;
+`extended_charset` changes the Cangjie candidate set through the installed
+charset filter; `traditionalization` and `disabled` are live session controls
+with visible status output. `ascii_punct` is still absent from the playground
+because no fresh browser-visible before/after evidence was captured for it.
+
+Bucket 3 loads `jyut6ping3_mobile`, `cangjie5`, and `luna_pinyin` through a real
+schema switcher. The new Cangjie and Luna browser schemas use M18/M19-derived
+schema data and compiled artifacts under the TypeDuck-Web app's
+`source/public/schema` asset tree; the measured M22 compiled browser assets are:
+`cangjie5.table.bin` 1,509,778 bytes, `cangjie5.prism.bin` 1,430,557 bytes,
+`cangjie5.reverse.bin` 663,901 bytes, `luna_pinyin.table.bin` 613,855 bytes,
+`luna_pinyin.prism.bin` 23,465 bytes, and `luna_pinyin.reverse.bin` 704,357
+bytes. Reverse lookup is active for both new schemas.
 
 Evidence is committed under
-`third_party/typeduck-web/e2e/results/m22-bucket2-inspector/`, and the
-implementation landed in `d548c9cf` (`Implement M22 Bucket 2 debug inspector`).
-M22 remains active for Bucket 1 honest browser controls and Bucket 3
-multi-schema/reverse-lookup playground work.
+`third_party/typeduck-web/e2e/results/m22-remaining-buckets/`. The completed
+plan is archived at
+[`plans/archive/m22-plan-web-playground-multischema-inspector.md`](./plans/archive/m22-plan-web-playground-multischema-inspector.md).
 
 ### M19: Breadth schemas and TypeDuck-profile ABI surface
 
@@ -491,7 +504,7 @@ In priority order:
 1. **Preserve the upstream-first baseline.** Keep default `RimeApi` and core behavior aligned to upstream `1.17.0`; add new TypeDuck fork-only behavior only behind an explicit profile surface.
 2. **Keep M9/M13/M16/M20 web gates green on merge.** Preserve the reproducible Emscripten build, TypeScript runtime tests/build, TypeDuck-Web worker build, real-assets browser evidence, native `typeduck_web` fallback, default-off M13 AI scenarios, and M20 showcase-control honesty checks.
 3. **Keep TypeDuck profile behavior isolated after M21.** TypeDuck-tuned sentence, correction, prediction, or ranking constants must stay behind an explicit profile predicate or typed translator config, not read unconditionally by default `luna_pinyin`/upstream behavior. A `TYPEDUCK_*` constant in shared core is a merge blocker unless it is gated or renamed with upstream-oracle evidence.
-4. **Advance the remaining Track 2 slices opportunistically.** M18's prism generation, deployment writers, rebuild executor, and punctuation processor depth are complete, M19's breadth schemas are complete, and M22's read-only debug inspector bucket has landed. The remaining upstream-depth work is M22's honest browser controls and multi-schema product surface plus the optional M17 language-model slice.
+4. **Advance the remaining Track 2 slices opportunistically.** M18's prism generation, deployment writers, rebuild executor, and punctuation processor depth are complete, M19's breadth schemas are complete, and M22's playground build-out is complete. The remaining upstream-depth work is the optional M17 language-model slice.
 5. **Extend the M20 playground only with browser-safe supported features.** Add active controls or guided scenarios for new browser-safe engine behavior, and keep unsupported behavior absent or documented instead of partially exposed.
 6. **Resume TypeDuck-Windows only with profile smoke and real E2E.** The M19 profile ABI accessor exists; return to TypeDuck-Windows packaging only after package/header smoke is re-derived against that accessor and the real frontend E2E path is available.
 7. **Add a future TypeDuck-Web product-integration track before changing a separately cloned TypeDuck-Web product checkout.** Treat `TypeDuck-HK/TypeDuck-Web` as the dedicated web IME product, not as the M20 harness or the runtime bridge.
@@ -504,23 +517,20 @@ In priority order:
 Priority is set by what a *named* (A)/(B) target needs, not by librime's feature
 list. **TypeDuck `jyut6ping3` reconciliation (M14-M16), the M20 browser
 playground, M23 architecture hardening, M18 deployment/processor depth, M19
-breadth schemas, and M22 Bucket 2 read-only inspector are complete** (see
-*Completed* above). The remaining engine-depth arc is **Track 2 (broad upstream
-depth):**
+breadth schemas, and M22 playground build-out are complete** (see *Completed*
+above). The remaining engine-depth arc is **Track 2 (broad upstream depth):**
 
 ### Execution order — what to do next
 
 This is the **authoritative sequence**; the per-milestone detail bullets below
 are reference, not order. M18 has removed the precompiled-asset crutch for later
-breadth and multi-schema work, and M19 has now added the first breadth schemas.
+breadth and multi-schema work, M19 has added the first breadth schemas, and M22
+has exposed them in the internal browser playground.
 **M17 remains the heaviest and least product-critical slice** (not required by
 any current named target), and the TypeDuck profile-tuning leak was gated in M23
 before M19 added schemas through the same shared sentence path.
 
-1. **M22 remaining playground buckets.** Finish honest browser controls (Bucket 1)
-   and multi-schema/reverse-lookup playground work (Bucket 3) on real M18 + M19
-   output, not a precompiled workaround. Bucket 2 is already complete.
-2. **M17 — upstream poet / language model (opportunistic, last).** Heaviest slice;
+1. **M17 — upstream poet / language model (opportunistic, last).** Heaviest slice;
    not required by any current named target. Do it when a frontend actually ships
    `luna_pinyin` sentence input to users.
 
@@ -590,28 +600,30 @@ processor semantics into `yune-core`) lands only when a real non-ABI consumer
   honest toggles:** the browser-safe user-facing controls M20 skipped —
   `traditionalization`, `disabled`, `extended_charset` (via `setOption()`; the option
   the always-on `CharsetFilter` reads, `filter/mod.rs:65-69`), and deploy-time
-  `dictionary_exclude` (`schema_install.rs:281-297`); `ascii_punct` is now engine-backed
-  after M18 but still needs M22 browser evidence before it becomes an active web
-  toggle. Every active control must clear the M20 honesty
-  gate (real browser before/after) or be a documented browser-surface N/A. **(2)
+  `dictionary_exclude` (`schema_install.rs:281-297`); each active control now has
+  browser evidence through status, candidate, or persisted-config output.
+  `ascii_punct` remains absent because no browser-visible before/after evidence
+  was captured for it. **(2)
   Read-only debug inspector (complete):** an opt-in per-keystroke panel observes
   segments + `segment_tags`, each candidate's source/quality/preedit/comment,
   spelling-algebra expansion, the filter pipeline, prediction scores vs the
   threshold, and AI staging with additive debug JSON only and **no default
-  `RimeApi`/`RimeCandidate` ABI change**; evidence lives under
-  `third_party/typeduck-web/e2e/results/m22-bucket2-inspector/`. **(3)
+  `RimeApi`/`RimeCandidate` ABI change**; Bucket 2 evidence lives under
+  `third_party/typeduck-web/e2e/results/m22-bucket2-inspector/`, while the
+  completed M22 evidence lives under
+  `third_party/typeduck-web/e2e/results/m22-remaining-buckets/`. **(3)
   Multi-schema (highest leverage):**
   load three schemas — `jyut6ping3_mobile` + `cangjie5` + `luna_pinyin` — behind a
   schema-switcher wired to the existing `RimeSelectSchema` ABI (`abi.rs:301`), with
   reverse lookup on both new schemas; unblocks `show_full_code` and the schema-switch
   surface M20 could only mark browser-surface N/A as a single-schema harness, and gives
-  M21 a multi-schema surface. M18 removed the dictionary-build blocker; M22 can choose
-  between Yune-generated artifacts and pre-compiled upstream artifacts based on its
-  browser asset-budget and provenance needs. Honesty-gate
+  M21 a multi-schema surface. M18 removed the dictionary-build blocker, and M22
+  records measured M18/M19-derived browser asset sizes for both new schemas.
+  Honesty-gate
   exclusions (`uniquifier_filter`, `single_char_filter`, always-on `charset_filter`,
   schema-owned templates, internal `_`-prefixed options) stay inspect-only or
   always-on — never toggles.
-  Detail: [`plans/m22-plan-web-playground-multischema-inspector.md`](./plans/m22-plan-web-playground-multischema-inspector.md).
+  Detail: [`plans/archive/m22-plan-web-playground-multischema-inspector.md`](./plans/archive/m22-plan-web-playground-multischema-inspector.md).
 - **AI-native frontend expansion** — the proven TypeDuck-Web surface stays
   default-off; Windows and other native frontend exposure wait for their own
   safety evidence.

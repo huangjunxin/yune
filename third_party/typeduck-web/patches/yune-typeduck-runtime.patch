@@ -29,17 +29,30 @@ index cbe61db..6d1043d 100644
  		"react-dom": "^18.3.1",
  		"react-toastify": "^10.0.5",
 diff --git a/src/App.tsx b/src/App.tsx
-index c43ccbc..1d6ce79 100644
+index c43ccbc..7d2b38f 100644
 --- a/src/App.tsx
 +++ b/src/App.tsx
-@@ -10,11 +10,19 @@ import Rime, { subscribe } from "./rime";
+@@ -1,20 +1,30 @@
+-import { useEffect, useReducer, useState } from "react";
++import { useEffect, useReducer, useRef, useState } from "react";
+ 
+ import { ToastContainer } from "react-toastify";
+ 
+ import CandidatePanel from "./CandidatePanel";
+-import { NO_AUTO_FILL } from "./consts";
++import { DEFAULT_PREFERENCES, NO_AUTO_FILL } from "./consts";
+ import { useLoading, usePreferences } from "./hooks";
+ import Preferences from "./Preferences";
+ import Rime, { subscribe } from "./rime";
++import SchemaSwitcher from "./SchemaSwitcher";
  import ThemeSwitcher from "./ThemeSwitcher";
  import Toolbar from "./Toolbar";
  import { notify } from "./utils";
 +import YuneFeatureShowcase from "./YuneFeatureShowcase";
 +import YuneInspector from "./YuneInspector";
++import YuneStatusStrip from "./YuneStatusStrip";
 +
-+import type { YuneInspectorDebug } from "./types";
++import type { YuneInspectorDebug, YuneStatusSnapshot } from "./types";
  
  export default function App() {
  	const [textArea, setTextArea] = useState<HTMLTextAreaElement | null>(null);
@@ -52,13 +65,40 @@ index c43ccbc..1d6ce79 100644
  	useEffect(() => {
  		const { resolve } = startAsyncTask();
  		return subscribe("initialized", success => {
-@@ -45,13 +53,41 @@ export default function App() {
+@@ -26,32 +36,114 @@ export default function App() {
+ 	}, [startAsyncTask]);
+ 
+ 	useEffect(() => {
+-		let resolve!: () => void;
+-		let reject!: () => void;
++		let pending: PromiseWithResolvers<void> | undefined;
+ 		return subscribe("deployStatusChanged", status => {
+ 			switch (status) {
+ 				case "start":
+-					({ resolve, reject } = startAsyncTask());
++					pending?.resolve();
++					pending = startAsyncTask();
+ 					break;
+ 				case "success":
+-					resolve();
++					pending?.resolve();
++					pending = undefined;
+ 					break;
+ 				case "failure":
+ 					notify("warning", "重新整理", "refreshing");
+-					reject();
++					pending?.reject();
++					pending = undefined;
+ 					break;
+ 			}
+ 		});
  	}, [startAsyncTask]);
  
  	const [deployStatus, updateDeployStatus] = useReducer((n: number) => n + 1, 0);
 +	const [aiStatus, updateAiStatus] = useReducer((n: number) => n + 1, 0);
 +	const [isInspectorEnabled, setIsInspectorEnabled] = useState(false);
 +	const [inspectorDebug, setInspectorDebug] = useState<YuneInspectorDebug | undefined>();
++	const [engineStatus, setEngineStatus] = useState<YuneStatusSnapshot | undefined>();
  	const preferences = usePreferences();
 -	const { pageSize, enableCompletion, enableCorrection, enableSentence, enableLearning, isCangjie5, isHeiTypeface } = preferences;
 +	const {
@@ -71,14 +111,64 @@ index c43ccbc..1d6ce79 100644
 +		combineCandidates,
 +		predictionNeverFirst,
 +		predictionThreshold,
++		activeSchema,
++		isTraditionalization,
++		isExtendedCharset,
++		isDisabled,
++		dictionaryExclude,
 +		isAsciiMode,
 +		isFullShape,
 +		isSimplification,
 +		isCangjie5,
 +		isHeiTypeface,
 +	} = preferences;
++	const didRunSchemaEffect = useRef(false);
++	const didRunCustomizeEffect = useRef(false);
++	const customizePreferencesMatchDefaults =
++		pageSize === DEFAULT_PREFERENCES.pageSize
++		&& enableCompletion === DEFAULT_PREFERENCES.enableCompletion
++		&& enableCorrection === DEFAULT_PREFERENCES.enableCorrection
++		&& enableSentence === DEFAULT_PREFERENCES.enableSentence
++		&& enableLearning === DEFAULT_PREFERENCES.enableLearning
++		&& combineCandidates === DEFAULT_PREFERENCES.combineCandidates
++		&& predictionNeverFirst === DEFAULT_PREFERENCES.predictionNeverFirst
++		&& predictionThreshold === DEFAULT_PREFERENCES.predictionThreshold
++		&& dictionaryExclude.length === 0
++		&& isCangjie5 === DEFAULT_PREFERENCES.isCangjie5;
++	useEffect(() =>
++		runAsyncTask(async () => {
++			if (!didRunSchemaEffect.current) {
++				didRunSchemaEffect.current = true;
++				if (activeSchema === "jyut6ping3_mobile") {
++					return;
++				}
++			}
++			let type: "warning" | "error" | undefined;
++			try {
++				if (!(await Rime.selectSchema(activeSchema))) {
++					type = "warning";
++				}
++				setInspectorDebug(undefined);
++				setEngineStatus(undefined);
++				updateDeployStatus();
++			}
++			catch {
++				type = "error";
++			}
++			if (type) {
++				notify(type, "Switch schema", "switching the schema");
++			}
++		}), [activeSchema, runAsyncTask]);
++
  	useEffect(() =>
  		runAsyncTask(async () => {
++			if (!didRunCustomizeEffect.current) {
++				didRunCustomizeEffect.current = true;
++				if (customizePreferencesMatchDefaults) {
++					updateDeployStatus();
++					return;
++				}
++			}
  			let type: "warning" | "error" | undefined;
  			try {
 -				const success = await Rime.customize({ pageSize, enableCompletion, enableCorrection, enableSentence, enableLearning, isCangjie5 });
@@ -91,17 +181,18 @@ index c43ccbc..1d6ce79 100644
 +					combineCandidates,
 +					predictionNeverFirst,
 +					predictionThreshold,
++					dictionaryExclude,
 +					isCangjie5,
 +				});
  				if (!(await Rime.deploy() && success)) {
  					type = "warning";
  				}
-@@ -63,20 +99,95 @@ export default function App() {
+@@ -63,20 +155,103 @@ export default function App() {
  				notify(type, "套用設定", "applying the settings");
  			}
  			updateDeployStatus();
 -		}), [pageSize, enableCompletion, enableCorrection, enableSentence, enableLearning, isCangjie5, updateDeployStatus, runAsyncTask]);
-+		}), [pageSize, enableCompletion, enableCorrection, enableSentence, enableLearning, combineCandidates, predictionNeverFirst, predictionThreshold, isCangjie5, updateDeployStatus, runAsyncTask]);
++		}), [activeSchema, pageSize, enableCompletion, enableCorrection, enableSentence, enableLearning, combineCandidates, predictionNeverFirst, predictionThreshold, dictionaryExclude, isCangjie5, customizePreferencesMatchDefaults, updateDeployStatus, runAsyncTask]);
 +
 +	useEffect(() =>
 +		runAsyncTask(async () => {
@@ -111,6 +202,9 @@ index c43ccbc..1d6ce79 100644
 +				await Rime.setOption("ascii_mode", isAsciiMode);
 +				await Rime.setOption("full_shape", isFullShape);
 +				await Rime.setOption("simplification", isSimplification);
++				await Rime.setOption("traditionalization", isTraditionalization);
++				await Rime.setOption("extended_charset", isExtendedCharset);
++				await Rime.setOption("disabled", isDisabled);
 +			}
 +			catch {
 +				type = "error";
@@ -118,7 +212,7 @@ index c43ccbc..1d6ce79 100644
 +			if (type) {
 +				notify(type, "Apply live options", "applying the live options");
 +			}
-+		}), [isAsciiMode, isFullShape, isSimplification, runAsyncTask]);
++		}), [activeSchema, isAsciiMode, isFullShape, isSimplification, isTraditionalization, isExtendedCharset, isDisabled, runAsyncTask]);
 +
 +	useEffect(() =>
 +		runAsyncTask(async () => {
@@ -174,6 +268,10 @@ index c43ccbc..1d6ce79 100644
 +				setIsSimplification={preferences.setIsSimplification}
 +				isFullShape={preferences.isFullShape}
 +				setIsFullShape={preferences.setIsFullShape} />
++			<SchemaSwitcher
++				activeSchema={preferences.activeSchema}
++				setActiveSchema={preferences.setActiveSchema} />
++			<YuneStatusStrip status={engineStatus} />
  			<textarea className={`block w-full min-h-64 my-6 textarea textarea-bordered text-lg px-3 ${isHeiTypeface ? "font-hei" : "font-sung"}`} ref={setTextArea} {...NO_AUTO_FILL} />
 -			{textArea && <CandidatePanel runAsyncTask={runAsyncTask} textArea={textArea} prefs={preferences} deployStatus={deployStatus} />}
 +			{textArea && <YuneFeatureShowcase textArea={textArea} />}
@@ -193,7 +291,8 @@ index c43ccbc..1d6ce79 100644
 +				prefs={preferences}
 +				deployStatus={deployStatus}
 +				aiStatus={aiStatus}
-+				onInspectorDebug={setInspectorDebug} />}
++				onInspectorDebug={setInspectorDebug}
++				onStatus={setEngineStatus} />}
  			<Preferences {...preferences} />
  		</main>
  		<footer className="footer footer-center p-6 bg-secondary text-secondary-content">
@@ -262,7 +361,7 @@ index 0add9ac..9390478 100644
  
  export class CandidateEntry {
 diff --git a/src/CandidatePanel.tsx b/src/CandidatePanel.tsx
-index 298a42d..53042a6 100644
+index 298a42d..6394308 100644
 --- a/src/CandidatePanel.tsx
 +++ b/src/CandidatePanel.tsx
 @@ -1,4 +1,4 @@
@@ -271,15 +370,15 @@ index 298a42d..53042a6 100644
  
  import Candidate from "./Candidate";
  import CandidateInfo from "./CandidateInfo";
-@@ -8,15 +8,18 @@ import DictionaryPanel from "./DictionaryPanel";
+@@ -8,15 +8,19 @@ import DictionaryPanel from "./DictionaryPanel";
  import Rime from "./rime";
  import { isPrintable, notify } from "./utils";
  
 -import type { InputState, InterfacePreferences, RimeResult } from "./types";
-+import type { InputState, Preferences, RimeResult, YuneInspectorDebug } from "./types";
++import type { InputState, Preferences, RimeResult, YuneInspectorDebug, YuneStatusSnapshot } from "./types";
  
 -export default function CandidatePanel({ runAsyncTask, textArea, prefs, deployStatus }: {
-+export default function CandidatePanel({ runAsyncTask, textArea, prefs, deployStatus, aiStatus, onInspectorDebug }: {
++export default function CandidatePanel({ runAsyncTask, textArea, prefs, deployStatus, aiStatus, onInspectorDebug, onStatus }: {
  	runAsyncTask(asyncTask: () => Promise<void>): void;
  	textArea: HTMLTextAreaElement;
 -	prefs: InterfacePreferences;
@@ -287,21 +386,23 @@ index 298a42d..53042a6 100644
  	deployStatus: number;
 +	aiStatus: number;
 +	onInspectorDebug?(debug: YuneInspectorDebug | undefined): void;
++	onStatus?(status: YuneStatusSnapshot | undefined): void;
  }) {
  	const [inputState, setInputState] = useState<InputState | undefined>();
 +	const inputStateRef = useRef<InputState | undefined>();
  	const [showDictionaryIndex, setShowDictionaryIndex] = useState<number | undefined>();
  	const candidateList = useRef<HTMLTableElement>(null);
  	const dictionaryPanel = useRef<HTMLDivElement>(null);
-@@ -36,6 +39,7 @@ export default function CandidatePanel({ runAsyncTask, textArea, prefs, deploySt
+@@ -36,6 +40,8 @@ export default function CandidatePanel({ runAsyncTask, textArea, prefs, deploySt
  			let type: "warning" | "error" | undefined;
  			try {
  				const result = await promise;
 +				onInspectorDebug?.(result.isComposing ? result.debug : undefined);
++				onStatus?.(result.status);
  				if (!result.success) {
  					type = "warning";
  				}
-@@ -44,12 +48,12 @@ export default function CandidatePanel({ runAsyncTask, textArea, prefs, deploySt
+@@ -44,12 +50,12 @@ export default function CandidatePanel({ runAsyncTask, textArea, prefs, deploySt
  						inputBuffer: result.inputBuffer,
  						highlightedIndex: result.highlightedIndex,
  						candidates: result.candidates.map(
@@ -316,12 +417,12 @@ index 298a42d..53042a6 100644
  				if (result.committed) {
  					insert(result.committed);
  				}
-@@ -66,12 +70,35 @@ export default function CandidatePanel({ runAsyncTask, textArea, prefs, deploySt
+@@ -66,12 +72,35 @@ export default function CandidatePanel({ runAsyncTask, textArea, prefs, deploySt
  				notify(type, "執行操作", "performing the operation");
  			}
  			textArea.focus();
 -		}), [hideDictionary, inputState, insert, runAsyncTask, textArea]);
-+		}), [hideDictionary, insert, onInspectorDebug, runAsyncTask, textArea]);
++		}), [hideDictionary, insert, onInspectorDebug, onStatus, runAsyncTask, textArea]);
  
 -	const processKey = useCallback((input: string, key?: string) => handleRimeResult(Rime.processKey(input), key), [handleRimeResult]);
 +	const processKey = useCallback((input: string, key?: string) => {
@@ -354,7 +455,7 @@ index 298a42d..53042a6 100644
  
  	const parseKey = useCallback((event: KeyboardEvent) => {
  		const { code, key } = event;
-@@ -118,6 +145,9 @@ export default function CandidatePanel({ runAsyncTask, textArea, prefs, deploySt
+@@ -118,6 +147,9 @@ export default function CandidatePanel({ runAsyncTask, textArea, prefs, deploySt
  
  	useEffect(() => {
  		function onKeyDown(event: KeyboardEvent) {
@@ -364,7 +465,7 @@ index 298a42d..53042a6 100644
  			const key = parseKey(event);
  			if (key) {
  				event.preventDefault();
-@@ -125,6 +155,9 @@ export default function CandidatePanel({ runAsyncTask, textArea, prefs, deploySt
+@@ -125,6 +157,9 @@ export default function CandidatePanel({ runAsyncTask, textArea, prefs, deploySt
  			}
  		}
  		function onKeyUp(event: KeyboardEvent) {
@@ -374,7 +475,7 @@ index 298a42d..53042a6 100644
  			if (inputState) {
  				const key = parseKey(event);
  				if (key) processKey(`{Release+${key}}`);
-@@ -136,13 +169,23 @@ export default function CandidatePanel({ runAsyncTask, textArea, prefs, deploySt
+@@ -136,13 +171,23 @@ export default function CandidatePanel({ runAsyncTask, textArea, prefs, deploySt
  			document.removeEventListener("keydown", onKeyDown);
  			document.removeEventListener("keyup", onKeyUp);
  		};
@@ -494,23 +595,29 @@ index d5451b8..becad87 100644
  	return <label className="cursor-pointer label gap-2">
  		<input
 diff --git a/src/Preferences.tsx b/src/Preferences.tsx
-index 820a2e0..137ef1d 100644
+index 820a2e0..eda9065 100644
 --- a/src/Preferences.tsx
 +++ b/src/Preferences.tsx
-@@ -1,8 +1,11 @@
+@@ -1,8 +1,17 @@
  import { LANGUAGE_LABELS, SHOW_ROMANIZATION_LABELS, Language, ShowRomanization } from "./consts";
 -import { Radio, RadioCheckbox, Segment, Toggle } from "./Inputs";
 +import { Radio, RadioCheckbox, Range, Segment, Toggle } from "./Inputs";
  
  import type { PreferencesWithSetter } from "./types";
  
++const DICTIONARY_EXCLUDE_BY_SCHEMA = {
++	jyut6ping3_mobile: ["你"],
++	cangjie5: ["日"],
++	luna_pinyin: ["侴"],
++} as const;
++
 +// Real-assets M20 probe: 50000 filters santai long predictions while preserving direct candidates.
 +const thresholdRange = { min: 0, max: 200000, step: 1000 } as const;
 +
  export default function Preferences(prefs: PreferencesWithSetter) {
  	function toggleDisplayLanguage(language: Language, checked: boolean) {
  		const newDisplayLanguages = new Set(prefs.displayLanguages);
-@@ -12,9 +15,51 @@ export default function Preferences(prefs: PreferencesWithSetter) {
+@@ -12,9 +21,63 @@ export default function Preferences(prefs: PreferencesWithSetter) {
  	return <section className="max-w-5xl lg:columns-2 m-auto">
  		<h3 className="font-bold text-2xl mb-2">輸入法設定 IME Settings</h3>
  		<ul>
@@ -542,6 +649,9 @@ index 820a2e0..137ef1d 100644
 +				<Range label="Prediction threshold" min={thresholdRange.min} max={thresholdRange.max} step={thresholdRange.step} value={prefs.predictionThreshold} setValue={prefs.setPredictionThreshold} />
 +			</li>
 +			<li>
++				<Toggle label="Dictionary exclude" checked={prefs.dictionaryExclude.length > 0} setChecked={checked => prefs.setDictionaryExclude(checked ? [...DICTIONARY_EXCLUDE_BY_SCHEMA[prefs.activeSchema]] : [])} />
++			</li>
++			<li>
 +				<h4 className="font-semibold text-xl my-2">Live session controls</h4>
 +			</li>
 +			<li>
@@ -554,6 +664,15 @@ index 820a2e0..137ef1d 100644
 +				<Toggle label="Simplification" checked={prefs.isSimplification} setChecked={prefs.setIsSimplification} />
 +			</li>
 +			<li>
++				<Toggle label="Traditionalization" checked={prefs.isTraditionalization} setChecked={prefs.setIsTraditionalization} />
++			</li>
++			<li>
++				<Toggle label="Extended charset" checked={prefs.isExtendedCharset} setChecked={prefs.setIsExtendedCharset} />
++			</li>
++			<li>
++				<Toggle label="Disabled" checked={prefs.isDisabled} setChecked={prefs.setIsDisabled} />
++			</li>
++			<li>
 +				<h4 className="font-semibold text-xl my-2">Display controls</h4>
 +			</li>
  			<li>
@@ -563,7 +682,7 @@ index 820a2e0..137ef1d 100644
  					{(Object.entries(LANGUAGE_LABELS) as [Language, string][]).map(([language, label]) =>
  						<RadioCheckbox
  							key={language}
-@@ -65,7 +110,7 @@ export default function Preferences(prefs: PreferencesWithSetter) {
+@@ -65,7 +128,7 @@ export default function Preferences(prefs: PreferencesWithSetter) {
  			</li>
  			<li>
  				<fieldset className="border border-base-300 rounded px-3 pb-2 mb-1">
@@ -572,7 +691,7 @@ index 820a2e0..137ef1d 100644
  					{(Object.entries(SHOW_ROMANIZATION_LABELS) as [ShowRomanization, string][]).map(([value, label]) =>
  						<Radio
  							key={value}
-@@ -78,26 +123,11 @@ export default function Preferences(prefs: PreferencesWithSetter) {
+@@ -78,26 +141,11 @@ export default function Preferences(prefs: PreferencesWithSetter) {
  				</fieldset>
  			</li>
  			<li>
@@ -832,10 +951,48 @@ index 0000000..e485c20
 +	</section>;
 +}
 diff --git a/src/consts.ts b/src/consts.ts
-index 25ec3bf..da869e8 100644
+index 25ec3bf..12f49ef 100644
 --- a/src/consts.ts
 +++ b/src/consts.ts
-@@ -55,6 +55,14 @@ export const DEFAULT_PREFERENCES: Preferences = {
+@@ -1,5 +1,5 @@
+ import type { CandidateEntry } from "./CandidateInfo";
+-import type { Preferences } from "./types";
++import type { Preferences, RimeSchemaId } from "./types";
+ 
+ export const enum Language {
+ 	Eng = "eng",
+@@ -15,6 +15,30 @@ export const enum ShowRomanization {
+ 	Never = "never",
+ }
+ 
++export interface SchemaOption {
++	id: RimeSchemaId;
++	label: string;
++	reverseLookup: string;
++}
++
++export const SCHEMA_OPTIONS: readonly SchemaOption[] = [
++	{
++		id: "jyut6ping3_mobile",
++		label: "Jyutping",
++		reverseLookup: "`nei; -> jyut6ping3 reverse lookup",
++	},
++	{
++		id: "cangjie5",
++		label: "Cangjie 5",
++		reverseLookup: "`nei; -> Jyutping lookup with Cangjie comments",
++	},
++	{
++		id: "luna_pinyin",
++		label: "Luna Pinyin",
++		reverseLookup: "`a; -> Cangjie lookup with Pinyin comments",
++	},
++];
++
+ export const LANGUAGE_CODES: Record<Language, string> = {
+ 	[Language.Eng]: "en",
+ 	[Language.Hin]: "hi",
+@@ -55,6 +79,19 @@ export const DEFAULT_PREFERENCES: Preferences = {
  	enableCorrection: false,
  	enableSentence: true,
  	enableLearning: true,
@@ -844,6 +1001,11 @@ index 25ec3bf..da869e8 100644
 +	combineCandidates: true,
 +	predictionNeverFirst: true,
 +	predictionThreshold: 0,
++	activeSchema: "jyut6ping3_mobile",
++	isTraditionalization: false,
++	isExtendedCharset: false,
++	isDisabled: false,
++	dictionaryExclude: [],
 +	isAsciiMode: false,
 +	isFullShape: false,
 +	isSimplification: false,
@@ -851,7 +1013,7 @@ index 25ec3bf..da869e8 100644
  	isCangjie5: true,
  };
 diff --git a/src/rime.ts b/src/rime.ts
-index 4393a9e..ac6ee5b 100644
+index 4393a9e..ddfa6fe 100644
 --- a/src/rime.ts
 +++ b/src/rime.ts
 @@ -18,7 +18,13 @@ interface ErrorPayload {
@@ -869,14 +1031,14 @@ index 4393a9e..ac6ee5b 100644
  
  type Listeners = { [K in keyof ListenerArgsMap]: (this: Worker, ...args: ListenerArgsMap[K]) => void };
  
-@@ -36,13 +42,33 @@ const listeners = {} as { [K in keyof Listeners]: Listeners[K][] };
+@@ -36,13 +42,37 @@ const listeners = {} as { [K in keyof Listeners]: Listeners[K][] };
  for (const type of allListenerTypes) {
  	listeners[type] = [];
  }
 +const lastListenerArgs = {} as Partial<{ [K in keyof ListenerArgsMap]: ListenerArgsMap[K] }>;
  
 -const worker = new Worker("./worker.js");
-+const YUNE_TYPEDUCK_WORKER_VERSION = "m22-bucket2-inspector";
++const YUNE_TYPEDUCK_WORKER_VERSION = "m22-bucket3-multischema-v8";
 +const debugWindow = window as typeof window & { __YUNE_RIME_VERSION__?: string };
 +debugWindow.__YUNE_RIME_VERSION__ = YUNE_TYPEDUCK_WORKER_VERSION;
 +document.documentElement.dataset.yuneRimeVersion = YUNE_TYPEDUCK_WORKER_VERSION;
@@ -902,10 +1064,14 @@ index 4393a9e..ac6ee5b 100644
 +		if (name === "initialized") {
 +			document.documentElement.dataset.yuneInitialized = String(args[0]);
 +		}
++		if (name === "schemaChanged") {
++			document.documentElement.dataset.yuneActiveSchema = args[0];
++			document.documentElement.dataset.yuneActiveSchemaName = args[1];
++		}
  		for (const listener of listeners[name]) {
  			// @ts-expect-error Unactionable
  			listener.apply(worker, args);
-@@ -67,14 +93,26 @@ worker.addEventListener("message", ({ data }: MessageEvent<Payload>) => {
+@@ -67,14 +97,27 @@ worker.addEventListener("message", ({ data }: MessageEvent<Payload>) => {
  });
  
  function postMessage(message: Message) {
@@ -928,12 +1094,13 @@ index 4393a9e..ac6ee5b 100644
 +
  const allActions: (keyof Actions)[] = [
  	"setOption",
++	"selectSchema",
  	"processKey",
 +	"stageAi",
  	"selectCandidate",
  	"deleteCandidate",
  	"flipPage",
-@@ -104,6 +142,14 @@ function registerAction<K extends keyof Actions>(name: K): Actions[K] {
+@@ -104,6 +147,14 @@ function registerAction<K extends keyof Actions>(name: K): Actions[K] {
  
  export function subscribe<K extends keyof Listeners>(type: K, callback: Listeners[K]) {
  	listeners[type].push(callback);
@@ -949,20 +1116,22 @@ index 4393a9e..ac6ee5b 100644
  		listeners[type] = listeners[type].filter(listener => listener !== callback) as never;
  	};
 diff --git a/src/types.ts b/src/types.ts
-index 5d47525..a1c2492 100644
+index 5d47525..f04ae91 100644
 --- a/src/types.ts
 +++ b/src/types.ts
 @@ -1,6 +1,7 @@
  import type CandidateInfo from "./CandidateInfo";
  import type { Language, ShowRomanization } from "./consts";
  import type { Dispatch, SetStateAction } from "react";
-+import type { TypeDuckInspectorDebug } from "@yune-ime/typeduck-runtime";
++import type { TypeDuckInspectorDebug, TypeDuckStatus } from "@yune-ime/typeduck-runtime";
  
  export interface RimeAPI {
  	init(): boolean;
-@@ -16,10 +17,11 @@ export interface RimeAPI {
+@@ -15,11 +16,13 @@ export interface RimeAPI {
+ 
  export interface Actions {
  	setOption(option: string, value: boolean): Promise<void>;
++	selectSchema(schemaId: RimeSchemaId): Promise<boolean>;
  	processKey(input: string): Promise<RimeResult>;
 +	stageAi(): Promise<RimeResult>;
  	selectCandidate(index: number): Promise<RimeResult>;
@@ -973,7 +1142,7 @@ index 5d47525..a1c2492 100644
  	deploy(): Promise<boolean>;
  }
  
-@@ -39,7 +41,12 @@ interface RimeComposing {
+@@ -39,7 +42,12 @@ interface RimeComposing {
  		label?: string;
  		text: string;
  		comment?: string;
@@ -986,15 +1155,21 @@ index 5d47525..a1c2492 100644
  }
  
  interface RimeNotComposing {
-@@ -52,6 +59,7 @@ interface RimePayload {
+@@ -49,9 +57,13 @@ interface RimeNotComposing {
+ interface RimePayload {
+ 	success: boolean;
+ 	committed?: string;
++	status?: TypeDuckStatus;
  }
  
  export type RimeResult = (RimeComposing | RimeNotComposing) & RimePayload;
 +export type YuneInspectorDebug = TypeDuckInspectorDebug;
++export type YuneStatusSnapshot = TypeDuckStatus;
++export type RimeSchemaId = "jyut6ping3_mobile" | "cangjie5" | "luna_pinyin";
  
  export type RimeDeployStatus = "start" | "success" | "failure";
  
-@@ -91,6 +99,13 @@ export interface RimePreferences {
+@@ -91,6 +103,18 @@ export interface RimePreferences {
  	enableCorrection: boolean;
  	enableSentence: boolean;
  	enableLearning: boolean;
@@ -1002,6 +1177,11 @@ index 5d47525..a1c2492 100644
 +	combineCandidates: boolean;
 +	predictionNeverFirst: boolean;
 +	predictionThreshold: number;
++	activeSchema: RimeSchemaId;
++	isTraditionalization: boolean;
++	isExtendedCharset: boolean;
++	isDisabled: boolean;
++	dictionaryExclude: string[];
 +	isAsciiMode: boolean;
 +	isFullShape: boolean;
 +	isSimplification: boolean;
@@ -1009,10 +1189,10 @@ index 5d47525..a1c2492 100644
  }
  
 diff --git a/src/worker.ts b/src/worker.ts
-index 92b9a90..4428956 100644
+index 92b9a90..b52e91a 100644
 --- a/src/worker.ts
 +++ b/src/worker.ts
-@@ -1,137 +1,276 @@
+@@ -1,137 +1,343 @@
 -import type { Actions, ListenerArgsMap, Message, RimeResult, RimeAPI, RimeNotification, RimeDeployStatus } from "./types";
 -
 -type TypeToString<T> = T extends number ? "number"
@@ -1032,7 +1212,6 @@ index 92b9a90..4428956 100644
 -		opts?: Emscripten.CCallOpts,
 -	): ReturnType<RimeAPI[Method]>;
 -	FS: typeof FS;
--}
 +/**
 + * TypeDuck-Web worker with Yune runtime integration
 + *
@@ -1041,7 +1220,7 @@ index 92b9a90..4428956 100644
 + * and message handling logic.
 + */
 +
-+import type { Actions, ListenerArgsMap, Message, RimeResult, RimePreferences, RimeNotification, RimeDeployStatus } from "./types";
++import type { Actions, ListenerArgsMap, Message, RimeResult, RimePreferences, RimeNotification, RimeDeployStatus, RimeSchemaId } from "./types";
 +
 +// Yune integration imports
 +import {
@@ -1052,7 +1231,7 @@ index 92b9a90..4428956 100644
 +  selectCandidate,
 +  deleteCandidate,
 +  flipPage,
-+  deploy,
++  deploy as deployYuneRuntime,
 +  customize,
 +  setOption,
 +  type YunePersistenceDiagnostic,
@@ -1065,27 +1244,33 @@ index 92b9a90..4428956 100644
 +  type ExplicitTypeDuckAssets,
 +  type AssetSource,
 +} from "./yune-integration/assets.js";
- 
--declare const Module: Module;
++
 +import {
 +  mountTypeDuckPersistence,
 +  type EmscriptenTypeDuckModule,
 +  type TypeDuckFilesystem,
 +} from "@yune-ime/typeduck-runtime";
++
++interface YuneTypeduckBrowserModule extends EmscriptenTypeDuckModule {
++  FS: TypeDuckFilesystem;
++  IDBFS: unknown;
+ }
+ 
+-declare const Module: Module;
++interface CreateYuneTypeduckModuleOptions {
++  printErr: (message: string) => void;
++  locateFile: (path: string, prefix: string) => string;
++  noInitialRun?: boolean;
++}
  
 -interface PredefinedModule {
 -	printErr: (message: string) => void;
 -	onRuntimeInitialized: () => void;
 -	locateFile: (path: string, prefix: string) => string;
-+interface YuneTypeduckBrowserModule extends EmscriptenTypeDuckModule {
-+  FS: TypeDuckFilesystem;
-+  IDBFS: unknown;
-+}
-+
-+interface CreateYuneTypeduckModuleOptions {
-+  printErr: (message: string) => void;
-+  locateFile: (path: string, prefix: string) => string;
-+  noInitialRun?: boolean;
++interface PlaygroundSchema {
++  id: RimeSchemaId;
++  name: string;
++  dictionaryId: string;
  }
  
  declare const globalThis: {
@@ -1188,6 +1373,17 @@ index 92b9a90..4428956 100644
 +  async setOption(option, value) {
 +    await setOption(option, value);
 +  },
++  async selectSchema(schemaId) {
++    dispatch("deployStatusChanged", "start");
++    try {
++      await selectYuneSchema(schemaId);
++      dispatch("deployStatusChanged", "success");
++      return true;
++    } catch (error) {
++      dispatch("deployStatusChanged", "failure");
++      throw error;
++    }
++  },
 +  async processKey(input) {
 +    const result = await processKey(input);
 +    // Persistence sync handled by adapter
@@ -1214,8 +1410,18 @@ index 92b9a90..4428956 100644
 +    return result;
 +  },
 +  async deploy() {
-+    const result = await deploy();
-+    return result;
++    dispatch("deployStatusChanged", "start");
++    try {
++      const result = await deployYuneRuntime();
++      if (result) {
++        await selectYuneSchema(activeSchemaId, true);
++      }
++      dispatch("deployStatusChanged", result ? "success" : "failure");
++      return result;
++    } catch (error) {
++      dispatch("deployStatusChanged", "failure");
++      throw error;
++    }
 +  },
  };
  
@@ -1251,9 +1457,28 @@ index 92b9a90..4428956 100644
 -	};
 -	importScripts("rime.js");
 -});
-+const SCHEMA_ID = "jyut6ping3_mobile";
-+const DICTIONARY_ID = "jyut6ping3";
-+const YUNE_TYPEDUCK_ASSET_VERSION = "m22-bucket2-inspector";
++const DEFAULT_SCHEMA_ID: RimeSchemaId = "jyut6ping3_mobile";
++const YUNE_TYPEDUCK_ASSET_VERSION = "m22-bucket3-multischema-v2";
++const PLAYGROUND_SCHEMAS: Record<RimeSchemaId, PlaygroundSchema> = {
++  jyut6ping3_mobile: {
++    id: "jyut6ping3_mobile",
++    name: "Jyutping",
++    dictionaryId: "jyut6ping3",
++  },
++  cangjie5: {
++    id: "cangjie5",
++    name: "Cangjie 5",
++    dictionaryId: "cangjie5",
++  },
++  luna_pinyin: {
++    id: "luna_pinyin",
++    name: "Luna Pinyin",
++    dictionaryId: "luna_pinyin",
++  },
++};
++let yuneModule: YuneTypeduckBrowserModule | null = null;
++let loadedExtraSharedAssets: { path: string; content: string | Uint8Array }[] = [];
++let activeSchemaId: RimeSchemaId = DEFAULT_SCHEMA_ID;
 +
 +// Yune runtime initialization
 +const loadRime = (async () => {
@@ -1275,18 +1500,9 @@ index 92b9a90..4428956 100644
 +    }
 +
 +    mountTypeDuckPersistence(module.FS, module.IDBFS, {}, RIME_USER_DIR);
++    yuneModule = module;
 +
-+    const assetsConfig: ExplicitTypeDuckAssets = {
-+      defaultYaml: { type: "url", url: "schema/default.yaml" },
-+      schemaYaml: { type: "url", url: `schema/${SCHEMA_ID}.schema.yaml` },
-+      dictionaryYaml: { type: "url", url: `schema/${DICTIONARY_ID}.dict.yaml` },
-+      deployedDefaultYaml: { type: "url", url: "schema/build/default.yaml" },
-+      deployedSchemaYaml: { type: "url", url: `schema/build/${SCHEMA_ID}.schema.yaml` },
-+    };
-+
-+    const assets = await loadExplicitAssets(assetsConfig);
-+    validateExplicitAssets(assets);
-+    const extraSharedAssets = await loadExtraSharedAssets([
++    loadedExtraSharedAssets = await loadExtraSharedAssets([
 +      "default.custom.yaml",
 +      "common.yaml",
 +      "common.custom.yaml",
@@ -1312,27 +1528,22 @@ index 92b9a90..4428956 100644
 +      "opencc/TSCharacters.ocd2",
 +      "opencc/TSPhrases.ocd2",
 +    ]);
-+    extraSharedAssets.push(...await loadExtraSharedAssets([
++    loadedExtraSharedAssets.push(...await loadExtraSharedAssets([
 +      "jyut6ping3.table.bin",
 +      "jyut6ping3.reverse.bin",
 +      "jyut6ping3_mobile.prism.bin",
 +      "jyut6ping3_scolar.table.bin",
 +      "jyut6ping3_scolar.reverse.bin",
 +      "jyut6ping3_scolar.prism.bin",
++      "cangjie5.table.bin",
++      "cangjie5.reverse.bin",
++      "cangjie5.prism.bin",
++      "luna_pinyin.table.bin",
++      "luna_pinyin.reverse.bin",
++      "luna_pinyin.prism.bin",
 +    ], true));
 +
-+    await initYuneRuntime(
-+      module,
-+      module.FS,
-+      {
-+        sharedDataDir: RIME_SHARED_DIR,
-+        userDataDir: RIME_USER_DIR,
-+        schemaId: SCHEMA_ID,
-+      },
-+      assets,
-+      DICTIONARY_ID,
-+      extraSharedAssets,
-+    );
++    await selectYuneSchema(DEFAULT_SCHEMA_ID);
 +
 +    loading = false;
 +    dispatch("initialized", true);
@@ -1378,6 +1589,41 @@ index 92b9a90..4428956 100644
 +    }),
 +  );
 +  return assets.filter((asset): asset is { path: string; content: string | Uint8Array } => asset !== null);
++}
++
++async function selectYuneSchema(schemaId: RimeSchemaId, preserveDeployedAssets = false): Promise<void> {
++  const module = yuneModule;
++  if (module === null) {
++    throw new Error("Yune module is not loaded");
++  }
++  const schema = PLAYGROUND_SCHEMAS[schemaId];
++  if (schema === undefined) {
++    throw new Error(`Unknown Yune schema: ${schemaId}`);
++  }
++  const assetsConfig: ExplicitTypeDuckAssets = {
++    defaultYaml: { type: "url", url: "schema/default.yaml" },
++    schemaYaml: { type: "url", url: `schema/${schema.id}.schema.yaml` },
++    dictionaryYaml: { type: "url", url: `schema/${schema.dictionaryId}.dict.yaml` },
++    deployedDefaultYaml: { type: "url", url: "schema/build/default.yaml" },
++    deployedSchemaYaml: { type: "url", url: `schema/build/${schema.id}.schema.yaml` },
++  };
++  const assets = await loadExplicitAssets(assetsConfig);
++  validateExplicitAssets(assets);
++  await initYuneRuntime(
++    module,
++    module.FS,
++    {
++      sharedDataDir: RIME_SHARED_DIR,
++      userDataDir: RIME_USER_DIR,
++      schemaId: schema.id,
++    },
++    assets,
++    schema.dictionaryId,
++    loadedExtraSharedAssets,
++    preserveDeployedAssets,
++  );
++  activeSchemaId = schema.id;
++  dispatch("schemaChanged", schema.id, schema.name);
 +}
  
  addEventListener("message", async ({ data: { name, args } }: MessageEvent<Message>) => {
@@ -1653,10 +1899,10 @@ index 0000000..f943e18
 +**Status**: Integration layer created, pending patch application and build gates
 diff --git a/src/yune-integration/adapter.ts b/src/yune-integration/adapter.ts
 new file mode 100644
-index 0000000..2ab2b88
+index 0000000..e45e7ed
 --- /dev/null
 +++ b/src/yune-integration/adapter.ts
-@@ -0,0 +1,636 @@
+@@ -0,0 +1,748 @@
 +/**
 + * Yune seam adapter for TypeDuck-Web
 + *
@@ -1718,6 +1964,7 @@ index 0000000..2ab2b88
 +  predictionNeverFirst?: boolean;
 +  predictionThreshold?: number;
 +  isCangjie5?: boolean;
++  dictionaryExclude?: string[];
 +  /** Pre-2024 options encoding */
 +  options?: number;
 +}
@@ -1819,6 +2066,7 @@ index 0000000..2ab2b88
 +  "translator/combine_candidates",
 +  "translator/prediction_never_first",
 +  "translator/prediction_weight_threshold",
++  "translator/dictionary_exclude",
 +  "cangjie/dictionary",
 +] as const;
 +
@@ -1829,6 +2077,7 @@ index 0000000..2ab2b88
 +  userDataDir: string;
 +  timestamp: string;
 +  persistedConfig: PersistedConfigSnapshot;
++  deployedConfig: PersistedConfigSnapshot;
 +}
 +
 +/**
@@ -1843,6 +2092,7 @@ index 0000000..2ab2b88
 +  assets: TypeDuckFilesystemAssets,
 +  dictionaryId: string,
 +  extraSharedAssets: TypeDuckExtraSharedAsset[] = [],
++  preserveDeployedAssets = false,
 +): Promise<void> {
 +  // Cleanup previous runtime if exists (one-active-runtime constraint)
 +  if (currentRuntime !== null) {
@@ -1871,7 +2121,11 @@ index 0000000..2ab2b88
 +  await syncFromPersistenceBeforeInit(fs);
 +  emitPersistenceDiagnostic(fs, prepareOptions, "syncFromPersistenceBeforeInit:pass", "before-init");
 +
-+  prepareTypeDuckFilesystem(fs, prepareOptions);
++  if (preserveDeployedAssets) {
++    prepareTypeDuckDeployFilesystem(fs, prepareOptions);
++  } else {
++    prepareTypeDuckFilesystem(fs, prepareOptions);
++  }
 +  for (const asset of extraSharedAssets) {
 +    writeExtraSharedAsset(fs, options.sharedDataDir, asset);
 +  }
@@ -2072,11 +2326,12 @@ index 0000000..2ab2b88
 +    throw new Error("Yune runtime not initialized");
 +  }
 +
-+  prepareTypeDuckFilesystem(currentFs, currentPrepareOptions);
++  prepareTypeDuckDeployFilesystem(currentFs, currentPrepareOptions);
 +  for (const asset of currentExtraSharedAssets) {
 +    writeExtraSharedAsset(currentFs, currentPrepareOptions.sharedDataDir, asset);
 +  }
 +
++  invalidateDeployedSchema(currentFs, currentPrepareOptions);
 +  const deployed = currentRuntime.deploy();
 +  await syncCurrentStateToPersistence("deploy");
 +  return deployed;
@@ -2105,7 +2360,7 @@ index 0000000..2ab2b88
 +  }
 +
 +  const customizeSetting = (key: string, value: string): void => {
-+    const customized = currentRuntime.customize(currentSchemaId, key, value);
++    const customized = currentRuntime.customize(`${currentSchemaId}.schema`, key, value);
 +    success = success && customized;
 +    customizedAny = true;
 +  };
@@ -2142,6 +2397,13 @@ index 0000000..2ab2b88
 +    customizeSetting(
 +      "translator/prediction_weight_threshold",
 +      String(preferences.predictionThreshold),
++    );
++  }
++
++  if (preferences.dictionaryExclude !== undefined) {
++    customizeSetting(
++      "translator/dictionary_exclude",
++      JSON.stringify(preferences.dictionaryExclude),
 +    );
 +  }
 +
@@ -2189,6 +2451,39 @@ index 0000000..2ab2b88
 +  const fullPath = joinTypeDuckVirtualPath(sharedDataDir, asset.path);
 +  ensureVirtualDirectory(fs, fullPath.split("/").slice(0, -1).join("/"));
 +  fs.writeFile(fullPath, asset.content, { flags: "w" });
++}
++
++function prepareTypeDuckDeployFilesystem(
++  fs: TypeDuckFilesystem,
++  options: PrepareTypeDuckFilesystemOptions,
++): void {
++  ensureVirtualDirectory(fs, options.sharedDataDir);
++  ensureVirtualDirectory(fs, options.userDataDir);
++  ensureVirtualDirectory(fs, joinTypeDuckVirtualPath(options.userDataDir, "build"));
++  fs.writeFile(joinTypeDuckVirtualPath(options.sharedDataDir, "default.yaml"), options.assets.defaultYaml, {
++    flags: "w",
++  });
++  fs.writeFile(
++    joinTypeDuckVirtualPath(options.sharedDataDir, `${options.schemaId}.schema.yaml`),
++    options.assets.schemaYaml,
++    { flags: "w" },
++  );
++  fs.writeFile(
++    joinTypeDuckVirtualPath(options.sharedDataDir, `${options.dictionaryId}.dict.yaml`),
++    options.assets.dictionaryYaml,
++    { flags: "w" },
++  );
++}
++
++function invalidateDeployedSchema(
++  fs: TypeDuckFilesystem,
++  options: PrepareTypeDuckFilesystemOptions,
++): void {
++  fs.writeFile(
++    joinTypeDuckVirtualPath(options.userDataDir, "build", `${options.schemaId}.schema.yaml`),
++    "# stale before Yune deploy\n",
++    { flags: "w" },
++  );
 +}
 +
 +function ensureVirtualDirectory(fs: TypeDuckFilesystem, path: string): void {
@@ -2242,6 +2537,7 @@ index 0000000..2ab2b88
 +    userDataDir: prepareOptions.userDataDir,
 +    timestamp: new Date().toISOString(),
 +    persistedConfig: snapshotPersistedCustomConfig(fs, prepareOptions),
++    deployedConfig: snapshotDeployedSchemaConfig(fs, prepareOptions),
 +  };
 +  console.info(`YUNE_PERSISTENCE ${JSON.stringify(diagnostic)}`);
 +  const diagnosticGlobal = globalThis as typeof globalThis & {
@@ -2250,11 +2546,30 @@ index 0000000..2ab2b88
 +  diagnosticGlobal.onYunePersistenceDiagnostic?.(diagnostic);
 +}
 +
++function snapshotDeployedSchemaConfig(
++  fs: TypeDuckFilesystem,
++  prepareOptions: PrepareTypeDuckFilesystemOptions,
++): PersistedConfigSnapshot {
++  const path = joinTypeDuckVirtualPath(
++    prepareOptions.userDataDir,
++    "build",
++    `${prepareOptions.schemaId}.schema.yaml`,
++  );
++  return snapshotYamlConfig(fs, path);
++}
++
 +function snapshotPersistedCustomConfig(
 +  fs: TypeDuckFilesystem,
 +  prepareOptions: PrepareTypeDuckFilesystemOptions,
 +): PersistedConfigSnapshot {
 +  const path = joinTypeDuckVirtualPath(prepareOptions.userDataDir, `${prepareOptions.schemaId}.custom.yaml`);
++  return snapshotYamlConfig(fs, path);
++}
++
++function snapshotYamlConfig(
++  fs: TypeDuckFilesystem,
++  path: string,
++): PersistedConfigSnapshot {
 +  if (!fs.analyzePath(path).exists) {
 +    return { path, exists: false };
 +  }
@@ -2263,7 +2578,7 @@ index 0000000..2ab2b88
 +    const file = fs.readFile(path, { encoding: "utf8" });
 +    const text = typeof file === "string" ? file : new TextDecoder().decode(file);
 +    const settings = Object.fromEntries(
-+      PERSISTED_CUSTOM_CONFIG_KEYS.map((key) => [key, readScalarYamlSetting(text, key)]),
++      PERSISTED_CUSTOM_CONFIG_KEYS.map((key) => [key, readYamlSetting(text, key)]),
 +    );
 +    return {
 +      path,
@@ -2281,10 +2596,53 @@ index 0000000..2ab2b88
 +  }
 +}
 +
-+function readScalarYamlSetting(text: string, key: string): string | null {
++function readYamlSetting(text: string, key: string): string | null {
 +  const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-+  const rawValue = new RegExp(`^\\s*${escapedKey}:\\s*(\\S+)`, "m").exec(text)?.[1] ?? null;
-+  return rawValue?.replace(/^['"](.+)['"]$/, "$1") ?? null;
++  const rawValue = new RegExp(`^\\s*${escapedKey}:[^\\S\\r\\n]*(\\S+)`, "m").exec(text)?.[1] ?? null;
++  if (rawValue !== null) {
++    return rawValue.replace(/^['"](.+)['"]$/, "$1");
++  }
++
++  const sequenceHeader = new RegExp(`^\\s*${escapedKey}:\\s*$`, "m").exec(text);
++  if (sequenceHeader === null) {
++    const [section, child] = key.split("/", 2);
++    if (section !== undefined && child !== undefined) {
++      const nested = yamlSectionText(text, section);
++      if (nested !== null) {
++        return readYamlSetting(nested, child);
++      }
++    }
++    return null;
++  }
++  const lines = text.slice(sequenceHeader.index).split(/\r?\n/).slice(1);
++  const values: string[] = [];
++  for (const line of lines) {
++    if (/^\S/.test(line) || /^\s*[A-Za-z0-9_/.-]+:/.test(line)) {
++      break;
++    }
++    const item = /^\s*-\s*(.+?)\s*$/.exec(line)?.[1];
++    if (item !== undefined) {
++      values.push(item.replace(/^['"](.+)['"]$/, "$1"));
++    }
++  }
++  return values.length > 0 ? JSON.stringify(values) : "[]";
++}
++
++function yamlSectionText(text: string, section: string): string | null {
++  const escapedSection = section.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
++  const sectionHeader = new RegExp(`^${escapedSection}:\\s*$`, "m").exec(text);
++  if (sectionHeader === null) {
++    return null;
++  }
++  const lines = text.slice(sectionHeader.index).split(/\r?\n/).slice(1);
++  const sectionLines: string[] = [];
++  for (const line of lines) {
++    if (/^\S/.test(line)) {
++      break;
++    }
++    sectionLines.push(line);
++  }
++  return sectionLines.join("\n");
 +}
 +
 +/**
@@ -2602,11 +2960,15 @@ index 0000000..e5f998a
 \ No newline at end of file
 diff --git a/src/yune-integration/response.ts b/src/yune-integration/response.ts
 new file mode 100644
-index 0000000..91ed85e
+index 0000000..60e2eec
 --- /dev/null
 +++ b/src/yune-integration/response.ts
-@@ -0,0 +1,72 @@
-+import type { TypeDuckInspectorDebug, TypeDuckResponse } from "@yune-ime/typeduck-runtime";
+@@ -0,0 +1,79 @@
++import type {
++  TypeDuckInspectorDebug,
++  TypeDuckResponse,
++  TypeDuckStatus,
++} from "@yune-ime/typeduck-runtime";
 +
 +/**
 + * Upstream RimeResult shape from src/types.ts
@@ -2633,6 +2995,7 @@ index 0000000..91ed85e
 +  debug?: TypeDuckInspectorDebug;
 +  success: boolean;
 +  committed?: string;
++  status?: TypeDuckStatus;
 +}
 +
 +export function translateResponse(response: TypeDuckResponse): RimeResult {
@@ -2669,6 +3032,7 @@ index 0000000..91ed85e
 +      debug: response.context.debug,
 +      success: true,
 +      committed,
++      status: response.status ?? undefined,
 +    };
 +  }
 +
@@ -2676,5 +3040,6 @@ index 0000000..91ed85e
 +    isComposing: false,
 +    success: true,
 +    committed,
++    status: response.status ?? undefined,
 +  };
 +}

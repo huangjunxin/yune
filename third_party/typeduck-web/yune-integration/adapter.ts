@@ -59,6 +59,7 @@ export interface RimePreferences {
   predictionNeverFirst?: boolean;
   predictionThreshold?: number;
   isCangjie5?: boolean;
+  dictionaryExclude?: string[];
   /** Pre-2024 options encoding */
   options?: number;
 }
@@ -160,6 +161,7 @@ const PERSISTED_CUSTOM_CONFIG_KEYS = [
   "translator/combine_candidates",
   "translator/prediction_never_first",
   "translator/prediction_weight_threshold",
+  "translator/dictionary_exclude",
   "cangjie/dictionary",
 ] as const;
 
@@ -170,6 +172,7 @@ export interface YunePersistenceDiagnostic {
   userDataDir: string;
   timestamp: string;
   persistedConfig: PersistedConfigSnapshot;
+  deployedConfig: PersistedConfigSnapshot;
 }
 
 /**
@@ -184,6 +187,7 @@ export async function initYuneRuntime(
   assets: TypeDuckFilesystemAssets,
   dictionaryId: string,
   extraSharedAssets: TypeDuckExtraSharedAsset[] = [],
+  preserveDeployedAssets = false,
 ): Promise<void> {
   // Cleanup previous runtime if exists (one-active-runtime constraint)
   if (currentRuntime !== null) {
@@ -212,7 +216,11 @@ export async function initYuneRuntime(
   await syncFromPersistenceBeforeInit(fs);
   emitPersistenceDiagnostic(fs, prepareOptions, "syncFromPersistenceBeforeInit:pass", "before-init");
 
-  prepareTypeDuckFilesystem(fs, prepareOptions);
+  if (preserveDeployedAssets) {
+    prepareTypeDuckDeployFilesystem(fs, prepareOptions);
+  } else {
+    prepareTypeDuckFilesystem(fs, prepareOptions);
+  }
   for (const asset of extraSharedAssets) {
     writeExtraSharedAsset(fs, options.sharedDataDir, asset);
   }
@@ -413,11 +421,12 @@ export async function deploy(): Promise<boolean> {
     throw new Error("Yune runtime not initialized");
   }
 
-  prepareTypeDuckFilesystem(currentFs, currentPrepareOptions);
+  prepareTypeDuckDeployFilesystem(currentFs, currentPrepareOptions);
   for (const asset of currentExtraSharedAssets) {
     writeExtraSharedAsset(currentFs, currentPrepareOptions.sharedDataDir, asset);
   }
 
+  invalidateDeployedSchema(currentFs, currentPrepareOptions);
   const deployed = currentRuntime.deploy();
   await syncCurrentStateToPersistence("deploy");
   return deployed;
@@ -446,7 +455,7 @@ export async function customize(preferences: RimePreferences): Promise<boolean> 
   }
 
   const customizeSetting = (key: string, value: string): void => {
-    const customized = currentRuntime.customize(currentSchemaId, key, value);
+    const customized = currentRuntime.customize(`${currentSchemaId}.schema`, key, value);
     success = success && customized;
     customizedAny = true;
   };
@@ -483,6 +492,13 @@ export async function customize(preferences: RimePreferences): Promise<boolean> 
     customizeSetting(
       "translator/prediction_weight_threshold",
       String(preferences.predictionThreshold),
+    );
+  }
+
+  if (preferences.dictionaryExclude !== undefined) {
+    customizeSetting(
+      "translator/dictionary_exclude",
+      JSON.stringify(preferences.dictionaryExclude),
     );
   }
 
@@ -530,6 +546,39 @@ function writeExtraSharedAsset(
   const fullPath = joinTypeDuckVirtualPath(sharedDataDir, asset.path);
   ensureVirtualDirectory(fs, fullPath.split("/").slice(0, -1).join("/"));
   fs.writeFile(fullPath, asset.content, { flags: "w" });
+}
+
+function prepareTypeDuckDeployFilesystem(
+  fs: TypeDuckFilesystem,
+  options: PrepareTypeDuckFilesystemOptions,
+): void {
+  ensureVirtualDirectory(fs, options.sharedDataDir);
+  ensureVirtualDirectory(fs, options.userDataDir);
+  ensureVirtualDirectory(fs, joinTypeDuckVirtualPath(options.userDataDir, "build"));
+  fs.writeFile(joinTypeDuckVirtualPath(options.sharedDataDir, "default.yaml"), options.assets.defaultYaml, {
+    flags: "w",
+  });
+  fs.writeFile(
+    joinTypeDuckVirtualPath(options.sharedDataDir, `${options.schemaId}.schema.yaml`),
+    options.assets.schemaYaml,
+    { flags: "w" },
+  );
+  fs.writeFile(
+    joinTypeDuckVirtualPath(options.sharedDataDir, `${options.dictionaryId}.dict.yaml`),
+    options.assets.dictionaryYaml,
+    { flags: "w" },
+  );
+}
+
+function invalidateDeployedSchema(
+  fs: TypeDuckFilesystem,
+  options: PrepareTypeDuckFilesystemOptions,
+): void {
+  fs.writeFile(
+    joinTypeDuckVirtualPath(options.userDataDir, "build", `${options.schemaId}.schema.yaml`),
+    "# stale before Yune deploy\n",
+    { flags: "w" },
+  );
 }
 
 function ensureVirtualDirectory(fs: TypeDuckFilesystem, path: string): void {
@@ -583,6 +632,7 @@ function emitPersistenceDiagnostic(
     userDataDir: prepareOptions.userDataDir,
     timestamp: new Date().toISOString(),
     persistedConfig: snapshotPersistedCustomConfig(fs, prepareOptions),
+    deployedConfig: snapshotDeployedSchemaConfig(fs, prepareOptions),
   };
   console.info(`YUNE_PERSISTENCE ${JSON.stringify(diagnostic)}`);
   const diagnosticGlobal = globalThis as typeof globalThis & {
@@ -591,11 +641,30 @@ function emitPersistenceDiagnostic(
   diagnosticGlobal.onYunePersistenceDiagnostic?.(diagnostic);
 }
 
+function snapshotDeployedSchemaConfig(
+  fs: TypeDuckFilesystem,
+  prepareOptions: PrepareTypeDuckFilesystemOptions,
+): PersistedConfigSnapshot {
+  const path = joinTypeDuckVirtualPath(
+    prepareOptions.userDataDir,
+    "build",
+    `${prepareOptions.schemaId}.schema.yaml`,
+  );
+  return snapshotYamlConfig(fs, path);
+}
+
 function snapshotPersistedCustomConfig(
   fs: TypeDuckFilesystem,
   prepareOptions: PrepareTypeDuckFilesystemOptions,
 ): PersistedConfigSnapshot {
   const path = joinTypeDuckVirtualPath(prepareOptions.userDataDir, `${prepareOptions.schemaId}.custom.yaml`);
+  return snapshotYamlConfig(fs, path);
+}
+
+function snapshotYamlConfig(
+  fs: TypeDuckFilesystem,
+  path: string,
+): PersistedConfigSnapshot {
   if (!fs.analyzePath(path).exists) {
     return { path, exists: false };
   }
@@ -604,7 +673,7 @@ function snapshotPersistedCustomConfig(
     const file = fs.readFile(path, { encoding: "utf8" });
     const text = typeof file === "string" ? file : new TextDecoder().decode(file);
     const settings = Object.fromEntries(
-      PERSISTED_CUSTOM_CONFIG_KEYS.map((key) => [key, readScalarYamlSetting(text, key)]),
+      PERSISTED_CUSTOM_CONFIG_KEYS.map((key) => [key, readYamlSetting(text, key)]),
     );
     return {
       path,
@@ -622,10 +691,53 @@ function snapshotPersistedCustomConfig(
   }
 }
 
-function readScalarYamlSetting(text: string, key: string): string | null {
+function readYamlSetting(text: string, key: string): string | null {
   const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const rawValue = new RegExp(`^\\s*${escapedKey}:\\s*(\\S+)`, "m").exec(text)?.[1] ?? null;
-  return rawValue?.replace(/^['"](.+)['"]$/, "$1") ?? null;
+  const rawValue = new RegExp(`^\\s*${escapedKey}:[^\\S\\r\\n]*(\\S+)`, "m").exec(text)?.[1] ?? null;
+  if (rawValue !== null) {
+    return rawValue.replace(/^['"](.+)['"]$/, "$1");
+  }
+
+  const sequenceHeader = new RegExp(`^\\s*${escapedKey}:\\s*$`, "m").exec(text);
+  if (sequenceHeader === null) {
+    const [section, child] = key.split("/", 2);
+    if (section !== undefined && child !== undefined) {
+      const nested = yamlSectionText(text, section);
+      if (nested !== null) {
+        return readYamlSetting(nested, child);
+      }
+    }
+    return null;
+  }
+  const lines = text.slice(sequenceHeader.index).split(/\r?\n/).slice(1);
+  const values: string[] = [];
+  for (const line of lines) {
+    if (/^\S/.test(line) || /^\s*[A-Za-z0-9_/.-]+:/.test(line)) {
+      break;
+    }
+    const item = /^\s*-\s*(.+?)\s*$/.exec(line)?.[1];
+    if (item !== undefined) {
+      values.push(item.replace(/^['"](.+)['"]$/, "$1"));
+    }
+  }
+  return values.length > 0 ? JSON.stringify(values) : "[]";
+}
+
+function yamlSectionText(text: string, section: string): string | null {
+  const escapedSection = section.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const sectionHeader = new RegExp(`^${escapedSection}:\\s*$`, "m").exec(text);
+  if (sectionHeader === null) {
+    return null;
+  }
+  const lines = text.slice(sectionHeader.index).split(/\r?\n/).slice(1);
+  const sectionLines: string[] = [];
+  for (const line of lines) {
+    if (/^\S/.test(line)) {
+      break;
+    }
+    sectionLines.push(line);
+  }
+  return sectionLines.join("\n");
 }
 
 /**

@@ -1,5 +1,5 @@
 use std::{
-    ffi::{CStr, CString},
+    ffi::{c_void, CStr, CString},
     mem,
     os::raw::{c_char, c_int},
     ptr,
@@ -14,8 +14,9 @@ use yune_core::{
 };
 
 use crate::{
-    rime_get_api, rime_levers_get_api, Bool, RimeCandidate, RimeCommit, RimeComposition,
-    RimeContext, RimeLeversApi, RimeMenu, RimeSessionId, RimeStatus, RimeTraits, FALSE, TRUE,
+    rime_get_api, rime_levers_get_api, Bool, ConfigState, RimeCandidate, RimeCommit,
+    RimeComposition, RimeConfig, RimeContext, RimeLeversApi, RimeMenu, RimeSessionId, RimeStatus,
+    RimeTraits, FALSE, TRUE,
 };
 
 use crate::session::{session_candidates_snapshot, session_inspector_snapshot, with_session};
@@ -287,7 +288,32 @@ pub unsafe extern "C" fn yune_typeduck_customize(
         return FALSE;
     }
     unsafe { load(settings) };
-    let customized = unsafe { customize_string(settings, key.as_ptr(), value.as_ptr()) } == TRUE;
+    let key_string = key.as_c_str().to_string_lossy();
+    let value_string = value.as_c_str().to_string_lossy();
+    let customized = if key_string == "translator/dictionary_exclude" {
+        let Some(exclude_list) = dictionary_exclude_config_value(&value_string) else {
+            unsafe { destroy(settings) };
+            return FALSE;
+        };
+        let Some(customize_item) = levers.customize_item else {
+            unsafe { destroy(settings) };
+            return FALSE;
+        };
+        let mut config = RimeConfig {
+            ptr: Box::into_raw(Box::new(ConfigState {
+                root: exclude_list,
+                cstring_borrows: Vec::new(),
+            }))
+            .cast::<c_void>(),
+        };
+        let customized = unsafe { customize_item(settings, key.as_ptr(), &mut config) } == TRUE;
+        unsafe {
+            drop(Box::from_raw(config.ptr.cast::<ConfigState>()));
+        }
+        customized
+    } else {
+        (unsafe { customize_string(settings, key.as_ptr(), value.as_ptr()) }) == TRUE
+    };
     let saved = customized && unsafe { save(settings) } == TRUE;
     unsafe { destroy(settings) };
     bool_to_rime(saved)
@@ -864,6 +890,16 @@ fn c_string_from_const(ptr: *const c_char) -> String {
 
 fn c_string_from_mut(ptr: *mut c_char) -> String {
     c_string_from_const(ptr.cast_const())
+}
+
+fn dictionary_exclude_config_value(value: &str) -> Option<Value> {
+    let parsed: JsonValue = serde_json::from_str(value).ok()?;
+    let items = parsed.as_array()?;
+    items
+        .iter()
+        .map(|item| item.as_str().map(|text| Value::String(text.to_owned())))
+        .collect::<Option<Vec<_>>>()
+        .map(Value::Sequence)
 }
 
 fn bool_to_rime(value: bool) -> Bool {

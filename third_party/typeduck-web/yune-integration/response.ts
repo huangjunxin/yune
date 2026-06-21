@@ -1,4 +1,4 @@
-import type { TypeDuckResponse } from "@yune-ime/typeduck-runtime";
+import type { TypeDuckResponse, TypeDuckStatus } from "@yune-ime/typeduck-runtime";
 
 /**
  * Upstream RimeResult shape from src/types.ts
@@ -21,6 +21,7 @@ export interface RimeResult {
   }>;
   success: boolean;
   committed?: string;
+  status?: TypeDuckStatus;
 }
 
 export function translateResponse(response: TypeDuckResponse): RimeResult {
@@ -53,6 +54,7 @@ export function translateResponse(response: TypeDuckResponse): RimeResult {
       candidates,
       success: true,
       committed,
+      status: response.status ?? undefined,
     };
   }
 
@@ -60,5 +62,6 @@ export function translateResponse(response: TypeDuckResponse): RimeResult {
     isComposing: false,
     success: true,
     committed,
+    status: response.status ?? undefined,
   };
 }

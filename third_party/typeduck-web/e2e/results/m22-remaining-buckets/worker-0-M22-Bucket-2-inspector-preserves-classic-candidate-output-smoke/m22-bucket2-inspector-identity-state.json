@@ -1,0 +1,613 @@
+{
+  "offClassic": [
+    {
+      "text": "你",
+      "note": null,
+      "rowText": "1.nei5你you (singular)ⓘ"
+    },
+    {
+      "text": "你",
+      "note": null,
+      "rowText": "2.nei5你you (singular)ⓘ"
+    },
+    {
+      "text": "呢",
+      "note": null,
+      "rowText": "3.ne1呢(how about)ⓘ"
+    },
+    {
+      "text": "尼",
+      "note": null,
+      "rowText": "4.nei4尼nunⓘ"
+    },
+    {
+      "text": "妮",
+      "note": null,
+      "rowText": "5.nei4妮little girlⓘ"
+    },
+    {
+      "text": "彌",
+      "note": null,
+      "rowText": "6.nei4彌full; fillⓘ"
+    },
+    {
+      "text": "妳",
+      "note": null,
+      "rowText": "7.nei5妳youⓘ"
+    },
+    {
+      "text": "您",
+      "note": null,
+      "rowText": "8.nei5您youⓘ"
+    },
+    {
+      "text": "膩",
+      "note": null,
+      "rowText": "9.nei6膩greasyⓘ"
+    },
+    {
+      "text": "餌",
+      "note": null,
+      "rowText": "0.nei6餌to feed; baitⓘ"
+    },
+    {
+      "text": "瀰",
+      "note": null,
+      "rowText": "1.nei4瀰a watery expanseⓘ"
+    },
+    {
+      "text": "祢",
+      "note": null,
+      "rowText": "2.nei4祢ⓘ"
+    },
+    {
+      "text": "祢",
+      "note": null,
+      "rowText": "3.nei4祢ⓘ"
+    },
+    {
+      "text": "禰",
+      "note": null,
+      "rowText": "4.nei5禰ⓘ"
+    },
+    {
+      "text": "珥",
+      "note": null,
+      "rowText": "5.ji5珥ⓘ"
+    },
+    {
+      "text": "旎",
+      "note": null,
+      "rowText": "6.nei5旎ⓘ"
+    },
+    {
+      "text": "籾",
+      "note": null,
+      "rowText": "7.nei4籾(rare 罕見)"
+    },
+    {
+      "text": "鈮",
+      "note": null,
+      "rowText": "8.nei4鈮Niobiumⓘ"
+    },
+    {
+      "text": "伲",
+      "note": null,
+      "rowText": "9.nei4伲(rare 罕見)"
+    },
+    {
+      "text": "𡛧",
+      "note": null,
+      "rowText": "0.nei5𡛧(rare 罕見)"
+    },
+    {
+      "text": "抳",
+      "note": null,
+      "rowText": "1.nei5抳(rare 罕見)"
+    },
+    {
+      "text": "我",
+      "note": "\\fngo5",
+      "rowText": "2.我\\fngo5"
+    },
+    {
+      "text": "外",
+      "note": "\\fngoi6",
+      "rowText": "3.外\\fngoi6"
+    },
+    {
+      "text": "能",
+      "note": "\\fnang4",
+      "rowText": "4.能\\fnang4"
+    },
+    {
+      "text": "內",
+      "note": "\\fnoi6",
+      "rowText": "5.內\\fnoi6"
+    },
+    {
+      "text": "男",
+      "note": "\\fnaam4",
+      "rowText": "6.男\\fnaam4"
+    },
+    {
+      "text": "女",
+      "note": "\\fneoi5",
+      "rowText": "7.女\\fneoi5"
+    },
+    {
+      "text": "眼",
+      "note": "\\fngaan5",
+      "rowText": "8.眼\\fngaan5"
+    },
+    {
+      "text": "五",
+      "note": "\\fng5",
+      "rowText": "9.五\\fng5"
+    },
+    {
+      "text": "那",
+      "note": "\\fnaa5",
+      "rowText": "0.那\\fnaa5"
+    },
+    {
+      "text": "銀",
+      "note": "\\fngan4",
+      "rowText": "1.銀\\fngan4"
+    },
+    {
+      "text": "年",
+      "note": "\\fnin4",
+      "rowText": "2.年\\fnin4"
+    },
+    {
+      "text": "南",
+      "note": "\\fnaam4",
+      "rowText": "3.南\\fnaam4"
+    },
+    {
+      "text": "諗",
+      "note": "\\fnam2",
+      "rowText": "4.諗\\fnam2"
+    },
+    {
+      "text": "難",
+      "note": "\\fnaan4",
+      "rowText": "5.難\\fnaan4"
+    },
+    {
+      "text": "呢個",
+      "note": "\\fni1go3",
+      "rowText": "6.呢個\\fni1go3"
+    },
+    {
+      "text": "牛",
+      "note": "\\fngau4",
+      "rowText": "7.牛\\fngau4"
+    },
+    {
+      "text": "拿",
+      "note": "\\fnaa4",
+      "rowText": "8.拿\\fnaa4"
+    },
+    {
+      "text": "牙",
+      "note": "\\fngaa4",
+      "rowText": "9.牙\\fngaa4"
+    },
+    {
+      "text": "腦",
+      "note": "\\fnou5",
+      "rowText": "0.腦\\fnou5"
+    },
+    {
+      "text": "我們",
+      "note": "\\fngo5mun4",
+      "rowText": "1.我們\\fngo5mun4"
+    },
+    {
+      "text": "念",
+      "note": "\\fnim6",
+      "rowText": "2.念\\fnim6"
+    },
+    {
+      "text": "奶",
+      "note": "\\fnaai5",
+      "rowText": "3.奶\\fnaai5"
+    },
+    {
+      "text": "啱",
+      "note": "\\fngaam1",
+      "rowText": "4.啱\\fngaam1"
+    },
+    {
+      "text": "硬",
+      "note": "\\fngaang6",
+      "rowText": "5.硬\\fngaang6"
+    },
+    {
+      "text": "銀行",
+      "note": "\\fngan4hong4",
+      "rowText": "6.銀行\\fngan4hong4"
+    },
+    {
+      "text": "午",
+      "note": "\\fng5",
+      "rowText": "7.午\\fng5"
+    },
+    {
+      "text": "耐",
+      "note": "\\fnoi6",
+      "rowText": "8.耐\\fnoi6"
+    },
+    {
+      "text": "內地",
+      "note": "\\fnoi6dei6",
+      "rowText": "9.內地\\fnoi6dei6"
+    },
+    {
+      "text": "額",
+      "note": "\\fngaak6",
+      "rowText": "0.額\\fngaak6"
+    }
+  ],
+  "onClassic": [
+    {
+      "text": "你",
+      "note": null,
+      "rowText": "1.nei5你you (singular)ⓘ"
+    },
+    {
+      "text": "你",
+      "note": null,
+      "rowText": "2.nei5你you (singular)ⓘ"
+    },
+    {
+      "text": "呢",
+      "note": null,
+      "rowText": "3.ne1呢(how about)ⓘ"
+    },
+    {
+      "text": "尼",
+      "note": null,
+      "rowText": "4.nei4尼nunⓘ"
+    },
+    {
+      "text": "妮",
+      "note": null,
+      "rowText": "5.nei4妮little girlⓘ"
+    },
+    {
+      "text": "彌",
+      "note": null,
+      "rowText": "6.nei4彌full; fillⓘ"
+    },
+    {
+      "text": "妳",
+      "note": null,
+      "rowText": "7.nei5妳youⓘ"
+    },
+    {
+      "text": "您",
+      "note": null,
+      "rowText": "8.nei5您youⓘ"
+    },
+    {
+      "text": "膩",
+      "note": null,
+      "rowText": "9.nei6膩greasyⓘ"
+    },
+    {
+      "text": "餌",
+      "note": null,
+      "rowText": "0.nei6餌to feed; baitⓘ"
+    },
+    {
+      "text": "瀰",
+      "note": null,
+      "rowText": "1.nei4瀰a watery expanseⓘ"
+    },
+    {
+      "text": "祢",
+      "note": null,
+      "rowText": "2.nei4祢ⓘ"
+    },
+    {
+      "text": "祢",
+      "note": null,
+      "rowText": "3.nei4祢ⓘ"
+    },
+    {
+      "text": "禰",
+      "note": null,
+      "rowText": "4.nei5禰ⓘ"
+    },
+    {
+      "text": "珥",
+      "note": null,
+      "rowText": "5.ji5珥ⓘ"
+    },
+    {
+      "text": "旎",
+      "note": null,
+      "rowText": "6.nei5旎ⓘ"
+    },
+    {
+      "text": "籾",
+      "note": null,
+      "rowText": "7.nei4籾(rare 罕見)"
+    },
+    {
+      "text": "鈮",
+      "note": null,
+      "rowText": "8.nei4鈮Niobiumⓘ"
+    },
+    {
+      "text": "伲",
+      "note": null,
+      "rowText": "9.nei4伲(rare 罕見)"
+    },
+    {
+      "text": "𡛧",
+      "note": null,
+      "rowText": "0.nei5𡛧(rare 罕見)"
+    },
+    {
+      "text": "抳",
+      "note": null,
+      "rowText": "1.nei5抳(rare 罕見)"
+    },
+    {
+      "text": "我",
+      "note": "\\fngo5",
+      "rowText": "2.我\\fngo5"
+    },
+    {
+      "text": "外",
+      "note": "\\fngoi6",
+      "rowText": "3.外\\fngoi6"
+    },
+    {
+      "text": "能",
+      "note": "\\fnang4",
+      "rowText": "4.能\\fnang4"
+    },
+    {
+      "text": "內",
+      "note": "\\fnoi6",
+      "rowText": "5.內\\fnoi6"
+    },
+    {
+      "text": "男",
+      "note": "\\fnaam4",
+      "rowText": "6.男\\fnaam4"
+    },
+    {
+      "text": "女",
+      "note": "\\fneoi5",
+      "rowText": "7.女\\fneoi5"
+    },
+    {
+      "text": "眼",
+      "note": "\\fngaan5",
+      "rowText": "8.眼\\fngaan5"
+    },
+    {
+      "text": "五",
+      "note": "\\fng5",
+      "rowText": "9.五\\fng5"
+    },
+    {
+      "text": "那",
+      "note": "\\fnaa5",
+      "rowText": "0.那\\fnaa5"
+    },
+    {
+      "text": "銀",
+      "note": "\\fngan4",
+      "rowText": "1.銀\\fngan4"
+    },
+    {
+      "text": "年",
+      "note": "\\fnin4",
+      "rowText": "2.年\\fnin4"
+    },
+    {
+      "text": "南",
+      "note": "\\fnaam4",
+      "rowText": "3.南\\fnaam4"
+    },
+    {
+      "text": "諗",
+      "note": "\\fnam2",
+      "rowText": "4.諗\\fnam2"
+    },
+    {
+      "text": "難",
+      "note": "\\fnaan4",
+      "rowText": "5.難\\fnaan4"
+    },
+    {
+      "text": "呢個",
+      "note": "\\fni1go3",
+      "rowText": "6.呢個\\fni1go3"
+    },
+    {
+      "text": "牛",
+      "note": "\\fngau4",
+      "rowText": "7.牛\\fngau4"
+    },
+    {
+      "text": "拿",
+      "note": "\\fnaa4",
+      "rowText": "8.拿\\fnaa4"
+    },
+    {
+      "text": "牙",
+      "note": "\\fngaa4",
+      "rowText": "9.牙\\fngaa4"
+    },
+    {
+      "text": "腦",
+      "note": "\\fnou5",
+      "rowText": "0.腦\\fnou5"
+    },
+    {
+      "text": "我們",
+      "note": "\\fngo5mun4",
+      "rowText": "1.我們\\fngo5mun4"
+    },
+    {
+      "text": "念",
+      "note": "\\fnim6",
+      "rowText": "2.念\\fnim6"
+    },
+    {
+      "text": "奶",
+      "note": "\\fnaai5",
+      "rowText": "3.奶\\fnaai5"
+    },
+    {
+      "text": "啱",
+      "note": "\\fngaam1",
+      "rowText": "4.啱\\fngaam1"
+    },
+    {
+      "text": "硬",
+      "note": "\\fngaang6",
+      "rowText": "5.硬\\fngaang6"
+    },
+    {
+      "text": "銀行",
+      "note": "\\fngan4hong4",
+      "rowText": "6.銀行\\fngan4hong4"
+    },
+    {
+      "text": "午",
+      "note": "\\fng5",
+      "rowText": "7.午\\fng5"
+    },
+    {
+      "text": "耐",
+      "note": "\\fnoi6",
+      "rowText": "8.耐\\fnoi6"
+    },
+    {
+      "text": "內地",
+      "note": "\\fnoi6dei6",
+      "rowText": "9.內地\\fnoi6dei6"
+    },
+    {
+      "text": "額",
+      "note": "\\fngaak6",
+      "rowText": "0.額\\fngaak6"
+    }
+  ],
+  "offInputValue": "",
+  "onInputValue": "",
+  "offSources": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
+  "onSources": [
+    "table",
+    "completion",
+    "table",
+    "table",
+    "table",
+    "table",
+    "table",
+    "table",
+    "table",
+    "table",
+    "table",
+    "table",
+    "table",
+    "table",
+    "table",
+    "table",
+    "table",
+    "table",
+    "table",
+    "table",
+    "table",
+    "table",
+    "table",
+    "table",
+    "table",
+    "table",
+    "table",
+    "table",
+    "table",
+    "table",
+    "table",
+    "table",
+    "table",
+    "table",
+    "table",
+    "table",
+    "table",
+    "table",
+    "table",
+    "table",
+    "table",
+    "table",
+    "table",
+    "table",
+    "table",
+    "table",
+    "table",
+    "table",
+    "table",
+    "table"
+  ],
+  "inspectorText": "Yune inspector\nAI off\nSegments\nabc 0-3\nFilters\ndictionary_lookup_filter\t5180 -> 5180\nsimplifier\t5180 -> 5180\nSpelling algebra\nstatic_table_translator\nnei\nPrediction\nSource\tText\tQuality\ntable\t你\t5181\ncompletion\t你\t5180\ntable\t呢\t5179\ntable\t尼\t5178\ntable\t妮\t5177\ntable\t彌\t5176\ntable\t妳\t5175\ntable\t您\t5174"
+}

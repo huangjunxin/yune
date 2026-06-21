@@ -32,12 +32,16 @@ const ACTIVE_SHOWCASE_CONTROLS = [
   /Combine same-text candidates/,
   /Prediction never first/,
   /Prediction threshold/,
+  /Dictionary exclude/,
 ] as const;
 
 const LIVE_SHOWCASE_CONTROLS = [
   /ASCII mode/,
   /Full shape/,
   /Simplification/,
+  /Traditionalization/,
+  /Extended charset/,
+  /Disabled/,
 ] as const;
 
 const DISPLAY_SHOWCASE_CONTROLS = [
@@ -359,8 +363,10 @@ async function typeRawInput(page: Page, text: string): Promise<{ value: string; 
 
 async function clearComposition(page: Page): Promise<void> {
   const inputField = page.locator("input[type='text'], textarea").first();
-  if (await page.locator(".candidate-panel").count() > 0) {
+  await inputField.focus();
+  for (let attempts = 0; attempts < 4 && await page.locator(".candidate-panel").count() > 0; attempts += 1) {
     await page.keyboard.press("Escape").catch(() => undefined);
+    await page.waitForTimeout(150);
   }
   await inputField.fill("");
   await expect(page.locator(".candidate-panel")).toHaveCount(0, { timeout: 5000 });
@@ -488,6 +494,56 @@ async function waitForPersistedSettings(
     );
   }, { timeout: 15000 }).toEqual(expected);
   return latestPersistedSettings(page);
+}
+
+async function selectSchema(page: Page, label: string | RegExp): Promise<void> {
+  await clearComposition(page);
+  const switcher = page.locator("[data-yune-schema-switcher]");
+  await expect(switcher).toBeVisible({ timeout: 5000 });
+  await switcher.getByLabel(label).check({ force: true });
+  const expectedSchema = expectedSchemaIdForLabel(label);
+  if (expectedSchema !== null) {
+    await expect.poll(async () =>
+      page.evaluate(() => document.documentElement.dataset.yuneActiveSchema ?? null),
+      { timeout: TIMEOUT_MS },
+    ).toBe(expectedSchema);
+  }
+  await waitForAppReady(page);
+  await expect(page.locator(".candidate-panel")).toHaveCount(0, { timeout: 5000 });
+  await page.waitForTimeout(500);
+}
+
+function expectedSchemaIdForLabel(label: string | RegExp): string | null {
+  const text = typeof label === "string" ? label : label.source;
+  if (/Cangjie/i.test(text)) {
+    return "cangjie5";
+  }
+  if (/Luna/i.test(text)) {
+    return "luna_pinyin";
+  }
+  if (/Jyutping/i.test(text)) {
+    return "jyut6ping3_mobile";
+  }
+  return null;
+}
+
+async function typeInputForStatus(page: Page, input: string): Promise<void> {
+  const inputField = page.locator("input[type='text'], textarea").first();
+  await clearComposition(page);
+  await inputField.focus();
+  await inputField.type(input, { delay: 120 });
+  await expect(page.locator("[data-yune-status]")).toBeVisible({ timeout: 10000 });
+}
+
+async function readYuneStatus(page: Page): Promise<Record<string, string | null>> {
+  const status = page.locator("[data-yune-status]");
+  await expect(status).toBeVisible({ timeout: 10000 });
+  return {
+    schema: await page.locator("[data-yune-status-schema]").textContent(),
+    disabled: await page.locator("[data-yune-status-disabled]").textContent(),
+    traditional: await page.locator("[data-yune-status-traditional]").textContent(),
+    ascii: await page.locator("[data-yune-status-ascii]").textContent(),
+  };
 }
 
 async function waitForDeployedSettings(
@@ -664,6 +720,7 @@ test.describe("TypeDuck-Web Browser E2E", () => {
   });
 
   test("M22 Bucket 2 inspector preserves classic candidate output @smoke", async ({ page }) => {
+    test.setTimeout(300000);
     await expect(page.locator('[data-yune-inspector="panel"]')).toHaveCount(0);
 
     await focusInputAndType(page, "nei");
@@ -708,6 +765,123 @@ test.describe("TypeDuck-Web Browser E2E", () => {
 
     await page.getByLabel("Yune inspector").uncheck();
     await expect(page.locator('[data-yune-inspector="panel"]')).toHaveCount(0, { timeout: 5000 });
+  });
+
+  test("M22 Bucket 1 controls are browser-visible and honest @smoke", async ({ page }) => {
+    test.setTimeout(300000);
+    await expect(page.getByLabel(/Dictionary exclude/).last()).toBeVisible();
+    await expect(page.getByLabel(/Traditionalization/).last()).toBeVisible();
+    await expect(page.getByLabel(/Extended charset/).last()).toBeVisible();
+    await expect(page.getByLabel(/Disabled/).last()).toBeVisible();
+    await expect(page.getByText(/ascii_punct/i)).toHaveCount(0);
+    await expect(page.getByLabel(/ascii_punct/i)).toHaveCount(0);
+
+    await selectSchema(page, /Luna Pinyin/);
+    const defaultLuna = await typeCompositionAndWaitForTopCandidate(page, "hao", "\u4fb4");
+
+    await clearComposition(page);
+    const excludeOn = await setPreferenceToggleAndWaitForSettings(page, /Dictionary exclude/, true, {
+      "translator/dictionary_exclude": "[\"\u4fb4\"]",
+    });
+    await typeInputForStatus(page, "hao");
+    const excludedLuna = await readCandidatePanelSnapshot(page, false);
+    expect(candidateTexts(excludedLuna)).not.toContain("\u4fb4");
+
+    await clearComposition(page);
+    await setPreferenceToggle(page, /Traditionalization/, true);
+    await typeInputForStatus(page, "hao");
+    const traditionalStatus = await readYuneStatus(page);
+    expect(traditionalStatus.traditional).toBe("traditional");
+
+    await clearComposition(page);
+    await setPreferenceToggle(page, /Disabled/, true);
+    await typeInputForStatus(page, "hao");
+    const disabledStatus = await readYuneStatus(page);
+    expect(disabledStatus.disabled).toBe("disabled");
+    await setPreferenceToggle(page, /Disabled/, false);
+    await setPreferenceToggle(page, /Traditionalization/, false);
+
+    await selectSchema(page, /Cangjie 5/);
+    await typeInputForStatus(page, "ambe");
+    const extendedOff = await readCandidatePanelSnapshot(page, false);
+    expect(candidateTexts(extendedOff)).not.toContain("\u{2330A}");
+
+    await clearComposition(page);
+    await setPreferenceToggle(page, /Extended charset/, true);
+    const extendedOn = await typeCompositionAndWaitForCandidate(page, "ambe", "\u{2330A}");
+    expect(candidateTexts(extendedOn)).toContain("\u{2330A}");
+
+    await saveJsonEvidence("m22-bucket1-controls-state.json", {
+      defaultLuna,
+      excludeOn,
+      excludedLuna,
+      traditionalStatus,
+      disabledStatus,
+      extendedOff,
+      extendedOn,
+      asciiPunctExposed: false,
+      visibleSurfaces: {
+        dictionaryExclude: "persisted translator/dictionary_exclude plus candidate removal",
+        traditionalization: "engine status strip",
+        disabled: "engine status strip",
+        extendedCharset: "candidate before/after on cangjie5 input ambe",
+      },
+    });
+    await takeEvidenceScreenshot(page, "m22-bucket1-controls");
+    expect(consoleFailures(consoleErrors)).toEqual([]);
+  });
+
+  test("M22 Bucket 3 schema switcher loads Jyutping, Cangjie, and Luna", async ({ page }) => {
+    test.setTimeout(300000);
+    await expect(page.locator("[data-yune-schema-switcher]")).toBeVisible();
+
+    await selectSchema(page, /Cangjie 5/);
+    const cangjie = await typeCompositionAndWaitForTopCandidate(page, "a", "\u65e5");
+    const cangjieStatus = await readYuneStatus(page);
+    expect(cangjieStatus.schema).toBe("cangjie5");
+
+    await selectSchema(page, /Luna Pinyin/);
+    const luna = await typeCompositionAndWaitForTopCandidate(page, "hao", "\u4fb4");
+    const lunaStatus = await readYuneStatus(page);
+    expect(lunaStatus.schema).toBe("luna_pinyin");
+
+    await selectSchema(page, /Jyutping/);
+    const jyutping = await typeCompositionAndWaitForTopCandidate(page, "nei", "\u4f60");
+    const jyutpingStatus = await readYuneStatus(page);
+    expect(jyutpingStatus.schema).toBe("jyut6ping3_mobile");
+
+    await saveJsonEvidence("m22-bucket3-schema-switch-state.json", {
+      cangjie,
+      cangjieStatus,
+      luna,
+      lunaStatus,
+      jyutping,
+      jyutpingStatus,
+    });
+    await takeEvidenceScreenshot(page, "m22-bucket3-schema-switch");
+    expect(consoleFailures(consoleErrors)).toEqual([]);
+  });
+
+  test("M22 Bucket 3 reverse lookup works for Cangjie and Luna", async ({ page }) => {
+    test.setTimeout(300000);
+    await selectSchema(page, /Cangjie 5/);
+    const cangjieReverse = await typeCompositionAndWaitForCandidate(page, "`nei;", "\u4f60");
+    expect(candidateTexts(cangjieReverse)).toContain("\u4f60");
+
+    await selectSchema(page, /Luna Pinyin/);
+    const lunaReverse = await typeCompositionAndWaitForCandidate(page, "`a;", "\u65e5");
+    expect(candidateTexts(lunaReverse)).toContain("\u65e5");
+
+    await saveJsonEvidence("m22-bucket3-reverse-lookup-state.json", {
+      cangjieReverse,
+      lunaReverse,
+      reverseLookup: {
+        cangjie5: "Jyutping dictionary lookup with cangjie5 target comments",
+        luna_pinyin: "Cangjie5 dictionary lookup with luna_pinyin target comments",
+      },
+    });
+    await takeEvidenceScreenshot(page, "m22-bucket3-reverse-lookup");
+    expect(consoleFailures(consoleErrors)).toEqual([]);
   });
 
   test("M13 AI commit safety", async ({ page }) => {
@@ -1034,7 +1208,7 @@ test.describe("TypeDuck-Web Browser E2E", () => {
     expect(mobileSchema).not.toContain("cangjie");
     expect(mobileSchema).not.toContain("show_full_code");
     const visibleSchemaControls = await page.locator(
-      "[data-schema], [data-schema-selector], .schema-selector, select[name='schema']",
+      "[data-yune-schema-switcher], [data-schema], [data-schema-selector], .schema-selector, select[name='schema']",
     ).count();
 
     await saveJsonEvidence("m20-display-controls-state.json", {
@@ -1047,9 +1221,9 @@ test.describe("TypeDuck-Web Browser E2E", () => {
         hindiVisible: hindiVisible.candidates[0],
       },
       reverseCodeAndCangjie: {
-        status: "N/A for the current browser surface",
+        status: "Covered by M22 schema switch and reverse-lookup tests",
         activeBrowserSchema: "jyut6ping3_mobile",
-        reason: "The real browser schema does not declare a cangjie namespace or show_full_code patch; reverse/Cangjie rendering remains engine-covered but not browser-reachable here.",
+        reason: "This M20 display test keeps the jyut6ping3_mobile display assertions; M22 tests switch to cangjie5 and luna_pinyin for schema/reverse-lookup browser evidence.",
         visibleSchemaControls,
       },
     });
@@ -1195,12 +1369,12 @@ test.describe("TypeDuck-Web Browser E2E", () => {
     const userdbFixture = await loadFixture("jyut6ping3-m14-userdb.json");
     const optionsFixture = await loadFixture("jyut6ping3-m14-options.json");
     const visibleSchemaControls = await page.locator(
-      "[data-schema], [data-schema-selector], .schema-selector, select[name='schema']",
+      "[data-yune-schema-switcher], [data-schema], [data-schema-selector], .schema-selector, select[name='schema']",
     ).count();
-    expect(visibleSchemaControls).toBe(0);
+    expect(visibleSchemaControls).toBeGreaterThan(0);
     await saveJsonEvidence("m16-documented-gaps-state.json", {
       deployOnlyVariants: {
-        browserSurface: "The checked-in TypeDuck-Web app initializes jyut6ping3_mobile only and exposes no schema/deploy-variant selector for common:/separate_candidates or common:/show_full_code.",
+        browserSurface: "M22 adds a real browser schema switcher for jyut6ping3_mobile, cangjie5, and luna_pinyin; deploy-variant controls for common:/separate_candidates and common:/show_full_code remain engine/doc scoped.",
         engineCoverage: "cargo test -p yune-core --test cantonese_parity covers combine_candidates and show_full_code against the M14 v1.1.2 goldens.",
         oracleSurface: optionsFixture["capture"],
       },
@@ -1210,7 +1384,7 @@ test.describe("TypeDuck-Web Browser E2E", () => {
       },
       schemaMenu: {
         oracleSurface: schemaMenuFixture["capture"],
-        browserSurface: "TypeDuck-Web exposes no schema-selector DOM control; M14 RimeGetSchemaList remains the oracle evidence.",
+        browserSurface: "M22 TypeDuck-Web exposes a schema switcher for the browser playground schemas; M14 RimeGetSchemaList remains the ABI oracle evidence.",
         visibleSchemaControls,
       },
       userdbPronunciation: {

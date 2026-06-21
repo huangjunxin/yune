@@ -1,0 +1,67 @@
+{
+  "cangjieReverse": {
+    "aiEnabled": false,
+    "inputValue": "",
+    "candidates": [
+      {
+        "index": 0,
+        "text": "你",
+        "note": "\\vonf",
+        "source": null,
+        "rowText": "1.你\\vonf"
+      },
+      {
+        "index": 1,
+        "text": "呢",
+        "note": "\\vrsp",
+        "source": null,
+        "rowText": "2.呢\\vrsp"
+      },
+      {
+        "index": 2,
+        "text": "尼",
+        "note": "\\vsp",
+        "source": null,
+        "rowText": "3.尼\\vsp"
+      },
+      {
+        "index": 3,
+        "text": "你哋",
+        "note": "nei5dei6",
+        "source": null,
+        "rowText": "4.你哋nei5dei6"
+      },
+      {
+        "index": 4,
+        "text": "你們",
+        "note": "nei5mun4",
+        "source": null,
+        "rowText": "5.你們nei5mun4"
+      }
+    ]
+  },
+  "lunaReverse": {
+    "aiEnabled": false,
+    "inputValue": "",
+    "candidates": [
+      {
+        "index": 0,
+        "text": "日",
+        "note": "\\vmi; ri",
+        "source": null,
+        "rowText": "1.日\\vmi; ri"
+      },
+      {
+        "index": 1,
+        "text": "曰",
+        "note": "\\vyue",
+        "source": null,
+        "rowText": "2.曰\\vyue"
+      }
+    ]
+  },
+  "reverseLookup": {
+    "cangjie5": "Jyutping dictionary lookup with cangjie5 target comments",
+    "luna_pinyin": "Cangjie5 dictionary lookup with luna_pinyin target comments"
+  }
+}

@@ -1,0 +1,134 @@
+{
+  "defaultLuna": {
+    "aiEnabled": false,
+    "inputValue": "",
+    "candidates": [
+      {
+        "index": 0,
+        "text": "侴",
+        "note": "\\vhao",
+        "source": null,
+        "rowText": "1.侴\\vhao"
+      },
+      {
+        "index": 1,
+        "text": "傐",
+        "note": "\\vhao",
+        "source": null,
+        "rowText": "2.傐\\vhao"
+      },
+      {
+        "index": 2,
+        "text": "儫",
+        "note": "\\vhao",
+        "source": null,
+        "rowText": "3.儫\\vhao"
+      },
+      {
+        "index": 3,
+        "text": "勂",
+        "note": "\\vhao",
+        "source": null,
+        "rowText": "4.勂\\vhao"
+      },
+      {
+        "index": 4,
+        "text": "号",
+        "note": "\\vhao",
+        "source": null,
+        "rowText": "5.号\\vhao"
+      }
+    ]
+  },
+  "excludeOn": {
+    "page_size": "6",
+    "translator/enable_completion": "true",
+    "translator/enable_correction": "false",
+    "translator/enable_sentence": "true",
+    "translator/enable_user_dict": "true",
+    "translator/encode_commit_history": "true",
+    "translator/combine_candidates": "true",
+    "translator/prediction_never_first": "true",
+    "translator/prediction_weight_threshold": "0",
+    "translator/dictionary_exclude": "[\"侴\"]",
+    "cangjie/dictionary": "cangjie5"
+  },
+  "excludedLuna": {
+    "aiEnabled": false,
+    "inputValue": "",
+    "candidates": [
+      {
+        "index": 0,
+        "text": "傐",
+        "note": "\\vhao",
+        "source": null,
+        "rowText": "1.傐\\vhao"
+      },
+      {
+        "index": 1,
+        "text": "儫",
+        "note": "\\vhao",
+        "source": null,
+        "rowText": "2.儫\\vhao"
+      },
+      {
+        "index": 2,
+        "text": "勂",
+        "note": "\\vhao",
+        "source": null,
+        "rowText": "3.勂\\vhao"
+      },
+      {
+        "index": 3,
+        "text": "号",
+        "note": "\\vhao",
+        "source": null,
+        "rowText": "4.号\\vhao"
+      },
+      {
+        "index": 4,
+        "text": "呺",
+        "note": "\\vhao",
+        "source": null,
+        "rowText": "5.呺\\vhao"
+      }
+    ]
+  },
+  "traditionalStatus": {
+    "schema": "luna_pinyin",
+    "disabled": "enabled",
+    "traditional": "traditional",
+    "ascii": "Chinese"
+  },
+  "disabledStatus": {
+    "schema": "luna_pinyin",
+    "disabled": "disabled",
+    "traditional": "traditional",
+    "ascii": "Chinese"
+  },
+  "extendedOff": {
+    "aiEnabled": false,
+    "inputValue": "",
+    "candidates": []
+  },
+  "extendedOn": {
+    "aiEnabled": false,
+    "inputValue": "",
+    "candidates": [
+      {
+        "index": 0,
+        "text": "𣌊",
+        "note": "\\女日一月水",
+        "source": null,
+        "rowText": "1.𣌊\\女日一月水"
+      }
+    ]
+  },
+  "asciiPunctExposed": false,
+  "visibleSurfaces": {
+    "dictionaryExclude": "persisted translator/dictionary_exclude plus candidate removal",
+    "traditionalization": "engine status strip",
+    "disabled": "engine status strip",
+    "extendedCharset": "candidate before/after on cangjie5 input ambe"
+  }
+}

@@ -1,8 +1,10 @@
-# M22 — TypeDuck-Web Playground Feature-Completeness + Multi-Schema + Engine Debug Inspector Implementation Plan
+﻿# M22 — TypeDuck-Web Playground Feature-Completeness + Multi-Schema + Engine Debug Inspector Implementation Plan
 
-> **Status:** Active · **Milestone:** M22 (Web playground build-out; M20 successor) · **Updated:** 2026-06-20 · **Type:** execution plan
+> **Status:** Finished · **Milestone:** M22 (Web playground build-out; M20 successor) · **Updated:** 2026-06-21 · **Type:** execution plan
 
 > **For agentic workers:** implement task-by-task; steps use checkbox (`- [ ]`) syntax. Capture browser before/after evidence *before* claiming any ACTIVE control (M20 honesty gate is binding).
+
+**Completion note (2026-06-21):** M22 is complete. Bucket 1 exposes only browser-honest controls (`dictionary_exclude`, `traditionalization`, `disabled`, `extended_charset`) and keeps `ascii_punct` absent without browser-visible before/after evidence. Bucket 2 remains the default-off read-only inspector. Bucket 3 loads `jyut6ping3_mobile`, `cangjie5`, and `luna_pinyin` with reverse lookup active for both new schemas. Evidence is under `third_party/typeduck-web/e2e/results/m22-remaining-buckets/`.
 
 **Goal:** Surface *more* of Yune's engine inside this repo's internal patched TypeDuck-Web playground (`third_party/typeduck-web/`) as **honest controls** plus a **read-only debug inspector**, and load **more schemas** with a schema-switcher and reverse lookup — extending M20's canonical browser workbench without reopening M13, without changing the default `RimeApi`/`RimeCandidate` ABI, and without representing any unsupported behavior as working.
 

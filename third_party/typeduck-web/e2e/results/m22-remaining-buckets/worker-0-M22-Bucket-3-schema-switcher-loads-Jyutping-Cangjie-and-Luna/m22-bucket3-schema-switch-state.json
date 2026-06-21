@@ -1,0 +1,143 @@
+{
+  "cangjie": {
+    "aiEnabled": false,
+    "inputValue": "",
+    "candidates": [
+      {
+        "index": 0,
+        "text": "日",
+        "note": null,
+        "source": null,
+        "rowText": "1.jat6日date; dayⓘ"
+      },
+      {
+        "index": 1,
+        "text": "曰",
+        "note": null,
+        "source": null,
+        "rowText": "2.joek6曰sayⓘ"
+      },
+      {
+        "index": 2,
+        "text": "昌",
+        "note": null,
+        "source": null,
+        "rowText": "3.coeng1昌proseperousⓘ"
+      },
+      {
+        "index": 3,
+        "text": "昍",
+        "note": null,
+        "source": null,
+        "rowText": "4.hyun1昍(rare 罕見)"
+      },
+      {
+        "index": 4,
+        "text": "晶",
+        "note": null,
+        "source": null,
+        "rowText": "5.zing1晶crystalⓘ"
+      }
+    ]
+  },
+  "cangjieStatus": {
+    "schema": "cangjie5",
+    "disabled": "enabled",
+    "traditional": "not traditional",
+    "ascii": "Chinese"
+  },
+  "luna": {
+    "aiEnabled": false,
+    "inputValue": "",
+    "candidates": [
+      {
+        "index": 0,
+        "text": "侴",
+        "note": "\\vhao",
+        "source": null,
+        "rowText": "1.侴\\vhao"
+      },
+      {
+        "index": 1,
+        "text": "傐",
+        "note": "\\vhao",
+        "source": null,
+        "rowText": "2.傐\\vhao"
+      },
+      {
+        "index": 2,
+        "text": "儫",
+        "note": "\\vhao",
+        "source": null,
+        "rowText": "3.儫\\vhao"
+      },
+      {
+        "index": 3,
+        "text": "勂",
+        "note": "\\vhao",
+        "source": null,
+        "rowText": "4.勂\\vhao"
+      },
+      {
+        "index": 4,
+        "text": "号",
+        "note": "\\vhao",
+        "source": null,
+        "rowText": "5.号\\vhao"
+      }
+    ]
+  },
+  "lunaStatus": {
+    "schema": "luna_pinyin",
+    "disabled": "enabled",
+    "traditional": "not traditional",
+    "ascii": "Chinese"
+  },
+  "jyutping": {
+    "aiEnabled": false,
+    "inputValue": "",
+    "candidates": [
+      {
+        "index": 0,
+        "text": "你",
+        "note": null,
+        "source": null,
+        "rowText": "1.nei5你you (singular)ⓘ"
+      },
+      {
+        "index": 1,
+        "text": "呢",
+        "note": null,
+        "source": null,
+        "rowText": "2.ne1呢(how about)ⓘ"
+      },
+      {
+        "index": 2,
+        "text": "尼",
+        "note": null,
+        "source": null,
+        "rowText": "3.nei4尼nunⓘ"
+      },
+      {
+        "index": 3,
+        "text": "妮",
+        "note": null,
+        "source": null,
+        "rowText": "4.nei4妮little girlⓘ"
+      },
+      {
+        "index": 4,
+        "text": "彌",
+        "note": null,
+        "source": null,
+        "rowText": "5.nei4彌full; fillⓘ"
+      }
+    ]
+  },
+  "jyutpingStatus": {
+    "schema": "jyut6ping3_mobile",
+    "disabled": "enabled",
+    "traditional": "not traditional",
+    "ascii": "Chinese"
+  }
+}

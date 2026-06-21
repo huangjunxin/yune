@@ -336,20 +336,22 @@ describe("initYuneRuntime browser filesystem ordering", () => {
       predictionNeverFirst: true,
       predictionThreshold: 0.05,
       isCangjie5: true,
+      dictionaryExclude: ["你"],
     })).resolves.toBe(true);
 
     expect(module.calls("yune_typeduck_customize")).toEqual([
-      [1, "luna_pinyin", "page_size", "6"],
-      [1, "luna_pinyin", "translator/enable_completion", "true"],
-      [1, "luna_pinyin", "translator/enable_correction", "false"],
-      [1, "luna_pinyin", "translator/enable_sentence", "true"],
-      [1, "luna_pinyin", "translator/enable_user_dict", "true"],
-      [1, "luna_pinyin", "translator/encode_commit_history", "true"],
-      [1, "luna_pinyin", "translator/combine_candidates", "true"],
-      [1, "luna_pinyin", "translator/prediction_never_first", "true"],
-      [1, "luna_pinyin", "translator/prediction_weight_threshold", "0.05"],
-      [1, "luna_pinyin", "cangjie/dictionary", "cangjie5"],
-      [1, "luna_pinyin", "cangjie/tips", "【倉頡五代】"],
+      [1, "luna_pinyin.schema", "page_size", "6"],
+      [1, "luna_pinyin.schema", "translator/enable_completion", "true"],
+      [1, "luna_pinyin.schema", "translator/enable_correction", "false"],
+      [1, "luna_pinyin.schema", "translator/enable_sentence", "true"],
+      [1, "luna_pinyin.schema", "translator/enable_user_dict", "true"],
+      [1, "luna_pinyin.schema", "translator/encode_commit_history", "true"],
+      [1, "luna_pinyin.schema", "translator/combine_candidates", "true"],
+      [1, "luna_pinyin.schema", "translator/prediction_never_first", "true"],
+      [1, "luna_pinyin.schema", "translator/prediction_weight_threshold", "0.05"],
+      [1, "luna_pinyin.schema", "translator/dictionary_exclude", "[\"你\"]"],
+      [1, "luna_pinyin.schema", "cangjie/dictionary", "cangjie5"],
+      [1, "luna_pinyin.schema", "cangjie/tips", "【倉頡五代】"],
     ]);
   });
 
@@ -361,10 +363,40 @@ describe("initYuneRuntime browser filesystem ordering", () => {
 
     await expect(setOption("ascii_mode", false)).resolves.toBeUndefined();
     await expect(setOption("soft_cursor", true)).resolves.toBeUndefined();
+    await expect(setOption("traditionalization", true)).resolves.toBeUndefined();
+    await expect(setOption("extended_charset", true)).resolves.toBeUndefined();
+    await expect(setOption("disabled", true)).resolves.toBeUndefined();
 
     expect(module.calls("yune_typeduck_set_option")).toEqual([
       [1, "ascii_mode", 0],
       [1, "soft_cursor", 1],
+      [1, "traditionalization", 1],
+      [1, "extended_charset", 1],
+      [1, "disabled", 1],
+    ]);
+  });
+
+  it("cleans up the active runtime before initializing another schema", async () => {
+    const fs = new FakeTypeDuckFilesystem();
+    const module = new FakeTypeDuckModule();
+
+    await initYuneRuntime(module, fs, initOptions, assets, "luna_pinyin");
+    await initYuneRuntime(
+      module,
+      fs,
+      { ...initOptions, schemaId: "cangjie5" },
+      {
+        defaultYaml: assets.defaultYaml,
+        schemaYaml: "schema:\n  schema_id: cangjie5\ntranslator:\n  dictionary: cangjie5\n",
+        dictionaryYaml: "---\nname: cangjie5\n...\na\t日\t1\n",
+      },
+      "cangjie5",
+    );
+
+    expect(module.calls("yune_typeduck_cleanup")).toEqual([[1]]);
+    expect(module.calls("yune_typeduck_init")).toEqual([
+      ["/usr/share/rime-data", "/rime", "luna_pinyin"],
+      ["/usr/share/rime-data", "/rime", "cangjie5"],
     ]);
   });
 });

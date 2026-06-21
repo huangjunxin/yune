@@ -322,12 +322,13 @@ browser gates and the upstream-first ABI constraints. Browser evidence is under
 - [x] **M22-PLAY-02**: The inspector is off by default, preserves classic
   candidate response identity when disabled, has committed browser evidence, and
   does not change the default `RimeApi`, `RimeCandidate`, or ABI layout files.
-- [ ] **M22-PLAY-03**: Remaining browser-safe controls
+- [x] **M22-PLAY-03**: Remaining browser-safe controls
   (`traditionalization`, `extended_charset`, `disabled`, `dictionary_exclude`,
   and any `ascii_punct` exposure after M18) are exposed only when they clear the
   M20 honesty gate with real browser before/after evidence; otherwise they are
-  documented as browser-surface N/A.
-- [ ] **M22-PLAY-04**: The playground loads `jyut6ping3_mobile`, `cangjie5`,
+  documented as browser-surface N/A. M22 exposes the first four controls with
+  status/candidate/persisted-config evidence and keeps `ascii_punct` absent.
+- [x] **M22-PLAY-04**: The playground loads `jyut6ping3_mobile`, `cangjie5`,
   and `luna_pinyin` through a real schema switcher with reverse lookup for the
   new schemas, using generated or provenance-stamped compiled artifacts with
   measured browser asset sizes.
@@ -457,8 +458,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | M19-ABI-01 | M19 | Complete - named TypeDuck-profile ABI accessor exposes list-append slots while default `rime_get_api()` remains upstream-shaped |
 | M22-PLAY-01 | M22 Bucket 2 | Complete - opt-in read-only inspector exposes engine debug data in the TypeDuck-Web playground |
 | M22-PLAY-02 | M22 Bucket 2 | Complete - inspector is default-off, response-identity tested, browser-evidenced, and ABI-layout neutral |
-| M22-PLAY-03 | M22 Bucket 1 | Active - remaining honest browser controls still need before/after evidence or documented N/A |
-| M22-PLAY-04 | M22 Bucket 3 | Active - multi-schema playground and reverse lookup can now build on M19 schema breadth output |
+| M22-PLAY-03 | M22 Bucket 1 | Complete - traditionalization, disabled, extended_charset, and dictionary_exclude have browser evidence; ascii_punct remains absent without browser-visible before/after evidence |
+| M22-PLAY-04 | M22 Bucket 3 | Complete - jyut6ping3_mobile, cangjie5, and luna_pinyin load through a real schema switcher; cangjie5 and luna_pinyin reverse lookup are active with measured browser asset sizes |
 
 **Coverage:**
 - v1 requirements: 25 total
@@ -471,10 +472,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 - Fork parity backlog (Cantonese engine-parity, vs upstream 1.17.0): 9 total, 9 complete; see [`fork-parity-ledger.md`](./fork-parity-ledger.md)
 - M20 web demo showcase controls requirements: 7 total, 7 complete
 - M19 schema breadth and TypeDuck-profile ABI requirements: 5 total, 5 complete
-- M22 web playground requirements: 4 total, 2 complete, 2 active
+- M22 web playground requirements: 4 total, 4 complete
 - Mapped to phases: 107
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-28*
-*Last updated: 2026-06-21 - M19 schema breadth and the named TypeDuck-profile ABI accessor are complete; M23 architecture hardening and M18 deployment/processor depth are complete; M22 Bucket 2 read-only inspector is complete with browser evidence while M22 honest controls and multi-schema buckets remain active; M21 TypeDuck-Web product comparison is complete as a hard-oracle closeout; M20 Web Demo Showcase Controls remain complete as a separate internal web/demo track; M10 TypeDuck-Windows remains parked as a TypeDuck compatibility profile pending fresh package/header smoke and real frontend E2E against the M19 profile accessor*
+*Last updated: 2026-06-21 - M19 schema breadth and the named TypeDuck-profile ABI accessor are complete; M23 architecture hardening and M18 deployment/processor depth are complete; all M22 TypeDuck-Web playground buckets are complete with browser evidence; M21 TypeDuck-Web product comparison is complete as a hard-oracle closeout; M20 Web Demo Showcase Controls remain complete as a separate internal web/demo track; M10 TypeDuck-Windows remains parked as a TypeDuck compatibility profile pending fresh package/header smoke and real frontend E2E against the M19 profile accessor*

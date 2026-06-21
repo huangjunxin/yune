@@ -302,6 +302,25 @@ If both automated runner AND manual browser are impossible:
 7. Run guided scenario buttons for `ngo`, `santai`, `mgoi`, `m`, tone letters, and AI trigger.
 8. For show-full-code, Reverse code display, and Cangjie version, use a browser-reachable Cangjie side lookup only if the active browser schema declares a `cangjie` namespace. If the active schema remains `jyut6ping3_mobile`, record them as N/A for this mobile-only browser surface and cite the schema file.
 
+### Step 15: M22 Playground Controls And Multi-Schema
+
+The automated M22 browser slice is the canonical evidence path:
+
+```bash
+TYPEDUCK_APP_URL=http://127.0.0.1:5174/web/ \
+TYPEDUCK_EVIDENCE_DIR=../e2e/results/m22-remaining-buckets \
+npm --prefix third_party/typeduck-web/e2e run test:e2e -- --grep "M22 Bucket" --workers=1
+```
+
+It must prove:
+
+- Bucket 1 active controls: `dictionary_exclude`, `traditionalization`, `disabled`, and `extended_charset`.
+- `ascii_punct` is not exposed as a working browser toggle.
+- Bucket 2 inspector identity still preserves classic candidate output.
+- Bucket 3 schema switcher loads `jyut6ping3_mobile`, `cangjie5`, and `luna_pinyin`.
+- Reverse lookup works for both `cangjie5` and `luna_pinyin`.
+- Evidence files are written under `e2e/results/m22-remaining-buckets/`, including the measured asset manifest.
+
 ---
 
 **Phase**: 10-typeduck-web-app-integration-and-e2e
