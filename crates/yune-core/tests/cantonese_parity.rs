@@ -23,6 +23,8 @@ const M21_CLOSEOUT_ORACLE: &str =
     include_str!("fixtures/typeduck-v1.1.2/jyut6ping3-m21-closeout.json");
 const M24_DOGFOODING_ORACLE: &str =
     include_str!("fixtures/typeduck-v1.1.2/jyut6ping3-m24-dogfooding.json");
+const M28_PARTIAL_SELECTION_ORACLE: &str =
+    include_str!("fixtures/typeduck-v1.1.2/jyut6ping3-m28-partial-selection.json");
 const FORK_PARITY_01_REAL_DICTIONARY_FUZZY_ORACLE: &str =
     include_str!("fixtures/typeduck-v1.1.2/jyut6ping3-fork-parity-01-real-dictionary-fuzzy.json");
 const FORK_PARITY_02_PREFER_USER_PHRASE_ORACLE: &str =
@@ -81,6 +83,11 @@ fn m21_closeout_fixture() -> Value {
 fn m24_dogfooding_fixture() -> Value {
     serde_json::from_str(M24_DOGFOODING_ORACLE)
         .expect("TypeDuck v1.1.2 M24 dogfooding fixture should be valid JSON")
+}
+
+fn m28_partial_selection_fixture() -> Value {
+    serde_json::from_str(M28_PARTIAL_SELECTION_ORACLE)
+        .expect("TypeDuck v1.1.2 M28 partial-selection fixture should be valid JSON")
 }
 
 fn fork_parity_01_real_dictionary_fuzzy_fixture() -> Value {
@@ -1179,6 +1186,23 @@ fn selected_candidate_comment(case: &Value, index: usize) -> &str {
         .expect("candidate comment should be a string")
 }
 
+fn m28_oracle_continuation_components(fixture: &Value) -> Vec<String> {
+    let comment = fixture["captured_next_candidates"][0]["comment"]
+        .as_str()
+        .expect("M28 fixture should capture continuation composition comment");
+    comment
+        .split('\r')
+        .filter_map(|record| {
+            record
+                .strip_prefix('1')
+                .or_else(|| record.strip_prefix('0'))
+        })
+        .filter_map(|record| record.split(',').nth(1))
+        .skip(1)
+        .map(str::to_owned)
+        .collect()
+}
+
 fn dictionary_yaml_from_fixture_rows(name: &str, rows: &Value) -> String {
     let rows = rows
         .as_array()
@@ -1306,6 +1330,121 @@ fn m21_nri_prefix_fallback_matches_typeduck_v112_real_dictionary_goldens() {
         correction_engine.context().candidates[0].text,
         selected_candidate_text(correction_enabled, 0)
     );
+}
+
+#[test]
+fn m28_partial_selection_commits_consumed_span_and_recomposes_remaining_input() {
+    let fixture = m28_partial_selection_fixture();
+    let input = fixture["input"]
+        .as_str()
+        .expect("M28 fixture should capture input");
+    let selection = &fixture["selection_request"];
+    let selection_index = selection["actual_candidate_index"]
+        .as_u64()
+        .expect("M28 fixture should capture selected candidate index")
+        as usize;
+    let selected_text = selection["requested_candidate_text"]
+        .as_str()
+        .expect("M28 fixture should capture selected candidate text");
+    let remaining_input = fixture["captured_active_remaining_input_by_consumed_span"]
+        .as_str()
+        .expect("M28 fixture should capture active remaining input");
+    let final_commit = fixture["captured_final_flow"]["final_commit_text"]
+        .as_str()
+        .expect("M28 fixture should capture final oracle commit");
+    let continuation_components = m28_oracle_continuation_components(&fixture);
+
+    let mut engine = typeduck_jyut6ping3_mobile_engine(false);
+    engine.set_input(input);
+    assert_eq!(
+        engine.context().candidates[selection_index].text,
+        selected_text
+    );
+
+    assert_eq!(
+        engine.select_candidate(selection_index).as_deref(),
+        Some(selected_text)
+    );
+    assert_eq!(engine.context().composition.input, remaining_input);
+    assert_eq!(engine.context().composition.preedit, remaining_input);
+    assert!(
+        continuation_components
+            .iter()
+            .all(|component| !component.is_empty()),
+        "oracle continuation components should be non-empty"
+    );
+    assert!(!engine
+        .context()
+        .last_commit
+        .as_deref()
+        .is_some_and(|commit| commit.contains(remaining_input)));
+
+    let event = engine
+        .take_pending_userdb_learning()
+        .expect("partial selection should stage consumed-span userdb learning");
+    assert_eq!(event.input, "cak");
+    assert_eq!(event.selected_text, selected_text);
+    assert_eq!(event.segment_start, 0);
+    assert_eq!(event.segment_end, "cak".len());
+    assert_eq!(event.code, "cak1");
+
+    let mut combined_text = selected_text.to_owned();
+    for component in continuation_components {
+        let component_index = engine
+            .context()
+            .candidates
+            .iter()
+            .position(|candidate| candidate.text == component)
+            .unwrap_or_else(|| {
+                panic!("oracle continuation component {component} should remain selectable")
+            });
+        assert_eq!(
+            engine.select_candidate(component_index).as_deref(),
+            Some(component.as_str())
+        );
+        combined_text.push_str(&component);
+    }
+    assert_eq!(combined_text, final_commit);
+    assert!(engine.context().composition.input.is_empty());
+}
+
+#[test]
+fn m28_whole_sentence_selection_keeps_full_primary_code_learning() {
+    let fixture = m28_partial_selection_fixture();
+    let input = fixture["input"]
+        .as_str()
+        .expect("M28 fixture should capture input");
+
+    let mut engine = typeduck_jyut6ping3_mobile_engine(false);
+    engine.set_input(input);
+
+    let selected_sentence = engine.context().candidates[0].clone();
+    let expected_code = selected_sentence
+        .comment
+        .split('\r')
+        .filter_map(|record| {
+            let fields = record.strip_prefix("1,")?.split(',').collect::<Vec<_>>();
+            let is_composition = fields.get(7).is_some_and(|field| *field == "composition");
+            (!is_composition).then(|| fields.get(1).map(|code| (*code).to_owned()))?
+        })
+        .collect::<Vec<_>>()
+        .join(" ");
+    assert!(
+        !expected_code.is_empty(),
+        "sentence candidate should carry primary component codes"
+    );
+    assert_eq!(
+        engine.select_candidate(0).as_deref(),
+        Some(selected_sentence.text.as_str())
+    );
+    let event = engine
+        .take_pending_userdb_learning()
+        .expect("whole-sentence selection should stage userdb learning");
+    assert_eq!(event.input, input);
+    assert_eq!(event.selected_text, selected_sentence.text);
+    assert_eq!(event.segment_start, 0);
+    assert_eq!(event.segment_end, input.len());
+    assert_eq!(event.code, expected_code);
 }
 
 #[test]

@@ -36,40 +36,25 @@ impl SpellingAlgebra {
         &self,
         entries: Vec<(String, Candidate)>,
     ) -> (Vec<ExpandedSpellingEntry>, HashSet<String>, bool) {
-        let mut entries = entries
-            .into_iter()
-            .map(|(code, candidate)| SpellingAlgebraEntry {
-                code,
-                candidate,
-                normal: true,
-                abbreviation: false,
-            })
-            .collect::<Vec<_>>();
-        for formula in &self.formulas {
-            let mut next = Vec::new();
-            for entry in entries {
-                let mut transformed = entry.code.clone();
-                let applied = formula.apply(&mut transformed);
-                if applied {
-                    if formula.keep_original() {
-                        next.push(entry.clone());
-                    }
-                    if formula.add_transformed() && !transformed.is_empty() {
-                        let mut candidate = entry.candidate;
-                        candidate.quality += formula.quality_penalty();
-                        next.push(SpellingAlgebraEntry {
-                            code: transformed,
-                            candidate,
-                            normal: entry.normal && formula.transformed_is_normal(),
-                            abbreviation: entry.abbreviation || formula.is_abbreviation(),
-                        });
-                    }
-                } else {
-                    next.push(entry);
-                }
+        let mut variant_cache = HashMap::<String, Vec<ExpandedSpellingCode>>::new();
+        let mut expanded_entries = Vec::new();
+        for (code, candidate) in entries {
+            let variants = variant_cache
+                .entry(code.clone())
+                .or_insert_with(|| self.expand_code_variants(&code));
+            expanded_entries.reserve(variants.len());
+            for variant in variants {
+                let mut candidate = candidate.clone();
+                candidate.quality += variant.quality_penalty;
+                expanded_entries.push(SpellingAlgebraEntry {
+                    code: variant.code.clone(),
+                    candidate,
+                    normal: variant.normal,
+                    abbreviation: variant.abbreviation,
+                });
             }
-            entries = dedupe_spelling_algebra_entries(next);
         }
+        let mut entries = dedupe_spelling_algebra_entries(expanded_entries);
         if self
             .formulas
             .iter()
@@ -96,6 +81,47 @@ impl SpellingAlgebra {
             .collect();
         (entries, normal_codes, has_single_letter_abbreviations)
     }
+
+    fn expand_code_variants(&self, code: &str) -> Vec<ExpandedSpellingCode> {
+        let mut entries = vec![ExpandedSpellingCode {
+            code: code.to_owned(),
+            quality_penalty: 0.0,
+            normal: true,
+            abbreviation: false,
+        }];
+        for formula in &self.formulas {
+            let mut next = Vec::new();
+            for entry in entries {
+                let mut transformed = entry.code.clone();
+                let applied = formula.apply(&mut transformed);
+                if applied {
+                    if formula.keep_original() {
+                        next.push(entry.clone());
+                    }
+                    if formula.add_transformed() && !transformed.is_empty() {
+                        next.push(ExpandedSpellingCode {
+                            code: transformed,
+                            quality_penalty: entry.quality_penalty + formula.quality_penalty(),
+                            normal: entry.normal && formula.transformed_is_normal(),
+                            abbreviation: entry.abbreviation || formula.is_abbreviation(),
+                        });
+                    }
+                } else {
+                    next.push(entry);
+                }
+            }
+            entries = dedupe_spelling_algebra_codes(next);
+        }
+        entries
+    }
+}
+
+#[derive(Clone)]
+struct ExpandedSpellingCode {
+    code: String,
+    quality_penalty: f32,
+    normal: bool,
+    abbreviation: bool,
 }
 
 #[derive(Clone)]
@@ -555,6 +581,25 @@ fn dedupe_spelling_algebra_entries(
             }
         } else {
             indexes.insert(key, deduped.len());
+            deduped.push(entry);
+        }
+    }
+    deduped
+}
+
+fn dedupe_spelling_algebra_codes(entries: Vec<ExpandedSpellingCode>) -> Vec<ExpandedSpellingCode> {
+    let mut deduped: Vec<ExpandedSpellingCode> = Vec::new();
+    let mut indexes = HashMap::<String, usize>::new();
+    for entry in entries {
+        if let Some(index) = indexes.get(&entry.code).copied() {
+            let existing_entry = &mut deduped[index];
+            existing_entry.normal |= entry.normal;
+            existing_entry.abbreviation |= entry.abbreviation;
+            if entry.quality_penalty > existing_entry.quality_penalty {
+                existing_entry.quality_penalty = entry.quality_penalty;
+            }
+        } else {
+            indexes.insert(entry.code.clone(), deduped.len());
             deduped.push(entry);
         }
     }

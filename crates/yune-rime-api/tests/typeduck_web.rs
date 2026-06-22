@@ -19,6 +19,9 @@ use yune_rime_api::{
 const SCHEMA_ID: &str = "typeduck_luna";
 const TYPEDUCK_V112_COMMENTS: &str =
     include_str!("../../yune-core/tests/fixtures/typeduck-v1.1.2/jyut6ping3-mobile-comments.json");
+const TYPEDUCK_V112_M28_PARTIAL_SELECTION: &str = include_str!(
+    "../../yune-core/tests/fixtures/typeduck-v1.1.2/jyut6ping3-m28-partial-selection.json"
+);
 
 fn test_guard() -> MutexGuard<'static, ()> {
     static TEST_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
@@ -59,6 +62,23 @@ fn state_label_slice(label: RimeStringSlice) -> String {
     std::str::from_utf8(bytes)
         .expect("state label slice should be valid UTF-8")
         .to_owned()
+}
+
+fn m28_oracle_continuation_components(fixture: &Value) -> Vec<String> {
+    let comment = fixture["captured_next_candidates"][0]["comment"]
+        .as_str()
+        .expect("M28 fixture should capture continuation composition comment");
+    comment
+        .split('\r')
+        .filter_map(|record| {
+            record
+                .strip_prefix('1')
+                .or_else(|| record.strip_prefix('0'))
+        })
+        .filter_map(|record| record.split(',').nth(1))
+        .skip(1)
+        .map(str::to_owned)
+        .collect()
 }
 
 #[test]
@@ -1182,7 +1202,7 @@ fn typeduck_adapter_deploys_browser_real_assets_after_init() {
 }
 
 #[test]
-fn typeduck_adapter_real_assets_prefix_fallback_keeps_raw_tail() {
+fn typeduck_adapter_real_assets_prefix_fallback_commits_consumed_span() {
     let _guard = test_guard();
     let runtime =
         TypeDuckRuntime::create_with_schema("browser-real-prefix-fallback", "jyut6ping3_mobile");
@@ -1223,8 +1243,103 @@ fn typeduck_adapter_real_assets_prefix_fallback_keeps_raw_tail() {
     let committed = response_json(unsafe { yune_typeduck_select_candidate(state, 0) });
     assert_eq!(
         committed["commits"],
+        Value::Array(vec![Value::String("\u{6211}".to_owned())])
+    );
+    assert_eq!(
+        committed["context"]["input"],
+        Value::String("ri".to_owned())
+    );
+    assert_eq!(committed["status"]["is_composing"], Value::Bool(true));
+    assert_ne!(
+        committed["commits"],
         Value::Array(vec![Value::String("\u{6211}ri".to_owned())])
     );
+
+    unsafe { yune_typeduck_cleanup(state) };
+    runtime.remove();
+}
+
+#[test]
+fn m28_partial_selection_real_assets_commits_only_consumed_span_and_recomposes() {
+    let _guard = test_guard();
+    let fixture: Value = serde_json::from_str(TYPEDUCK_V112_M28_PARTIAL_SELECTION)
+        .expect("TypeDuck v1.1.2 M28 fixture should parse");
+    let input = fixture["input"]
+        .as_str()
+        .expect("M28 fixture should capture input");
+    let selected_text = fixture["selection_request"]["requested_candidate_text"]
+        .as_str()
+        .expect("M28 fixture should capture selected text");
+    let selection_index = fixture["selection_request"]["actual_candidate_index"]
+        .as_u64()
+        .expect("M28 fixture should capture selected index") as usize;
+    let remaining_input = fixture["captured_active_remaining_input_by_consumed_span"]
+        .as_str()
+        .expect("M28 fixture should capture active remaining input");
+    let final_commit = fixture["captured_final_flow"]["final_commit_text"]
+        .as_str()
+        .expect("M28 fixture should capture final commit");
+    let continuation_components = m28_oracle_continuation_components(&fixture);
+
+    let runtime =
+        TypeDuckRuntime::create_with_schema("browser-real-m28-partial", "jyut6ping3_mobile");
+    runtime.write_browser_real_assets();
+
+    let state = unsafe {
+        yune_typeduck_init(
+            runtime.shared_c.as_ptr(),
+            runtime.user_c.as_ptr(),
+            runtime.schema_id_c.as_ptr(),
+        )
+    };
+    assert!(!state.is_null());
+
+    let composing = process_input(state, input);
+    assert_eq!(
+        composing["context"]["candidates"][selection_index]["text"],
+        Value::String(selected_text.to_owned())
+    );
+
+    let selected = response_json(unsafe { yune_typeduck_select_candidate(state, selection_index) });
+    assert_eq!(
+        selected["commits"],
+        Value::Array(vec![Value::String(selected_text.to_owned())])
+    );
+    assert_ne!(
+        selected["commits"],
+        Value::Array(vec![Value::String(format!(
+            "{selected_text}{remaining_input}"
+        ))])
+    );
+    assert_eq!(
+        selected["context"]["input"],
+        Value::String(remaining_input.to_owned())
+    );
+    assert_eq!(selected["status"]["is_composing"], Value::Bool(true));
+
+    let mut current = selected;
+    let mut combined = current["commits"][0]
+        .as_str()
+        .expect("first commit should be text")
+        .to_owned();
+    for component in continuation_components {
+        let component_index = current["context"]["candidates"]
+            .as_array()
+            .expect("remaining candidates should be an array")
+            .iter()
+            .position(|candidate| candidate["text"] == Value::String(component.clone()))
+            .unwrap_or_else(|| {
+                panic!("oracle continuation component {component} should remain selectable")
+            });
+        current = response_json(unsafe { yune_typeduck_select_candidate(state, component_index) });
+        assert_eq!(
+            current["commits"],
+            Value::Array(vec![Value::String(component.clone())])
+        );
+        combined.push_str(&component);
+    }
+    assert_eq!(combined, final_commit);
+    assert_eq!(current["context"]["input"], Value::String(String::new()));
 
     unsafe { yune_typeduck_cleanup(state) };
     runtime.remove();

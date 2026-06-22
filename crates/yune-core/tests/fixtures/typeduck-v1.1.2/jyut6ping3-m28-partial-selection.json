@@ -1,0 +1,368 @@
+{
+    "fixture":  "jyut6ping3-m28-partial-selection",
+    "oracle":  {
+                   "engine":  "TypeDuck-HK/librime",
+                   "engine_tag":  "v1.1.2",
+                   "engine_commit":  "74cb52b78fb2411137a7643f6c8bc6517acfde69",
+                   "canonical_repository":  "https://github.com/TypeDuck-HK/librime",
+                   "schema":  "jyut6ping3_mobile",
+                   "schema_commit":  "1bed1ae6a0ab48055f073774d7dfd152a171c548",
+                   "plugin":  "TypeDuck-HK/rime-dictionary-lookup-filter",
+                   "plugin_commit":  "3e4605c4fae99f068df2edb85aaeab5a97752795",
+                   "captured_on":  "2026-06-22"
+               },
+    "capture_rule":  "capture-not-confirm: TypeDuck v1.1.2 values are authoritative; the user-provided text is a feel target only.",
+    "capture_command":  "temporary direct RimeSelectCandidate harness against target/typeduck-oracle/v1.1.2 with modules default,dictionary_lookup",
+    "input":  "caksijathaacoenggeoizi",
+    "user_feel_target":  "測試一下長句子",
+    "selection_request":  {
+                              "requested_candidate_text":  "測",
+                              "actual_candidate_index":  1,
+                              "candidate_row_before_selection":  {
+                                                                     "index":  1,
+                                                                     "text":  "測",
+                                                                     "comment":  "\f\r1,測,cak1,2,0,,v,,,,,,測試,test,,,,Pengukuran\r0,測,caak1,1,0,,v,,,,,,測試,test,,,,Pengukuran",
+                                                                     "quality":  0.0023285505630001291
+                                                                 }
+                          },
+    "captured_before_selection":  {
+                                      "rime_get_input":  "caksijathaacoenggeoizi",
+                                      "preedit":  "cak si jat haa coeng geoi zi",
+                                      "commit_text_preview":  "測是日下場句子",
+                                      "highlighted_candidate_index":  0,
+                                      "page_size":  50
+                                  },
+    "captured_commit":  null,
+    "captured_remaining_input":  "caksijathaacoenggeoizi",
+    "captured_remaining_preedit":  "測si jat haa coeng geoi zi",
+    "captured_active_remaining_input_by_consumed_span":  "sijathaacoenggeoizi",
+    "captured_next_candidates":  [
+                                     {
+                                         "index":  0,
+                                         "text":  "是日下場句子",
+                                         "comment":  "\f\r1,是日下場句子,si6jat6haa6coeng4geoi3zi2,1,0,,,,composition,,,,,,,,,\r1,是日,si6jat6,1,0,,n,,,,,,,the day,,,,hari\r1,下場,haa6coeng4,1,0,,n,,,,,,,ending,نتیجا,अन्त्य,परिणाम,Akhir\r1,句子,geoi3zi2,1,0,,n,,,,,,,sentence,جملہ,वाक्य,वाक्य,kalimat",
+                                         "quality":  0
+                                     },
+                                     {
+                                         "index":  1,
+                                         "text":  "是日",
+                                         "comment":  "\f\r1,是日,si6jat6,1,0,,n,,,,,,,the day,,,,hari",
+                                         "quality":  0.00013996000775195512
+                                     },
+                                     {
+                                         "index":  2,
+                                         "text":  "時日",
+                                         "comment":  "\f\r1,時日,si4jat6,1,0,,n,,,,,,,time,وقت,समय,समय,waktu",
+                                         "quality":  3.5909994346542189E-05
+                                     },
+                                     {
+                                         "index":  3,
+                                         "text":  "時",
+                                         "comment":  "\f\r1,時,si4,1,0,,n,,,,,,,time; hour,بجے,समय,बजे,jam",
+                                         "quality":  0.04904765540471754
+                                     },
+                                     {
+                                         "index":  4,
+                                         "text":  "是",
+                                         "comment":  "\f\r1,是,si6,1,0,,v,,,,,,,yes; this,جی ہاں,हो,हाँ,Iya",
+                                         "quality":  0.033028612050570116
+                                     },
+                                     {
+                                         "index":  5,
+                                         "text":  "事",
+                                         "comment":  "\f\r1,事,si6,1,0,,n,,,,,,,thing,معاملہ,कुरा,मामला,hal",
+                                         "quality":  0.026699701698446397
+                                     },
+                                     {
+                                         "index":  6,
+                                         "text":  "市",
+                                         "comment":  "\f\r1,市,si5,1,0,,n,,,,,,,city,شہر,शहर,शहर,kota",
+                                         "quality":  0.01583592512191271
+                                     },
+                                     {
+                                         "index":  7,
+                                         "text":  "士",
+                                         "comment":  "\f\r1,士,si6,1,0,,n,,,,,,,scholar; soldier,,,,",
+                                         "quality":  0.011846158286750714
+                                     },
+                                     {
+                                         "index":  8,
+                                         "text":  "示",
+                                         "comment":  "\f\r1,示,si6,1,0,,morph,,,,,,展示,show,,,,",
+                                         "quality":  0.010793726231484802
+                                     },
+                                     {
+                                         "index":  9,
+                                         "text":  "司",
+                                         "comment":  "\f\r1,司,si1,1,0,,n,,,,,,司機,driver,,,,",
+                                         "quality":  0.010516304801414331
+                                     },
+                                     {
+                                         "index":  10,
+                                         "text":  "師",
+                                         "comment":  "\f\r1,師,si1,1,0,,n,,,,,,,teacher,,,,guru",
+                                         "quality":  0.0090270662056217248
+                                     },
+                                     {
+                                         "index":  11,
+                                         "text":  "視",
+                                         "comment":  "\f\r1,視,si6,1,0,,v n,,,,,,,sight,نظر,दृष्य,देखना,pandangan",
+                                         "quality":  0.0069507867474621751
+                                     },
+                                     {
+                                         "index":  12,
+                                         "text":  "斯",
+                                         "comment":  "\f\r1,斯,si1,1,0,,oth,,,,,,,this,,,,ini",
+                                         "quality":  0.0068895495826001045
+                                     },
+                                     {
+                                         "index":  13,
+                                         "text":  "思",
+                                         "comment":  "\f\r1,思,si1,1,0,,morph,,,,,,思想，思考,think,,,,",
+                                         "quality":  0.00436554952760451
+                                     },
+                                     {
+                                         "index":  14,
+                                         "text":  "絲",
+                                         "comment":  "\f\r1,絲,si1,1,0,,n mw,,,,,,,silk; thread,سلک,रेसम,रेशम,sutra",
+                                         "quality":  0.0038310515876701073
+                                     },
+                                     {
+                                         "index":  15,
+                                         "text":  "私",
+                                         "comment":  "\f\r1,私,si1,1,0,,morph,,,,,,私家，私人,private,,,,",
+                                         "quality":  0.0034670693095159486
+                                     },
+                                     {
+                                         "index":  16,
+                                         "text":  "試",
+                                         "comment":  "\f\r1,試,si5,2,0,,n,,,,,,考試,examination,امتحان,परीक्षा,परीक्षा,ujian\r0,試,si3,1,0,,v,,,,,,試驗,try,کوشش کرنا,प्रयास गर्नु,कोशिश करना,coba",
+                                         "quality":  0.0033806912609884434
+                                     },
+                                     {
+                                         "index":  17,
+                                         "text":  "試",
+                                         "comment":  "\f\r1,試,si3,1,0,,v,,,,,,試驗,try,کوشش کرنا,प्रयास गर्नु,कोशिश करना,coba\r0,試,si5,2,0,,n,,,,,,考試,examination,امتحان,परीक्षा,परीक्षा,ujian",
+                                         "quality":  0.0033806912609884434
+                                     },
+                                     {
+                                         "index":  18,
+                                         "text":  "施",
+                                         "comment":  "\f\r1,施,si1,1,0,,n v,,surname,,,,,grant; surname[Sze],,,,menerapkan",
+                                         "quality":  0.00306515979798388
+                                     },
+                                     {
+                                         "index":  19,
+                                         "text":  "史",
+                                         "comment":  "\f\r1,史,si2,1,0,,n,,surname,,,,,history; surname [Sze],,,,",
+                                         "quality":  0.00304262941248086
+                                     },
+                                     {
+                                         "index":  20,
+                                         "text":  "使",
+                                         "comment":  "\f\r1,使,si2,1,0,,v,wri,,,,令,,make,بنائیں,बनाउनु,हेरफेर करना,Membuat\r0,使,sai2,2,0,,v,wri,,,,令,,make,بنائیں,बनाउनु,लाभ उठाना,menyuruh\r0,使,si3,2,0,,morph,,,,,,,ambassador,ایلچی,प्रतिनिधी,दूत,utusan",
+                                         "quality":  0.0021577901374196856
+                                     },
+                                     {
+                                         "index":  21,
+                                         "text":  "使",
+                                         "comment":  "\f\r1,使,si3,2,0,,morph,,,,,,,ambassador,ایلچی,प्रतिनिधी,दूत,utusan\r0,使,si2,1,0,,v,wri,,,,令,,make,بنائیں,बनाउनु,हेरफेर करना,Membuat\r0,使,sai2,2,0,,v,wri,,,,令,,make,بنائیں,बनाउनु,लाभ उठाना,menyuruh",
+                                         "quality":  0.0021577901374196856
+                                     },
+                                     {
+                                         "index":  22,
+                                         "text":  "屍",
+                                         "comment":  "\f\r1,屍,si1,1,0,,n,,,,,,,corpse,,,,mayat",
+                                         "quality":  0.0014840404442993521
+                                     },
+                                     {
+                                         "index":  23,
+                                         "text":  "屎",
+                                         "comment":  "\f\r1,屎,si2,1,0,,n,ver,,,大便，糞,,,faeces,پاخانہ,दिसा,मल,kotoran",
+                                         "quality":  0.0013736902767196378
+                                     },
+                                     {
+                                         "index":  24,
+                                         "text":  "詩",
+                                         "comment":  "\f\r1,詩,si1,1,0,,n,,,,,,,poem; poetry,شاعری,कविता,कविता,puisi",
+                                         "quality":  0.00075619032819472759
+                                     },
+                                     {
+                                         "index":  25,
+                                         "text":  "獅",
+                                         "comment":  "\f\r1,獅,si1,1,0,,n,,,,,,,lion,,,,",
+                                         "quality":  0.00055010973995168056
+                                     },
+                                     {
+                                         "index":  26,
+                                         "text":  "氏",
+                                         "comment":  "\f\r1,氏,si6,1,0,,n,,,,,,,last name,,,,",
+                                         "quality":  0.00046202995095230792
+                                     },
+                                     {
+                                         "index":  27,
+                                         "text":  "匙",
+                                         "comment":  "\f\r1,匙,si4,1,0,,n,,,,,,,key,,,,",
+                                         "quality":  0.00044942001859381167
+                                     },
+                                     {
+                                         "index":  28,
+                                         "text":  "侍",
+                                         "comment":  "\f\r1,侍,si6,1,0,,v n,,,,,,,serve,,,,",
+                                         "quality":  0.0002665299116113122
+                                     },
+                                     {
+                                         "index":  29,
+                                         "text":  "撕",
+                                         "comment":  "\f\r1,撕,si1,1,0,,v,,,,,,,tear off,چیر دینا,च्यात्नु,फाड़ना,merobek",
+                                         "quality":  0.00023158993530509236
+                                     },
+                                     {
+                                         "index":  30,
+                                         "text":  "仕",
+                                         "comment":  "\f\r1,仕,si6,1,0,,morph,,,,,,仕途,official,,,,",
+                                         "quality":  0.00017139004830093982
+                                     },
+                                     {
+                                         "index":  31,
+                                         "text":  "豉",
+                                         "comment":  "\f\r1,豉,si6,1,0,,morph,,,,,,豉油，豉椒,fermented bean,,,,kacang fermentasi",
+                                         "quality":  0.00011907002760226582
+                                     },
+                                     {
+                                         "index":  32,
+                                         "text":  "伺",
+                                         "comment":  "\f\r1,伺,si6,1,0,,morph,,,,,,伺機,wait,,,,",
+                                         "quality":  0.0001079899720193783
+                                     },
+                                     {
+                                         "index":  33,
+                                         "text":  "肆",
+                                         "comment":  "\f\r1,肆,si3,1,0,,morph,,,,,,放肆，肆意，肆虐,wantonly; indulge,,,,sembrono; memanjakan\r0,肆,sei3,2,0,,oth,,,,,,,four (anti-fraud num),چار,चार,चार,empat",
+                                         "quality":  9.7399980902291121E-05
+                                     },
+                                     {
+                                         "index":  34,
+                                         "text":  "俬",
+                                         "comment":  "\f\r1,俬,si1,1,0,,x,,,,,,傢俬,,,,,",
+                                         "quality":  8.8669991659900315E-05
+                                     },
+                                     {
+                                         "index":  35,
+                                         "text":  "嗜",
+                                         "comment":  "\f\r1,嗜,si3,1,0,,v,,,,,,,have a liking for,,,,gemar",
+                                         "quality":  7.5519971998004389E-05
+                                     },
+                                     {
+                                         "index":  36,
+                                         "text":  "廝",
+                                         "comment":  "\f\r1,廝,si1,1,0,,n,,,,,,,male servant,,,,pelayan",
+                                         "quality":  3.0920000010106677E-05
+                                     },
+                                     {
+                                         "index":  37,
+                                         "text":  "弒",
+                                         "comment":  "\f\r1,弒,si3,1,0,,morph,,,,,,弒君，篡弒，弒父,murder a superior,,,,membunuh atasan",
+                                         "quality":  1.739999940426951E-05
+                                     },
+                                     {
+                                         "index":  38,
+                                         "text":  "偲",
+                                         "comment":  "\f\r1,偲,si1,2,0,,x,,,,,,,,,,,\r0,偲,caai1,1,0,,x,,,,,,,,,,,\r0,偲,soi1,2,0,,x,,,,,,,,,,,",
+                                         "quality":  1.6460003781774561E-05
+                                     },
+                                     {
+                                         "index":  39,
+                                         "text":  "尸",
+                                         "comment":  "\f\r1,尸,si1,1,0,,morph,,,,,,尸位素餐,,,,,",
+                                         "quality":  8.0000005573186969E-06
+                                     },
+                                     {
+                                         "index":  40,
+                                         "text":  "駟",
+                                         "comment":  "\f\r1,駟,si3,1,0,,morph,,,,,,駟馬難追，良駟,horses,,,,",
+                                         "quality":  4.80000028525508E-06
+                                     },
+                                     {
+                                         "index":  41,
+                                         "text":  "鍶",
+                                         "comment":  "\f\r1,鍶,si1,1,0,,n,,chem,,,,,Strontium,,,,",
+                                         "quality":  4.1499992969874787E-06
+                                     },
+                                     {
+                                         "index":  42,
+                                         "text":  "泗",
+                                         "comment":  "\f\r1,泗,si3,1,0,,morph,,,,,,泗水,泗水: Surabaya,,,,Surabaya",
+                                         "quality":  2.7899999325895406E-06
+                                     },
+                                     {
+                                         "index":  43,
+                                         "text":  "鰤",
+                                         "comment":  "\f\r1,鰤,si1,1,0,,x,,,,,,,,,,,",
+                                         "quality":  9.6999987142057313E-07
+                                     },
+                                     {
+                                         "index":  44,
+                                         "text":  "蒔",
+                                         "comment":  "\f\r1,蒔,si4,1,0,,x,,,,,,,,,,,",
+                                         "quality":  8.9000011031614745E-07
+                                     },
+                                     {
+                                         "index":  45,
+                                         "text":  "諡",
+                                         "comment":  "\f\r1,諡,si3,1,0,,,,rare,,,,,,,,,",
+                                         "quality":  5.5000005138294571E-07
+                                     },
+                                     {
+                                         "index":  46,
+                                         "text":  "謚",
+                                         "comment":  "\f\r1,謚,si3,1,0,,x,,,,,,,,,,,\r0,謚,si6,2,0,,x,,,,,,,,,,,",
+                                         "quality":  5.299999678814319E-07
+                                     },
+                                     {
+                                         "index":  47,
+                                         "text":  "噝",
+                                         "comment":  "\f\r1,噝,si1,1,0,,,,rare,,,,,,,,,",
+                                         "quality":  5.299999678814319E-07
+                                     },
+                                     {
+                                         "index":  48,
+                                         "text":  "謚",
+                                         "comment":  "\f\r1,謚,si6,2,0,,x,,,,,,,,,,,\r0,謚,si3,1,0,,x,,,,,,,,,,,",
+                                         "quality":  5.299999678814319E-07
+                                     },
+                                     {
+                                         "index":  49,
+                                         "text":  "蓍",
+                                         "comment":  "\f\r1,蓍,si1,1,0,,,,rare,,,,,,,,,",
+                                         "quality":  4.8000001317729766E-07
+                                     }
+                                 ],
+    "captured_final_flow":  {
+                                "steps":  [
+                                              {
+                                                  "action":  "RimeSelectCandidate",
+                                                  "index":  1,
+                                                  "text":  "測",
+                                                  "commit_text":  null,
+                                                  "preedit_after":  "測si jat haa coeng geoi zi"
+                                              },
+                                              {
+                                                  "action":  "RimeSelectCandidate",
+                                                  "index":  0,
+                                                  "text":  "是日下場句子",
+                                                  "commit_text":  "測是日下場句子",
+                                                  "preedit_after":  null
+                                              }
+                                          ],
+                                "final_commit_text":  "測是日下場句子",
+                                "final_rime_get_input":  "",
+                                "diverges_from_user_feel_target":  true,
+                                "divergence_note":  "TypeDuck v1.1.2 default continuation after selecting 測 chooses 是日下場句子; the user feel target is not the captured default oracle flow for this input."
+                            },
+    "raw_tail_guard":  {
+                           "direct_first_selection_commits_raw_tail":  false,
+                           "first_selection_commit_text":  null,
+                           "note":  "Direct RimeSelectCandidate index 1 emits no RimeCommit after selecting 測 and therefore never commits raw sijathaacoenggeoizi at the first-selection step."
+                       }
+}

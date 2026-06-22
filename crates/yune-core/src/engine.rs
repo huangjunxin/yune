@@ -65,7 +65,7 @@ fn next_char_boundary(input: &str, caret: usize) -> Option<usize> {
 fn learning_code_for_candidate(input: &str, candidate: &Candidate) -> String {
     let primary_records = primary_dictionary_lookup_records(&candidate.comment);
     if primary_records.is_empty() {
-        input.to_owned()
+        compact_dictionary_lookup_code(&candidate.comment).unwrap_or_else(|| input.to_owned())
     } else if candidate.source == CandidateSource::Sentence {
         let component_records = primary_records
             .iter()
@@ -88,6 +88,30 @@ fn learning_code_for_candidate(input: &str, candidate: &Candidate) -> String {
     } else {
         primary_records[0].code.clone()
     }
+}
+
+fn compact_dictionary_lookup_code(comment: &str) -> Option<String> {
+    let code = comment
+        .strip_prefix('\u{000c}')?
+        .split('\r')
+        .find(|part| !part.is_empty())?
+        .trim();
+    (!code.is_empty() && !code.contains(',')).then(|| code.to_owned())
+}
+
+fn explicit_partial_consumed_len(
+    input: &str,
+    candidate: &Candidate,
+    intent: CommitIntent,
+) -> Option<usize> {
+    if intent != CommitIntent::ExplicitSelection {
+        return None;
+    }
+    let consumed = candidate.source.partial_consumed_len()?;
+    if consumed == 0 || consumed >= input.len() || !input.is_char_boundary(consumed) {
+        return None;
+    }
+    Some(consumed)
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -1043,17 +1067,29 @@ impl Engine {
     fn commit_candidate(&mut self, candidate_index: usize, intent: CommitIntent) -> Option<String> {
         let input = self.context.composition.input.clone();
         let segment_start = 0;
-        let segment_end = input.len();
         let candidate = self.context.candidates.get(candidate_index).cloned()?;
-        let text = candidate.commit_text_for_input(&input);
         let candidate_source = candidate.source.clone();
         if intent == CommitIntent::DefaultConfirm && candidate_source.is_ai() {
             return None;
         }
-        let code = learning_code_for_candidate(&input, &candidate);
+        let partial_consumed = explicit_partial_consumed_len(&input, &candidate, intent);
+        let (text, learning_input, segment_end) = if let Some(consumed) = partial_consumed {
+            (
+                candidate.text.clone(),
+                input[..consumed].to_owned(),
+                consumed,
+            )
+        } else {
+            (
+                candidate.commit_text_for_input(&input),
+                input.clone(),
+                input.len(),
+            )
+        };
+        let code = learning_code_for_candidate(&learning_input, &candidate);
         self.commit_tick = self.commit_tick.saturating_add(1);
         let learning = UserDbCommitMetadata::new(
-            input.clone(),
+            learning_input,
             text.clone(),
             candidate_source.clone(),
             segment_start,
@@ -1068,7 +1104,16 @@ impl Engine {
             self.pending_userdb_learning = Some(learning.clone());
         }
         self.record_commit_with_metadata(learning);
-        self.clear_composition();
+        if let Some(consumed) = partial_consumed {
+            let remaining = input[consumed..].to_owned();
+            self.staged_ai_result = None;
+            self.context.composition.input = remaining.clone();
+            self.context.composition.caret = remaining.len();
+            self.context.composition.preedit = remaining;
+            self.refresh_candidates();
+        } else {
+            self.clear_composition();
+        }
         Some(text)
     }
 

@@ -1,0 +1,301 @@
+{
+  "label": "after-final",
+  "freshStartup": {
+    "type": "diagnostic",
+    "source": "yune-startup",
+    "marker": {
+      "phase": "startup:complete",
+      "totalMs": 5648,
+      "markers": [
+        {
+          "phase": "runtime:init:start",
+          "ms": 0
+        },
+        {
+          "phase": "worker:start",
+          "ms": 0
+        },
+        {
+          "phase": "wasm-glue:loaded",
+          "ms": 5
+        },
+        {
+          "phase": "wasm:module:create:start",
+          "ms": 5
+        },
+        {
+          "phase": "wasm:module:create:finish",
+          "ms": 17
+        },
+        {
+          "phase": "module:created",
+          "ms": 17
+        },
+        {
+          "phase": "filesystem:mount:start",
+          "ms": 17
+        },
+        {
+          "phase": "filesystem:mount:finish",
+          "ms": 18
+        },
+        {
+          "phase": "persistence:mounted",
+          "ms": 18
+        },
+        {
+          "phase": "assets:load:start",
+          "ms": 18
+        },
+        {
+          "phase": "assets:load:finish",
+          "ms": 123
+        },
+        {
+          "phase": "assets:loaded",
+          "ms": 123
+        },
+        {
+          "phase": "schema:select:start",
+          "ms": 123
+        },
+        {
+          "phase": "schema:select:finish",
+          "ms": 5648
+        },
+        {
+          "phase": "runtime:init:finish",
+          "ms": 5648
+        },
+        {
+          "phase": "runtime:initialized",
+          "ms": 5648
+        }
+      ],
+      "m27EvidenceVersion": "m27-startup-v1",
+      "assetVersion": "m27-startup-v1",
+      "schema": "jyut6ping3_mobile",
+      "wasmBuildProfile": "release",
+      "wasmGlue": "yune-typeduck.js",
+      "wasmBinary": "yune-typeduck.wasm",
+      "loadedSharedAssets": [
+        "default.custom.yaml",
+        "common.yaml",
+        "common.custom.yaml",
+        "include.yaml",
+        "template.yaml",
+        "jyut6ping3.schema.yaml",
+        "jyut6ping3_mobile_longpress.schema.yaml",
+        "jyut6ping3_mobile_10keys.schema.yaml",
+        "jyut6ping3_scolar.schema.yaml",
+        "jyut6ping3_scolar.dict.yaml",
+        "luna_pinyin.schema.yaml",
+        "luna_pinyin.dict.yaml",
+        "luna_pinyin_yune_reverse.dict.yaml",
+        "loengfan.schema.yaml",
+        "loengfan.dict.yaml",
+        "loengfan_longpress.schema.yaml",
+        "cangjie3.schema.yaml",
+        "cangjie3.dict.yaml",
+        "cangjie5.schema.yaml",
+        "cangjie5.dict.yaml",
+        "opencc/hk2s.json",
+        "opencc/HKVariantsRev.ocd2",
+        "opencc/HKVariantsRevPhrases.ocd2",
+        "opencc/TSCharacters.ocd2",
+        "opencc/TSPhrases.ocd2",
+        "jyut6ping3.table.bin",
+        "jyut6ping3.reverse.bin",
+        "jyut6ping3_mobile.prism.bin",
+        "jyut6ping3_scolar.table.bin",
+        "jyut6ping3_scolar.reverse.bin",
+        "jyut6ping3_scolar.prism.bin",
+        "cangjie5.table.bin",
+        "cangjie5.reverse.bin",
+        "cangjie5.prism.bin",
+        "luna_pinyin.table.bin",
+        "luna_pinyin.reverse.bin",
+        "luna_pinyin.prism.bin"
+      ]
+    }
+  },
+  "freshPhases": [
+    "assets:load:finish",
+    "assets:load:start",
+    "assets:loaded",
+    "deploy:cache-miss",
+    "filesystem:mount:finish",
+    "filesystem:mount:start",
+    "module:created",
+    "persistence:mounted",
+    "rime:init:finish",
+    "rime:init:start",
+    "runtime:init",
+    "runtime:init:finish",
+    "runtime:init:start",
+    "runtime:initialized",
+    "schema:deploy:finish",
+    "schema:deploy:start",
+    "schema:select:finish",
+    "schema:select:start",
+    "startup:complete",
+    "syncFromPersistenceBeforeInit:pass",
+    "syncFromPersistenceBeforeInit:start",
+    "syncToPersistenceAfterMutation:pass",
+    "syncToPersistenceAfterMutation:start",
+    "wasm-glue:loaded",
+    "wasm:module:create:finish",
+    "wasm:module:create:start",
+    "worker:diagnostic-ready",
+    "worker:start"
+  ],
+  "reloadStartup": {
+    "type": "diagnostic",
+    "source": "yune-startup",
+    "marker": {
+      "phase": "startup:complete",
+      "totalMs": 5597,
+      "markers": [
+        {
+          "phase": "runtime:init:start",
+          "ms": 0
+        },
+        {
+          "phase": "worker:start",
+          "ms": 0
+        },
+        {
+          "phase": "wasm-glue:loaded",
+          "ms": 3
+        },
+        {
+          "phase": "wasm:module:create:start",
+          "ms": 3
+        },
+        {
+          "phase": "wasm:module:create:finish",
+          "ms": 11
+        },
+        {
+          "phase": "module:created",
+          "ms": 11
+        },
+        {
+          "phase": "filesystem:mount:start",
+          "ms": 11
+        },
+        {
+          "phase": "filesystem:mount:finish",
+          "ms": 11
+        },
+        {
+          "phase": "persistence:mounted",
+          "ms": 11
+        },
+        {
+          "phase": "assets:load:start",
+          "ms": 11
+        },
+        {
+          "phase": "assets:load:finish",
+          "ms": 85
+        },
+        {
+          "phase": "assets:loaded",
+          "ms": 85
+        },
+        {
+          "phase": "schema:select:start",
+          "ms": 85
+        },
+        {
+          "phase": "schema:select:finish",
+          "ms": 5597
+        },
+        {
+          "phase": "runtime:init:finish",
+          "ms": 5597
+        },
+        {
+          "phase": "runtime:initialized",
+          "ms": 5597
+        }
+      ],
+      "m27EvidenceVersion": "m27-startup-v1",
+      "assetVersion": "m27-startup-v1",
+      "schema": "jyut6ping3_mobile",
+      "wasmBuildProfile": "release",
+      "wasmGlue": "yune-typeduck.js",
+      "wasmBinary": "yune-typeduck.wasm",
+      "loadedSharedAssets": [
+        "default.custom.yaml",
+        "common.yaml",
+        "common.custom.yaml",
+        "include.yaml",
+        "template.yaml",
+        "jyut6ping3.schema.yaml",
+        "jyut6ping3_mobile_longpress.schema.yaml",
+        "jyut6ping3_mobile_10keys.schema.yaml",
+        "jyut6ping3_scolar.schema.yaml",
+        "jyut6ping3_scolar.dict.yaml",
+        "luna_pinyin.schema.yaml",
+        "luna_pinyin.dict.yaml",
+        "luna_pinyin_yune_reverse.dict.yaml",
+        "loengfan.schema.yaml",
+        "loengfan.dict.yaml",
+        "loengfan_longpress.schema.yaml",
+        "cangjie3.schema.yaml",
+        "cangjie3.dict.yaml",
+        "cangjie5.schema.yaml",
+        "cangjie5.dict.yaml",
+        "opencc/hk2s.json",
+        "opencc/HKVariantsRev.ocd2",
+        "opencc/HKVariantsRevPhrases.ocd2",
+        "opencc/TSCharacters.ocd2",
+        "opencc/TSPhrases.ocd2",
+        "jyut6ping3.table.bin",
+        "jyut6ping3.reverse.bin",
+        "jyut6ping3_mobile.prism.bin",
+        "jyut6ping3_scolar.table.bin",
+        "jyut6ping3_scolar.reverse.bin",
+        "jyut6ping3_scolar.prism.bin",
+        "cangjie5.table.bin",
+        "cangjie5.reverse.bin",
+        "cangjie5.prism.bin",
+        "luna_pinyin.table.bin",
+        "luna_pinyin.reverse.bin",
+        "luna_pinyin.prism.bin"
+      ]
+    }
+  },
+  "reloadPhases": [
+    "assets:load:finish",
+    "assets:load:start",
+    "assets:loaded",
+    "deploy:cache-miss",
+    "filesystem:mount:finish",
+    "filesystem:mount:start",
+    "module:created",
+    "persistence:mounted",
+    "rime:init:finish",
+    "rime:init:start",
+    "runtime:init",
+    "runtime:init:finish",
+    "runtime:init:start",
+    "runtime:initialized",
+    "schema:deploy:finish",
+    "schema:deploy:start",
+    "schema:select:finish",
+    "schema:select:start",
+    "startup:complete",
+    "syncFromPersistenceBeforeInit:pass",
+    "syncFromPersistenceBeforeInit:start",
+    "syncToPersistenceAfterMutation:pass",
+    "syncToPersistenceAfterMutation:start",
+    "wasm-glue:loaded",
+    "wasm:module:create:finish",
+    "wasm:module:create:start",
+    "worker:diagnostic-ready",
+    "worker:start"
+  ]
+}

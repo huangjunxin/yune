@@ -25,7 +25,10 @@ let currentEvidenceScope = "unscoped";
 const M24_EVIDENCE_DIR = "m24-dogfooding";
 const M25_EVIDENCE_DIR = "m25-dogfooding";
 const M26_EVIDENCE_DIR = "m26-performance";
+const M27_EVIDENCE_DIR = "m27-startup-runtime";
+const M28_EVIDENCE_DIR = "m28-partial-selection";
 const M26_EVIDENCE_LABEL = process.env.M26_EVIDENCE_LABEL || "latest";
+const M27_EVIDENCE_LABEL = process.env.M27_EVIDENCE_LABEL || "latest";
 
 const ACTIVE_SHOWCASE_CONTROLS = [
   /Auto-completion/,
@@ -176,6 +179,7 @@ interface PersistenceDiagnosticSnapshot {
     renderMs?: number;
     input?: string;
     assetVersion?: string;
+    m27EvidenceVersion?: string;
     wasmBuildProfile?: string;
     wasmBinary?: string;
     markers?: { phase: string; ms: number }[];
@@ -314,6 +318,32 @@ async function saveM26Json(filename: string, payload: unknown): Promise<void> {
   await fs.writeFile(jsonPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
 }
 
+async function m27EvidencePath(filename: string): Promise<string> {
+  const path = await import("path");
+  return path.join(EVIDENCE_DIR, M27_EVIDENCE_DIR, filename);
+}
+
+async function saveM27Json(filename: string, payload: unknown): Promise<void> {
+  const fs = await import("fs/promises");
+  const path = await import("path");
+  const jsonPath = await m27EvidencePath(filename);
+  await fs.mkdir(path.dirname(jsonPath), { recursive: true });
+  await fs.writeFile(jsonPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
+}
+
+async function m28EvidencePath(filename: string): Promise<string> {
+  const path = await import("path");
+  return path.join(EVIDENCE_DIR, M28_EVIDENCE_DIR, filename);
+}
+
+async function saveM28Json(filename: string, payload: unknown): Promise<void> {
+  const fs = await import("fs/promises");
+  const path = await import("path");
+  const jsonPath = await m28EvidencePath(filename);
+  await fs.mkdir(path.dirname(jsonPath), { recursive: true });
+  await fs.writeFile(jsonPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
+}
+
 async function findRepoRoot(): Promise<string> {
   const fs = await import("fs/promises");
   const path = await import("path");
@@ -360,6 +390,18 @@ async function m14Case(
 async function m14Texts(filename: string, variant: string, input: string, count: number): Promise<string[]> {
   const found = await m14Case(filename, variant, input);
   return found.selected_candidates.slice(0, count).map((candidate) => candidate.text);
+}
+
+function m28ContinuationComponents(fixture: { captured_next_candidates?: { comment?: string }[] }): string[] {
+  const comment = fixture.captured_next_candidates?.[0]?.comment ?? "";
+  return comment
+    .split("\r")
+    .map((record) => {
+      const body = record.startsWith("1") || record.startsWith("0") ? record.slice(1) : "";
+      return body.split(",")[1] ?? "";
+    })
+    .filter((text) => text.length > 0)
+    .slice(1);
 }
 
 async function m14Notes(filename: string, variant: string, input: string, count: number): Promise<string[]> {
@@ -469,6 +511,18 @@ async function learnPhraseThroughBrowser(page: Page): Promise<CandidatePanelSnap
 
 function candidateTexts(state: CandidatePanelSnapshot): (string | null)[] {
   return state.candidates.map((candidate) => candidate.text);
+}
+
+async function selectVisibleCandidateByText(
+  page: Page,
+  text: string,
+): Promise<{ before: CandidatePanelSnapshot; selectedIndex: number }> {
+  const before = await readCandidatePanelSnapshot(page, false);
+  const selectedIndex = before.candidates.findIndex((candidate) => candidate.text === text);
+  expect(selectedIndex, `candidate ${text} should be visible`).toBeGreaterThanOrEqual(0);
+  expect(selectedIndex, `candidate ${text} should be selectable by number key`).toBeLessThan(10);
+  await page.keyboard.press(selectedIndex === 9 ? "0" : String(selectedIndex + 1));
+  return { before, selectedIndex };
 }
 
 function classicCandidateSignature(state: CandidatePanelSnapshot): { text: string | null; note: string | null; rowText: string }[] {
@@ -1049,6 +1103,256 @@ test.describe("TypeDuck-Web Browser E2E", () => {
       reloadDiagnostics,
       resources,
     });
+    expect(consoleFailures(consoleErrors)).toEqual([]);
+  });
+
+  test("M27 PERF startup marker records evidence version", async ({ page }) => {
+    let startup: PersistenceDiagnosticSnapshot | undefined;
+    await expect.poll(async () => {
+      const diagnostics = await readPersistenceDiagnostics(page);
+      startup = diagnostics.find((diagnostic) => diagnostic.source === "yune-startup");
+      return startup?.marker.phase ?? "";
+    }, { timeout: TIMEOUT_MS }).toBe("startup:complete");
+    expect(startup).toBeDefined();
+    expect(startup?.marker.m27EvidenceVersion).toBe("m27-startup-v1");
+    expect(startup?.marker.wasmBuildProfile).toBe("release");
+    expect(startup?.marker.wasmBinary).toBe("yune-typeduck.wasm");
+    expectStartupMarkerOrder(startup as PersistenceDiagnosticSnapshot);
+
+    const freshDiagnostics = await readPersistenceDiagnostics(page);
+    const freshPhases = markerPhases(freshDiagnostics);
+
+    await page.reload({ waitUntil: "domcontentloaded", timeout: TIMEOUT_MS });
+    await waitForAppReady(page);
+    const reloadDiagnostics = await readPersistenceDiagnostics(page);
+    const reloadStartup = reloadDiagnostics
+      .slice()
+      .reverse()
+      .find((diagnostic) => diagnostic.source === "yune-startup");
+    expect(reloadStartup?.marker.phase).toBe("startup:complete");
+    expect(reloadStartup?.marker.m27EvidenceVersion).toBe("m27-startup-v1");
+    expectStartupMarkerOrder(reloadStartup as PersistenceDiagnosticSnapshot);
+
+    await saveM27Json(`browser-startup-after-${M27_EVIDENCE_LABEL}.json`, {
+      label: M27_EVIDENCE_LABEL,
+      freshStartup: startup,
+      freshPhases: [...freshPhases].sort(),
+      reloadStartup,
+      reloadPhases: [...markerPhases(reloadDiagnostics)].sort(),
+    });
+    expect(consoleFailures(consoleErrors)).toEqual([]);
+  });
+
+  test("M27 PERF controls classify loading boundaries", async ({ page }) => {
+    const inputField = page.locator("input[type='text'], textarea").first();
+    const resetDiagnostics = async () => {
+      await page.evaluate(() => {
+        document.documentElement.dataset.yuneActionDiagnostics = "[]";
+        document.documentElement.dataset.yunePersistenceDiagnostics = "[]";
+      });
+    };
+    const loadingState = async () => ({
+      dataset: await page.evaluate(() => document.documentElement.dataset.yuneLoading ?? "unset"),
+      indicatorCount: await page.locator("[data-yune-loading-indicator]").count(),
+    });
+    const actionNames = async () => (await readActionDiagnostics(page)).map((diagnostic) => diagnostic.action);
+    const phases = async () => [...markerPhases(await readPersistenceDiagnostics(page))].sort();
+
+    await clearComposition(page);
+    await inputField.focus();
+    await inputField.type("nei", { delay: 80 });
+    await expect(page.locator(".candidate-panel .candidates tbody").first()).toBeVisible({ timeout: 10000 });
+
+    await resetDiagnostics();
+    const aiToggle = page.getByLabel(/AI Candidates/).last();
+    await aiToggle.evaluate((element) => {
+      (element as HTMLInputElement).click();
+    });
+    await expect(aiToggle).toBeChecked({ checked: true, timeout: 5000 });
+    await expect(page.locator('.candidate-panel .candidates tbody[data-source="ai:local"]')).toHaveCount(1, { timeout: 10000 });
+    await expect.poll(async () => (await actionNames()).includes("stageAi"), { timeout: 10000 }).toBe(true);
+    const ai = {
+      loading: await loadingState(),
+      actions: await actionNames(),
+      phases: await phases(),
+      state: await readCandidatePanelSnapshot(page, true),
+    };
+
+    await resetDiagnostics();
+    await setPreferenceToggleAndWaitForSettings(page, /Auto-correction/, true, {
+      "translator/enable_correction": "true",
+    });
+    const deployBacked = {
+      loading: await loadingState(),
+      actions: await actionNames(),
+      phases: await phases(),
+      settings: await latestPersistedSettings(page),
+    };
+
+    await resetDiagnostics();
+    await setPreferenceToggle(page, /ASCII mode/, true);
+    await expect.poll(async () => (await actionNames()).includes("setOption"), { timeout: 10000 }).toBe(true);
+    const live = {
+      loading: await loadingState(),
+      actions: await actionNames(),
+      phases: await phases(),
+    };
+
+    await resetDiagnostics();
+    await page.getByLabel(/Vertical/).last().check({ force: true });
+    await page.waitForTimeout(300);
+    const browserOnly = {
+      loading: await loadingState(),
+      actions: await actionNames(),
+      phases: await phases(),
+      selectedLayout: await page.getByLabel(/Vertical/).last().isChecked(),
+    };
+
+    const classification = {
+      deployTime: [
+        "Auto-completion",
+        "Auto-correction",
+        "Auto-composition",
+        "Input Memory",
+        "No. of Candidates Per Page",
+        "Combine same-text candidates",
+        "Prediction never first",
+        "Prediction threshold",
+        "Dictionary exclude",
+        "schema switch",
+        "Cangjie version",
+      ],
+      live: [
+        "ASCII mode",
+        "Full shape",
+        "Simplification",
+        "Traditionalization",
+        "Extended charset",
+        "Disabled",
+        "Yune inspector",
+      ],
+      browserOnly: [
+        "Display languages",
+        "Candidate Menu Layout",
+        "Chinese Typeface",
+        "Candidate Jyutping",
+        "Reverse code display",
+      ],
+      localRuntimeOnly: [
+        "AI Candidates",
+      ],
+    };
+
+    await saveM27Json(`control-classification-after-${M27_EVIDENCE_LABEL}.json`, {
+      label: M27_EVIDENCE_LABEL,
+      classification,
+      ai,
+      deployBacked,
+      live,
+      browserOnly,
+    });
+
+    expect(ai.loading.dataset).toBe("false");
+    expect(ai.loading.indicatorCount).toBe(0);
+    expect(ai.actions).toContain("customize");
+    expect(ai.actions).toContain("stageAi");
+    expect(ai.actions).not.toContain("deploy");
+    expect(ai.phases.some((phase) => phase.startsWith("schema:deploy"))).toBe(false);
+    expect(deployBacked.actions).toContain("customize");
+    expect(deployBacked.actions).toContain("deploy");
+    expect(deployBacked.phases).toContain("schema:deploy:start");
+    expect(deployBacked.phases).toContain("schema:deploy:finish");
+    expect(live.actions).toContain("setOption");
+    expect(live.actions).not.toContain("deploy");
+    expect(live.phases.some((phase) => phase.startsWith("schema:deploy"))).toBe(false);
+    expect(browserOnly.actions).toEqual([]);
+    expect(browserOnly.loading.dataset).toBe("false");
+    expect(browserOnly.loading.indicatorCount).toBe(0);
+    expect(browserOnly.selectedLayout).toBe(true);
+    expect(consoleFailures(consoleErrors)).toEqual([]);
+  });
+
+  test("M28 PARTIAL selecting a prefix candidate keeps the tail composing", async ({ page }) => {
+    const fixture = JSON.parse(await readRepoText(
+      "crates/yune-core/tests/fixtures/typeduck-v1.1.2/jyut6ping3-m28-partial-selection.json",
+    )) as {
+      input: string;
+      user_feel_target?: string;
+      selection_request: { requested_candidate_text: string };
+      captured_active_remaining_input_by_consumed_span: string;
+      captured_next_candidates: { text: string; comment?: string }[];
+      captured_final_flow: { final_commit_text: string };
+    };
+    const input = fixture.input;
+    const selectedText = fixture.selection_request.requested_candidate_text;
+    const remainingInput = fixture.captured_active_remaining_input_by_consumed_span;
+    const rawTailCommit = `${selectedText}${remainingInput}`;
+    const continuationComponents = m28ContinuationComponents(fixture);
+    expect(continuationComponents.length).toBeGreaterThan(0);
+
+    const inputField = page.locator("input[type='text'], textarea").first();
+    await clearComposition(page);
+    await inputField.focus();
+    await inputField.type(input, { delay: 50 });
+    await expect.poll(async () =>
+      candidateTexts(await readCandidatePanelSnapshot(page, false)),
+      { timeout: 10000 },
+    ).toContain(selectedText);
+    const beforeSelection = await readCandidatePanelSnapshot(page, false);
+
+    const firstSelection = await selectVisibleCandidateByText(page, selectedText);
+    await expect(inputField).not.toHaveValue(rawTailCommit, { timeout: 5000 });
+    await expect(page.locator(".candidate-panel .candidates tbody").first()).toBeVisible({ timeout: 10000 });
+    await expect.poll(async () =>
+      candidateTexts(await readCandidatePanelSnapshot(page, false)),
+      { timeout: 10000 },
+    ).toContain(continuationComponents[0]);
+    const afterFirstSelection = await readCandidatePanelSnapshot(page, false);
+    const valueAfterFirstSelection = await inputField.inputValue();
+
+    const continuationSteps: unknown[] = [];
+    for (const component of continuationComponents) {
+      const step = await selectVisibleCandidateByText(page, component);
+      continuationSteps.push({
+        component,
+        selectedIndex: step.selectedIndex,
+        before: step.before,
+      });
+      await page.waitForTimeout(250);
+    }
+
+    await expect(inputField).toHaveValue(fixture.captured_final_flow.final_commit_text, { timeout: 5000 });
+    await expect(page.locator(".candidate-panel")).toHaveCount(0, { timeout: 5000 });
+    const finalValue = await inputField.inputValue();
+    const oneRowOracleContinuation = fixture.captured_next_candidates[0]?.text ?? null;
+
+    await saveM28Json("browser-partial-selection.json", {
+      input,
+      selectedText,
+      remainingInput,
+      continuationComponents,
+      beforeSelection,
+      firstSelection: {
+        selectedIndex: firstSelection.selectedIndex,
+        after: afterFirstSelection,
+        valueAfterFirstSelection,
+        rawTailCommit,
+        rawTailInserted: valueAfterFirstSelection === rawTailCommit,
+        oneRowOracleContinuation,
+        oneRowOracleContinuationVisible: afterFirstSelection.candidates.some((candidate) =>
+          candidate.text === oneRowOracleContinuation
+        ),
+      },
+      continuationSteps,
+      finalValue,
+      fixtureFinalCommit: fixture.captured_final_flow.final_commit_text,
+      userFeelTarget: fixture.user_feel_target ?? null,
+      userFeelTargetReached: finalValue === fixture.user_feel_target,
+      consoleFailures: consoleFailures(consoleErrors),
+    });
+
+    expect(valueAfterFirstSelection).not.toBe(rawTailCommit);
+    expect(finalValue).toBe(fixture.captured_final_flow.final_commit_text);
     expect(consoleFailures(consoleErrors)).toEqual([]);
   });
 

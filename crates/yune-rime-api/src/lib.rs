@@ -37,6 +37,7 @@ mod schema_api;
 mod schema_install;
 mod schema_selection;
 mod session;
+mod startup_trace;
 mod typeduck_web;
 #[path = "userdb.rs"]
 mod userdb;
@@ -69,6 +70,10 @@ pub(crate) use schema_install::{
 pub(crate) use schema_selection::apply_schema_to_session;
 pub use schema_selection::{RimeGetCurrentSchema, RimeSelectSchema};
 pub use session::*;
+#[doc(hidden)]
+pub use startup_trace::{
+    begin_startup_trace, finish_startup_trace, StartupTraceEvent, StartupTraceMemorySample,
+};
 pub use typeduck_web::*;
 pub use userdb::*;
 

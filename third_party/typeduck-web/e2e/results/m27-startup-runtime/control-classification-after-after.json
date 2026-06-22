@@ -1,0 +1,160 @@
+{
+  "label": "after",
+  "classification": {
+    "deployTime": [
+      "Auto-completion",
+      "Auto-correction",
+      "Auto-composition",
+      "Input Memory",
+      "No. of Candidates Per Page",
+      "Combine same-text candidates",
+      "Prediction never first",
+      "Prediction threshold",
+      "Dictionary exclude",
+      "schema switch",
+      "Cangjie version"
+    ],
+    "live": [
+      "ASCII mode",
+      "Full shape",
+      "Simplification",
+      "Traditionalization",
+      "Extended charset",
+      "Disabled",
+      "Yune inspector"
+    ],
+    "browserOnly": [
+      "Display languages",
+      "Candidate Menu Layout",
+      "Chinese Typeface",
+      "Candidate Jyutping",
+      "Reverse code display"
+    ],
+    "localRuntimeOnly": [
+      "AI Candidates"
+    ]
+  },
+  "ai": {
+    "loading": {
+      "dataset": "false",
+      "indicatorCount": 0
+    },
+    "actions": [
+      "customize",
+      "stageAi"
+    ],
+    "phases": [],
+    "state": {
+      "aiEnabled": true,
+      "inputValue": "",
+      "candidates": [
+        {
+          "index": 0,
+          "text": "你",
+          "note": null,
+          "source": null,
+          "rowText": "1.nei5你ⓘ"
+        },
+        {
+          "index": 1,
+          "text": "你啊",
+          "note": "ai:local-model 0.83",
+          "source": "ai:local",
+          "rowText": "2.你啊ai:local-model 0.83AI"
+        },
+        {
+          "index": 2,
+          "text": "你",
+          "note": null,
+          "source": null,
+          "rowText": "3.nei5你ⓘ"
+        },
+        {
+          "index": 3,
+          "text": "呢",
+          "note": null,
+          "source": null,
+          "rowText": "4.ne1呢ⓘ"
+        },
+        {
+          "index": 4,
+          "text": "尼",
+          "note": null,
+          "source": null,
+          "rowText": "5.nei4尼ⓘ"
+        },
+        {
+          "index": 5,
+          "text": "妮",
+          "note": null,
+          "source": null,
+          "rowText": "6.nei4妮ⓘ"
+        }
+      ]
+    }
+  },
+  "deployBacked": {
+    "loading": {
+      "dataset": "false",
+      "indicatorCount": 0
+    },
+    "actions": [
+      "customize",
+      "deploy"
+    ],
+    "phases": [
+      "deploy:cache-hit",
+      "deploy:cache-miss",
+      "rime:init:finish",
+      "rime:init:start",
+      "runtime:init",
+      "runtime:init:finish",
+      "runtime:init:start",
+      "schema:deploy:finish",
+      "schema:deploy:start",
+      "syncFromPersistenceBeforeInit:pass",
+      "syncFromPersistenceBeforeInit:start",
+      "syncToPersistenceAfterMutation:pass",
+      "syncToPersistenceAfterMutation:start"
+    ],
+    "settings": {
+      "menu/page_size": "6",
+      "translator/enable_completion": "true",
+      "translator/enable_correction": "true",
+      "translator/enable_sentence": "true",
+      "translator/enable_user_dict": "true",
+      "translator/encode_commit_history": "true",
+      "translator/combine_candidates": "true",
+      "translator/prediction_never_first": "true",
+      "translator/prediction_weight_threshold": "0",
+      "translator/dictionary_exclude": "[]",
+      "cangjie/dictionary": "cangjie5",
+      "cangjie/tips": "【倉頡五代】"
+    }
+  },
+  "live": {
+    "loading": {
+      "dataset": "false",
+      "indicatorCount": 0
+    },
+    "actions": [
+      "setOption",
+      "setOption",
+      "setOption",
+      "setOption",
+      "setOption",
+      "setOption",
+      "setOption"
+    ],
+    "phases": []
+  },
+  "browserOnly": {
+    "loading": {
+      "dataset": "false",
+      "indicatorCount": 0
+    },
+    "actions": [],
+    "phases": [],
+    "selectedLayout": true
+  }
+}

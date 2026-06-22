@@ -1,6 +1,6 @@
 # M28 TypeDuck Partial Candidate Selection Implementation Plan
 
-> **Status:** Draft - **Milestone:** M28 (TypeDuck partial candidate selection) - **Updated:** 2026-06-22 - **Type:** execution plan
+> **Status:** Complete - **Milestone:** M28 (TypeDuck partial candidate selection) - **Closed:** 2026-06-22 - **Type:** execution plan
 >
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -9,6 +9,8 @@
 **Architecture:** This is engine correctness work, not TypeDuck-Web UI polish and not M27 performance work. Capture TypeDuck-HK/librime `v1.1.2` oracle behavior first, then add native engine/API tests, then change `yune-core` candidate span and commit handling. The oracle capture is capture-not-confirm: the user's `測試一下長句子` flow is the feel target, but TypeDuck v1.1.2 is authoritative if it diverges. Browser evidence is a final integration proof only after the engine behavior is fixture-backed.
 
 **Tech Stack:** Rust (`yune-core` Engine/candidate state, `cantonese_parity`, `yune-rime-api` typeduck_web tests), TypeDuck v1.1.2 oracle fixture capture, TypeDuck-Web Playwright smoke only as final surface evidence.
+
+**Closeout:** Completed on 2026-06-22. M28 classified the issue as missing support, captured TypeDuck-HK/librime `v1.1.2` oracle behavior, implemented segment-aware partial commit/recomposition, preserved FORK-PARITY-03 learning behavior, added native/API/browser evidence, and left one-row sentence continuation/ranking as a separate future oracle-backed scope. Evidence lives under `third_party/typeduck-web/e2e/results/m28-partial-selection/`, with the fixture at `crates/yune-core/tests/fixtures/typeduck-v1.1.2/jyut6ping3-m28-partial-selection.json`.
 
 ---
 
@@ -74,7 +76,7 @@ Out of scope:
 - Read: `crates/yune-core/src/state.rs`
 - Create: `third_party/typeduck-web/e2e/results/m28-partial-selection/history-classification.md`
 
-- [ ] Step 0.1: Inspect history.
+- [x] Step 0.1: Inspect history.
 
 Run:
 
@@ -96,7 +98,7 @@ Expected:
 - Create: `crates/yune-core/tests/fixtures/typeduck-v1.1.2/jyut6ping3-m28-partial-selection.json`
 - Create: `third_party/typeduck-web/e2e/results/m28-partial-selection/oracle-capture.md`
 
-- [ ] Step 1.1: Capture the partial-selection flow from TypeDuck v1.1.2.
+- [x] Step 1.1: Capture the partial-selection flow from TypeDuck v1.1.2.
 
 Capture the real oracle behavior for:
 
@@ -137,7 +139,7 @@ Acceptance:
 - Modify: `crates/yune-rime-api/tests/typeduck_web.rs` or a focused typeduck_web module
 - Read: `crates/yune-core/tests/fixtures/typeduck-v1.1.2/jyut6ping3-m28-partial-selection.json`
 
-- [ ] Step 2.1: Add a `cantonese_parity` test.
+- [x] Step 2.1: Add a `cantonese_parity` test.
 
 The test must:
 
@@ -159,7 +161,7 @@ Expected before implementation:
 
 - The test fails by committing raw tail text or clearing composition.
 
-- [ ] Step 2.2: Add a frontend-shaped `typeduck_web` test.
+- [x] Step 2.2: Add a frontend-shaped `typeduck_web` test.
 
 The test must use the same runtime/API path that TypeDuck-Web uses for candidate selection and assert the same commit/preedit behavior.
 
@@ -181,7 +183,7 @@ Expected before implementation:
 - Modify: `crates/yune-core/src/translator/mod.rs`
 - Modify: `crates/yune-core/src/engine.rs`
 
-- [ ] Step 3.1: Add consumed-span metadata to candidates.
+- [x] Step 3.1: Add consumed-span metadata to candidates.
 
 Expected shape:
 
@@ -191,7 +193,7 @@ Expected shape:
 - Prefix candidates consume only the matched prefix.
 - If a candidate lacks explicit span metadata, default behavior must be conservative and covered by tests.
 
-- [ ] Step 3.2: Recompose the remaining input after explicit selection.
+- [x] Step 3.2: Recompose the remaining input after explicit selection.
 
 Expected behavior:
 
@@ -221,7 +223,7 @@ Expected:
 - Patch if source changed: `third_party/typeduck-web/patches/yune-typeduck-runtime.patch`
 - Evidence: `third_party/typeduck-web/e2e/results/m28-partial-selection/browser-partial-selection.json`
 
-- [ ] Step 4.1: Add a browser smoke.
+- [x] Step 4.1: Add a browser smoke.
 
 The browser test must:
 
@@ -251,7 +253,7 @@ Expected:
 - Modify: `docs/requirements.md`
 - Archive when complete: `docs/plans/archive/m28-plan-typeduck-partial-selection.md`
 
-- [ ] Step 5.1: Run verification.
+- [x] Step 5.1: Run verification.
 
 Run:
 

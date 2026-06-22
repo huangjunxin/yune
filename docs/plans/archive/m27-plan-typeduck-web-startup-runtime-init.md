@@ -1,6 +1,8 @@
 # M27 TypeDuck-Web Startup Runtime Init Implementation Plan
 
-> **Status:** Active - **Milestone:** M27 (TypeDuck-Web startup/runtime init) - **Updated:** 2026-06-22 - **Type:** execution plan
+> **Status:** Complete - **Milestone:** M27 (TypeDuck-Web startup/runtime init) - **Updated:** 2026-06-22 - **Type:** archived execution plan
+>
+> **Closeout:** M27 is complete. Evidence is recorded under `third_party/typeduck-web/e2e/results/m27-startup-runtime/`, including native startup owner spans, Windows working-set metrics, browser fresh/reload evidence, control classification evidence, TypeDuck-Web patch checks, and `task-5-gates.md`.
 >
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -27,7 +29,7 @@ One post-M26 TypeDuck-Web interaction issue stays in M27 because it is the same 
 
 - Toggling engine controls such as auto-correction, AI candidates, or auto-completion shows `載入中 Loading...` today. M27 must classify each control as live, deploy-time, or browser-only before changing behavior. AI candidates should be live/browser-only. Options such as auto-correction, auto-completion, and sentence composition may legitimately be deploy-time customize options, so M27 should reduce their deploy/reload cost and avoid misleading full-engine-loading UI rather than pretending they are live `setOption` controls unless the engine actually supports that.
 
-The long-sentence partial-selection issue is not M27 scope. Current engine code commits the whole input span in `Engine::commit_candidate`, so typing `caksijathaacoenggeoizi` and selecting `測` can produce `測sijathaacoenggeoizi`. That is an engine-side segment-aware partial-commit gap, not a browser insertion bug, and it needs TypeDuck v1.1.2 oracle capture plus native tests before implementation. It is tracked separately by M28: [`m28-plan-typeduck-partial-selection.md`](./m28-plan-typeduck-partial-selection.md).
+The long-sentence partial-selection issue is not M27 scope. Current engine code commits the whole input span in `Engine::commit_candidate`, so typing `caksijathaacoenggeoizi` and selecting `測` can produce `測sijathaacoenggeoizi`. That is an engine-side segment-aware partial-commit gap, not a browser insertion bug, and it needs TypeDuck v1.1.2 oracle capture plus native tests before implementation. It is tracked separately by M28: [`m28-plan-typeduck-partial-selection.md`](../m28-plan-typeduck-partial-selection.md).
 
 M27 exists to close these concrete points:
 

@@ -1,0 +1,277 @@
+{
+  "input": "caksijathaacoenggeoizi",
+  "selectedText": "測",
+  "remainingInput": "sijathaacoenggeoizi",
+  "continuationComponents": [
+    "是日",
+    "下場",
+    "句子"
+  ],
+  "beforeSelection": {
+    "aiEnabled": false,
+    "inputValue": "",
+    "candidates": [
+      {
+        "index": 0,
+        "text": "測時一下場句子",
+        "note": "(compound 詞組)",
+        "source": null,
+        "rowText": "1.caak1 cak1 si4 jat1 haa5 coeng4 geoi3 zi2測時一下場句子(compound 詞組)ⓘ"
+      },
+      {
+        "index": 1,
+        "text": "測",
+        "note": null,
+        "source": null,
+        "rowText": "2.cak1測"
+      },
+      {
+        "index": 2,
+        "text": "惻",
+        "note": null,
+        "source": null,
+        "rowText": "3.cak1惻"
+      },
+      {
+        "index": 3,
+        "text": "出",
+        "note": null,
+        "source": null,
+        "rowText": "4.ceot1出"
+      },
+      {
+        "index": 4,
+        "text": "前",
+        "note": null,
+        "source": null,
+        "rowText": "5.cin4前"
+      },
+      {
+        "index": 5,
+        "text": "場",
+        "note": null,
+        "source": null,
+        "rowText": "6.coeng4場"
+      }
+    ]
+  },
+  "firstSelection": {
+    "selectedIndex": 1,
+    "after": {
+      "aiEnabled": false,
+      "inputValue": "測",
+      "candidates": [
+        {
+          "index": 0,
+          "text": "時一下場句子",
+          "note": "(compound 詞組)",
+          "source": null,
+          "rowText": "1.si4 jat1 haa5 coeng4 geoi3 zi2時一下場句子(compound 詞組)ⓘ"
+        },
+        {
+          "index": 1,
+          "text": "是日",
+          "note": null,
+          "source": null,
+          "rowText": "2.si6jat6是日"
+        },
+        {
+          "index": 2,
+          "text": "時日",
+          "note": null,
+          "source": null,
+          "rowText": "3.si4jat6時日"
+        },
+        {
+          "index": 3,
+          "text": "時",
+          "note": null,
+          "source": null,
+          "rowText": "4.si4時"
+        },
+        {
+          "index": 4,
+          "text": "是",
+          "note": null,
+          "source": null,
+          "rowText": "5.si6是"
+        },
+        {
+          "index": 5,
+          "text": "事",
+          "note": null,
+          "source": null,
+          "rowText": "6.si6事"
+        }
+      ]
+    },
+    "valueAfterFirstSelection": "測",
+    "rawTailCommit": "測sijathaacoenggeoizi",
+    "rawTailInserted": false,
+    "oneRowOracleContinuation": "是日下場句子",
+    "oneRowOracleContinuationVisible": false
+  },
+  "continuationSteps": [
+    {
+      "component": "是日",
+      "selectedIndex": 1,
+      "before": {
+        "aiEnabled": false,
+        "inputValue": "測",
+        "candidates": [
+          {
+            "index": 0,
+            "text": "時一下場句子",
+            "note": "(compound 詞組)",
+            "source": null,
+            "rowText": "1.si4 jat1 haa5 coeng4 geoi3 zi2時一下場句子(compound 詞組)ⓘ"
+          },
+          {
+            "index": 1,
+            "text": "是日",
+            "note": null,
+            "source": null,
+            "rowText": "2.si6jat6是日"
+          },
+          {
+            "index": 2,
+            "text": "時日",
+            "note": null,
+            "source": null,
+            "rowText": "3.si4jat6時日"
+          },
+          {
+            "index": 3,
+            "text": "時",
+            "note": null,
+            "source": null,
+            "rowText": "4.si4時"
+          },
+          {
+            "index": 4,
+            "text": "是",
+            "note": null,
+            "source": null,
+            "rowText": "5.si6是"
+          },
+          {
+            "index": 5,
+            "text": "事",
+            "note": null,
+            "source": null,
+            "rowText": "6.si6事"
+          }
+        ]
+      }
+    },
+    {
+      "component": "下場",
+      "selectedIndex": 1,
+      "before": {
+        "aiEnabled": false,
+        "inputValue": "測是日",
+        "candidates": [
+          {
+            "index": 0,
+            "text": "下場句子",
+            "note": "(compound 詞組)",
+            "source": null,
+            "rowText": "1.haa6 coeng4 geoi3 zi2下場句子(compound 詞組)ⓘ"
+          },
+          {
+            "index": 1,
+            "text": "下場",
+            "note": null,
+            "source": null,
+            "rowText": "2.haa6coeng4下場"
+          },
+          {
+            "index": 2,
+            "text": "蝦腸",
+            "note": null,
+            "source": null,
+            "rowText": "3.haa1coeng2蝦腸"
+          },
+          {
+            "index": 3,
+            "text": "下挫",
+            "note": null,
+            "source": null,
+            "rowText": "4.haa6co3下挫"
+          },
+          {
+            "index": 4,
+            "text": "下",
+            "note": null,
+            "source": null,
+            "rowText": "5.haa6下"
+          },
+          {
+            "index": 5,
+            "text": "吓",
+            "note": null,
+            "source": null,
+            "rowText": "6.haa2吓"
+          }
+        ]
+      }
+    },
+    {
+      "component": "句子",
+      "selectedIndex": 0,
+      "before": {
+        "aiEnabled": false,
+        "inputValue": "測是日下場",
+        "candidates": [
+          {
+            "index": 0,
+            "text": "句子",
+            "note": null,
+            "source": null,
+            "rowText": "1.geoi3 zi2句子ⓘ"
+          },
+          {
+            "index": 1,
+            "text": "舉止",
+            "note": null,
+            "source": null,
+            "rowText": "2.geoi2 zi2舉止ⓘ"
+          },
+          {
+            "index": 2,
+            "text": "據知",
+            "note": null,
+            "source": null,
+            "rowText": "3.geoi3 zi1據知ⓘ"
+          },
+          {
+            "index": 3,
+            "text": "巨子",
+            "note": null,
+            "source": null,
+            "rowText": "4.geoi6 zi2巨子ⓘ"
+          },
+          {
+            "index": 4,
+            "text": "詎知",
+            "note": null,
+            "source": null,
+            "rowText": "5.geoi6 zi1詎知"
+          },
+          {
+            "index": 5,
+            "text": "據",
+            "note": null,
+            "source": null,
+            "rowText": "6.geoi3據"
+          }
+        ]
+      }
+    }
+  ],
+  "finalValue": "測是日下場句子",
+  "fixtureFinalCommit": "測是日下場句子",
+  "userFeelTarget": "測試一下長句子",
+  "userFeelTargetReached": false,
+  "consoleFailures": []
+}

@@ -219,7 +219,7 @@ index 0000000..74bc863
 +這	zhe	100000
 +这	zhe	99999
 diff --git a/src/App.tsx b/src/App.tsx
-index c43ccbc..f979747 100644
+index c43ccbc..693e74e 100644
 --- a/src/App.tsx
 +++ b/src/App.tsx
 @@ -1,20 +1,29 @@
@@ -377,7 +377,7 @@ index c43ccbc..f979747 100644
  				if (!(await Rime.deploy() && success)) {
  					type = "warning";
  				}
-@@ -63,26 +155,116 @@ export default function App() {
+@@ -63,26 +155,124 @@ export default function App() {
  				notify(type, "套用設定", "applying the settings");
  			}
  			updateDeployStatus();
@@ -421,8 +421,9 @@ index c43ccbc..f979747 100644
 +			}
 +		}), [isInspectorEnabled, runAsyncTask]);
 +
-+	useEffect(() =>
-+		runAsyncTask(async () => {
++	useEffect(() => {
++		let cancelled = false;
++		async function applyAiSettings() {
 +			let type: "warning" | "error" | undefined;
 +			try {
 +				if (!(await Rime.customize({ enableAI }))) {
@@ -435,8 +436,15 @@ index c43ccbc..f979747 100644
 +			if (type) {
 +				notify(type, "Apply AI settings", "applying the AI settings");
 +			}
-+			updateAiStatus();
-+		}), [enableAI, updateAiStatus, runAsyncTask]);
++			if (!cancelled) {
++				updateAiStatus();
++			}
++		}
++		void applyAiSettings();
++		return () => {
++			cancelled = true;
++		};
++	}, [enableAI, updateAiStatus]);
  
  	return <>
 -		<header className="p-8 border-b border-base-300 flex items-center">
@@ -2372,7 +2380,7 @@ index 9dc742c..9c1974b 100644
  	}
  }
 diff --git a/src/rime.ts b/src/rime.ts
-index 4393a9e..a529d28 100644
+index 4393a9e..391be9a 100644
 --- a/src/rime.ts
 +++ b/src/rime.ts
 @@ -11,14 +11,26 @@ type ListenerPayload = {
@@ -2410,7 +2418,7 @@ index 4393a9e..a529d28 100644
 +const lastListenerArgs = {} as Partial<{ [K in keyof ListenerArgsMap]: ListenerArgsMap[K] }>;
  
 -const worker = new Worker("./worker.js");
-+const YUNE_TYPEDUCK_WORKER_VERSION = "m26-performance-v1";
++const YUNE_TYPEDUCK_WORKER_VERSION = "m27-startup-runtime-v1";
 +const debugWindow = window as typeof window & { __YUNE_RIME_VERSION__?: string };
 +debugWindow.__YUNE_RIME_VERSION__ = YUNE_TYPEDUCK_WORKER_VERSION;
 +document.documentElement.dataset.yuneRimeVersion = YUNE_TYPEDUCK_WORKER_VERSION;
@@ -2635,10 +2643,10 @@ index 5d47525..45547e5 100644
  	showReverseCode: boolean;
  }
 diff --git a/src/worker.ts b/src/worker.ts
-index 92b9a90..6a8b173 100644
+index 92b9a90..6eb060f 100644
 --- a/src/worker.ts
 +++ b/src/worker.ts
-@@ -1,137 +1,394 @@
+@@ -1,137 +1,396 @@
 -import type { Actions, ListenerArgsMap, Message, RimeResult, RimeAPI, RimeNotification, RimeDeployStatus } from "./types";
 -
 -type TypeToString<T> = T extends number ? "number"
@@ -2909,8 +2917,9 @@ index 92b9a90..6a8b173 100644
 -	importScripts("rime.js");
 -});
 +const DEFAULT_SCHEMA_ID: RimeSchemaId = "jyut6ping3_mobile";
-+const YUNE_TYPEDUCK_ASSET_VERSION = "m25-dogfood-v1";
++const YUNE_TYPEDUCK_ASSET_VERSION = "m27-startup-v1";
 +const YUNE_TYPEDUCK_WASM_BUILD_PROFILE = "release";
++const YUNE_TYPEDUCK_M27_EVIDENCE_VERSION = "m27-startup-v1";
 +const PLAYGROUND_SCHEMAS: Record<RimeSchemaId, PlaygroundSchema> = {
 +  jyut6ping3_mobile: {
 +    id: "jyut6ping3_mobile",
@@ -3032,6 +3041,7 @@ index 92b9a90..6a8b173 100644
 +        phase: "startup:complete",
 +        totalMs: Math.round(performance.now() - startupStartedAt),
 +        markers: startupMarkers,
++        m27EvidenceVersion: YUNE_TYPEDUCK_M27_EVIDENCE_VERSION,
 +        assetVersion: YUNE_TYPEDUCK_ASSET_VERSION,
 +        schema: DEFAULT_SCHEMA_ID,
 +        wasmBuildProfile: YUNE_TYPEDUCK_WASM_BUILD_PROFILE,

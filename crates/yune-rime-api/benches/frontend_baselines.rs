@@ -1,5 +1,6 @@
 use std::{
-    ffi::CString,
+    collections::BTreeMap,
+    ffi::{c_void, CString},
     fs, mem,
     os::raw::c_int,
     path::{Path, PathBuf},
@@ -15,8 +16,8 @@ use yune_core::{
     TableDictionaryAdvancedData, TYPEDUCK_SENTENCE_WORD_PENALTY,
 };
 use yune_rime_api::{
-    rime_get_api, Bool, RimeCommit, RimeComposition, RimeContext, RimeMenu, RimeSessionId,
-    RimeStatus, RimeTraits, TRUE,
+    begin_startup_trace, finish_startup_trace, rime_get_api, Bool, RimeCommit, RimeComposition,
+    RimeContext, RimeMenu, RimeSessionId, RimeStatus, RimeTraits, StartupTraceMemorySample, TRUE,
 };
 
 const PHASE_LABEL: &str = "06-04";
@@ -35,7 +36,7 @@ fn main() {
     let api = api_table();
     validate_api_table(api);
 
-    let results = vec![
+    let mut results = vec![
         run_session_lifecycle(api),
         run_simple_ascii_key(api),
         run_schema_loaded_key(api),
@@ -61,6 +62,11 @@ fn main() {
         run_real_deploy_cache_hit(api, RealSchema::Jyut6ping3Mobile),
         run_real_startup_runtime_ready(api, RealSchema::LunaPinyin),
     ];
+    results.extend(run_real_startup_trace_rows(
+        api,
+        RealSchema::Jyut6ping3Mobile,
+    ));
+    results.extend(run_real_startup_trace_rows(api, RealSchema::LunaPinyin));
 
     print_results(&results);
 }
@@ -129,6 +135,21 @@ impl BenchStats {
             cold_first: cold_first_us,
         }
     }
+}
+
+#[derive(Clone, Debug)]
+struct StartupSpan {
+    name: &'static str,
+    micros: u128,
+    working_set_before: Option<u64>,
+    working_set_after: Option<u64>,
+    peak_working_set_after: Option<u64>,
+}
+
+#[derive(Clone, Debug)]
+struct MemorySample {
+    working_set_bytes: Option<u64>,
+    peak_working_set_bytes: Option<u64>,
 }
 
 #[derive(Clone, Copy)]
@@ -1030,6 +1051,88 @@ fn run_real_deploy_cache_hit(api: &yune_rime_api::RimeApi, schema: RealSchema) -
     }
 }
 
+fn run_real_startup_trace_rows(
+    api: &yune_rime_api::RimeApi,
+    schema: RealSchema,
+) -> Vec<BenchResult> {
+    let mut samples_by_name: BTreeMap<&'static str, Vec<StartupSpan>> = BTreeMap::new();
+
+    for _ in 0..REAL_STARTUP_SAMPLES {
+        let mut sample_spans: BTreeMap<&'static str, StartupSpan> = BTreeMap::new();
+        let fixture = RuntimeFixture::new(&format!("startup-trace-{}", schema.schema_id()));
+
+        let (_, span) = measure_startup_span("write_real_schema_assets", || {
+            write_real_schema_assets(&fixture)
+        });
+        merge_startup_span(&mut sample_spans, span);
+
+        let ((), span) = measure_startup_span("teardown_or_finalize", || reset_runtime(api));
+        merge_startup_span(&mut sample_spans, span);
+
+        let traits = fixture.traits();
+        let setup = require("setup", api.setup);
+        let initialize = require("initialize", api.initialize);
+        let ((), span) = measure_startup_span("setup", || {
+            // SAFETY: fixture-owned C strings outlive setup.
+            unsafe { setup(&traits) };
+        });
+        merge_startup_span(&mut sample_spans, span);
+        let ((), span) = measure_startup_span("initialize", || {
+            // SAFETY: fixture-owned C strings outlive initialize.
+            unsafe { initialize(&traits) };
+        });
+        merge_startup_span(&mut sample_spans, span);
+
+        let create_session = require("create_session", api.create_session);
+        let (session_id, span) = measure_startup_span("create_session", || create_session());
+        assert_ne!(session_id, 0, "create_session returned 0");
+        merge_startup_span(&mut sample_spans, span);
+
+        begin_startup_trace(Some(current_startup_trace_memory_sample));
+        let select_schema = require("select_schema", api.select_schema);
+        let schema_id = CString::new(schema.schema_id()).expect("schema id should be valid");
+        let ((), span) = measure_startup_span("select_schema_total", || {
+            // SAFETY: schema_id points to a valid NUL-terminated logical schema ID.
+            assert_eq!(
+                unsafe { select_schema(session_id, schema_id.as_ptr()) },
+                TRUE
+            );
+        });
+        let trace_events = finish_startup_trace();
+        merge_startup_span(&mut sample_spans, span);
+        for event in trace_events {
+            merge_startup_span(
+                &mut sample_spans,
+                StartupSpan {
+                    name: event.name,
+                    micros: event.micros,
+                    working_set_before: event.working_set_before,
+                    working_set_after: event.working_set_after,
+                    peak_working_set_after: event.peak_working_set_after,
+                },
+            );
+        }
+
+        let destroy_session = require("destroy_session", api.destroy_session);
+        let ((), span) = measure_startup_span("destroy_session", || {
+            assert_eq!(destroy_session(session_id), TRUE);
+        });
+        merge_startup_span(&mut sample_spans, span);
+
+        let ((), span) = measure_startup_span("teardown_or_finalize", || reset_runtime(api));
+        merge_startup_span(&mut sample_spans, span);
+
+        for (name, span) in sample_spans {
+            samples_by_name.entry(name).or_default().push(span);
+        }
+    }
+
+    samples_by_name
+        .into_iter()
+        .map(|(name, spans)| startup_span_result(schema, name, &spans))
+        .collect()
+}
+
 fn create_and_select_real_schema(
     api: &yune_rime_api::RimeApi,
     schema: RealSchema,
@@ -1218,6 +1321,191 @@ fn percentile(sorted_samples: &[f64], percentile: f64) -> f64 {
     );
     let index = ((sorted_samples.len() - 1) as f64 * percentile).ceil() as usize;
     sorted_samples[index.min(sorted_samples.len() - 1)]
+}
+
+#[cfg(windows)]
+fn current_memory_sample() -> MemorySample {
+    #[repr(C)]
+    struct ProcessMemoryCounters {
+        cb: u32,
+        page_fault_count: u32,
+        peak_working_set_size: usize,
+        working_set_size: usize,
+        quota_peak_paged_pool_usage: usize,
+        quota_paged_pool_usage: usize,
+        quota_peak_non_paged_pool_usage: usize,
+        quota_non_paged_pool_usage: usize,
+        pagefile_usage: usize,
+        peak_pagefile_usage: usize,
+    }
+
+    #[link(name = "kernel32")]
+    extern "system" {
+        fn GetCurrentProcess() -> *mut c_void;
+    }
+
+    #[link(name = "psapi")]
+    extern "system" {
+        fn GetProcessMemoryInfo(
+            process: *mut c_void,
+            counters: *mut ProcessMemoryCounters,
+            size: u32,
+        ) -> i32;
+    }
+
+    let mut counters = ProcessMemoryCounters {
+        cb: mem::size_of::<ProcessMemoryCounters>() as u32,
+        page_fault_count: 0,
+        peak_working_set_size: 0,
+        working_set_size: 0,
+        quota_peak_paged_pool_usage: 0,
+        quota_paged_pool_usage: 0,
+        quota_peak_non_paged_pool_usage: 0,
+        quota_non_paged_pool_usage: 0,
+        pagefile_usage: 0,
+        peak_pagefile_usage: 0,
+    };
+    let ok = unsafe {
+        GetProcessMemoryInfo(
+            GetCurrentProcess(),
+            &mut counters,
+            mem::size_of::<ProcessMemoryCounters>() as u32,
+        )
+    };
+    if ok == 0 {
+        return MemorySample {
+            working_set_bytes: None,
+            peak_working_set_bytes: None,
+        };
+    }
+    MemorySample {
+        working_set_bytes: Some(counters.working_set_size as u64),
+        peak_working_set_bytes: Some(counters.peak_working_set_size as u64),
+    }
+}
+
+#[cfg(not(windows))]
+fn current_memory_sample() -> MemorySample {
+    MemorySample {
+        working_set_bytes: None,
+        peak_working_set_bytes: None,
+    }
+}
+
+fn current_startup_trace_memory_sample() -> StartupTraceMemorySample {
+    let sample = current_memory_sample();
+    StartupTraceMemorySample {
+        working_set_bytes: sample.working_set_bytes,
+        peak_working_set_bytes: sample.peak_working_set_bytes,
+    }
+}
+
+fn measure_startup_span<T>(name: &'static str, f: impl FnOnce() -> T) -> (T, StartupSpan) {
+    let before = current_memory_sample();
+    let start = Instant::now();
+    let output = f();
+    let elapsed = start.elapsed();
+    let after = current_memory_sample();
+    (
+        output,
+        StartupSpan {
+            name,
+            micros: elapsed.as_micros(),
+            working_set_before: before.working_set_bytes,
+            working_set_after: after.working_set_bytes,
+            peak_working_set_after: after.peak_working_set_bytes,
+        },
+    )
+}
+
+fn merge_startup_span(spans: &mut BTreeMap<&'static str, StartupSpan>, span: StartupSpan) {
+    spans
+        .entry(span.name)
+        .and_modify(|existing| {
+            existing.micros = existing.micros.saturating_add(span.micros);
+            if existing.working_set_before.is_none() {
+                existing.working_set_before = span.working_set_before;
+            }
+            if span.working_set_after.is_some() {
+                existing.working_set_after = span.working_set_after;
+            }
+            existing.peak_working_set_after =
+                max_optional(existing.peak_working_set_after, span.peak_working_set_after);
+        })
+        .or_insert(span);
+}
+
+fn startup_span_result(
+    schema: RealSchema,
+    span_name: &'static str,
+    spans: &[StartupSpan],
+) -> BenchResult {
+    let samples = spans
+        .iter()
+        .map(|span| span.micros as f64)
+        .collect::<Vec<_>>();
+    let total_micros = spans
+        .iter()
+        .fold(0_u128, |total, span| total.saturating_add(span.micros));
+    BenchResult {
+        name: format!("startup_trace_{}_{}", schema.schema_id(), span_name),
+        operations: spans.len() as u64,
+        fixture: "typeduck-web-real-assets",
+        schema_id: schema.schema_id(),
+        asset_set: schema.asset_set(),
+        data_size: format!(
+            "startup_trace_samples={} observed_samples={}",
+            REAL_STARTUP_SAMPLES,
+            spans.len()
+        ),
+        total: duration_from_micros(total_micros),
+        stats: Some(BenchStats::from_samples(&samples, None)),
+        memory_notes: startup_memory_notes(spans),
+    }
+}
+
+fn duration_from_micros(micros: u128) -> Duration {
+    Duration::from_micros(u64::try_from(micros).unwrap_or(u64::MAX))
+}
+
+fn startup_memory_notes(spans: &[StartupSpan]) -> String {
+    let before = median_optional_u64(spans.iter().filter_map(|span| span.working_set_before));
+    let after = median_optional_u64(spans.iter().filter_map(|span| span.working_set_after));
+    let peak = spans
+        .iter()
+        .filter_map(|span| span.peak_working_set_after)
+        .max();
+    let delta = before
+        .zip(after)
+        .map(|(before, after)| i128::from(after) - i128::from(before));
+    format!(
+        "working_set_before_bytes={} working_set_after_bytes={} peak_working_set_after_bytes={} memory_delta_bytes={}",
+        format_optional_u64(before),
+        format_optional_u64(after),
+        format_optional_u64(peak),
+        delta.map_or_else(|| "unavailable".to_owned(), |value| value.to_string())
+    )
+}
+
+fn median_optional_u64(values: impl Iterator<Item = u64>) -> Option<u64> {
+    let mut values = values.collect::<Vec<_>>();
+    if values.is_empty() {
+        return None;
+    }
+    values.sort_unstable();
+    Some(values[values.len() / 2])
+}
+
+fn max_optional(left: Option<u64>, right: Option<u64>) -> Option<u64> {
+    match (left, right) {
+        (Some(left), Some(right)) => Some(left.max(right)),
+        (Some(value), None) | (None, Some(value)) => Some(value),
+        (None, None) => None,
+    }
+}
+
+fn format_optional_u64(value: Option<u64>) -> String {
+    value.map_or_else(|| "unavailable".to_owned(), |value| value.to_string())
 }
 
 fn require<T>(name: &str, function: Option<T>) -> T {

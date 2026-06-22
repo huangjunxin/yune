@@ -11,8 +11,9 @@ use crate::{
     install_schema_recognizer_processor, install_schema_segment_tags,
     install_schema_selector_bindings, install_schema_speller_processor,
     install_schema_translator_chain, load_runtime_config_root, notify, schema_string_list,
-    selected_runtime_config_path, sessions, with_session, Bool, ConfigOpenKind, NavigatorBindings,
-    NavigatorSyllableJumpPosition, RimeSessionId, SelectorBindings, SessionState, FALSE, TRUE,
+    selected_runtime_config_path, sessions, startup_trace, with_session, Bool, ConfigOpenKind,
+    NavigatorBindings, NavigatorSyllableJumpPosition, RimeSessionId, SelectorBindings,
+    SessionState, FALSE, TRUE,
 };
 
 /// Copies the current session schema id into caller-provided storage.
@@ -81,7 +82,10 @@ pub unsafe extern "C" fn RimeSelectSchema(
 }
 
 pub(crate) fn apply_schema_to_session(session: &mut SessionState, schema_id: &str) {
-    let schema_name = deployed_schema_name(schema_id);
+    let schema_name = {
+        let _trace = startup_trace::span("schema_config_load");
+        deployed_schema_name(schema_id)
+    };
     session.engine.set_schema(schema_id.to_owned(), schema_name);
     session.clear_user_dict_name();
     session.engine.clear_translators();
@@ -109,21 +113,36 @@ pub(crate) fn apply_schema_to_session(session: &mut SessionState, schema_id: &st
     session.navigator_delimiters = " ".to_owned();
     session.navigator_syllable_jump_position = NavigatorSyllableJumpPosition::AfterDelimiter;
     session.paging = false;
-    restore_switcher_saved_options(session, schema_id);
-    apply_schema_switch_resets(session, schema_id);
-    install_schema_segment_tags(session, schema_id);
-    install_schema_editor_processor(session, schema_id);
-    install_schema_chord_composer_processor(session, schema_id);
-    install_schema_ascii_composer_processor(session, schema_id);
-    install_schema_speller_processor(session, schema_id);
-    install_schema_recognizer_processor(session, schema_id);
-    install_schema_selector_bindings(session, schema_id);
-    install_schema_navigator_bindings(session, schema_id);
-    install_schema_key_binder_processor(session, schema_id);
-    install_schema_punctuation_processor(session, schema_id);
-    install_schema_translator_chain(session, schema_id);
-    install_schema_filter_chain(session, schema_id);
-    session.reload_userdb_from_store();
+    {
+        let _trace = startup_trace::span("schema_switch_options");
+        restore_switcher_saved_options(session, schema_id);
+        apply_schema_switch_resets(session, schema_id);
+    }
+    {
+        let _trace = startup_trace::span("processor_install");
+        install_schema_segment_tags(session, schema_id);
+        install_schema_editor_processor(session, schema_id);
+        install_schema_chord_composer_processor(session, schema_id);
+        install_schema_ascii_composer_processor(session, schema_id);
+        install_schema_speller_processor(session, schema_id);
+        install_schema_recognizer_processor(session, schema_id);
+        install_schema_selector_bindings(session, schema_id);
+        install_schema_navigator_bindings(session, schema_id);
+        install_schema_key_binder_processor(session, schema_id);
+        install_schema_punctuation_processor(session, schema_id);
+    }
+    {
+        let _trace = startup_trace::span("translator_install");
+        install_schema_translator_chain(session, schema_id);
+    }
+    {
+        let _trace = startup_trace::span("filter_install");
+        install_schema_filter_chain(session, schema_id);
+    }
+    {
+        let _trace = startup_trace::span("userdb_open_or_sync");
+        session.reload_userdb_from_store();
+    }
     session.engine.clear_composition();
     session.input_buffer = None;
     session.unread_commit = None;

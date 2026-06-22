@@ -16,13 +16,15 @@ use crate::{
     ends_with_ascii_digit, find_config_value, install_schema_punctuation_translator_from_config,
     load_runtime_config_root, resource_id::validate_data_resource_id, schema_folded_switch_options,
     schema_list_translator_config_for_current, schema_switch_translator_switches,
-    selected_runtime_data_path, switch_scalar_field, AffixSegmentor, ConfigOpenKind,
+    selected_runtime_data_path, startup_trace, switch_scalar_field, AffixSegmentor, ConfigOpenKind,
     MatcherPattern, MatcherSegmentor, PunctSegmentor, RemainingGearDeferral, SessionState,
 };
 
 pub(crate) fn install_schema_translator_chain(session: &mut SessionState, schema_id: &str) {
-    let schema_config =
-        load_runtime_config_root(&format!("{schema_id}.schema"), ConfigOpenKind::Deployed);
+    let schema_config = {
+        let _trace = startup_trace::span("schema_config_load");
+        load_runtime_config_root(&format!("{schema_id}.schema"), ConfigOpenKind::Deployed)
+    };
     let Some(Value::Sequence(translators)) =
         find_config_value(&schema_config, "engine/translators")
     else {
@@ -286,25 +288,31 @@ fn install_schema_dictionary_translator_from_config(
     let dictionary_exclude =
         schema_string_list(schema_config, &format!("{name_space}/dictionary_exclude"));
     let spelling_algebra = spelling_algebra_for_dictionary(schema_config);
-    let mut translator = StaticTableTranslator::from_dictionary(dictionary)
-        .with_spelling_algebra(&spelling_algebra)
-        .with_completion(enable_completion)
-        .with_correction(enable_correction)
-        .with_dynamic_correction_lookup(is_typeduck_jyut6ping3_profile)
-        .with_charset_filter(enable_charset_filter)
-        .with_sentence(enable_sentence)
-        .with_sentence_over_completion(sentence_over_completion)
-        .with_delimiters(delimiters)
-        .with_tags(tags)
-        .with_initial_quality(initial_quality)
-        .with_comment_format(&comment_format)
-        .with_preedit_format(&preedit_format)
-        .with_dictionary_exclude(dictionary_exclude)
-        .with_combine_candidates(combine_candidates)
-        .with_affix(prefix, suffix)
-        .with_show_full_code(show_full_code)
-        .with_prediction_never_first(prediction_never_first)
-        .with_prefix_fallback(prefix_fallback);
+    let mut translator = {
+        let _trace = startup_trace::span("translator_index_build");
+        StaticTableTranslator::from_dictionary(dictionary)
+    }
+    .with_completion(enable_completion)
+    .with_correction(enable_correction)
+    .with_dynamic_correction_lookup(is_typeduck_jyut6ping3_profile)
+    .with_charset_filter(enable_charset_filter)
+    .with_sentence(enable_sentence)
+    .with_sentence_over_completion(sentence_over_completion)
+    .with_delimiters(delimiters)
+    .with_tags(tags)
+    .with_initial_quality(initial_quality)
+    .with_comment_format(&comment_format)
+    .with_preedit_format(&preedit_format)
+    .with_dictionary_exclude(dictionary_exclude)
+    .with_combine_candidates(combine_candidates)
+    .with_affix(prefix, suffix)
+    .with_show_full_code(show_full_code)
+    .with_prediction_never_first(prediction_never_first)
+    .with_prefix_fallback(prefix_fallback);
+    {
+        let _trace = startup_trace::span("spelling_algebra_expand");
+        translator = translator.with_spelling_algebra(&spelling_algebra);
+    }
     if let Some(threshold) = prediction_weight_threshold {
         translator = translator.with_prediction_weight_threshold(threshold);
     }
@@ -461,8 +469,10 @@ fn install_schema_switch_translator_from_config(session: &mut SessionState, sche
 }
 
 pub(crate) fn install_schema_filter_chain(session: &mut SessionState, schema_id: &str) {
-    let schema_config =
-        load_runtime_config_root(&format!("{schema_id}.schema"), ConfigOpenKind::Deployed);
+    let schema_config = {
+        let _trace = startup_trace::span("schema_config_load");
+        load_runtime_config_root(&format!("{schema_id}.schema"), ConfigOpenKind::Deployed)
+    };
     let Some(Value::Sequence(filters)) = find_config_value(&schema_config, "engine/filters") else {
         return;
     };
@@ -829,7 +839,11 @@ fn load_schema_dictionary_by_name(
         Ok(dictionary) => DictionaryLoadOutcome::Compiled(dictionary),
         Err(reason) => match source_yaml {
             Some(dictionary_yaml) => {
-                match parse_schema_source_dictionary(schema_config, name_space, &dictionary_yaml) {
+                let parsed = {
+                    let _trace = startup_trace::span("source_dictionary_parse_if_any");
+                    parse_schema_source_dictionary(schema_config, name_space, &dictionary_yaml)
+                };
+                match parsed {
                     Ok(dictionary) => DictionaryLoadOutcome::SourceFallback { dictionary, reason },
                     Err(_) => DictionaryLoadOutcome::NoUsablePath {
                         dictionary_id: dictionary_name,
@@ -874,14 +888,24 @@ fn load_schema_compiled_dictionary(
     let Some(reverse_path) = selected_runtime_data_path(&reverse_name) else {
         return Err(CompiledRejectReason::Missing);
     };
-    let table_bytes = fs::read(table_path)
-        .map_err(|error| CompiledRejectReason::Invalid(format!("table read failed: {error}")))?;
-    let prism_bytes = prism_path
-        .map(fs::read)
-        .transpose()
-        .map_err(|error| CompiledRejectReason::Invalid(format!("prism read failed: {error}")))?;
-    let reverse_bytes = fs::read(reverse_path)
-        .map_err(|error| CompiledRejectReason::Invalid(format!("reverse read failed: {error}")))?;
+    let table_bytes = {
+        let _trace = startup_trace::span("compiled_table_load");
+        fs::read(table_path)
+            .map_err(|error| CompiledRejectReason::Invalid(format!("table read failed: {error}")))?
+    };
+    let prism_bytes = {
+        let _trace = startup_trace::span("compiled_prism_load");
+        prism_path
+            .map(fs::read)
+            .transpose()
+            .map_err(|error| CompiledRejectReason::Invalid(format!("prism read failed: {error}")))?
+    };
+    let reverse_bytes = {
+        let _trace = startup_trace::span("compiled_reverse_load");
+        fs::read(reverse_path).map_err(|error| {
+            CompiledRejectReason::Invalid(format!("reverse read failed: {error}"))
+        })?
+    };
 
     if let Some(source_yaml) = source_yaml {
         let source_checksum = rime_dict_source_checksum(0, [source_yaml.as_bytes()], None);
@@ -890,46 +914,53 @@ fn load_schema_compiled_dictionary(
         }
     }
 
-    let prism_payload = prism_bytes
-        .as_ref()
-        .map(parse_rime_prism_bin_payload)
-        .transpose()
-        .map_err(|error| match error {
-            yune_core::RimePrismBinParseError::UnsupportedSection { role } => {
-                CompiledRejectReason::Unsupported(role)
-            }
-            other => CompiledRejectReason::Invalid(format!("prism parse failed: {other:?}")),
-        })?;
-    let reverse_dictionary =
+    let prism_payload = {
+        let _trace = startup_trace::span("compiled_prism_load");
+        prism_bytes
+            .as_ref()
+            .map(parse_rime_prism_bin_payload)
+            .transpose()
+            .map_err(|error| match error {
+                yune_core::RimePrismBinParseError::UnsupportedSection { role } => {
+                    CompiledRejectReason::Unsupported(role)
+                }
+                other => CompiledRejectReason::Invalid(format!("prism parse failed: {other:?}")),
+            })?
+    };
+    let reverse_dictionary = {
+        let _trace = startup_trace::span("compiled_reverse_load");
         parse_rime_reverse_bin_dictionary(&reverse_bytes).map_err(|error| match error {
             yune_core::RimeReverseBinParseError::UnsupportedSection { role } => {
                 CompiledRejectReason::Unsupported(role)
             }
             other => CompiledRejectReason::Invalid(format!("reverse parse failed: {other:?}")),
-        })?;
-    parse_rime_table_bin_dictionary(&table_bytes)
-        .map(|dictionary| {
-            let mut dictionary = dictionary.with_merged_advanced_data_from(&reverse_dictionary);
-            if let Some(prism_payload) = prism_payload {
-                dictionary = dictionary.with_merged_advanced_data_from(
-                    &TableDictionary::with_advanced_data(
-                        Vec::new(),
-                        yune_core::TableDictionaryAdvancedData {
-                            corrections: prism_payload.corrections,
-                            tolerance_rules: prism_payload.tolerance_rules,
-                            ..yune_core::TableDictionaryAdvancedData::default()
-                        },
-                    ),
-                );
-            }
-            dictionary
-        })
-        .map_err(|error| match error {
-            yune_core::RimeTableBinParseError::UnsupportedSection { role } => {
-                CompiledRejectReason::Unsupported(role)
-            }
-            other => CompiledRejectReason::Invalid(format!("table parse failed: {other:?}")),
-        })
+        })?
+    };
+    {
+        let _trace = startup_trace::span("compiled_table_load");
+        parse_rime_table_bin_dictionary(&table_bytes)
+    }
+    .map(|dictionary| {
+        let mut dictionary = dictionary.with_merged_advanced_data_from(&reverse_dictionary);
+        if let Some(prism_payload) = prism_payload {
+            dictionary =
+                dictionary.with_merged_advanced_data_from(&TableDictionary::with_advanced_data(
+                    Vec::new(),
+                    yune_core::TableDictionaryAdvancedData {
+                        corrections: prism_payload.corrections,
+                        tolerance_rules: prism_payload.tolerance_rules,
+                        ..yune_core::TableDictionaryAdvancedData::default()
+                    },
+                ));
+        }
+        dictionary
+    })
+    .map_err(|error| match error {
+        yune_core::RimeTableBinParseError::UnsupportedSection { role } => {
+            CompiledRejectReason::Unsupported(role)
+        }
+        other => CompiledRejectReason::Invalid(format!("table parse failed: {other:?}")),
+    })
 }
 
 fn load_schema_source_dictionary_yaml(dictionary_name: &str) -> Option<String> {
