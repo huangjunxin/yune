@@ -48,8 +48,8 @@ const ACTIVE_SHOWCASE_CONTROLS = [
 const LIVE_SHOWCASE_CONTROLS = [
   /ASCII mode/,
   /Full shape/,
-  /Simplification/,
-  /Traditionalization/,
+  /Hong Kong Traditional/,
+  /Simplified Chinese/,
   /Extended charset/,
   /Disabled/,
 ] as const;
@@ -58,7 +58,7 @@ const DISPLAY_SHOWCASE_CONTROLS = [
   /Display languages/,
   /Candidate Jyutping/,
   /Reverse code display/,
-  /Cangjie version/,
+  /Cangjie lookup/,
 ] as const;
 
 const LEARNED_PREFIX_INPUT = "ngo";
@@ -862,16 +862,37 @@ async function readYuneStatus(page: Page): Promise<Record<string, string | null>
   await expect(status).toBeVisible({ timeout: 10000 });
   const schema = page.locator("[data-yune-status-schema]");
   const disabled = page.locator("[data-yune-status-disabled]");
-  const traditional = page.locator("[data-yune-status-traditional]");
+  const composing = page.locator("[data-yune-status-composing]");
+  const outputStandard = page.locator("[data-yune-status-output-standard]");
   const ascii = page.locator("[data-yune-status-ascii]");
+  const fullShape = page.locator("[data-yune-status-full-shape]");
+  const simplified = page.locator("[data-yune-status-simplified]");
+  const traditional = page.locator("[data-yune-status-traditional]");
+  const asciiPunct = page.locator("[data-yune-status-ascii-punct]");
+  const schemaId = await schema.getAttribute("data-yune-status-schema-id") ?? await schema.textContent();
+  const schemaName = await schema.getAttribute("data-yune-status-schema-name") ?? await schema.textContent();
   const disabledValue = await disabled.getAttribute("data-yune-status-disabled");
-  const traditionalValue = await traditional.getAttribute("data-yune-status-traditional");
+  const composingValue = await composing.getAttribute("data-yune-status-composing");
+  const outputStandardValue = await outputStandard.getAttribute("data-yune-status-output-standard");
   const asciiValue = await ascii.getAttribute("data-yune-status-ascii");
+  const fullShapeValue = await fullShape.getAttribute("data-yune-status-full-shape");
+  const simplifiedValue = await simplified.getAttribute("data-yune-status-simplified");
+  const traditionalValue = await traditional.getAttribute("data-yune-status-traditional");
+  const asciiPunctValue = await asciiPunct.getAttribute("data-yune-status-ascii-punct");
   return {
-    schema: await schema.getAttribute("data-yune-status-schema-id") ?? await schema.textContent(),
+    schema: schemaId,
+    schema_id: schemaId,
+    schema_name: schemaName,
     disabled: disabledValue === "true" ? "disabled" : "enabled",
-    traditional: traditionalValue === "true" ? "traditional" : "not traditional",
+    is_disabled: disabledValue,
+    is_composing: composingValue,
+    outputStandard: outputStandardValue,
+    is_simplified: simplifiedValue,
+    is_traditional: traditionalValue,
     ascii: asciiValue === "true" ? "ASCII" : "Chinese",
+    is_ascii_mode: asciiValue,
+    is_full_shape: fullShapeValue,
+    is_ascii_punct: asciiPunctValue,
   };
 }
 
@@ -1410,13 +1431,12 @@ test.describe("TypeDuck-Web Browser E2E", () => {
         "Prediction threshold",
         "Dictionary exclude",
         "schema switch",
-        "Cangjie version",
+        "Cangjie lookup",
       ],
       live: [
         "ASCII mode",
         "Full shape",
-        "Simplification",
-        "Traditionalization",
+        "Output standard",
         "Extended charset",
         "Disabled",
         "Yune inspector",
@@ -1424,7 +1444,7 @@ test.describe("TypeDuck-Web Browser E2E", () => {
       browserOnly: [
         "Display languages",
         "Candidate Menu Layout",
-        "Chinese Typeface",
+        "Font",
         "Candidate Jyutping",
         "Reverse code display",
       ],
@@ -1858,7 +1878,7 @@ test.describe("TypeDuck-Web Browser E2E", () => {
     await takeM25Screenshot(page, "M25-DOGFOOD-04", "schema-switcher-toolbar-mobile");
   });
 
-  test("M25 DOGFOOD-05 Cangjie version control lives in the top control band", async ({ page }) => {
+  test("M25 DOGFOOD-05 Cangjie lookup control lives in the top control band", async ({ page }) => {
     await selectSchema(page, /Jyutping/);
     const topControls = page.locator("[data-yune-top-controls]");
     await expect(topControls).toBeVisible();
@@ -1866,12 +1886,13 @@ test.describe("TypeDuck-Web Browser E2E", () => {
     await expect(cangjieControl).toBeVisible();
     await expect(page.getByText(/Web Frontend Controls/)).toHaveCount(0);
 
-    await cangjieControl.getByText(/Version 3/).click();
-    await expect(cangjieControl.getByLabel(/Version 3/)).toBeChecked();
+    await expect(cangjieControl.getByText(/Cangjie lookup/)).toBeVisible();
+    await cangjieControl.getByText("三代").click();
+    await expect(cangjieControl.getByLabel("三代")).toBeChecked();
     await waitForAppReady(page);
     const version3 = await waitForPersistedSettings(page, { "cangjie/dictionary": "cangjie3" });
-    await cangjieControl.getByText(/Version 5/).click();
-    await expect(cangjieControl.getByLabel(/Version 5/)).toBeChecked();
+    await cangjieControl.getByText("五代").click();
+    await expect(cangjieControl.getByLabel("五代")).toBeChecked();
     await waitForAppReady(page);
     const version5 = await waitForPersistedSettings(page, { "cangjie/dictionary": "cangjie5" });
 
@@ -2098,7 +2119,21 @@ test.describe("TypeDuck-Web Browser E2E", () => {
   test("M24 engine status strip explains labeled state", async ({ page }) => {
     await typeInputForStatus(page, "nei");
     await expect(page.getByText(/引擎狀態 Engine status/)).toBeVisible();
-    await expect(page.getByText(/顯示目前 schema/)).toBeVisible();
+    await expect(page.getByText(/完整 status 欄位/)).toBeVisible();
+    const status = page.locator("[data-yune-status]");
+    for (const field of [
+      "schema_id",
+      "schema_name",
+      "is_disabled",
+      "is_composing",
+      "is_ascii_mode",
+      "is_full_shape",
+      "is_simplified",
+      "is_traditional",
+      "is_ascii_punct",
+    ]) {
+      await expect(status.getByText(field, { exact: true })).toBeVisible();
+    }
     await saveM24Json("M24-DOGFOOD-09", "status-strip.json", await readYuneStatus(page));
     await takeM24Screenshot(page, "M24-DOGFOOD-09", "status-strip");
   });
@@ -2127,16 +2162,42 @@ test.describe("TypeDuck-Web Browser E2E", () => {
   });
 
   test("M24 Chinese typeface picker applies full family names to visible Chinese surfaces", async ({ page }) => {
-    await expect(page.getByText("Chiron Sung HK")).toBeVisible();
-    await expect(page.getByText("Chiron Hei HK")).toBeVisible();
-    await expect(page.getByText("Iansui")).toBeVisible();
-    await expect(page.getByText(/宋體 Sung|黑體 Hei/)).toHaveCount(0);
-    await page.getByLabel("Iansui").check({ force: true });
+    const typefaceLabels = [
+      "昭源黑體 Chiron Hei HK",
+      "昭源宋體 Chiron Sung HK",
+      "昭源環方 Chiron GoRound TC",
+      "朱古力黑體 Chocolate Classical Sans",
+      "霞鶩文楷 TC LXGW WenKai TC",
+      "霞鶩文楷等寬 TC LXGW WenKai Mono TC",
+      "芫荽 Iansui",
+      "粉圓 Huninn",
+      "注音粉圓 Bpmf Huninn",
+      "滑油字 WDXL Lubrifont TC",
+    ];
+    await expect(page.getByText("字體 Font")).toBeVisible();
+    for (const label of typefaceLabels) {
+      await expect(page.getByText(label)).toBeVisible();
+    }
+    const renderedLabels = await page.locator("[data-yune-typeface-option-label]").evaluateAll(elements =>
+      elements.map(element => element.textContent?.trim() ?? ""),
+    );
+    expect(renderedLabels).toEqual(typefaceLabels);
+    const renderedFonts = await page.locator("[data-yune-typeface-option-label]").evaluateAll(elements =>
+      elements.map(element => ({
+        id: element.getAttribute("data-yune-typeface-option"),
+        fontFamily: getComputedStyle(element).fontFamily,
+        text: element.textContent?.trim() ?? "",
+      })),
+    );
+    expect(renderedFonts.find(font => font.id === "iansui")?.fontFamily).toContain("Iansui");
+    expect(renderedFonts.find(font => font.id === "huninn")?.fontFamily).toContain("Huninn");
+    expect(renderedFonts.find(font => font.id === "bpmf-huninn")?.fontFamily).toContain("Bpmf Huninn");
+    await page.getByLabel("芫荽 Iansui").check({ force: true });
     const state = await captureM24Phrase(page, "M24-DOGFOOD-12", M24_DOGFOOD_INPUT, M24_DOGFOOD_TOP);
     await page.locator(`.candidate-panel .candidates tbody[data-candidate-text="${M24_DOGFOOD_TOP}"]`).hover();
     await expect(page.locator("[data-chinese-typeface='iansui']").first()).toBeVisible();
     const textareaFont = await page.locator("textarea").evaluate(element => getComputedStyle(element).fontFamily);
-    await saveM24Json("M24-DOGFOOD-12", "typeface-picker-font-resources.json", { textareaFont, state });
+    await saveM24Json("M24-DOGFOOD-12", "typeface-picker-font-resources.json", { renderedFonts, textareaFont, state });
     await takeM24Screenshot(page, "M24-DOGFOOD-12", "typeface-picker-iansui");
     expect(textareaFont).toContain("Iansui");
   });
@@ -2312,10 +2373,12 @@ test.describe("TypeDuck-Web Browser E2E", () => {
   test("M22 Bucket 1 controls are browser-visible and honest @smoke", async ({ page }) => {
     test.setTimeout(300000);
     await expect(page.getByLabel(/Dictionary exclude/).last()).toBeVisible();
-    await expect(page.getByLabel(/Traditionalization/).last()).toBeVisible();
+    await expect(page.getByText(/Output standard/).last()).toBeVisible();
+    await expect(page.getByLabel(/Hong Kong Traditional/).last()).toBeVisible();
+    await expect(page.getByLabel(/Simplified Chinese/).last()).toBeVisible();
     await expect(page.getByLabel(/Extended charset/).last()).toBeVisible();
     await expect(page.getByLabel(/Disabled/).last()).toBeVisible();
-    await expect(page.getByText(/ascii_punct/i)).toHaveCount(0);
+    await expect(page.locator("label").filter({ hasText: /ascii_punct/i })).toHaveCount(0);
     await expect(page.getByLabel(/ascii_punct/i)).toHaveCount(0);
 
     await selectSchema(page, /Luna Pinyin/);
@@ -2330,18 +2393,11 @@ test.describe("TypeDuck-Web Browser E2E", () => {
     expect(candidateTexts(excludedLuna)).not.toContain("\u4fb4");
 
     await clearComposition(page);
-    await setPreferenceToggle(page, /Traditionalization/, true);
-    await typeInputForStatus(page, "hao");
-    const traditionalStatus = await readYuneStatus(page);
-    expect(traditionalStatus.traditional).toBe("traditional");
-
-    await clearComposition(page);
     await setPreferenceToggle(page, /Disabled/, true);
     await typeInputForStatus(page, "hao");
     const disabledStatus = await readYuneStatus(page);
     expect(disabledStatus.disabled).toBe("disabled");
     await setPreferenceToggle(page, /Disabled/, false);
-    await setPreferenceToggle(page, /Traditionalization/, false);
 
     await selectSchema(page, /Cangjie 5/);
     await typeInputForStatus(page, "ambe");
@@ -2357,14 +2413,12 @@ test.describe("TypeDuck-Web Browser E2E", () => {
       defaultLuna,
       excludeOn,
       excludedLuna,
-      traditionalStatus,
       disabledStatus,
       extendedOff,
       extendedOn,
       asciiPunctExposed: false,
       visibleSurfaces: {
         dictionaryExclude: "persisted translator/dictionary_exclude plus candidate removal",
-        traditionalization: "engine status strip",
         disabled: "engine status strip",
         extendedCharset: "candidate before/after on cangjie5 input ambe",
       },
@@ -2481,7 +2535,7 @@ test.describe("TypeDuck-Web Browser E2E", () => {
     await expect(page.getByLabel(/Prediction never first/).last()).toBeChecked();
     await expect(page.getByLabel(/AI Candidates/).last()).not.toBeChecked();
     await expect(page.getByLabel(/Prediction threshold/).last()).toHaveValue("0");
-    await expect(page.getByText(/ascii_punct/i)).toHaveCount(0);
+    await expect(page.locator("label").filter({ hasText: /ascii_punct/i })).toHaveCount(0);
     await expect(page.getByLabel(/ascii_punct/i)).toHaveCount(0);
     const commonCustom = await readRepoText("third_party/typeduck-web/source/public/schema/common.custom.yaml");
     const commonYaml = await readRepoText("third_party/typeduck-web/source/public/schema/common.yaml");
@@ -2710,7 +2764,7 @@ test.describe("TypeDuck-Web Browser E2E", () => {
     expect(fullShapeSlash).toEqual({ value: "／", panelCount: 0 });
 
     await setPreferenceToggle(page, /Full shape/, false);
-    await setPreferenceToggle(page, /Simplification/, true);
+    await setPreferenceRadio(page, /Simplified Chinese/);
     const simplification = await typeCompositionAndWaitForCandidate(page, "ngohaigo", "我系个");
     expect(simplification.candidates[0].text).toBe("我系个");
 
@@ -2745,7 +2799,7 @@ test.describe("TypeDuck-Web Browser E2E", () => {
     expect(hindiVisible.candidates[0].rowText).toContain("आप");
 
     await expect(page.getByLabel(/Reverse code display/).last()).toBeVisible();
-    await expect(page.getByText(/Cangjie version/)).toBeVisible();
+    await expect(page.getByText(/Cangjie lookup/)).toBeVisible();
     const mobileSchema = await readRepoText("third_party/typeduck-web/source/public/schema/jyut6ping3_mobile.schema.yaml");
     expect(mobileSchema).not.toContain("cangjie");
     expect(mobileSchema).not.toContain("show_full_code");
@@ -2894,7 +2948,7 @@ test.describe("TypeDuck-Web Browser E2E", () => {
     );
 
     await clearComposition(page);
-    await page.getByRole("button", { name: /Simplification/ }).click();
+    await page.getByRole("button", { name: /Output standard/ }).click();
     await page.waitForTimeout(500);
     await focusInputAndType(page, "ngohaigo");
     const simplified = await captureM16Scenario(

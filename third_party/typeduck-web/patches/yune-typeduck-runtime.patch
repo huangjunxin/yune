@@ -219,7 +219,7 @@ index 0000000..74bc863
 +這	zhe	100000
 +这	zhe	99999
 diff --git a/src/App.tsx b/src/App.tsx
-index c43ccbc..693e74e 100644
+index c43ccbc..4004f32 100644
 --- a/src/App.tsx
 +++ b/src/App.tsx
 @@ -1,20 +1,29 @@
@@ -254,7 +254,7 @@ index c43ccbc..693e74e 100644
  	useEffect(() => {
  		const { resolve } = startAsyncTask();
  		return subscribe("initialized", success => {
-@@ -26,32 +35,115 @@ export default function App() {
+@@ -26,32 +35,114 @@ export default function App() {
  	}, [startAsyncTask]);
  
  	useEffect(() => {
@@ -301,7 +301,6 @@ index c43ccbc..693e74e 100644
 +		predictionNeverFirst,
 +		predictionThreshold,
 +		activeSchema,
-+		isTraditionalization,
 +		isExtendedCharset,
 +		isDisabled,
 +		dictionaryExclude,
@@ -377,7 +376,7 @@ index c43ccbc..693e74e 100644
  				if (!(await Rime.deploy() && success)) {
  					type = "warning";
  				}
-@@ -63,26 +155,124 @@ export default function App() {
+@@ -63,26 +154,124 @@ export default function App() {
  				notify(type, "套用設定", "applying the settings");
  			}
  			updateDeployStatus();
@@ -392,7 +391,7 @@ index c43ccbc..693e74e 100644
 +				await Rime.setOption("ascii_mode", isAsciiMode);
 +				await Rime.setOption("full_shape", isFullShape);
 +				await Rime.setOption("simplification", isSimplification);
-+				await Rime.setOption("traditionalization", isTraditionalization);
++				await Rime.setOption("traditionalization", false);
 +				await Rime.setOption("extended_charset", isExtendedCharset);
 +				await Rime.setOption("disabled", isDisabled);
 +			}
@@ -402,7 +401,7 @@ index c43ccbc..693e74e 100644
 +			if (type) {
 +				notify(type, "Apply live options", "applying the live options");
 +			}
-+		}), [activeSchema, isAsciiMode, isFullShape, isSimplification, isTraditionalization, isExtendedCharset, isDisabled, runAsyncTask]);
++		}), [activeSchema, isAsciiMode, isFullShape, isSimplification, isExtendedCharset, isDisabled, runAsyncTask]);
 +
 +	useEffect(() =>
 +		runAsyncTask(async () => {
@@ -729,7 +728,7 @@ index 0add9ac..1a5e419 100644
  	}
  
 diff --git a/src/CandidatePanel.tsx b/src/CandidatePanel.tsx
-index 298a42d..a5307fb 100644
+index 298a42d..cf446e4 100644
 --- a/src/CandidatePanel.tsx
 +++ b/src/CandidatePanel.tsx
 @@ -1,4 +1,4 @@
@@ -1017,17 +1016,29 @@ index 298a42d..a5307fb 100644
  	const hideDictionaryOnLeaveCandidate = useCallback(() => {
  		function hideDictionaryOnLeaveDictionaryPanel() {
  			if (!candidateList.current?.matches(":hover")) {
-@@ -161,7 +334,8 @@ export default function CandidatePanel({ runAsyncTask, textArea, prefs, deploySt
+@@ -160,8 +333,19 @@ export default function CandidatePanel({ runAsyncTask, textArea, prefs, deploySt
+ 		}
  	}, [hideDictionary]);
  
- 	const shouldShowDictionary = typeof showDictionaryIndex === "number";
+-	const shouldShowDictionary = typeof showDictionaryIndex === "number";
 -	return inputState && <CaretFollower textArea={textArea} className="candidate-panel">
++	if (!inputState) {
++		return null;
++	}
++
 +	const visibleCandidates = inputState?.candidates.slice(0, prefs.pageSize) ?? [];
-+	return inputState && <CaretFollower textArea={textArea} className={`candidate-panel candidate-panel--${prefs.candidateMenuLayout}`}>
++	const activeCandidateIndex = typeof showDictionaryIndex === "number" ? showDictionaryIndex : inputState.highlightedIndex;
++	const dictionaryIndex = typeof showDictionaryIndex === "number"
++		? showDictionaryIndex
++		: prefs.showDictionaryByDefault
++		? inputState.highlightedIndex
++		: undefined;
++	const dictionaryCandidate = typeof dictionaryIndex === "number" ? visibleCandidates[dictionaryIndex] : undefined;
++	return <CaretFollower textArea={textArea} className={`candidate-panel candidate-panel--${prefs.candidateMenuLayout}`}>
  		<div>
  			<div className="flex">
  				<div className="flex-1 text-[15pt]">
-@@ -169,17 +343,17 @@ export default function CandidatePanel({ runAsyncTask, textArea, prefs, deploySt
+@@ -169,21 +353,21 @@ export default function CandidatePanel({ runAsyncTask, textArea, prefs, deploySt
  					{inputState.inputBuffer.active && <span className="p-1 inline-block rounded-md bg-accent text-accent-content">{inputState.inputBuffer.active}</span>}
  					{inputState.inputBuffer.after && <span className="m-1 inline-block">{inputState.inputBuffer.after}</span>}
  				</div>
@@ -1049,12 +1060,17 @@ index 298a42d..a5307fb 100644
  					<Candidate
  						key={index}
  						info={candidate}
-@@ -192,6 +366,6 @@ export default function CandidatePanel({ runAsyncTask, textArea, prefs, deploySt
+-						isHighlighted={index === (shouldShowDictionary ? showDictionaryIndex : inputState.highlightedIndex)}
++						isHighlighted={index === activeCandidateIndex}
+ 						selectCandidate={() => selectCandidate(index)}
+ 						deleteCandidate={() => deleteCandidate(index)}
+ 						showDictionary={() => setShowDictionaryIndex(index)}
+@@ -192,6 +376,6 @@ export default function CandidatePanel({ runAsyncTask, textArea, prefs, deploySt
  				)}
  			</table>
  		</div>
 -		{shouldShowDictionary && <DictionaryPanel info={inputState.candidates[showDictionaryIndex]} prefs={prefs} ref={dictionaryPanel} />}
-+		{shouldShowDictionary && <DictionaryPanel info={visibleCandidates[showDictionaryIndex]} prefs={prefs} ref={dictionaryPanel} />}
++		{dictionaryCandidate && <DictionaryPanel info={dictionaryCandidate} prefs={prefs} ref={dictionaryPanel} />}
  	</CaretFollower>;
  }
 diff --git a/src/DictionaryPanel.tsx b/src/DictionaryPanel.tsx
@@ -1288,10 +1304,10 @@ index d5451b8..3d4fe92 100644
 +	</label>;
  }
 diff --git a/src/Preferences.tsx b/src/Preferences.tsx
-index 820a2e0..e7d4a14 100644
+index 820a2e0..6f8b4d0 100644
 --- a/src/Preferences.tsx
 +++ b/src/Preferences.tsx
-@@ -1,109 +1,130 @@
+@@ -1,109 +1,161 @@
 -import { LANGUAGE_LABELS, SHOW_ROMANIZATION_LABELS, Language, ShowRomanization } from "./consts";
 -import { Radio, RadioCheckbox, Segment, Toggle } from "./Inputs";
 +import {
@@ -1312,10 +1328,19 @@ index 820a2e0..e7d4a14 100644
 +	luna_pinyin: ["侴"],
 +} as const;
 +
++type OutputStandard = "hk_traditional" | "simplified";
++
++const OUTPUT_STANDARD_LABELS: Record<OutputStandard, string> = {
++	hk_traditional: "香港繁體 Hong Kong Traditional",
++	simplified: "簡化字 Simplified Chinese (hk2s)",
++};
++
 +const thresholdRange = { min: 0, max: 200000, step: 1000 } as const;
 +const languageOrder = Object.values(Language);
 +
  export default function Preferences(prefs: PreferencesWithSetter) {
++	const outputStandard: OutputStandard = prefs.isSimplification ? "simplified" : "hk_traditional";
++
  	function toggleDisplayLanguage(language: Language, checked: boolean) {
 -		const newDisplayLanguages = new Set(prefs.displayLanguages);
 -		newDisplayLanguages[checked ? "add" : "delete"](language);
@@ -1380,7 +1405,7 @@ index 820a2e0..e7d4a14 100644
 +
 +	return <section className="mt-8" data-yune-preferences>
 +		<h3 className="mb-4 text-2xl font-semibold">輸入法設定 IME Settings</h3>
-+		<div className="grid gap-4 lg:grid-cols-2">
++		<div className="grid items-start gap-3 lg:grid-cols-3">
 +			<Section
 +				sectionId="active"
 +				title="引擎設定 Active engine controls"
@@ -1410,6 +1435,11 @@ index 820a2e0..e7d4a14 100644
 +					</div>
 +				</div>
 +				<Range label="每頁候選詞數量 No. of Candidates Per Page" min={3} max={10} step={1} value={prefs.pageSize} setValue={prefs.setPageSize} />
++				<Toggle
++					label="字典註解 Dictionary details"
++					description="預設顯示目前候選嘅字典註解；關閉後只會喺滑鼠移過候選時顯示。"
++					checked={prefs.showDictionaryByDefault}
++					setChecked={prefs.setShowDictionaryByDefault} />
 +				<div className="yd-field">
 +					<div className="yd-field-label">候選排版 Candidate Menu Layout</div>
 +					<div className="grid gap-1">
@@ -1432,13 +1462,18 @@ index 820a2e0..e7d4a14 100644
 -						<Segment name="chineseTypeface" label="宋體 Sung" state={prefs.isHeiTypeface} setState={prefs.setIsHeiTypeface} value={false} />
 -						<Segment name="chineseTypeface" label="黑體 Hei" state={prefs.isHeiTypeface} setState={prefs.setIsHeiTypeface} value={true} />
 +				<div className="yd-field">
-+					<div className="yd-field-label">中文字款 Chinese Typeface</div>
-+					<div className="grid gap-1 sm:grid-cols-2">
++					<div className="yd-field-label">字體 Font</div>
++					<div className="grid gap-1" data-yune-typeface-picker>
 +						{CHINESE_TYPEFACE_OPTIONS.map(option =>
 +							<Radio
 +								key={option.id}
 +								name="chineseTypeface"
-+								label={option.label}
++								label={<span
++									className={`${option.className} text-[13pt] font-normal leading-snug`}
++									data-yune-typeface-option={option.id}
++									data-yune-typeface-option-label>
++									{option.label}
++								</span>}
 +								state={prefs.chineseTypeface}
 +								setState={prefs.setChineseTypeface}
 +								value={option.id} />
@@ -1496,10 +1531,8 @@ index 820a2e0..e7d4a14 100644
 +								setState={prefs.setShowRomanization}
 +								value={value} />
 +						)}
- 					</div>
- 				</div>
--			</li>
--		</ul>
++					</div>
++				</div>
 +				<Toggle label="反查編碼 Reverse code display" checked={prefs.showReverseCode} setChecked={prefs.setShowReverseCode} />
 +			</Section>
 +
@@ -1509,8 +1542,22 @@ index 820a2e0..e7d4a14 100644
 +				description="只改目前 session 狀態，不改候選引擎設定。">
 +				<Toggle label="中英模式 ASCII mode" description="切換中文輸入或直接輸入英文字母。" checked={prefs.isAsciiMode} setChecked={prefs.setIsAsciiMode} />
 +				<Toggle label="全形 Full shape" description="切換全形或半形字母及符號。" checked={prefs.isFullShape} setChecked={prefs.setIsFullShape} />
-+				<Toggle label="簡化字 Simplification" description="用 hk2s OpenCC 路徑轉簡體。" checked={prefs.isSimplification} setChecked={prefs.setIsSimplification} />
-+				<Toggle label="繁體化 Traditionalization" description="保留作狀態驗證；此 dogfood schema 預設繁體。" checked={prefs.isTraditionalization} setChecked={prefs.setIsTraditionalization} />
++				<div className="yd-field">
++					<div className="yd-field-label">輸出字形 Output standard</div>
++					<div className="grid gap-1">
++						{(Object.entries(OUTPUT_STANDARD_LABELS) as [OutputStandard, string][]).map(([value, label]) =>
++							<Radio
++								key={value}
++								name="outputStandard"
++								label={label}
++								state={outputStandard}
++								setState={nextValue => prefs.setIsSimplification(nextValue === "simplified")}
++								value={value} />
++						)}
+ 					</div>
+ 				</div>
+-			</li>
+-		</ul>
 +				<Toggle label="擴展字 Extended charset" description="允許 charset filter 顯示擴展字。" checked={prefs.isExtendedCharset} setChecked={prefs.setIsExtendedCharset} />
 +				<Toggle label="停用輸入法 Disabled" description="暫停 IME 處理，鍵盤直接輸入文字。" checked={prefs.isDisabled} setChecked={prefs.setIsDisabled} />
 +			</Section>
@@ -1519,10 +1566,10 @@ index 820a2e0..e7d4a14 100644
  }
 diff --git a/src/SchemaSwitcher.tsx b/src/SchemaSwitcher.tsx
 new file mode 100644
-index 0000000..27f5f00
+index 0000000..dd69452
 --- /dev/null
 +++ b/src/SchemaSwitcher.tsx
-@@ -0,0 +1,36 @@
+@@ -0,0 +1,44 @@
 +import { SCHEMA_OPTIONS } from "./consts";
 +import { Segment } from "./Inputs";
 +
@@ -1538,25 +1585,33 @@ index 0000000..27f5f00
 +	setActiveSchema: Dispatch<SetStateAction<RimeSchemaId>>;
 +	compact?: boolean;
 +}) {
-+	return <fieldset className={compact ? "yd-top-field" : "my-4"} data-yune-schema-switcher>
-+		<legend className={compact ? "yd-top-label" : "mb-2 font-semibold"}>方案 Schema</legend>
-+		<div className="yd-segment-group flex-wrap">
-+			{SCHEMA_OPTIONS.map(schema =>
-+				<Segment
-+					key={schema.id}
-+					name="yuneSchema"
-+					label={<span className="flex flex-col items-start leading-tight">
-+						<span>{schema.schemaName}</span>
-+						<span className="text-xs opacity-75">{schema.secondaryLabel}</span>
-+					</span>}
-+					state={activeSchema}
-+					setState={setActiveSchema}
-+					value={schema.id} />
-+			)}
-+		</div>
-+		<p className={compact ? "mt-1 text-xs text-base-content-300" : "mt-2 text-sm text-base-content-300"}>
-+			{SCHEMA_OPTIONS.find(schema => schema.id === activeSchema)?.reverseLookup}
-+		</p>
++	const controls = <div className="yd-segment-group flex-wrap" role="radiogroup" aria-label="方案 Schema">
++		{SCHEMA_OPTIONS.map(schema =>
++			<Segment
++				key={schema.id}
++				name="yuneSchema"
++				label={schema.schemaName}
++				state={activeSchema}
++				setState={setActiveSchema}
++				value={schema.id} />
++		)}
++	</div>;
++	const reverseLookup = <p className={compact ? "mt-1 text-xs text-base-content-300" : "mt-2 text-sm text-base-content-300"}>
++		{SCHEMA_OPTIONS.find(schema => schema.id === activeSchema)?.reverseLookup}
++	</p>;
++
++	if (compact) {
++		return <div className="yd-top-field yd-schema-switcher-compact" data-yune-schema-switcher>
++			<span className="yd-top-label">方案 Schema</span>
++			{controls}
++			{reverseLookup}
++		</div>;
++	}
++
++	return <fieldset className="my-4" data-yune-schema-switcher>
++		<legend className="mb-2 font-semibold">方案 Schema</legend>
++		{controls}
++		{reverseLookup}
 +	</fieldset>;
 +}
 diff --git a/src/ThemeSwitcher.tsx b/src/ThemeSwitcher.tsx
@@ -1579,7 +1634,7 @@ index 28fe97b..2ec146b 100644
  		<svg
  			className="col-start-1 row-start-1 stroke-base-100 fill-base-100 size-3.5"
 diff --git a/src/Toolbar.tsx b/src/Toolbar.tsx
-index ff262af..47c000b 100644
+index ff262af..60b2029 100644
 --- a/src/Toolbar.tsx
 +++ b/src/Toolbar.tsx
 @@ -1,8 +1,36 @@
@@ -1648,33 +1703,32 @@ index ff262af..47c000b 100644
 -			</div>
 -			<div className="tooltip" data-tip={"半形／全形字母及符號\nHalfwidth / Fullwidth Letters & Symbols"}>
 -				<button className="btn-toolbar join-item" onClick={toggleIsFullwidthLettersAndSymbols}>{isFullwidthLettersAndSymbols ? "全" : "半"}</button>
--			</div>
--			<div className="tooltip" data-tip={"半形／全形標點符號\nHalfwidth / Fullwidth Punctuations"}>
--				<button className="btn-toolbar join-item" onClick={toggleIsHalfwidthPunctuation}>{isHalfwidthPunctuation ? "." : "。"}</button>
 +	return <div className="space-y-2" data-yune-top-controls>
 +		<div className="flex flex-wrap items-start gap-3 align-middle">
 +			<div className="flex flex-wrap gap-2" data-yune-control="mode-buttons">
 +				<div className="yd-tip" data-tip={"中文／英文字母\nChinese / Alphabet"}>
 +					<button className="yd-icon-button" aria-label="ASCII mode" onClick={() => setIsAsciiMode(value => !value)}>{isAsciiMode ? "En" : "中"}</button>
 +				</div>
-+				<div className="yd-tip" data-tip={"繁體字／簡體字\nTraditional / Simplified"}>
-+					<button className="yd-icon-button" aria-label="Simplification" onClick={() => setIsSimplification(value => !value)}>{isSimplification ? "简" : "繁"}</button>
++				<div className="yd-tip" data-tip={"香港繁體／簡化字\nHong Kong Traditional / Simplified"}>
++					<button className="yd-icon-button" aria-label="Output standard" onClick={() => setIsSimplification(value => !value)}>{isSimplification ? "简" : "繁"}</button>
 +				</div>
 +				<div className="yd-tip" data-tip={"半形／全形字母及符號\nHalfwidth / Fullwidth Letters & Symbols"}>
 +					<button className="yd-icon-button" aria-label="Full shape" onClick={() => setIsFullShape(value => !value)}>{isFullShape ? "全" : "半"}</button>
 +				</div>
  			</div>
+-			<div className="tooltip" data-tip={"半形／全形標點符號\nHalfwidth / Fullwidth Punctuations"}>
+-				<button className="btn-toolbar join-item" onClick={toggleIsHalfwidthPunctuation}>{isHalfwidthPunctuation ? "." : "。"}</button>
 +			<SchemaSwitcher
 +				activeSchema={activeSchema}
 +				setActiveSchema={setActiveSchema}
 +				compact />
-+			<fieldset className="yd-top-field" data-yune-control="cangjie-version">
-+				<legend className="yd-top-label">倉頡版本 Cangjie version</legend>
-+				<div className="yd-segment-group flex-wrap">
-+					<Segment name="cangjieVersion" label="三代 Version 3" state={isCangjie5} setState={setIsCangjie5} value={false} />
-+					<Segment name="cangjieVersion" label="五代 Version 5" state={isCangjie5} setState={setIsCangjie5} value={true} />
++			<div className="yd-top-field yd-top-inline-field" data-yune-control="cangjie-version">
++				<span className="yd-top-label">倉頡反查字典 Cangjie lookup</span>
++				<div className="yd-segment-group flex-wrap" role="radiogroup" aria-label="倉頡反查字典 Cangjie lookup">
++					<Segment name="cangjieVersion" label="三代" state={isCangjie5} setState={setIsCangjie5} value={false} />
++					<Segment name="cangjieVersion" label="五代" state={isCangjie5} setState={setIsCangjie5} value={true} />
 +				</div>
-+			</fieldset>
+ 			</div>
  		</div>
 -		{debouncedLoading && <span className="text-base-content-200">
 -			<div className="mx-3 align-middle loading loading-spinner loading-lg" />載入中 Loading…
@@ -1852,29 +1906,68 @@ index 0000000..6b0ebb6
 +}
 diff --git a/src/YuneStatusStrip.tsx b/src/YuneStatusStrip.tsx
 new file mode 100644
-index 0000000..b30c292
+index 0000000..83f74fc
 --- /dev/null
 +++ b/src/YuneStatusStrip.tsx
-@@ -0,0 +1,17 @@
+@@ -0,0 +1,56 @@
 +import type { YuneStatusSnapshot } from "./types";
++
++function boolStatus(value: boolean, enabled: string, disabled: string) {
++	return `${value ? "true" : "false"} (${value ? enabled : disabled})`;
++}
 +
 +export default function YuneStatusStrip({ status }: { status?: YuneStatusSnapshot }) {
 +	if (!status) {
 +		return null;
 +	}
++
++	const outputStandard = status.is_simplified ? "simplified" : "hk_traditional";
++
 +	return <section className="my-3 rounded border border-base-300 bg-base-100 p-3 text-sm" data-yune-status>
 +		<div className="mb-2 font-medium">引擎狀態 Engine status</div>
-+		<p className="mb-2 text-base-content-300">顯示目前 schema、輸入模式同轉換狀態。</p>
++		<p className="mb-2 text-base-content-300">顯示 runtime 回傳嘅完整 status 欄位。</p>
 +		<div className="flex flex-wrap gap-2">
-+			<span className="yd-tag" data-yune-status-schema data-yune-status-schema-id={status.schema_id}>{status.schema_name || status.schema_id}</span>
-+			<span className="yd-tag" data-yune-status-disabled={status.is_disabled}>狀態 {status.is_disabled ? "停用 disabled" : "啟用 enabled"}</span>
-+			<span className="yd-tag" data-yune-status-traditional={status.is_traditional}>字形 {status.is_traditional ? "繁體 traditional" : "未繁化 not traditional"}</span>
-+			<span className="yd-tag" data-yune-status-ascii={status.is_ascii_mode}>模式 {status.is_ascii_mode ? "英文 ASCII" : "中文 Chinese"}</span>
++			<span className="yd-tag gap-1.5" data-yune-status-schema-id-field>
++				<span className="font-mono">schema_id</span>
++				<span>{status.schema_id}</span>
++			</span>
++			<span className="yd-tag gap-1.5" data-yune-status-schema data-yune-status-schema-id={status.schema_id} data-yune-status-schema-name={status.schema_name}>
++				<span className="font-mono">schema_name</span>
++				<span>{status.schema_name || "(empty)"}</span>
++			</span>
++			<span className="yd-tag gap-1.5" data-yune-status-disabled={status.is_disabled}>
++				<span className="font-mono">is_disabled</span>
++				<span>{boolStatus(status.is_disabled, "disabled", "enabled")}</span>
++			</span>
++			<span className="yd-tag gap-1.5" data-yune-status-composing={status.is_composing}>
++				<span className="font-mono">is_composing</span>
++				<span>{boolStatus(status.is_composing, "composing", "idle")}</span>
++			</span>
++			<span className="yd-tag gap-1.5" data-yune-status-ascii={status.is_ascii_mode} data-yune-status-ascii-mode={status.is_ascii_mode}>
++				<span className="font-mono">is_ascii_mode</span>
++				<span>{boolStatus(status.is_ascii_mode, "ASCII", "Chinese")}</span>
++			</span>
++			<span className="yd-tag gap-1.5" data-yune-status-full-shape={status.is_full_shape}>
++				<span className="font-mono">is_full_shape</span>
++				<span>{boolStatus(status.is_full_shape, "full shape", "half shape")}</span>
++			</span>
++			<span className="yd-tag gap-1.5" data-yune-status-simplified={status.is_simplified} data-yune-status-output-standard={outputStandard}>
++				<span className="font-mono">is_simplified</span>
++				<span>{boolStatus(status.is_simplified, "simplified", "not simplified")}</span>
++			</span>
++			<span className="yd-tag gap-1.5" data-yune-status-traditional={status.is_traditional}>
++				<span className="font-mono">is_traditional</span>
++				<span>{boolStatus(status.is_traditional, "traditional", "off")}</span>
++			</span>
++			<span className="yd-tag gap-1.5" data-yune-status-ascii-punct={status.is_ascii_punct}>
++				<span className="font-mono">is_ascii_punct</span>
++				<span>{boolStatus(status.is_ascii_punct, "ASCII punct", "Chinese punct")}</span>
++			</span>
 +		</div>
 +	</section>;
 +}
 diff --git a/src/consts.ts b/src/consts.ts
-index 25ec3bf..427907e 100644
+index 25ec3bf..25c8380 100644
 --- a/src/consts.ts
 +++ b/src/consts.ts
 @@ -1,5 +1,5 @@
@@ -1884,7 +1977,7 @@ index 25ec3bf..427907e 100644
  
  export const enum Language {
  	Eng = "eng",
-@@ -15,6 +15,94 @@ export const enum ShowRomanization {
+@@ -15,6 +15,104 @@ export const enum ShowRomanization {
  	Never = "never",
  }
  
@@ -1929,44 +2022,54 @@ index 25ec3bf..427907e 100644
 +
 +export const CHINESE_TYPEFACE_OPTIONS = [
 +	{
-+		id: "chiron-sung-hk",
-+		label: "Chiron Sung HK",
-+		className: "font-chinese-chiron-sung-hk",
-+	},
-+	{
 +		id: "chiron-hei-hk",
-+		label: "Chiron Hei HK",
++		label: "昭源黑體 Chiron Hei HK",
 +		className: "font-chinese-chiron-hei-hk",
 +	},
 +	{
-+		id: "chocolate-classical-sans",
-+		label: "Chocolate Classical Sans",
-+		className: "font-chinese-chocolate-classical-sans",
-+	},
-+	{
-+		id: "iansui",
-+		label: "Iansui",
-+		className: "font-chinese-iansui",
-+	},
-+	{
-+		id: "lxgw-wenkai-mono-tc",
-+		label: "LXGW WenKai Mono TC",
-+		className: "font-chinese-lxgw-wenkai-mono-tc",
-+	},
-+	{
-+		id: "lxgw-wenkai-tc",
-+		label: "LXGW WenKai TC",
-+		className: "font-chinese-lxgw-wenkai-tc",
-+	},
-+	{
-+		id: "wdxl-lubrifont-tc",
-+		label: "WDXL Lubrifont TC",
-+		className: "font-chinese-wdxl-lubrifont-tc",
++		id: "chiron-sung-hk",
++		label: "昭源宋體 Chiron Sung HK",
++		className: "font-chinese-chiron-sung-hk",
 +	},
 +	{
 +		id: "chiron-goround-tc",
-+		label: "Chiron GoRound TC",
++		label: "昭源環方 Chiron GoRound TC",
 +		className: "font-chinese-chiron-goround-tc",
++	},
++	{
++		id: "chocolate-classical-sans",
++		label: "朱古力黑體 Chocolate Classical Sans",
++		className: "font-chinese-chocolate-classical-sans",
++	},
++	{
++		id: "lxgw-wenkai-tc",
++		label: "霞鶩文楷 TC LXGW WenKai TC",
++		className: "font-chinese-lxgw-wenkai-tc",
++	},
++	{
++		id: "lxgw-wenkai-mono-tc",
++		label: "霞鶩文楷等寬 TC LXGW WenKai Mono TC",
++		className: "font-chinese-lxgw-wenkai-mono-tc",
++	},
++	{
++		id: "iansui",
++		label: "芫荽 Iansui",
++		className: "font-chinese-iansui",
++	},
++	{
++		id: "huninn",
++		label: "粉圓 Huninn",
++		className: "font-chinese-huninn",
++	},
++	{
++		id: "bpmf-huninn",
++		label: "注音粉圓 Bpmf Huninn",
++		className: "font-chinese-bpmf-huninn",
++	},
++	{
++		id: "wdxl-lubrifont-tc",
++		label: "滑油字 WDXL Lubrifont TC",
++		className: "font-chinese-wdxl-lubrifont-tc",
 +	},
 +] as const;
 +
@@ -1979,13 +2082,14 @@ index 25ec3bf..427907e 100644
  export const LANGUAGE_CODES: Record<Language, string> = {
  	[Language.Eng]: "en",
  	[Language.Hin]: "hi",
-@@ -49,12 +137,26 @@ export const DEFAULT_PREFERENCES: Preferences = {
+@@ -49,12 +147,26 @@ export const DEFAULT_PREFERENCES: Preferences = {
  	displayLanguages: new Set([Language.Eng]),
  	mainLanguage: Language.Eng,
  	pageSize: 6,
 -	isHeiTypeface: false,
 +	chineseTypeface: "chiron-sung-hk",
 +	candidateMenuLayout: "horizontal",
++	showDictionaryByDefault: true,
  	showRomanization: ShowRomanization.Always,
  	enableCompletion: true,
  	enableCorrection: false,
@@ -1997,7 +2101,6 @@ index 25ec3bf..427907e 100644
 +	predictionNeverFirst: true,
 +	predictionThreshold: 0,
 +	activeSchema: "jyut6ping3_mobile",
-+	isTraditionalization: false,
 +	isExtendedCharset: false,
 +	isDisabled: false,
 +	dictionaryExclude: [],
@@ -2101,11 +2204,11 @@ index ef2a4f3..dd5645f 100644
 +	return defaultValue;
 +}
 diff --git a/src/index.css b/src/index.css
-index 9dc742c..9c1974b 100644
+index 9dc742c..b806d65 100644
 --- a/src/index.css
 +++ b/src/index.css
 @@ -1,3 +1,5 @@
-+@import url("https://fonts.googleapis.com/css2?family=Chocolate+Classical+Sans&family=Iansui&family=LXGW+WenKai+Mono+TC&family=LXGW+WenKai+TC&family=WDXL+Lubrifont+TC&family=Chiron+GoRound+TC&family=Chiron+Hei+HK&family=Chiron+Sung+HK&display=swap");
++@import url("https://fonts.googleapis.com/css2?family=Bpmf+Huninn&family=Chocolate+Classical+Sans&family=Huninn&family=Iansui&family=LXGW+WenKai+Mono+TC&family=LXGW+WenKai+TC&family=WDXL+Lubrifont+TC&family=Chiron+GoRound+TC&family=Chiron+Hei+HK&family=Chiron+Sung+HK&display=swap");
 +
  @tailwind base;
  @tailwind components;
@@ -2181,7 +2284,7 @@ index 9dc742c..9c1974b 100644
  	}
  	:lang(en) {
  		@apply font-sans text-[12pt];
-@@ -55,19 +106,112 @@
+@@ -55,19 +106,130 @@
  		@apply font-arabic text-[10pt];
  	}
  }
@@ -2208,6 +2311,21 @@ index 9dc742c..9c1974b 100644
 +	}
 +	.yd-top-label {
 +		@apply mb-1 text-sm font-semibold text-base-content-200;
++	}
++	.yd-schema-switcher-compact {
++		@apply flex flex-wrap items-center gap-x-2 gap-y-1;
++	}
++	.yd-top-inline-field {
++		@apply flex flex-wrap items-center gap-x-2 gap-y-1;
++	}
++	.yd-schema-switcher-compact .yd-top-label {
++		@apply mb-0;
++	}
++	.yd-top-inline-field .yd-top-label {
++		@apply mb-0;
++	}
++	.yd-schema-switcher-compact p {
++		@apply basis-full;
 +	}
 +	.yd-section {
 +		@apply rounded border border-base-300 bg-base-100 p-4;
@@ -2280,22 +2398,25 @@ index 9dc742c..9c1974b 100644
 +
  .candidate-panel {
 -	@apply flex absolute shadow-lg border-[0.1875rem] border-base-400 bg-base-200 rounded-[0.5625rem] z-50 overflow-hidden leading-snug whitespace-nowrap;
-+	@apply absolute z-50 flex max-w-[min(96vw,72rem)] overflow-hidden rounded-[0.5625rem] border-[0.1875rem] border-base-400 bg-base-200 leading-snug shadow-lg;
++	@apply absolute z-50 flex w-max max-w-none overflow-visible rounded-[0.5625rem] border-[0.1875rem] border-base-400 bg-base-200 leading-snug shadow-lg;
 +}
 +.candidate-panel--horizontal {
 +	@apply whitespace-nowrap;
 +}
 +.candidate-panel--vertical {
-+	@apply w-[min(28rem,92vw)] whitespace-normal;
++	@apply whitespace-normal;
 +}
 +.candidate-panel--vertical .candidates {
-+	@apply block w-full;
++	@apply block w-max;
 +}
 +.candidate-panel--vertical .candidate-row {
 +	@apply block w-full;
 +}
 +.candidate-panel--vertical .candidate-row tr {
-+	@apply grid grid-cols-[2rem_4rem_1fr_2rem] items-end;
++	@apply grid grid-cols-[2rem_max-content_max-content_2rem] items-end;
++}
++.candidate-panel--vertical .candidate-row td:nth-child(2) {
++	@apply whitespace-nowrap;
  }
  .page-nav {
 -	@apply btn btn-ghost text-primary text-4xl h-[unset] min-h-[unset] leading-[1.875rem] px-2 rounded-md hover:bg-base-400 hover:border-base-400 disabled:bg-transparent disabled:text-base-500;
@@ -2303,7 +2424,7 @@ index 9dc742c..9c1974b 100644
  }
  .candidates td {
  	@apply p-1 align-bottom text-left empty:p-0;
-@@ -77,23 +221,27 @@
+@@ -77,23 +239,27 @@
  		}
  	}
  }
@@ -2323,7 +2444,7 @@ index 9dc742c..9c1974b 100644
 +	@apply rounded-ee-md min-w-1.5;
 +}
 +.candidate-note {
-+	@apply max-w-60 overflow-hidden text-ellipsis text-[11pt];
++	@apply whitespace-nowrap text-[11pt];
 +}
  .candidates :lang(ur) {
  	@apply text-right;
@@ -2345,7 +2466,7 @@ index 9dc742c..9c1974b 100644
  @supports selector(:has(*)) {
  	.candidate-panel:has(.dictionary-panel) .candidates .highlighted tr {
  		@apply relative;
-@@ -112,7 +260,7 @@
+@@ -112,7 +278,7 @@
  	}
  }
  .dictionary-panel {
@@ -2354,7 +2475,7 @@ index 9dc742c..9c1974b 100644
  }
  .dictionary-panel > *:not(:last-child) {
  	@apply mb-3.5;
-@@ -125,10 +273,10 @@
+@@ -125,10 +291,10 @@
  	@apply ml-4;
  }
  .pos {
@@ -2367,7 +2488,7 @@ index 9dc742c..9c1974b 100644
  }
  .pos + .pos,
  .lbl + .lbl {
-@@ -136,15 +284,9 @@
+@@ -136,15 +302,9 @@
  }
  .dictionary-panel {
  	th {
@@ -2557,7 +2678,7 @@ index 4393a9e..391be9a 100644
  		listeners[type] = listeners[type].filter(listener => listener !== callback) as never;
  	};
 diff --git a/src/types.ts b/src/types.ts
-index 5d47525..45547e5 100644
+index 5d47525..37a95ca 100644
 --- a/src/types.ts
 +++ b/src/types.ts
 @@ -1,6 +1,7 @@
@@ -2629,7 +2750,6 @@ index 5d47525..45547e5 100644
 +	predictionNeverFirst: boolean;
 +	predictionThreshold: number;
 +	activeSchema: RimeSchemaId;
-+	isTraditionalization: boolean;
 +	isExtendedCharset: boolean;
 +	isDisabled: boolean;
 +	dictionaryExclude: string[];
@@ -2645,6 +2765,7 @@ index 5d47525..45547e5 100644
 -	isHeiTypeface: boolean;
 +	chineseTypeface: ChineseTypefaceId;
 +	candidateMenuLayout: CandidateMenuLayout;
++	showDictionaryByDefault: boolean;
  	showRomanization: ShowRomanization;
  	showReverseCode: boolean;
  }
@@ -4794,7 +4915,7 @@ index 0000000..60e2eec
 +  };
 +}
 diff --git a/tailwind.config.ts b/tailwind.config.ts
-index 801c076..2c5cea0 100644
+index 801c076..e5eaade 100644
 --- a/tailwind.config.ts
 +++ b/tailwind.config.ts
 @@ -1,6 +1,3 @@
@@ -4804,11 +4925,13 @@ index 801c076..2c5cea0 100644
  import type { Config } from "tailwindcss";
  
  export default {
-@@ -17,74 +14,40 @@ export default {
+@@ -17,74 +14,42 @@ export default {
  			"kai-fallback-hei": ["var(--font-kai)", "var(--font-hei)", "var(--font-sans)", "var(--font-emoji)"],
  			"devanagari": ["var(--font-devanagari)", "var(--font-sans)", "var(--font-emoji)"],
  			"arabic": ["var(--font-arabic)", "var(--font-sans)", "var(--font-emoji)"],
 +			"chinese-chocolate-classical-sans": ['"Chocolate Classical Sans"', "var(--font-sans)", "var(--font-emoji)"],
++			"chinese-huninn": ['"Huninn"', "var(--font-sans)", "var(--font-emoji)"],
++			"chinese-bpmf-huninn": ['"Bpmf Huninn"', "var(--font-sans)", "var(--font-emoji)"],
 +			"chinese-iansui": ['"Iansui"', "var(--font-sans)", "var(--font-emoji)"],
 +			"chinese-lxgw-wenkai-mono-tc": ['"LXGW WenKai Mono TC"', "var(--font-sans)", "var(--font-emoji)"],
 +			"chinese-lxgw-wenkai-tc": ['"LXGW WenKai TC"', "var(--font-sans)", "var(--font-emoji)"],
