@@ -2,11 +2,7 @@
 
 > **Status:** Finished - **Milestone:** M12 (Upstream Oracle Refresh) - **Closed:** 2026-06-19 - **Type:** execution plan record
 
-> **Post-closeout note:** The original local source-build blocker was retired
-> after the official upstream `1.17.0` Windows MSVC release archives were
-> downloaded and verified locally. The canonical behavioral-capture path is now
-> the upstream release binary cache under `target/upstream-oracle/1.17.0/`; the
-> local source build remains a reproducibility cross-check.
+> **Post-closeout note:** The original local source-build blocker was retired after the official upstream `1.17.0` Windows MSVC release archives were downloaded and verified locally. The canonical behavioral-capture path is now the upstream release binary cache under `target/upstream-oracle/1.17.0/`; the local source build remains a reproducibility cross-check.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -20,11 +16,7 @@
 
 ## Context
 
-The M12 target is upstream `rime/librime` tag `1.17.0`, release commit
-`33e78140250125871856cdc5b42ddc6a5fcd3cd4`. GitHub lists `librime 1.17.0`
-as the latest release on 2026-06-19. The local checkout at
-`C:\Users\laubonghaudoi\Documents\GitHub\librime` is useful for capture work;
-it currently has:
+The M12 target is upstream `rime/librime` tag `1.17.0`, release commit `33e78140250125871856cdc5b42ddc6a5fcd3cd4`. GitHub lists `librime 1.17.0` as the latest release on 2026-06-19. The local checkout at `C:\Users\laubonghaudoi\Documents\GitHub\librime` is useful for capture work; it currently has:
 
 - Remote: `https://github.com/rime/librime.git`
 - `master` / local `latest`: `d71168e9e8c8392ed219dca011dbc76b80727d6c`
@@ -37,11 +29,7 @@ TypeDuck `v1.1.2` remains a compatibility-profile oracle only:
 - Tag: `v1.1.2`
 - Commit: `74cb52b78fb2411137a7643f6c8bc6517acfde69`
 
-The first concrete M12 parity slice is the standard upstream C ABI table. This
-is deliberate: the pre-M12 Yune table contained TypeDuck fork-only
-`config_list_append_*` fields in the default `RimeApi`, while upstream `1.17.0`
-does not. `start_quick` is also absent from upstream `1.17.0` and was not a
-pre-M12 default `RimeApi` function-table field.
+The first concrete M12 parity slice is the standard upstream C ABI table. This is deliberate: the pre-M12 Yune table contained TypeDuck fork-only `config_list_append_*` fields in the default `RimeApi`, while upstream `1.17.0` does not. `start_quick` is also absent from upstream `1.17.0` and was not a pre-M12 default `RimeApi` function-table field.
 
 ## Non-Goals
 
@@ -49,8 +37,7 @@ pre-M12 default `RimeApi` function-table field.
 - Do not un-ignore the five TypeDuck `v1.1.2` Cantonese/Jyutping parity tests.
 - Do not make TypeDuck fork-only behavior define core Yune behavior.
 - Do not expose AI-native behavior through TypeDuck-Web or Windows.
-- Do not commit local upstream build artifacts, DLLs, generated build folders, or
-  machine-local absolute paths as canonical oracle identity.
+- Do not commit local upstream build artifacts, DLLs, generated build folders, or machine-local absolute paths as canonical oracle identity.
 
 ## File Map
 
@@ -73,15 +60,14 @@ pre-M12 default `RimeApi` function-table field.
 ## Task 1: Confirm Oracle Provenance And Worktree State
 
 **Files:**
+
 - Read: `docs/roadmap.md`
 - Read: `docs/requirements.md`
 - Read: `docs/CONVENTIONS.md`
 - Read: `docs/decisions.md`
 - Read: `docs/plans/m12-plan-upstream-oracle-refresh.md`
-- Read: pinned upstream header via
-  `git -C C:\Users\laubonghaudoi\Documents\GitHub\librime show 33e78140250125871856cdc5b42ddc6a5fcd3cd4:src/rime_api.h`
-- Read: pinned upstream levers header via
-  `git -C C:\Users\laubonghaudoi\Documents\GitHub\librime show 33e78140250125871856cdc5b42ddc6a5fcd3cd4:src/rime_levers_api.h`
+- Read: pinned upstream header via `git -C C:\Users\laubonghaudoi\Documents\GitHub\librime show 33e78140250125871856cdc5b42ddc6a5fcd3cd4:src/rime_api.h`
+- Read: pinned upstream levers header via `git -C C:\Users\laubonghaudoi\Documents\GitHub\librime show 33e78140250125871856cdc5b42ddc6a5fcd3cd4:src/rime_levers_api.h`
 
 - [ ] **Step 1: Record the current Yune worktree**
 
@@ -91,8 +77,7 @@ Run:
 git status --short --branch
 ```
 
-Expected: the worker knows whether unrelated edits already exist. Do not revert
-or stage unrelated edits.
+Expected: the worker knows whether unrelated edits already exist. Do not revert or stage unrelated edits.
 
 - [ ] **Step 2: Verify upstream remote and release tag**
 
@@ -126,20 +111,16 @@ Run:
 rg -n "start_quick|config_list_append|config_begin_list|get_prebuilt_data_dir|get_staging_dir" crates\yune-rime-api\src\abi.rs crates\yune-rime-api\src\api_table.rs crates\yune-rime-api\src\tests\abi.rs
 ```
 
-Pre-M12 expected: matches for `config_list_append_*` in Yune's default
-`RimeApi` and ABI layout test. `start_quick` should not appear as a default
-function-table field; if it appears in docs or exports, treat it as stale
-TypeDuck-profile/default-surface drift. This confirms M12 must address
-TypeDuck fork-only fields before core upstream ABI parity can be claimed.
+Pre-M12 expected: matches for `config_list_append_*` in Yune's default `RimeApi` and ABI layout test. `start_quick` should not appear as a default function-table field; if it appears in docs or exports, treat it as stale TypeDuck-profile/default-surface drift. This confirms M12 must address TypeDuck fork-only fields before core upstream ABI parity can be claimed.
 
 - [ ] **Step 4: Commit no changes in this task**
 
-This task is read-only. If it reveals a mismatch in the target commit or remote,
-stop and update this plan before proceeding.
+This task is read-only. If it reveals a mismatch in the target commit or remote, stop and update this plan before proceeding.
 
 ## Task 2: Add Machine-Readable Oracle Provenance
 
 **Files:**
+
 - Create: `crates/yune-core/tests/fixtures/upstream-1.17.0/README.md`
 - Create: `crates/yune-core/tests/fixtures/upstream-1.17.0/oracle-manifest.json`
 - Create: `crates/yune-core/tests/fixtures/typeduck-v1.1.2/oracle-manifest.json`
@@ -236,6 +217,7 @@ Expected: only the three provenance files are staged and committed.
 ## Task 3: Add Fixture Provenance Guardrails
 
 **Files:**
+
 - Create: `crates/yune-core/tests/oracle_fixture_provenance.rs`
 
 - [ ] **Step 1: Write the failing provenance test**
@@ -332,6 +314,7 @@ Expected: only the provenance test is staged and committed.
 ## Task 4: Build Or Document The Upstream Oracle
 
 **Files:**
+
 - Modify: `crates/yune-core/tests/fixtures/upstream-1.17.0/README.md`
 
 - [ ] **Step 1: Move local librime to the pinned release**
@@ -347,8 +330,7 @@ Expected: local librime is detached at `33e78140250125871856cdc5b42ddc6a5fcd3cd4
 
 - [ ] **Step 2: Build in a Visual Studio developer shell**
 
-Run these commands from a Developer Command Prompt or a PowerShell session with
-MSVC build tools on `PATH`:
+Run these commands from a Developer Command Prompt or a PowerShell session with MSVC build tools on `PATH`:
 
 ```powershell
 Set-Location C:\Users\laubonghaudoi\Documents\GitHub\librime
@@ -360,8 +342,7 @@ Expected:
 
 - `build.bat deps` completes without `Error: Boost not found!`.
 - `build.bat test` completes with librime built and CTest passing.
-- `rime.dll`, `rime_deployer.exe`, and `rime_api_console.exe` are discoverable
-  under the local librime `build`, `dist`, or `bin` output tree.
+- `rime.dll`, `rime_deployer.exe`, and `rime_api_console.exe` are discoverable under the local librime `build`, `dist`, or `bin` output tree.
 
 - [ ] **Step 3: Record build evidence or a precise blocker**
 
@@ -378,8 +359,7 @@ If the build passes, append this to the upstream README:
 - Required capture tools present: `rime.dll`, `rime_deployer.exe`, `rime_api_console.exe`
 ```
 
-If the build cannot run, append this instead, replacing the example error with
-the exact command and first failing diagnostic:
+If the build cannot run, append this instead, replacing the example error with the exact command and first failing diagnostic:
 
 ```markdown
 ## Local Build Blocker
@@ -406,6 +386,7 @@ Expected: README-only commit. Do not commit upstream build outputs.
 ## Task 5: Audit And Refresh The Default C ABI
 
 **Files:**
+
 - Create: `docs/plans/m12-audit-upstream-abi.md`
 - Modify: `crates/yune-rime-api/src/abi.rs`
 - Modify: `crates/yune-rime-api/src/api_table.rs`
@@ -442,9 +423,7 @@ Upstream source: `rime/librime` tag `1.17.0`, commit
 
 - [ ] **Step 2: Write the failing upstream ABI test**
 
-In `crates/yune-rime-api/src/tests/abi.rs`, change
-`rime_api_function_table_layout_matches_librime_header` so it asserts these
-upstream `1.17.0` slots:
+In `crates/yune-rime-api/src/tests/abi.rs`, change `rime_api_function_table_layout_matches_librime_header` so it asserts these upstream `1.17.0` slots:
 
 ```rust
 assert_api_slot!(setup, 0);
@@ -551,8 +530,7 @@ assert_eq!(
 );
 ```
 
-Note: the macro's slot index starts at `setup`, not at `data_size`. The upstream
-header has 98 function-pointer fields after `data_size`.
+Note: the macro's slot index starts at `setup`, not at `data_size`. The upstream header has 98 function-pointer fields after `data_size`.
 
 - [ ] **Step 3: Run the focused test and confirm it fails**
 
@@ -562,41 +540,28 @@ Run:
 cargo test -p yune-rime-api abi::rime_api_function_table_layout_matches_librime_header
 ```
 
-Pre-M12 expected: FAIL because the default table still contains TypeDuck
-`config_list_append_*` slots. Post-M12 expected: PASS with those fork-only slots
-absent from default `RimeApi`.
+Pre-M12 expected: FAIL because the default table still contains TypeDuck `config_list_append_*` slots. Post-M12 expected: PASS with those fork-only slots absent from default `RimeApi`.
 
 - [ ] **Step 4: Update `RimeApi` and `api_table.rs` to upstream order**
 
 Implement the minimum change:
 
-- Keep `start_quick` absent from default `RimeApi`. It is absent from upstream
-  `1.17.0` and was not present as a pre-M12 default function-table field.
-- Remove `config_list_append_bool`, `config_list_append_int`,
-  `config_list_append_double`, and `config_list_append_string` from default
-  `RimeApi`.
-- Place `config_begin_map`, `config_next`, and `config_end` immediately after
-  `config_update_signature`.
+- Keep `start_quick` absent from default `RimeApi`. It is absent from upstream `1.17.0` and was not present as a pre-M12 default function-table field.
+- Remove `config_list_append_bool`, `config_list_append_int`, `config_list_append_double`, and `config_list_append_string` from default `RimeApi`.
+- Place `config_begin_map`, `config_next`, and `config_end` immediately after `config_update_signature`.
 - Place `config_begin_list` immediately after `config_list_size`.
-- Place `get_prebuilt_data_dir` and `get_staging_dir` after
-  `candidate_list_from_index`, matching upstream `1.17.0`.
-- Keep the exported helper implementations `RimeConfigListAppend*` in their
-  existing modules only if they still compile and are covered by direct tests;
-  they are parked TypeDuck-profile code, not default upstream API fields. Do
-  not expose `RimeStartQuick` as part of the default upstream surface; any future
-  quick-start support needs a named TypeDuck profile and fresh fork evidence.
+- Place `get_prebuilt_data_dir` and `get_staging_dir` after `candidate_list_from_index`, matching upstream `1.17.0`.
+- Keep the exported helper implementations `RimeConfigListAppend*` in their existing modules only if they still compile and are covered by direct tests; they are parked TypeDuck-profile code, not default upstream API fields. Do not expose `RimeStartQuick` as part of the default upstream surface; any future quick-start support needs a named TypeDuck profile and fresh fork evidence.
 
 - [ ] **Step 5: Update config append tests**
 
-In `crates/yune-rime-api/src/tests/config_api.rs`, keep these direct helper
-tests because they validate parked TypeDuck-profile implementation behavior:
+In `crates/yune-rime-api/src/tests/config_api.rs`, keep these direct helper tests because they validate parked TypeDuck-profile implementation behavior:
 
 - `config_list_append_creates_and_extends_lists`
 - `config_list_append_scalar_variants_round_trip_through_accessors`
 - `config_list_append_rejects_invalid_and_non_list_targets`
 
-Delete or rewrite `rime_api_exposes_config_list_append_contract` so no default
-`rime_get_api()` test requires TypeDuck-only fields. Add this replacement:
+Delete or rewrite `rime_api_exposes_config_list_append_contract` so no default `rime_get_api()` test requires TypeDuck-only fields. Add this replacement:
 
 ```rust
 #[test]
@@ -643,6 +608,7 @@ Expected: only ABI refresh files are committed.
 ## Task 6: Audit Existing TypeDuck Assumptions
 
 **Files:**
+
 - Create: `docs/plans/m12-audit-coverage.md`
 - Modify: affected comments/test names only when the audit finds unlabeled profile behavior.
 
@@ -654,8 +620,7 @@ Run:
 rg -n "TypeDuck|typeduck|v1\.1\.2|start_quick|config_list_append|dictionary_lookup|librime" crates docs scripts packages
 ```
 
-Expected: a review list covering TypeDuck fixtures, TypeDuck-Web tests, ABI tests,
-config append tests, docs, and packaging scripts.
+Expected: a review list covering TypeDuck fixtures, TypeDuck-Web tests, ABI tests, config append tests, docs, and packaging scripts.
 
 - [ ] **Step 2: Create the coverage audit document**
 
@@ -679,9 +644,7 @@ Create `docs/plans/m12-audit-coverage.md`:
 
 - [ ] **Step 3: Rename or comment any unlabeled profile tests**
 
-If the audit finds a test whose name says only `librime` but whose expected bytes
-come from TypeDuck `v1.1.2`, rename it or add a comment containing
-`TypeDuck profile oracle: v1.1.2`. Do not change behavior in this step.
+If the audit finds a test whose name says only `librime` but whose expected bytes come from TypeDuck `v1.1.2`, rename it or add a comment containing `TypeDuck profile oracle: v1.1.2`. Do not change behavior in this step.
 
 - [ ] **Step 4: Run focused TypeDuck profile gates**
 
@@ -694,8 +657,7 @@ cargo test -p yune-rime-api --test typeduck_web
 
 Expected:
 
-- `cantonese_parity`: active tests pass and the five documented TypeDuck blockers
-  remain ignored.
+- `cantonese_parity`: active tests pass and the five documented TypeDuck blockers remain ignored.
 - `typeduck_web`: PASS, preserving the web profile path.
 
 - [ ] **Step 5: Commit the audit**
@@ -708,12 +670,12 @@ git diff --cached --name-only
 git commit -m "docs: audit TypeDuck profile coverage for M12"
 ```
 
-Expected: staged paths are limited to audit docs and any naming/comment fixes
-that directly label TypeDuck-profile behavior.
+Expected: staged paths are limited to audit docs and any naming/comment fixes that directly label TypeDuck-profile behavior.
 
 ## Task 7: Update Milestone Docs After Evidence Lands
 
 **Files:**
+
 - Modify: `docs/requirements.md`
 - Modify: `docs/roadmap.md`
 - Modify: `docs/CONVENTIONS.md`
@@ -725,13 +687,9 @@ that directly label TypeDuck-profile behavior.
 Update `docs/requirements.md`:
 
 - `UPSTREAM-ORACLE-01`: checked only after upstream README and manifest land.
-- `UPSTREAM-ORACLE-02`: checked only after both upstream and TypeDuck manifest
-  roots exist and the provenance test passes.
-- `UPSTREAM-AUDIT-01`: checked only after `docs/plans/m12-audit-coverage.md`
-  lands.
-- `TYPEDUCK-PROFILE-01`: checked only after TypeDuck tests/docs/scripts are
-  labeled profile-only and default upstream ABI no longer depends on fork-only
-  fields.
+- `UPSTREAM-ORACLE-02`: checked only after both upstream and TypeDuck manifest roots exist and the provenance test passes.
+- `UPSTREAM-AUDIT-01`: checked only after `docs/plans/m12-audit-coverage.md` lands.
+- `TYPEDUCK-PROFILE-01`: checked only after TypeDuck tests/docs/scripts are labeled profile-only and default upstream ABI no longer depends on fork-only fields.
 
 - [ ] **Step 2: Update roadmap M12 table**
 
@@ -746,10 +704,8 @@ Update `docs/roadmap.md` M12 rows from `Pending` to the actual state:
 
 Make the smallest needed edits:
 
-- `docs/CONVENTIONS.md`: default `RimeApi` means upstream `1.17.0`; TypeDuck
-  fork-only fields require an explicit TypeDuck profile surface.
-- `docs/decisions.md`: append a D-24 note that M12's first parity slice refreshed
-  the default API table to upstream `1.17.0`.
+- `docs/CONVENTIONS.md`: default `RimeApi` means upstream `1.17.0`; TypeDuck fork-only fields require an explicit TypeDuck profile surface.
+- `docs/decisions.md`: append a D-24 note that M12's first parity slice refreshed the default API table to upstream `1.17.0`.
 
 - [ ] **Step 4: Run docs consistency scans**
 
@@ -762,10 +718,8 @@ rg -n --glob "!docs/plans/m12-plan-upstream-oracle-refresh.md" "upstream-1\.17\.
 
 Expected:
 
-- First scan returns no false claims. If it finds intentional profile references,
-  reword them so the profile label is explicit.
-- Second scan shows the upstream and TypeDuck fixture labels in the expected docs
-  and tests.
+- First scan returns no false claims. If it finds intentional profile references, reword them so the profile label is explicit.
+- Second scan shows the upstream and TypeDuck fixture labels in the expected docs and tests.
 
 - [ ] **Step 5: Commit milestone docs**
 
@@ -782,6 +736,7 @@ Expected: staged paths are docs only.
 ## Task 8: Full Verification
 
 **Files:**
+
 - Read-only verification over the whole workspace.
 
 - [ ] **Step 1: Format Rust**
@@ -806,8 +761,7 @@ cargo test -p yune-core --test cantonese_parity
 cargo test -p yune-rime-api --test typeduck_web
 ```
 
-Expected: all non-ignored tests PASS; existing TypeDuck blocker tests remain
-ignored with `panic!()` bodies.
+Expected: all non-ignored tests PASS; existing TypeDuck blocker tests remain ignored with `panic!()` bodies.
 
 - [ ] **Step 3: Run workspace tests and lints**
 
@@ -821,9 +775,7 @@ npm --prefix packages/yune-typeduck-runtime run build
 git diff --check
 ```
 
-Expected: all commands exit 0. `git diff --check` may warn about CRLF-to-LF
-normalization only if Git reports it outside whitespace-error status; whitespace
-errors must be fixed.
+Expected: all commands exit 0. `git diff --check` may warn about CRLF-to-LF normalization only if Git reports it outside whitespace-error status; whitespace errors must be fixed.
 
 - [ ] **Step 4: Final review pass**
 
@@ -851,16 +803,11 @@ Expected: no unrelated files are staged.
 
 M12 is complete when all of the following are true:
 
-- Upstream `rime/librime 1.17.0` provenance is checked in under
-  `upstream-1.17.0/`.
-- TypeDuck `v1.1.2` provenance is checked in under `typeduck-v1.1.2/` and marked
-  profile-only.
+- Upstream `rime/librime 1.17.0` provenance is checked in under `upstream-1.17.0/`.
+- TypeDuck `v1.1.2` provenance is checked in under `typeduck-v1.1.2/` and marked profile-only.
 - A provenance guard test prevents unlabeled oracle fixture roots.
-- The default `RimeApi` table matches upstream `1.17.0` slot order and function
-  count.
+- The default `RimeApi` table matches upstream `1.17.0` slot order and function count.
 - TypeDuck fork-only ABI helpers are not required by default `rime_get_api()`.
 - Existing TypeDuck behavior is audited and labeled as profile-only.
 - M12 docs and requirements reflect the evidence that actually landed.
-- `cargo fmt`, focused M12 tests, `cargo test --workspace`,
-  `cargo clippy --workspace --all-targets -- -D warnings`, TypeScript runtime
-  test/build, and `git diff --check` pass.
+- `cargo fmt`, focused M12 tests, `cargo test --workspace`, `cargo clippy --workspace --all-targets -- -D warnings`, TypeScript runtime test/build, and `git diff --check` pass.

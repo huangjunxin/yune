@@ -2,11 +2,10 @@
 
 > **Status:** Finished - **Milestone:** M12 (Upstream Oracle Refresh) - **Closed:** 2026-06-19 - **Type:** ABI audit reference
 
-Upstream source: `rime/librime` tag `1.17.0`, commit
-`33e78140250125871856cdc5b42ddc6a5fcd3cd4`, file `src/rime_api.h`.
+Upstream source: `rime/librime` tag `1.17.0`, commit `33e78140250125871856cdc5b42ddc6a5fcd3cd4`, file `src/rime_api.h`.
 
 | Field | Upstream 1.17.0 slot | Current Yune slot before M12 | M12 classification | Action |
-|---|---:|---:|---|---|
+| --- | --: | --: | --- | --- |
 | `start_maintenance` | 4 | 4 | upstream core | keep |
 | `start_quick` | absent | absent | TypeDuck profile | keep absent from default `RimeApi`; any future support must remain profile-only |
 | `is_maintenance_mode` | 5 | 5 | upstream core | keep |

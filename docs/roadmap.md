@@ -1,31 +1,20 @@
 # Roadmap
 
-Yune is a Rust input-method engine that uses **librime as a compatibility
-oracle** while building toward an AI-native input engine librime cannot provide.
-The strategy: make existing RIME schemas and frontends behave predictably through
-Yune, measuring every difference against librime before accepting it, then layer
-AI-native behavior on top as a separate product milestone.
+Yune is a Rust input-method engine that uses **librime as a compatibility oracle** while building toward an AI-native input engine librime cannot provide. The strategy: make existing RIME schemas and frontends behave predictably through Yune, measuring every difference against librime before accepting it, then layer AI-native behavior on top as a separate product milestone.
 
-> **Compatibility oracle.** Upstream librime latest stable is the default core
-> behavior reference for user-visible behavior, schema semantics, standard ABI
-> contracts, deployed data, and migration. The current pinned upstream target is
-> `rime/librime 1.17.0`
-> (`33e78140250125871856cdc5b42ddc6a5fcd3cd4`):
-> <https://github.com/rime/librime>. TypeDuck-specific behavior is referenced
-> only as a compatibility profile against the TypeDuck fork (tag `v1.1.2`,
-> commit `74cb52b78fb2411137a7643f6c8bc6517acfde69`):
-> <https://github.com/TypeDuck-HK/librime>. (Earlier docs referenced a local
-> checkout path; treat the GitHub sources above as canonical.)
+> **Compatibility oracle.** Upstream librime latest stable is the default core behavior reference for user-visible behavior, schema semantics, standard ABI contracts, deployed data, and migration. The current pinned upstream target is `rime/librime 1.17.0` (`33e78140250125871856cdc5b42ddc6a5fcd3cd4`): <https://github.com/rime/librime>. TypeDuck-specific behavior is referenced only as a compatibility profile against the TypeDuck fork (tag `v1.1.2`, commit `74cb52b78fb2411137a7643f6c8bc6517acfde69`): <https://github.com/TypeDuck-HK/librime>. (Earlier docs referenced a local checkout path; treat the GitHub sources above as canonical.)
 
 **Document map**
+
 - This file — high-level roadmap (what's done, what's next).
 - [`m00-analysis-founding.md`](./plans/archive/m00-analysis-founding.md) — founding architecture decisions (archived historical snapshot).
 - [`CONVENTIONS.md`](./CONVENTIONS.md) — architecture, stack, structure, coding/testing conventions, integrations, and current risks (one consolidated reference).
 - [`decisions.md`](./decisions.md) — the consolidated decision log (standing principles + `D-*` entries).
 - [`requirements.md`](./requirements.md) — requirement IDs and their status.
 - [`typeduck-windows-backend-requirements.md`](./typeduck-windows-backend-requirements.md) - the completed TypeDuck-Windows compatibility-profile contract.
-- [`fork-parity-ledger.md`](./fork-parity-ledger.md) — the single source of truth for *every* Cantoboard + TypeDuck fork improvement vs upstream `1.17.0`, with origin, category, and Yune status (done / todo / non-goal). Sourced from archived provenance notes under [`archive/fork-provenance/`](./archive/fork-provenance/).
+- [`fork-parity-ledger.md`](./fork-parity-ledger.md) — the single source of truth for _every_ Cantoboard + TypeDuck fork improvement vs upstream `1.17.0`, with origin, category, and Yune status (done / todo / non-goal). Sourced from archived provenance notes under [`archive/fork-provenance/`](./archive/fork-provenance/).
 - [`plans/archive/m25-plan-typeduck-web-dogfooding-round-2.md`](./plans/archive/m25-plan-typeduck-web-dogfooding-round-2.md) - completed Phase 2 TypeDuck-Web dogfooding round-2 ledger.
+- [`plans/m26-plan-performance-hardening.md`](./plans/m26-plan-performance-hardening.md) - active engine/runtime performance hardening plan for native large-dictionary benchmarks, browser keydown-to-paint evidence, startup attribution, and the first measured optimization slice.
 - [`plans/p2-win01-plan-typeduck-windows-next.md`](./plans/p2-win01-plan-typeduck-windows-next.md) - Phase 2 planning for a Yune-first TypeDuck-Windows product/frontend track.
 - [`plans/p2-win02-plan-typeduck-boundary-compat.md`](./plans/p2-win02-plan-typeduck-boundary-compat.md) - active Yune-side TypeDuck Windows boundary compatibility fix created from Phase 0C evidence.
 - [`plans/`](./plans/) — per-stage implementation plans, findings, build notes, and validation artifacts (finished ones under `plans/archive/`).
@@ -36,80 +25,34 @@ AI-native behavior on top as a separate product milestone.
 
 ## Phase 1 closeout — engine build-out complete
 
-As of 2026-06-21, the Phase 1 engine build-out is effectively complete for the
-named target set: upstream `luna_pinyin` / common-schema behavior is measured
-against upstream `rime/librime 1.17.0`, and TypeDuck/Cantoboard fork behavior is
-captured as the TypeDuck `jyut6ping3` compatibility profile against
-TypeDuck-HK/librime `v1.1.2`. M0-M24 are complete, including the M10
-TypeDuck-Windows backend smoke and the M24 TypeDuck-Web dogfooding/demo-hardening
-batch. M24 was a **web dogfooding/demo-hardening loop**, not a new
-oracle-parity milestone.
+As of 2026-06-21, the Phase 1 engine build-out is effectively complete for the named target set: upstream `luna_pinyin` / common-schema behavior is measured against upstream `rime/librime 1.17.0`, and TypeDuck/Cantoboard fork behavior is captured as the TypeDuck `jyut6ping3` compatibility profile against TypeDuck-HK/librime `v1.1.2`. M0-M24 are complete, including the M10 TypeDuck-Windows backend smoke and the M24 TypeDuck-Web dogfooding/demo-hardening batch. M24 was a **web dogfooding/demo-hardening loop**, not a new oracle-parity milestone.
 
-This does **not** mean Yune is a bit-for-bit clone of librime. It means the
-current Phase 1 promise is met: the named upstream and TypeDuck targets have
-oracle-backed behavior, the fork deltas are documented, and frontend integration
-can consume Yune through explicit profile surfaces without widening the default
-upstream ABI.
+This does **not** mean Yune is a bit-for-bit clone of librime. It means the current Phase 1 promise is met: the named upstream and TypeDuck targets have oracle-backed behavior, the fork deltas are documented, and frontend integration can consume Yune through explicit profile surfaces without widening the default upstream ABI.
 
-Phase 2 moves from engine construction to product/platform frontends and
-continuous maintenance: TypeDuck-Web dogfooding, a Yune-first Windows IME,
-future iOS/native tracks, AI-native frontend exposure where explicitly gated,
-and ongoing oracle fixture refresh when new real targets need deeper behavior.
-The completed TypeDuck-Web dogfooding round-2 ledger is
-[`plans/archive/m25-plan-typeduck-web-dogfooding-round-2.md`](./plans/archive/m25-plan-typeduck-web-dogfooding-round-2.md).
-The first Phase 2 Windows planning artifact is
-[`plans/p2-win01-plan-typeduck-windows-next.md`](./plans/p2-win01-plan-typeduck-windows-next.md).
-Phase 0C in the separate TypeDuck-Windows repo has now classified the first
-interactive Windows blocker as a Yune TypeDuck-profile boundary bug, so Windows
-product work is blocked on
-[`plans/p2-win02-plan-typeduck-boundary-compat.md`](./plans/p2-win02-plan-typeduck-boundary-compat.md).
-This is related to, but not closed by, the earlier TypeDuck-Web
-`M24-DOGFOOD-02` visible `\f` cleanup: the browser parser now hides raw control
-markers in candidate rows, while P2-WIN-02 owns the stricter raw
-`RimeCandidate.comment` byte compatibility needed by native/front-end ABI
-consumers.
+Phase 2 moves from engine construction to product/platform frontends and continuous maintenance: TypeDuck-Web dogfooding, a Yune-first Windows IME, future iOS/native tracks, AI-native frontend exposure where explicitly gated, and ongoing oracle fixture refresh when new real targets need deeper behavior. The completed TypeDuck-Web dogfooding round-2 ledger is [`plans/archive/m25-plan-typeduck-web-dogfooding-round-2.md`](./plans/archive/m25-plan-typeduck-web-dogfooding-round-2.md). The first Phase 2 Windows planning artifact is [`plans/p2-win01-plan-typeduck-windows-next.md`](./plans/p2-win01-plan-typeduck-windows-next.md). Phase 0C in the separate TypeDuck-Windows repo has now classified the first interactive Windows blocker as a Yune TypeDuck-profile boundary bug, so Windows product work is blocked on [`plans/p2-win02-plan-typeduck-boundary-compat.md`](./plans/p2-win02-plan-typeduck-boundary-compat.md). This is related to, but not closed by, the earlier TypeDuck-Web `M24-DOGFOOD-02` visible `\f` cleanup: the browser parser now hides raw control markers in candidate rows, while P2-WIN-02 owns the stricter raw `RimeCandidate.comment` byte compatibility needed by native/front-end ABI consumers.
+
+M26 is the active cross-cutting performance hardening track. It does not reopen Phase 1 parity or M24/M25 dogfooding. Its job is to measure native large-asset Yune separately from browser/WASM/worker/React latency, attribute the remaining TypeDuck-Web startup cost, and land the first optimization proven by evidence. Native speed claims must use native large-dictionary benchmarks; browser dogfood claims must use browser keydown-to-paint evidence.
 
 ---
 
 ## Compatibility goal — oracle as a floor, not a feature checklist
 
-Yune treats librime as a **behavioral oracle, not a feature target.** Success is
-**not** "reimplement 100% of librime 1.17.0" — that would contradict the standing
-*"oracle, not template"* principle and add no product value, since librime
-already exists. Success is that **the schemas and frontends Yune targets behave
-correctly against the oracle**, every difference measured and either fixed or
-documented, with the **AI-native layer librime cannot provide** riding on top of
-that compatible base.
+Yune treats librime as a **behavioral oracle, not a feature target.** Success is **not** "reimplement 100% of librime 1.17.0" — that would contradict the standing _"oracle, not template"_ principle and add no product value, since librime already exists. Success is that **the schemas and frontends Yune targets behave correctly against the oracle**, every difference measured and either fixed or documented, with the **AI-native layer librime cannot provide** riding on top of that compatible base.
 
 The goal has two horizons and one explicit non-goal:
 
-- **(A) Target-driven compatibility — the near-term definition of "done."** A
-  bounded, *named* set of schemas and frontends must behave correctly versus the
-  oracle. Today that set is the `luna_pinyin` core path (vs the upstream `1.17.0`
-  oracle) and the TypeDuck `jyut6ping3` profile (vs the `v1.1.2` oracle). "Done"
-  is always relative to this named list — never an open-ended checklist. This is
-  what M12 begins.
-- **(B) Broad RIME compatibility — the expansion ambition.** Over time, widen the
-  named set so the **common** RIME schemas and the **real third-party frontends**
-  (ibus / fcitx / Squirrel / weasel, TypeDuck-Web / Windows) work predictably.
-  Breadth is added schema-by-schema and frontend-by-frontend through the same
-  oracle-measured parity harness — not in one leap, and not by cloning librime
-  wholesale.
-- **Non-goal: bit-for-bit feature parity with librime internals.** Reproducing
-  every librime gear, plugin, and code path is out of scope. A librime feature is
-  implemented only when a named (A)/(B) target needs it (*"name the behavior"*).
+- **(A) Target-driven compatibility — the near-term definition of "done."** A bounded, _named_ set of schemas and frontends must behave correctly versus the oracle. Today that set is the `luna_pinyin` core path (vs the upstream `1.17.0` oracle) and the TypeDuck `jyut6ping3` profile (vs the `v1.1.2` oracle). "Done" is always relative to this named list — never an open-ended checklist. This is what M12 begins.
+- **(B) Broad RIME compatibility — the expansion ambition.** Over time, widen the named set so the **common** RIME schemas and the **real third-party frontends** (ibus / fcitx / Squirrel / weasel, TypeDuck-Web / Windows) work predictably. Breadth is added schema-by-schema and frontend-by-frontend through the same oracle-measured parity harness — not in one leap, and not by cloning librime wholesale.
+- **Non-goal: bit-for-bit feature parity with librime internals.** Reproducing every librime gear, plugin, and code path is out of scope. A librime feature is implemented only when a named (A)/(B) target needs it (_"name the behavior"_).
 
-So **"the engine is done" is never absolute** — it reads *"the current target set
-is green against the oracle; everything else is deferred-and-documented."* The
-product north star is the AI-native layer on top of a compatible base, not parity
-for its own sake. *(Ratified as a standing principle and `D-25` in
-[`decisions.md`](./decisions.md#standing-principles).)*
+So **"the engine is done" is never absolute** — it reads _"the current target set is green against the oracle; everything else is deferred-and-documented."_ The product north star is the AI-native layer on top of a compatible base, not parity for its own sake. _(Ratified as a standing principle and `D-25` in [`decisions.md`](./decisions.md#standing-principles).)_
 
 ---
 
 ## Completed
 
 ### M0–M4: Foundation
+
 - Rust workspace (`yune-core`, `yune-rime-api`, `yune-cli`; the early orphaned `yune-schema` crate was removed in M23); core session/candidate types; CLI smoke test.
 - Deterministic compatibility harness: recorded fixtures, JSON output for context/candidates/commit/status, workspace tests.
 - RIME-style schema subset: processors, segmentors, translators, filters as named components; config patch/include behavior.
@@ -117,6 +60,7 @@ for its own sake. *(Ratified as a standing principle and `D-25` in
 - Non-blocking candidate reranking trait with a mock ranker; classic ordering preserved as fallback.
 
 ### M5–M7: RIME ABI, schema, and data compatibility
+
 - Focused RIME-style C ABI (`yune-rime-api`): sessions, context/status/commit, config, levers, schema lists, deployment, modules, runtime options, key processing — driven through the exported `RimeApi` function table.
 - Broad librime-compatible key-table coverage and aligned core/ABI key handling.
 - Schema-loaded compatibility across the high-value processor/segmentor/translator/filter set (speller, editor, navigator, selector, chord, punctuation, shape; abc/ascii/affix/matcher segmentors; table/script/r10n/reverse-lookup/history/switch/schema-list translators; simplifier/uniquifier/charset/reverse-lookup filters).
@@ -127,78 +71,40 @@ for its own sake. *(Ratified as a standing principle and `D-25` in
 Detail: [`plans/archive/m05-m07-record-compat-foundation-summary.md`](./plans/archive/m05-m07-record-compat-foundation-summary.md), [`plans/archive/m05-m07-record-foundation-refactor.md`](./plans/archive/m05-m07-record-foundation-refactor.md) (module/test ownership rules), and the [`decisions.md`](./decisions.md) log.
 
 ### M8: Real frontend validation & benchmarks
+
 - Host-shaped native loader validates the full `rime_get_api` → setup → deploy → schema select → session → key process → context/status → commit → teardown lifecycle.
 - Squirrel/macOS and ibus/fcitx Linux paths attempted and documented with reproducible blockers (not claimed as completed native integration).
 - Frontend-sensitive benchmark baselines for session lifecycle, per-key processing, deploy/dictionary loading, and userdb learning/sync.
-- **Outcome:** *GO WITH CONDITIONS* to begin AI-native candidate/ranking **design**.
+- **Outcome:** _GO WITH CONDITIONS_ to begin AI-native candidate/ranking **design**.
 
 Detail: [`plans/archive/m08-plan-real-frontend-validation.md`](./plans/archive/m08-plan-real-frontend-validation.md), [`plans/archive/frontend-validation/`](./plans/archive/frontend-validation/).
 
 ### M9: TypeDuck-Web browser validation
 
-- Emscripten build emits loadable `yune-typeduck.js`/`.wasm` glue, and a Node
-  smoke instantiates it, calls a `yune_typeduck_*` export, and performs an
-  Emscripten `FS` write/read.
-- TypeDuck-Web adapter maps runtime `candidate.text`, `candidate.comment`, and
-  `context.highlighted` into the upstream candidate panel shape.
-- Patched TypeDuck-Web worker calls the modular Emscripten factory, mounts IDBFS,
-  fetches real `public/schema` assets before init, and runs in a real browser.
-- **Browser result:** the HR-5 real-assets matrix passes for composition,
-  candidate list, paging, selection, deletion, Space commit, phrase commit,
-  deploy, customize, persistence sync, reload survival, and dictionary-panel
-  rendering against `jyut6ping3_mobile`; the committed byte-parity guarantee
-  for rich dictionary comments is the `cantonese_parity` fixture, with the
-  browser-shaped native rich-comment test enabled when local v1.1.2 oracle
-  build assets are present. HR-6 also locks the shared reverse-lookup `"; "`
-  joiner and schema-prompt bytes against the TypeDuck v1.1.2 oracle.
-- **Outcome:** **GO WITH CONDITIONS** for AI-native frontend exposure. This
-  supersedes the old tooling-blocked Phase 10 NO-GO and the interim hardening
-  NO-GO: real browser compatibility is proven, but AI-native behavior remains
-  disabled by default in real frontends until the M11 provider/ranking/privacy
-  contracts are proven and explicitly enabled.
+- Emscripten build emits loadable `yune-typeduck.js`/`.wasm` glue, and a Node smoke instantiates it, calls a `yune_typeduck_*` export, and performs an Emscripten `FS` write/read.
+- TypeDuck-Web adapter maps runtime `candidate.text`, `candidate.comment`, and `context.highlighted` into the upstream candidate panel shape.
+- Patched TypeDuck-Web worker calls the modular Emscripten factory, mounts IDBFS, fetches real `public/schema` assets before init, and runs in a real browser.
+- **Browser result:** the HR-5 real-assets matrix passes for composition, candidate list, paging, selection, deletion, Space commit, phrase commit, deploy, customize, persistence sync, reload survival, and dictionary-panel rendering against `jyut6ping3_mobile`; the committed byte-parity guarantee for rich dictionary comments is the `cantonese_parity` fixture, with the browser-shaped native rich-comment test enabled when local v1.1.2 oracle build assets are present. HR-6 also locks the shared reverse-lookup `"; "` joiner and schema-prompt bytes against the TypeDuck v1.1.2 oracle.
+- **Outcome:** **GO WITH CONDITIONS** for AI-native frontend exposure. This supersedes the old tooling-blocked Phase 10 NO-GO and the interim hardening NO-GO: real browser compatibility is proven, but AI-native behavior remains disabled by default in real frontends until the M11 provider/ranking/privacy contracts are proven and explicitly enabled.
 
 Detail: [`plans/archive/m09-plan-typeduck-web-validation.md`](./plans/archive/m09-plan-typeduck-web-validation.md), [`plans/m09-reference-typeduck-web-adapter.md`](./plans/m09-reference-typeduck-web-adapter.md), [`plans/archive/m09-findings-typeduck-web-integration.md`](./plans/archive/m09-findings-typeduck-web-integration.md), [`plans/archive/m09-record-ai-native-frontend-readiness.md`](./plans/archive/m09-record-ai-native-frontend-readiness.md) (HR-7 recommendation).
 
-### M11: AI-native input layer — S1–S5 CLI/core complete *(2026-06-18; frontend exposure deferred)*
+### M11: AI-native input layer — S1–S5 CLI/core complete _(2026-06-18; frontend exposure deferred)_
 
-The AI-native layer (M11) is implemented in `crates/yune-core` and the direct
-`yune-cli run` path only, leaving the TypeDuck-Web and TypeDuck-Windows frontend surfaces unchanged. The
-core exposes an `AiCandidateProvider` interface, deterministic `MockAiProvider`,
-and an `AiWorker` (provider execution is CLI-orchestrated outside
-`Engine::refresh_candidates`; the engine consumes only staged, input-keyed
-results); structured `Ai { provider, confidence }` source metadata with
-fixed-point confidence; one merge function that pins the top classic candidate
-at index 0; a default-sensitive `AiPrivacyPolicy` that blocks remote providers
-before invocation and gates learning; an inspectable / clearable / disable-able
-`MemoryStore` kept **outside** the librime `*.userdb` namespace; and a
-deterministic local rule-backed provider (`yune-cli run --ai-provider local`).
-All eight S1–S5 safety criteria are independently verified — source-labeled,
-classic-first, non-blocking, no default auto-commit, **no userdb leak**,
-privacy-gated, deterministic fallback. Real frontend exposure remains deferred
-and default-off (see *Deferred / future*).
+The AI-native layer (M11) is implemented in `crates/yune-core` and the direct `yune-cli run` path only, leaving the TypeDuck-Web and TypeDuck-Windows frontend surfaces unchanged. The core exposes an `AiCandidateProvider` interface, deterministic `MockAiProvider`, and an `AiWorker` (provider execution is CLI-orchestrated outside `Engine::refresh_candidates`; the engine consumes only staged, input-keyed results); structured `Ai { provider, confidence }` source metadata with fixed-point confidence; one merge function that pins the top classic candidate at index 0; a default-sensitive `AiPrivacyPolicy` that blocks remote providers before invocation and gates learning; an inspectable / clearable / disable-able `MemoryStore` kept **outside** the librime `*.userdb` namespace; and a deterministic local rule-backed provider (`yune-cli run --ai-provider local`). All eight S1–S5 safety criteria are independently verified — source-labeled, classic-first, non-blocking, no default auto-commit, **no userdb leak**, privacy-gated, deterministic fallback. Real frontend exposure remains deferred and default-off (see _Deferred / future_).
 
 Detail: [`plans/m11-design-ai-native.md`](./plans/m11-design-ai-native.md) (living architecture), [`plans/archive/m11-plan-ai-native-cli-slice.md`](./plans/archive/m11-plan-ai-native-cli-slice.md) (S1 record).
 
 ### M12: Upstream behavioral parity closeout (upstream `1.17.0`)
 
-Yune's core engine now tracks upstream `rime/librime 1.17.0` as the default
-oracle target. M12 turned TypeDuck behavior into an explicit compatibility
-profile instead of the default engine truth. The expanded M12 closeout captures
-`luna_pinyin` behavior from the official upstream Windows MSVC release binary
-and checks Yune against those bytes for curated single-code mechanics, full
-`ni` dictionary selection with essay weights, Engine paging/selection/commit,
-reverse lookup, punctuation/symbol candidates, and supported option paths
-(`zh_hans` single-code conversion and full-shape punctuation first candidate).
-The later M17 and M18 milestones closed the `zhongguo` sentence/lattice,
-`ascii_punct` processor bypass, and punctuation immediate-commit blockers with
-fresh upstream fixtures instead of retroactively expanding M12.
+Yune's core engine now tracks upstream `rime/librime 1.17.0` as the default oracle target. M12 turned TypeDuck behavior into an explicit compatibility profile instead of the default engine truth. The expanded M12 closeout captures `luna_pinyin` behavior from the official upstream Windows MSVC release binary and checks Yune against those bytes for curated single-code mechanics, full `ni` dictionary selection with essay weights, Engine paging/selection/commit, reverse lookup, punctuation/symbol candidates, and supported option paths (`zh_hans` single-code conversion and full-shape punctuation first candidate). The later M17 and M18 milestones closed the `zhongguo` sentence/lattice, `ascii_punct` processor bypass, and punctuation immediate-commit blockers with fresh upstream fixtures instead of retroactively expanding M12.
 
 Detail: [`plans/archive/m12-plan-upstream-oracle-refresh.md`](./plans/archive/m12-plan-upstream-oracle-refresh.md) and [`plans/archive/m12-plan-upstream-behavioral-parity-closeout.md`](./plans/archive/m12-plan-upstream-behavioral-parity-closeout.md).
 
 **Status**:
 
 | # | Work item | State | Notes |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | 0 | Pin upstream oracle | Done | Upstream `1.17.0` commit `33e78140250125871856cdc5b42ddc6a5fcd3cd4` is the default core target; provenance is checked in and the official Windows MSVC release binary is available for behavioral byte capture. |
 | 1 | Fixture naming policy | Done | Fixture manifests and the provenance guard test distinguish `upstream-1.17.0` from `typeduck-v1.1.2`. |
 | 2 | TypeDuck assumption audit | Done | Existing TypeDuck-derived behavior is classified in `docs/plans/archive/m12-audit-coverage.md`. |
@@ -209,36 +115,16 @@ Detail: [`plans/archive/m12-plan-upstream-oracle-refresh.md`](./plans/archive/m1
 
 ### M13: AI-native frontend exposure
 
-The first test of the product thesis: take M11's completed CLI/core AI layer to a
-**real frontend** — default-off, local-first, and gated by the same safety
-invariants already proven in the CLI. M11 owns the hard parts (the
-`AiCandidateProvider` trait, `MockAiProvider`/`LocalModelProvider`, the
-input-keyed merge that pins the top classic candidate at index 0, the
-default-sensitive `AiPrivacyPolicy`, and the `MemoryStore` kept outside the
-librime `*.userdb` namespace). M13 carries that surface — **unchanged and still
-safe** — across the frontend boundary on **TypeDuck-Web**, the only
-GO-WITH-CONDITIONS frontend (M9). No core or TypeDuck compatibility behavior
-changes.
+The first test of the product thesis: take M11's completed CLI/core AI layer to a **real frontend** — default-off, local-first, and gated by the same safety invariants already proven in the CLI. M11 owns the hard parts (the `AiCandidateProvider` trait, `MockAiProvider`/`LocalModelProvider`, the input-keyed merge that pins the top classic candidate at index 0, the default-sensitive `AiPrivacyPolicy`, and the `MemoryStore` kept outside the librime `*.userdb` namespace). M13 carries that surface — **unchanged and still safe** — across the frontend boundary on **TypeDuck-Web**, the only GO-WITH-CONDITIONS frontend (M9). No core or TypeDuck compatibility behavior changes.
 
-**Orchestration decision.** M11 requires the per-key path to *never* run provider
-code — it only reads an already-staged result. The browser has no CLI host, and
-`AiWorker` uses `std::thread`, which does not port to Emscripten. M13 honors the
-invariant with **two passes in Rust**: `yune_typeduck_process_key` stays
-unchanged and returns the classic response (so AI-off is byte-identical and the
-key path never invokes the provider); a new `yune_typeduck_stage_ai` export then
-runs the `LocalModelProvider` **synchronously** and stages an input-keyed result,
-which the worker requests **after** rendering classic. Classic input is never
-delayed; AI rows arrive as a bounded **second-pass update** on the
-off-main-thread worker. The async / second-Web-Worker port is deferred.
+**Orchestration decision.** M11 requires the per-key path to _never_ run provider code — it only reads an already-staged result. The browser has no CLI host, and `AiWorker` uses `std::thread`, which does not port to Emscripten. M13 honors the invariant with **two passes in Rust**: `yune_typeduck_process_key` stays unchanged and returns the classic response (so AI-off is byte-identical and the key path never invokes the provider); a new `yune_typeduck_stage_ai` export then runs the `LocalModelProvider` **synchronously** and stages an input-keyed result, which the worker requests **after** rendering classic. Classic input is never delayed; AI rows arrive as a bounded **second-pass update** on the off-main-thread worker. The async / second-Web-Worker port is deferred.
 
-**Non-goals (deferred).** Remote LLM providers; the async background-worker port;
-exposure through Windows or other native frontends; any change to classic-input
-defaults.
+**Non-goals (deferred).** Remote LLM providers; the async background-worker port; exposure through Windows or other native frontends; any change to classic-input defaults.
 
 **Status**:
 
 | # | Work item | State | Notes |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | 0 | Browser AI orchestration | Done | `process_key` stays provider-free; `yune_typeduck_stage_ai` runs the `LocalModelProvider` in Rust as a second pass after classic renders. |
 | 1 | Default-off + opt-in toggle | Done | AI is invisible until enabled; disabling AI clears staged rows for the current input so the visible candidate page returns to classic output. |
 | 2 | Source-labeled candidates in the panel | Done | AI rows render after the classic top candidate with `source: "ai:local"` from engine snapshot data aligned to the rendered page; `RimeCandidate` remains unchanged. |
@@ -246,39 +132,20 @@ defaults.
 | 4 | Privacy in browser context | Done | Browser context has no app/field signal and defaults to **sensitive**; M13 ships local only and keeps remote providers out of scope. |
 | 5 | Browser-E2E safety evidence | Done | Native `typeduck_web`, TS runtime tests/build, and the real TypeDuck-Web Playwright M13 scenarios cover AI-off identity, AI labels, no auto-commit, and explicit AI selection. |
 
-**Outcome:** M13 proves the web surface of the product thesis. The M11 safety
-invariants (classic-first, non-blocking classic path, no default AI auto-commit,
-no userdb leak, privacy-gated local provider, deterministic fallback) now hold
-through TypeDuck-Web. AI candidates render as a second-pass update, are labeled,
-and never preempt classic index 0. Classic input remains byte-identical with AI
-off, and disabling AI clears stale staged rows for the current input. This
-supersedes the *Deferred / future* "AI-native frontend exposure" item for the web
-surface only; native frontend exposure remains deferred.
+**Outcome:** M13 proves the web surface of the product thesis. The M11 safety invariants (classic-first, non-blocking classic path, no default AI auto-commit, no userdb leak, privacy-gated local provider, deterministic fallback) now hold through TypeDuck-Web. AI candidates render as a second-pass update, are labeled, and never preempt classic index 0. Classic input remains byte-identical with AI off, and disabling AI clears stale staged rows for the current input. This supersedes the _Deferred / future_ "AI-native frontend exposure" item for the web surface only; native frontend exposure remains deferred.
 
 Detail: [`plans/archive/m13-plan-ai-native-frontend-exposure.md`](./plans/archive/m13-plan-ai-native-frontend-exposure.md) (execution plan) and [`plans/m11-design-ai-native.md`](./plans/m11-design-ai-native.md) (architecture).
 
 ### M14–M16: TypeDuck-Web fork parity
 
-The chosen next arc: complete the **TypeDuck `jyut6ping3` target** so the
-TypeDuck-Web example behaves like the fork — the named (A) target from the
-*Compatibility goal*, not feature-completeness for its own sake. **Key gap-map
-finding:** `jyut6ping3` is dictionary-driven (`script_translator` +
-`dictionary_lookup_filter` + `simplifier`); it does **not** use
-`poet`/`octagram`/grammar, so this arc needs **golden capture + dictionary-driven
-features**, *not* the upstream language model (that is Track 2 / M17). Five
-behaviors are fixture-backed in `cantonese_parity.rs`, with browser-only gaps
-listed explicitly below.
+The chosen next arc: complete the **TypeDuck `jyut6ping3` target** so the TypeDuck-Web example behaves like the fork — the named (A) target from the _Compatibility goal_, not feature-completeness for its own sake. **Key gap-map finding:** `jyut6ping3` is dictionary-driven (`script_translator` + `dictionary_lookup_filter` + `simplifier`); it does **not** use `poet`/`octagram`/grammar, so this arc needs **golden capture + dictionary-driven features**, _not_ the upstream language model (that is Track 2 / M17). Five behaviors are fixture-backed in `cantonese_parity.rs`, with browser-only gaps listed explicitly below.
 
 #### M14 — Capture the TypeDuck v1.1.2 Cantonese goldens
 
-Parameterize the scenario-capable `oracle-rime-probe.cs` (its traits currently
-hardcode upstream `1.17.0` identity) — or add a TypeDuck v1.1.2 capture wrapper —
-with the **correct v1.1.2 oracle identity** (modules, distribution name/version,
-provenance) and a `jyut6ping3` fixture composer, then capture goldens from the
-v1.1.2 oracle binary (oracle-measured, non-circular).
+Parameterize the scenario-capable `oracle-rime-probe.cs` (its traits currently hardcode upstream `1.17.0` identity) — or add a TypeDuck v1.1.2 capture wrapper — with the **correct v1.1.2 oracle identity** (modules, distribution name/version, provenance) and a `jyut6ping3` fixture composer, then capture goldens from the v1.1.2 oracle binary (oracle-measured, non-circular).
 
 | # | Work item | State | Notes |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | 0 | v1.1.2 capture wrapper | Done | `oracle-rime-probe.cs` has TypeDuck v1.1.2 identity support and `scripts/capture-typeduck-jyutping.ps1` composes provenance-stamped fixtures. |
 | 1 | Option-toggle goldens | Done | `jyut6ping3-m14-options.json` captures deploy-time variants for `combine_candidates`, `show_full_code`, and `enable_sentence` at multiple input lengths. |
 | 2 | Completion + correction goldens | Done | `jyut6ping3-m14-completion-correction.json` captures completion and correction variants, including the `nri` correction difference. |
@@ -287,11 +154,10 @@ v1.1.2 oracle binary (oracle-measured, non-circular).
 
 #### M15 — Dictionary-driven feature parity
 
-Complete. Yune's real engine now passes the M14 dictionary-driven goldens without
-adding a language model or changing the upstream ABI.
+Complete. Yune's real engine now passes the M14 dictionary-driven goldens without adding a language model or changing the upstream ABI.
 
 | # | Work item | State | Notes |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | 0 | `combine_candidates` | Done | Same-text rows coalesce with multi-primary TypeDuck dictionary comments when `translator/combine_candidates` is enabled; separate mode remains available. |
 | 1 | `show_full_code` | Done | Affix-aware table lookup and cangjie short/full-code comments match the M14 side-lookup fixture. |
 | 2 | `enable_sentence` | Done | Viterbi dictionary sentence candidates plus sentence-aware lookup comments reproduce the `ngohaigo` M14 row. |
@@ -300,216 +166,71 @@ adding a language model or changing the upstream ABI.
 
 #### M16 — TypeDuck-Web fork-parity validation
 
-Complete with documented browser-surface limits. The real TypeDuck-Web Playwright
-matrix now covers the browser-supported `jyut6ping3_mobile` surface against the
-M14 goldens where the app exposes it: default combined candidates, sentence
-composition, completion, simplification, the existing M9 smoke flows, and the
-M13 default-off AI scenarios. M15 remains the authoritative real-engine proof
-for deploy-only variants (`common:/separate_candidates`, `common:/show_full_code`)
-and correction details that TypeDuck-Web does not expose as independent browser
-selectors. Schema-menu hiding and per-entry userdb pronunciation remain explicit
-browser/userdb inspection gaps, backed by the M14 emitted-schema-list and levers
-export fixtures rather than claimed as browser UI coverage.
+Complete with documented browser-surface limits. The real TypeDuck-Web Playwright matrix now covers the browser-supported `jyut6ping3_mobile` surface against the M14 goldens where the app exposes it: default combined candidates, sentence composition, completion, simplification, the existing M9 smoke flows, and the M13 default-off AI scenarios. M15 remains the authoritative real-engine proof for deploy-only variants (`common:/separate_candidates`, `common:/show_full_code`) and correction details that TypeDuck-Web does not expose as independent browser selectors. Schema-menu hiding and per-entry userdb pronunciation remain explicit browser/userdb inspection gaps, backed by the M14 emitted-schema-list and levers export fixtures rather than claimed as browser UI coverage.
 
 Detail: [`plans/archive/m14-plan-typeduck-v112-golden-capture.md`](./plans/archive/m14-plan-typeduck-v112-golden-capture.md), [`plans/archive/m15-plan-typeduck-dictionary-driven-parity.md`](./plans/archive/m15-plan-typeduck-dictionary-driven-parity.md), and [`plans/archive/m16-plan-typeduck-web-parity-validation.md`](./plans/archive/m16-plan-typeduck-web-parity-validation.md).
 
-> **Scope of M14–M16, and what it did *not* cover.** M14–M16 closed the *captured*
-> `jyut6ping3_mobile` browser surface. A fuller audit of **all** Cantoboard + TypeDuck
-> fork improvements vs upstream `1.17.0` now lives in
-> [`fork-parity-ledger.md`](./fork-parity-ledger.md). Two corrections it records:
-> (1) **F2 (`santai`→身體/身體健康 prefix prediction) and F4 (auto-compose-only-as-fallback)
-> are upstream `1.17.0` behaviors, not fork inventions** — Yune preserves them by tracking
-> upstream, not by porting fork code; only the fork's *prediction ranking* differs.
-> (2) **The Cantonese 容錯 (fuzzy) ruleset was previously stripped on dictionaries >50k
-> entries** (`schema_install.rs:237-260`); the production `jyut6ping3_scolar` dict is
-> ~127k rows, so this became the highest-priority TypeDuck Cantonese engine-parity
-> backlog item and is now covered by a real-dictionary golden.
+> **Scope of M14–M16, and what it did _not_ cover.** M14–M16 closed the _captured_ `jyut6ping3_mobile` browser surface. A fuller audit of **all** Cantoboard + TypeDuck fork improvements vs upstream `1.17.0` now lives in [`fork-parity-ledger.md`](./fork-parity-ledger.md). Two corrections it records: (1) **F2 (`santai`→身體/身體健康 prefix prediction) and F4 (auto-compose-only-as-fallback) are upstream `1.17.0` behaviors, not fork inventions** — Yune preserves them by tracking upstream, not by porting fork code; only the fork's _prediction ranking_ differs. (2) **The Cantonese 容錯 (fuzzy) ruleset was previously stripped on dictionaries >50k entries** (`schema_install.rs:237-260`); the production `jyut6ping3_scolar` dict is ~127k rows, so this became the highest-priority TypeDuck Cantonese engine-parity backlog item and is now covered by a real-dictionary golden.
 >
-> **Backlog closeout:** FORK-PARITY-01..09 are now implemented or explicitly decided.
-> F08 keeps upstream `1.17.0` ranking semantics while preserving long-entry prediction
-> and adding profile controls for prediction thresholds / never-first behavior. F09 is
-> intentionally UI-side for TypeDuck-Web display-language selection.
+> **Backlog closeout:** FORK-PARITY-01..09 are now implemented or explicitly decided. F08 keeps upstream `1.17.0` ranking semantics while preserving long-entry prediction and adding profile controls for prediction thresholds / never-first behavior. F09 is intentionally UI-side for TypeDuck-Web display-language selection.
 
 ### M20: Web demo showcase controls
 
-M20 turned this repo's patched TypeDuck-Web harness into Yune's canonical
-internal browser playground for demoing, stress-testing, and comparing the
-behavior already proven by M9, M13, M14-M16, and the FORK-PARITY backlog. It is a
-**separate web/demo track**,
-not a reopened M13: M13 remains the completed default-off AI frontend exposure
-milestone, while M20 made the browser demo highly controllable, honest,
-inspectable, and useful for manual dogfooding before later M17 and frontend work.
+M20 turned this repo's patched TypeDuck-Web harness into Yune's canonical internal browser playground for demoing, stress-testing, and comparing the behavior already proven by M9, M13, M14-M16, and the FORK-PARITY backlog. It is a **separate web/demo track**, not a reopened M13: M13 remains the completed default-off AI frontend exposure milestone, while M20 made the browser demo highly controllable, honest, inspectable, and useful for manual dogfooding before later M17 and frontend work.
 
-This is not the same surface as a separately cloned `TypeDuck-HK/TypeDuck-Web`
-product checkout. `packages/yune-typeduck-runtime/` remains the reusable Yune
-runtime bridge, `third_party/typeduck-web/` is the internal patched harness, and
-the real TypeDuck-Web web IME product should get its own future integration
-track.
+This is not the same surface as a separately cloned `TypeDuck-HK/TypeDuck-Web` product checkout. `packages/yune-typeduck-runtime/` remains the reusable Yune runtime bridge, `third_party/typeduck-web/` is the internal patched harness, and the real TypeDuck-Web web IME product should get its own future integration track.
 
-The milestone exposes only controls backed by real runtime behavior:
-schema/deploy-time knobs through `customize()` (`enable_completion`,
-`enable_correction`, `enable_sentence`, learning, `combine_candidates`,
-`prediction_never_first`, and one measured, fine-grained prediction threshold
-with a real-assets-calibrated `santai` cutoff and documented range bounds) and
-live session options through `setOption()` (`ascii_mode`, `full_shape`,
-`simplification`). Browser-visible controls have before/after assertions,
-including learned prediction ranking for `prediction_never_first`; Input Memory
-records a visible learned-prediction on-state but an explicit browser-surface
-N/A for memory-off suppression, and Auto-correction records real `nri`
-browser before/after evidence: correction off renders the v1.1.2 prefix
-fallback page and correction on renders `你` first, while `cantonese_parity`
-continues to lock the full oracle row set and commit previews. Deploy-time
-controls whose current
-browser panel effect is not independently visible keep persisted
-`jyut6ping3_mobile.custom.yaml` assertions, without being counted as
-candidate-output proof. Display-only controls are grouped separately and prove
-visible rendering changes for the current browser-reachable display surface.
-Static or
-default-on engine features such as `santai`
--> `身體健康`, Cantonese fuzzy/容錯, letter-to-tone input, reverse lookup,
-`show_full_code` reachability/N-A, and AI second-pass behavior are presented as
-guided scenarios rather than fake toggles. The M20 UI keeps grouped candidates
-as a documented demo default, while the checked-in raw mobile assets still
-record the `common:/separate_candidates` patch. For the current
-`jyut6ping3_mobile` browser schema, reverse/Cangjie/show-full-code evidence
-records the missing `cangjie` namespace as N/A instead of exposing a fake
-control. `ascii_punct` now has M18 core/ABI processor behavior, but the browser
-playground should expose it only after a dedicated browser-visible M22 evidence
-slice proves the control honestly changes observable output.
-As Yune adds browser-safe engine features, this playground should gain either an
-active control or a guided scenario so the web surface stays useful for future
-regression hunts and product demos.
+The milestone exposes only controls backed by real runtime behavior: schema/deploy-time knobs through `customize()` (`enable_completion`, `enable_correction`, `enable_sentence`, learning, `combine_candidates`, `prediction_never_first`, and one measured, fine-grained prediction threshold with a real-assets-calibrated `santai` cutoff and documented range bounds) and live session options through `setOption()` (`ascii_mode`, `full_shape`, `simplification`). Browser-visible controls have before/after assertions, including learned prediction ranking for `prediction_never_first`; Input Memory records a visible learned-prediction on-state but an explicit browser-surface N/A for memory-off suppression, and Auto-correction records real `nri` browser before/after evidence: correction off renders the v1.1.2 prefix fallback page and correction on renders `你` first, while `cantonese_parity` continues to lock the full oracle row set and commit previews. Deploy-time controls whose current browser panel effect is not independently visible keep persisted `jyut6ping3_mobile.custom.yaml` assertions, without being counted as candidate-output proof. Display-only controls are grouped separately and prove visible rendering changes for the current browser-reachable display surface. Static or default-on engine features such as `santai` -> `身體健康`, Cantonese fuzzy/容錯, letter-to-tone input, reverse lookup, `show_full_code` reachability/N-A, and AI second-pass behavior are presented as guided scenarios rather than fake toggles. The M20 UI keeps grouped candidates as a documented demo default, while the checked-in raw mobile assets still record the `common:/separate_candidates` patch. For the current `jyut6ping3_mobile` browser schema, reverse/Cangjie/show-full-code evidence records the missing `cangjie` namespace as N/A instead of exposing a fake control. `ascii_punct` now has M18 core/ABI processor behavior, but the browser playground should expose it only after a dedicated browser-visible M22 evidence slice proves the control honestly changes observable output. As Yune adds browser-safe engine features, this playground should gain either an active control or a guided scenario so the web surface stays useful for future regression hunts and product demos.
 
-Evidence lives under
-`third_party/typeduck-web/e2e/results/m20-showcase-controls/`. The completed
-plan is archived at
-[`plans/archive/m20-plan-web-demo-showcase-controls.md`](./plans/archive/m20-plan-web-demo-showcase-controls.md).
+Evidence lives under `third_party/typeduck-web/e2e/results/m20-showcase-controls/`. The completed plan is archived at [`plans/archive/m20-plan-web-demo-showcase-controls.md`](./plans/archive/m20-plan-web-demo-showcase-controls.md).
 
 ### M21: TypeDuck-Web product comparison closeout
 
-M21 compared the internal Yune TypeDuck-Web harness against the deployed
-`typeduck.hk/web` product as a qualitative feel target while keeping the pinned
-TypeDuck v1.1.2 fixtures as the only hard oracle. The final gap ledger has no
-remaining hard-oracle action rows: every row is now classified as a v1.1.2 match,
-an oracle-backed fix, expected version skew, or current browser-surface N/A.
+M21 compared the internal Yune TypeDuck-Web harness against the deployed `typeduck.hk/web` product as a qualitative feel target while keeping the pinned TypeDuck v1.1.2 fixtures as the only hard oracle. The final gap ledger has no remaining hard-oracle action rows: every row is now classified as a v1.1.2 match, an oracle-backed fix, expected version skew, or current browser-surface N/A.
 
 Three oracle-backed slices closed during M21:
 
-- **M21-GAP-01:** multi-syllable dictionary sentence composition now matches the
-  v1.1.2 fixture for `loengnincin`, `leoicijyu`, `ngohaigo`, and analogous
-  cases, with the sentence word penalty documented as a Yune heuristic validated
-  against that fixture.
-- **M21-GAP-02:** `nri` partial-parse prefix fallback and the TypeDuck
-  `jyut6ping3` prediction-count behavior now match v1.1.2, with browser
-  before/after evidence replacing the old auto-correction N/A.
-- **Closeout fixture:** `jyut6ping3-m21-closeout.json` locks the remaining
-  baseline, fuzzy, sentence, `hk2s`, tone-letter, and paging rows, including the
-  final standalone-`m` and `mgoi` abbreviation/fuzzy ordering fixes.
+- **M21-GAP-01:** multi-syllable dictionary sentence composition now matches the v1.1.2 fixture for `loengnincin`, `leoicijyu`, `ngohaigo`, and analogous cases, with the sentence word penalty documented as a Yune heuristic validated against that fixture.
+- **M21-GAP-02:** `nri` partial-parse prefix fallback and the TypeDuck `jyut6ping3` prediction-count behavior now match v1.1.2, with browser before/after evidence replacing the old auto-correction N/A.
+- **Closeout fixture:** `jyut6ping3-m21-closeout.json` locks the remaining baseline, fuzzy, sentence, `hk2s`, tone-letter, and paging rows, including the final standalone-`m` and `mgoi` abbreviation/fuzzy ordering fixes.
 
-Live product differences such as `leoicijyu` (`類似於` live vs `類似如` in
-v1.1.2) and `seov` (`eo`/`oe` fuzzy version skew) are recorded as
-expected-by-design unless a future pinned oracle fixture says otherwise.
+Live product differences such as `leoicijyu` (`類似於` live vs `類似如` in v1.1.2) and `seov` (`eo`/`oe` fuzzy version skew) are recorded as expected-by-design unless a future pinned oracle fixture says otherwise.
 
-Detail: [`plans/archive/m21-plan-typeduck-web-product-comparison.md`](./plans/archive/m21-plan-typeduck-web-product-comparison.md)
-and
-[`third_party/typeduck-web/e2e/results/m21-product-comparison/2026-06-20T0849Z-yune-cdb7bd52-product-manual/gap-ledger.md`](../third_party/typeduck-web/e2e/results/m21-product-comparison/2026-06-20T0849Z-yune-cdb7bd52-product-manual/gap-ledger.md).
+Detail: [`plans/archive/m21-plan-typeduck-web-product-comparison.md`](./plans/archive/m21-plan-typeduck-web-product-comparison.md) and [`third_party/typeduck-web/e2e/results/m21-product-comparison/2026-06-20T0849Z-yune-cdb7bd52-product-manual/gap-ledger.md`](../third_party/typeduck-web/e2e/results/m21-product-comparison/2026-06-20T0849Z-yune-cdb7bd52-product-manual/gap-ledger.md).
 
 ### M23: Architecture hardening
 
-M23 closed the bounded architecture-hardening register without doing the larger
-trigger-gated processor extraction. The TypeDuck-calibrated `21.0` sentence word
-penalty is now a typed translator setting defaulting to upstream-neutral behavior
-and installed only for the `jyut6ping3` TypeDuck profile; default upstream
-schemas such as `luna_pinyin` no longer inherit it. The correction constants were
-audited and remain unreachable from default upstream schemas because correction
-is opt-in and dynamic correction lookup is already profile-gated.
+M23 closed the bounded architecture-hardening register without doing the larger trigger-gated processor extraction. The TypeDuck-calibrated `21.0` sentence word penalty is now a typed translator setting defaulting to upstream-neutral behavior and installed only for the `jyut6ping3` TypeDuck profile; default upstream schemas such as `luna_pinyin` no longer inherit it. The correction constants were audited and remain unreachable from default upstream schemas because correction is opt-in and dynamic correction lookup is already profile-gated.
 
-The workspace lint policy now applies to the unsafe-free core crate, while
-`yune-rime-api` and the ABI-driving `yune-cli` have explicit non-inheriting FFI
-lint exceptions. M23 also removed the orphaned `yune-schema` crate instead of
-parking it; production schema parsing/install remains in `yune-rime-api`.
-Finally, the inline core facade tests and oversized ABI test modules were split
-into behavior-owned include files with unchanged test names.
+The workspace lint policy now applies to the unsafe-free core crate, while `yune-rime-api` and the ABI-driving `yune-cli` have explicit non-inheriting FFI lint exceptions. M23 also removed the orphaned `yune-schema` crate instead of parking it; production schema parsing/install remains in `yune-rime-api`. Finally, the inline core facade tests and oversized ABI test modules were split into behavior-owned include files with unchanged test names.
 
-The completed plan is archived at
-[`plans/archive/m23-plan-architecture-hardening.md`](./plans/archive/m23-plan-architecture-hardening.md).
+The completed plan is archived at [`plans/archive/m23-plan-architecture-hardening.md`](./plans/archive/m23-plan-architecture-hardening.md).
 
 ### M18: Deployment & processor depth
 
-M18 turned the dictionary subsystem from read/plan-only into read/write for the
-named Yune artifact surface. `yune-core` now has pure-Rust Darts double-array
-support, parses real upstream prism double-array sections, builds
-`build_table_bin` / `build_reverse_bin` / `build_prism_bin`, and exposes
-`execute_rebuild_plan` so a rebuild plan can write exactly the artifacts it marks
-rebuilt. The RIME deployer path now delegates to those public writers instead of
-private placeholder serializers; generated table/reverse artifacts round-trip
-through the existing readers, and generated prism artifacts include a real
-double-array spelling index.
+M18 turned the dictionary subsystem from read/plan-only into read/write for the named Yune artifact surface. `yune-core` now has pure-Rust Darts double-array support, parses real upstream prism double-array sections, builds `build_table_bin` / `build_reverse_bin` / `build_prism_bin`, and exposes `execute_rebuild_plan` so a rebuild plan can write exactly the artifacts it marks rebuilt. The RIME deployer path now delegates to those public writers instead of private placeholder serializers; generated table/reverse artifacts round-trip through the existing readers, and generated prism artifacts include a real double-array spelling index.
 
-M18 also closed the M12/M20 punctuation processor blockers without changing
-`RimeApi`, candidate ABI, or TypeDuck profile ABI. A new upstream 1.17.0
-curated punctuation fixture proves `ascii_punct` returns upstream no-op for
-configured punctuation keys, `{commit: ...}` commits immediately, scalar
-punctuation creates confirm-unique preview state, pair punctuation alternates
-preview text, and list punctuation cycles the selected candidate. The former
-ignored core parity blockers are now active, and the ABI processor follows the
-same behavior. The upstream prism fixture
-`m18-luna-pinyin-prism.bin` proves Yune parses a real librime Darts section; the
-punctuation fixture is captured by `scripts/capture-upstream-m18-punctuation.ps1`.
+M18 also closed the M12/M20 punctuation processor blockers without changing `RimeApi`, candidate ABI, or TypeDuck profile ABI. A new upstream 1.17.0 curated punctuation fixture proves `ascii_punct` returns upstream no-op for configured punctuation keys, `{commit: ...}` commits immediately, scalar punctuation creates confirm-unique preview state, pair punctuation alternates preview text, and list punctuation cycles the selected candidate. The former ignored core parity blockers are now active, and the ABI processor follows the same behavior. The upstream prism fixture `m18-luna-pinyin-prism.bin` proves Yune parses a real librime Darts section; the punctuation fixture is captured by `scripts/capture-upstream-m18-punctuation.ps1`.
 
-The completed plan is archived at
-[`plans/archive/m18-plan-deployment-and-processor-depth.md`](./plans/archive/m18-plan-deployment-and-processor-depth.md).
+The completed plan is archived at [`plans/archive/m18-plan-deployment-and-processor-depth.md`](./plans/archive/m18-plan-deployment-and-processor-depth.md).
 
 ### M22: Web playground feature-completeness
 
-M22 is complete. The internal TypeDuck-Web playground now keeps the Bucket 2
-read-only inspector off by default and identity-preserving, and it completes the
-remaining playground buckets without changing the default `RimeApi` table,
-`RimeCandidate`, or ABI layout files.
+M22 is complete. The internal TypeDuck-Web playground now keeps the Bucket 2 read-only inspector off by default and identity-preserving, and it completes the remaining playground buckets without changing the default `RimeApi` table, `RimeCandidate`, or ABI layout files.
 
-Bucket 1 exposes only browser-honest controls: `dictionary_exclude` is a
-deploy-time customization with persisted-config and candidate-removal evidence;
-`extended_charset` changes the Cangjie candidate set through the installed
-charset filter; `traditionalization` and `disabled` are live session controls
-with visible status output. `ascii_punct` is still absent from the playground
-because no fresh browser-visible before/after evidence was captured for it.
+Bucket 1 exposes only browser-honest controls: `dictionary_exclude` is a deploy-time customization with persisted-config and candidate-removal evidence; `extended_charset` changes the Cangjie candidate set through the installed charset filter; `traditionalization` and `disabled` are live session controls with visible status output. `ascii_punct` is still absent from the playground because no fresh browser-visible before/after evidence was captured for it.
 
-Bucket 3 loads `jyut6ping3_mobile`, `cangjie5`, and `luna_pinyin` through a real
-schema switcher. The new Cangjie and Luna browser schemas use M18/M19-derived
-schema data and compiled artifacts under the TypeDuck-Web app's
-`source/public/schema` asset tree; the measured M22 compiled browser assets are:
-`cangjie5.table.bin` 1,509,778 bytes, `cangjie5.prism.bin` 1,430,557 bytes,
-`cangjie5.reverse.bin` 663,901 bytes, `luna_pinyin.table.bin` 613,855 bytes,
-`luna_pinyin.prism.bin` 23,465 bytes, and `luna_pinyin.reverse.bin` 704,357
-bytes. Reverse lookup is active for both new schemas.
+Bucket 3 loads `jyut6ping3_mobile`, `cangjie5`, and `luna_pinyin` through a real schema switcher. The new Cangjie and Luna browser schemas use M18/M19-derived schema data and compiled artifacts under the TypeDuck-Web app's `source/public/schema` asset tree; the measured M22 compiled browser assets are: `cangjie5.table.bin` 1,509,778 bytes, `cangjie5.prism.bin` 1,430,557 bytes, `cangjie5.reverse.bin` 663,901 bytes, `luna_pinyin.table.bin` 613,855 bytes, `luna_pinyin.prism.bin` 23,465 bytes, and `luna_pinyin.reverse.bin` 704,357 bytes. Reverse lookup is active for both new schemas.
 
-Evidence is committed under
-`third_party/typeduck-web/e2e/results/m22-remaining-buckets/`. The completed
-plan is archived at
-[`plans/archive/m22-plan-web-playground-multischema-inspector.md`](./plans/archive/m22-plan-web-playground-multischema-inspector.md).
+Evidence is committed under `third_party/typeduck-web/e2e/results/m22-remaining-buckets/`. The completed plan is archived at [`plans/archive/m22-plan-web-playground-multischema-inspector.md`](./plans/archive/m22-plan-web-playground-multischema-inspector.md).
 
 ### M19: Breadth schemas and TypeDuck-profile ABI surface
 
-M19 added three upstream `1.17.0` schema families to Yune's named compatibility
-set without widening the default TypeDuck profile. `double_pinyin`, `cangjie5`,
-and `bopomofo` now each have a provenance-stamped upstream oracle fixture, an
-owning parity test, and source-policy checks in `oracle_fixture_provenance.rs`.
-The active captured cases cover Shuangpin spelling-algebra folding, Cangjie
-exact-code table lookups, and Zhuyin keymap/tone algebra. Sentence/lattice
-behavior, broader Cangjie phrase/table-encoder interleave, and schema-speller
-digit/space key routing remain explicit ignored blockers instead of hidden
-claims.
+M19 added three upstream `1.17.0` schema families to Yune's named compatibility set without widening the default TypeDuck profile. `double_pinyin`, `cangjie5`, and `bopomofo` now each have a provenance-stamped upstream oracle fixture, an owning parity test, and source-policy checks in `oracle_fixture_provenance.rs`. The active captured cases cover Shuangpin spelling-algebra folding, Cangjie exact-code table lookups, and Zhuyin keymap/tone algebra. Sentence/lattice behavior, broader Cangjie phrase/table-encoder interleave, and schema-speller digit/space key routing remain explicit ignored blockers instead of hidden claims.
 
-M19 also named the TypeDuck profile ABI surface for the Windows backend:
-`rime_get_typeduck_profile_api()` exposes the fork-only
-`config_list_append_{bool,int,double,string}` slots through a non-default
-profile table, while the default `rime_get_api()` table remains upstream
-`1.17.0` shaped. The new reference doc records the slot surface and explicitly
-keeps `start_quick`, Windows packaging, and real TypeDuck-Windows frontend E2E
-out of M19.
+M19 also named the TypeDuck profile ABI surface for the Windows backend: `rime_get_typeduck_profile_api()` exposes the fork-only `config_list_append_{bool,int,double,string}` slots through a non-default profile table, while the default `rime_get_api()` table remains upstream `1.17.0` shaped. The new reference doc records the slot surface and explicitly keeps `start_quick`, Windows packaging, and real TypeDuck-Windows frontend E2E out of M19.
 
-The completed plan is archived at
-[`plans/archive/m19-plan-breadth-schemas.md`](./plans/archive/m19-plan-breadth-schemas.md).
+The completed plan is archived at [`plans/archive/m19-plan-breadth-schemas.md`](./plans/archive/m19-plan-breadth-schemas.md).
 
 ---
 
@@ -517,37 +238,11 @@ The completed plan is archived at
 
 ### M10: TypeDuck-Windows native backend
 
-TypeDuck-Windows remains valuable, but it is no longer the active core-engine
-priority. Its work is complete as a TypeDuck compatibility profile. M19 named
-the ABI surface for the fork-only list-append slots, and the M10 resume now has
-current TypeDuck-profile package/header smoke, packaged host-loader lifecycle
-evidence, TypeDuck-Windows x64 build/link evidence, and stock real-server IPC
-smoke evidence against the Yune package.
+TypeDuck-Windows remains valuable, but it is no longer the active core-engine priority. Its work is complete as a TypeDuck compatibility profile. M19 named the ABI surface for the fork-only list-append slots, and the M10 resume now has current TypeDuck-profile package/header smoke, packaged host-loader lifecycle evidence, TypeDuck-Windows x64 build/link evidence, and stock real-server IPC smoke evidence against the Yune package.
 
-Archived pre-M12 M10 evidence is preserved: Windows test trust, fork-only
-`config_list_append_*` helper behavior, current TypeDuck comment shaping
-fixtures, and a historical native `rime.dll`/`.lib`/headers package smoke. That
-package smoke is not an active or valid gate for the default upstream
-`rime_get_api()` table after M12. Current package evidence uses an
-upstream-shaped default `rime_api.h` plus `rime_typeduck_profile_api.h`,
-packages upstream-deprecated direct-call declarations for the existing
-TypeDuck-Windows source, loads the packaged DLL, resolves
-`rime_get_typeduck_profile_api()`, verifies the profile append slots, and runs
-the dynamic-loader lifecycle. T1 is verified: Visual Studio 2022 Community
-MSBuild builds the pinned x64 TypeDuck-Windows solution plus the deployer/server
-projects against the Yune package, with the deployer settings path locally using
-the named profile accessor for `config_list_append_*`. T3 is also verified:
-stock `TypeDuckServer.exe` starts from `output\`, loads packaged
-`output\rime.dll`, and stock `TestTypeDuckIPC.exe /console` returns a nonzero
-session, sends `ngohaig` key events, and receives `status.schema_id=jyut6ping3`
-plus candidate/context data. The tracked closeout evidence is under
-[`plans/archive/m10-evidence/t3-stock-real-server/`](./plans/archive/m10-evidence/t3-stock-real-server/).
-This is a stock server/client IPC smoke; interactive TSF typing and visible
-candidate-window rendering are Phase 2 Windows product/frontend gates.
+Archived pre-M12 M10 evidence is preserved: Windows test trust, fork-only `config_list_append_*` helper behavior, current TypeDuck comment shaping fixtures, and a historical native `rime.dll`/`.lib`/headers package smoke. That package smoke is not an active or valid gate for the default upstream `rime_get_api()` table after M12. Current package evidence uses an upstream-shaped default `rime_api.h` plus `rime_typeduck_profile_api.h`, packages upstream-deprecated direct-call declarations for the existing TypeDuck-Windows source, loads the packaged DLL, resolves `rime_get_typeduck_profile_api()`, verifies the profile append slots, and runs the dynamic-loader lifecycle. T1 is verified: Visual Studio 2022 Community MSBuild builds the pinned x64 TypeDuck-Windows solution plus the deployer/server projects against the Yune package, with the deployer settings path locally using the named profile accessor for `config_list_append_*`. T3 is also verified: stock `TypeDuckServer.exe` starts from `output\`, loads packaged `output\rime.dll`, and stock `TestTypeDuckIPC.exe /console` returns a nonzero session, sends `ngohaig` key events, and receives `status.schema_id=jyut6ping3` plus candidate/context data. The tracked closeout evidence is under [`plans/archive/m10-evidence/t3-stock-real-server/`](./plans/archive/m10-evidence/t3-stock-real-server/). This is a stock server/client IPC smoke; interactive TSF typing and visible candidate-window rendering are Phase 2 Windows product/frontend gates.
 
-Detail: [`typeduck-windows-backend-requirements.md`](./typeduck-windows-backend-requirements.md),
-[`plans/m10-reference-typeduck-windows-contract.md`](./plans/m10-reference-typeduck-windows-contract.md),
-and [`plans/m10-reference-typeduck-windows-native-build.md`](./plans/m10-reference-typeduck-windows-native-build.md).
+Detail: [`typeduck-windows-backend-requirements.md`](./typeduck-windows-backend-requirements.md), [`plans/m10-reference-typeduck-windows-contract.md`](./plans/m10-reference-typeduck-windows-contract.md), and [`plans/m10-reference-typeduck-windows-native-build.md`](./plans/m10-reference-typeduck-windows-native-build.md).
 
 ## Concrete next steps
 
@@ -558,196 +253,48 @@ In priority order:
 3. **Keep TypeDuck profile behavior isolated after M21.** TypeDuck-tuned sentence, correction, prediction, or ranking constants must stay behind an explicit profile predicate or typed translator config, not read unconditionally by default `luna_pinyin`/upstream behavior. A `TYPEDUCK_*` constant in shared core is a merge blocker unless it is gated or renamed with upstream-oracle evidence.
 4. **Keep Track 2 complete and fixture-gated.** M17's upstream `luna_pinyin` null-grammar sentence/lattice path, M18's prism/deployment/processor depth, M19's breadth schemas, and M22's playground build-out are complete. Future upstream-depth work needs a named target and fresh oracle fixtures before implementation.
 5. **Keep the completed M24/M25 TypeDuck-Web dogfood baselines green.** The first M24 demo-hardening batch is archived at [`plans/archive/m24-plan-typeduck-web-dogfooding.md`](./plans/archive/m24-plan-typeduck-web-dogfooding.md) with 13/13 rows closed, and the M25 round-2 batch is archived at [`plans/archive/m25-plan-typeduck-web-dogfooding-round-2.md`](./plans/archive/m25-plan-typeduck-web-dogfooding-round-2.md) with 10/10 rows closed. Future manual web-demo rounds need a new scoped ledger and must classify each report as browser integration, UI polish, engine correctness, unsupported/N/A, future product integration, or needs triage before changing code.
-6. **Extend the M20 playground only with browser-safe supported features.** Add active controls or guided scenarios for new browser-safe engine behavior, and keep unsupported behavior absent or documented instead of partially exposed.
-7. **Unblock Phase 2 Windows by fixing the Yune TypeDuck boundary bug first.** M10 completed with T1/T2 package/build evidence and a stock TypeDuck-Windows real-server IPC smoke. TypeDuck-Windows Phase 0C then classified the interactive Notepad blocker as a Yune TypeDuck-profile compatibility/boundary bug: `ngohaig` comment bytes differ from the TypeDuck `v1.1.2` rich `\f\r1,` oracle payloads, and AppVerifier stops the server inside Yune-backed session/schema creation before candidate rendering. TypeDuck-Web already had a related visible-control-marker issue in M24, but its UI parser sanitizes display output and is not proof that raw engine boundary bytes are correct. Finish [`plans/p2-win02-plan-typeduck-boundary-compat.md`](./plans/p2-win02-plan-typeduck-boundary-compat.md) before resuming [`plans/p2-win01-plan-typeduck-windows-next.md`](./plans/p2-win01-plan-typeduck-windows-next.md). None of those choices should widen Yune's default ABI.
-8. **Add a future TypeDuck-Web product-integration track before changing a separately cloned TypeDuck-Web product checkout.** Treat `TypeDuck-HK/TypeDuck-Web` as the dedicated web IME product, not as the M20 harness or the runtime bridge.
-9. **Add a future iOS keyboard-developer track before TypeDuck iOS work starts.** Treat the Cantoboard/TypeDuck iOS build repositories as platform-integration provenance, not as engine-parity code to port. The track should define Yune-native iOS packaging, Swift/Obj-C host bindings, resource bundling, sandboxed userdb/storage, keyboard-extension lifecycle limits, and mobile-specific configuration hooks.
+6. **Execute M26 before making speed claims or broad performance rewrites.** M25 left TypeDuck-Web startup and key latency improved but still visibly measurable, and native benchmark coverage still uses a tiny synthetic dictionary. M26 must add native large-real-asset benchmarks, browser keydown-to-paint diagnostics, startup attribution below `runtime:initialized`, and one evidence-proven optimization slice.
+7. **Extend the M20 playground only with browser-safe supported features.** Add active controls or guided scenarios for new browser-safe engine behavior, and keep unsupported behavior absent or documented instead of partially exposed.
+8. **Unblock Phase 2 Windows by fixing the Yune TypeDuck boundary bug first.** M10 completed with T1/T2 package/build evidence and a stock TypeDuck-Windows real-server IPC smoke. TypeDuck-Windows Phase 0C then classified the interactive Notepad blocker as a Yune TypeDuck-profile compatibility/boundary bug: `ngohaig` comment bytes differ from the TypeDuck `v1.1.2` rich `\f\r1,` oracle payloads, and AppVerifier stops the server inside Yune-backed session/schema creation before candidate rendering. TypeDuck-Web already had a related visible-control-marker issue in M24, but its UI parser sanitizes display output and is not proof that raw engine boundary bytes are correct. Finish [`plans/p2-win02-plan-typeduck-boundary-compat.md`](./plans/p2-win02-plan-typeduck-boundary-compat.md) before resuming [`plans/p2-win01-plan-typeduck-windows-next.md`](./plans/p2-win01-plan-typeduck-windows-next.md). None of those choices should widen Yune's default ABI.
+9. **Add a future TypeDuck-Web product-integration track before changing a separately cloned TypeDuck-Web product checkout.** Treat `TypeDuck-HK/TypeDuck-Web` as the dedicated web IME product, not as the M20 harness or the runtime bridge.
+10. **Add a future iOS keyboard-developer track before TypeDuck iOS work starts.** Treat the Cantoboard/TypeDuck iOS build repositories as platform-integration provenance, not as engine-parity code to port. The track should define Yune-native iOS packaging, Swift/Obj-C host bindings, resource bundling, sandboxed userdb/storage, keyboard-extension lifecycle limits, and mobile-specific configuration hooks.
 
 ---
 
 ## Planned / Next up
 
-Priority is set by what a *named* (A)/(B) target needs, not by librime's feature
-list. **TypeDuck `jyut6ping3` reconciliation (M14-M16), the M20 browser
-playground, M23 architecture hardening, M17 upstream sentence/lattice depth, M18
-deployment/processor depth, M19 breadth schemas, M22 playground build-out, and
-M24/M25 TypeDuck-Web dogfooding/demo hardening are complete** (see *Completed*
-above). Phase 2 Windows work started as **P2-WIN-01** planning, then the
-TypeDuck-Windows Phase 0C diagnosis turned the first interactive blocker into
-**P2-WIN-02**, a Yune-side TypeDuck boundary compatibility milestone. Future
-engine-depth work remains trigger-gated by named targets and fresh oracle
-fixtures.
+Priority is set by what a _named_ (A)/(B) target needs, not by librime's feature list. **TypeDuck `jyut6ping3` reconciliation (M14-M16), the M20 browser playground, M23 architecture hardening, M17 upstream sentence/lattice depth, M18 deployment/processor depth, M19 breadth schemas, M22 playground build-out, and M24/M25 TypeDuck-Web dogfooding/demo hardening are complete** (see _Completed_ above). Phase 2 Windows work started as **P2-WIN-01** planning, then the TypeDuck-Windows Phase 0C diagnosis turned the first interactive blocker into **P2-WIN-02**, a Yune-side TypeDuck boundary compatibility milestone. Future engine-depth work remains trigger-gated by named targets and fresh oracle fixtures. **M26** is the active performance hardening track created from the post-M25 latency review; it may run in parallel with P2-WIN-02 because it is measurement-first and must not change compatibility semantics without proof.
 
 ### Execution order — what to do next
 
-This is the **authoritative sequence**; the per-milestone detail bullets below
-are reference, not order. M17, M18, M19, M22, M23, M24, and M25 are complete.
-M25 closed the second manual dogfooding/debug loop for the internal TypeDuck-Web
-playground without reopening completed parity claims without oracle-backed
-evidence. **P2-WIN-02 is the active Windows unblocker**:
-fix the Yune TypeDuck-profile boundary bug, rerun the Windows smoke, then return
-to the P2-WIN-01 repo/process/product decision checkpoint. New engine milestone
-work should start only after a plan names its target, oracle, fixtures, and
-front-end or schema need.
+This is the **authoritative sequence**; the per-milestone detail bullets below are reference, not order. M17, M18, M19, M22, M23, M24, and M25 are complete. M25 closed the second manual dogfooding/debug loop for the internal TypeDuck-Web playground without reopening completed parity claims without oracle-backed evidence. **P2-WIN-02 is the active Windows unblocker**: fix the Yune TypeDuck-profile boundary bug, rerun the Windows smoke, then return to the P2-WIN-01 repo/process/product decision checkpoint. New engine milestone work should start only after a plan names its target, oracle, fixtures, and front-end or schema need. **M26 can run in a separate clean worktree as a parallel measurement/optimization milestone**, but it must keep all oracle and browser gates green and must not use browser-only numbers as native engine speed claims.
 
-**Trigger-gated, not scheduled:** the core/ABI **processor extraction** (move
-processor semantics into `yune-core`) lands only when a real non-ABI consumer
-(iOS package / Yune-native frontend) needs the full input pipeline — see
-`decisions.md` D-28. Do not milestone it speculatively.
+**Trigger-gated, not scheduled:** the core/ABI **processor extraction** (move processor semantics into `yune-core`) lands only when a real non-ABI consumer (iOS package / Yune-native frontend) needs the full input pipeline — see `decisions.md` D-28. Do not milestone it speculatively.
 
 ---
 
 ### Per-milestone detail
 
-> The bullets below are reference detail. The **Execution order** above is the
-> authoritative sequence (note: M18 precedes M17, despite list position here).
+> The bullets below are reference detail. The **Execution order** above is the authoritative sequence (note: M18 precedes M17, despite list position here).
 
-- **M25 - TypeDuck-Web dogfooding round 2 (complete)** - closed the second
-  manual play-testing batch for the internal `third_party/typeduck-web/`
-  playground with 10/10 `M25-DOGFOOD-*` rows closed. The batch moved the browser
-  build to release-mode WASM, preserved deploy-state reuse instead of forced
-  invalidation, separated normal typing from the global loading state, wired
-  `menu/page_size` through the 3-10 control and rendered candidate cap, changed
-  current Jyutping web-profile reverse lookup to bare `` ` `` for
-  `luna_pinyin`, moved retained Loengfan/Cangjie side lookups to explicit
-  `` `vl`` / `` `vc`` triggers, and listed those triggers in the web UI. It also
-  completed the requested top-control layout, settings order/alignment, checkbox
-  affordance, and radio menu-layout polish while preserving the Vite + React +
-  Tailwind CSS + small local components stack. Browser evidence is committed
-  under `third_party/typeduck-web/e2e/results/m25-dogfooding/`, and the source
-  changes are tracked through
-  `third_party/typeduck-web/patches/yune-typeduck-runtime.patch`. Candidate or
-  ranking semantics remain fixture-gated against TypeDuck `v1.1.2` or upstream
-  `1.17.0`; M25 did not treat `typeduck.hk/web` as a hard oracle. Detail:
-  [`plans/archive/m25-plan-typeduck-web-dogfooding-round-2.md`](./plans/archive/m25-plan-typeduck-web-dogfooding-round-2.md).
-- **M24 — TypeDuck-Web dogfooding and demo hardening (complete)** — closed the
-  first manual play-testing, bug-triage, performance, and UI-polish batch for
-  the internal `third_party/typeduck-web/` playground. The 13 closed
-  `M24-DOGFOOD-*` rows cover startup evidence, comment-control cleanup, compact
-  candidate/detail layout, oracle-backed `jigaajiusihaa` ordering,
-  Cantonese-first grouped settings, checklist display languages, the
-  `menu/page_size` browser/runtime key, frontend-only horizontal/vertical menu
-  layout, a labeled engine status strip, real schema names, Jyutping `` `pzhe ``
-  reverse lookup, full Chinese typeface names, and DaisyUI removal in favor of
-  Vite + React + Tailwind CSS + small local components. Candidate/ranking
-  behavior remains fixture-gated against TypeDuck `v1.1.2` or upstream
-  `1.17.0`; M24 did not treat `typeduck.hk/web` as a hard oracle.
-  Detail: [`plans/archive/m24-plan-typeduck-web-dogfooding.md`](./plans/archive/m24-plan-typeduck-web-dogfooding.md).
-- **P2-WIN-02 - TypeDuck Windows boundary compatibility (active)** - fixes the
-  Yune-side boundary incompatibility found by TypeDuck-Windows Phase 0C before
-  product/frontend work resumes. The first target is `jyut6ping3` `ngohaig`:
-  TypeDuck-Windows evidence shows Yune's candidate texts match the TypeDuck
-  `v1.1.2` oracle, but rich dictionary-panel comment bytes do not yet match the
-  `\f\r1,` payload shape that the Windows path expects. This milestone promotes
-  that evidence into Yune fixtures/tests, fixes the TypeDuck profile behavior
-  without widening default `RimeApi` or `RimeCandidate`, rebuilds the Windows
-  package, and reruns IPC plus Notepad smoke before P2-WIN-01 can continue.
-  Detail:
-  [`plans/p2-win02-plan-typeduck-boundary-compat.md`](./plans/p2-win02-plan-typeduck-boundary-compat.md).
-- **P2-WIN-01 — TypeDuck-Windows next product/frontend planning (draft)** —
-  remains the Phase 2 Yune-first Windows IME product track. The engine direction
-  is Yune-only; old librime/Weasel code is reference material and a platform-shell
-  extraction source, not a runtime fallback requirement. This plan is currently
-  blocked by P2-WIN-02; resume it at the repo/process/product decision checkpoint
-  only after the Yune boundary fix has a rerun Windows smoke result.
-  Detail: [`plans/p2-win01-plan-typeduck-windows-next.md`](./plans/p2-win01-plan-typeduck-windows-next.md).
-- **M17 — Upstream sentence / language model (poet) (complete)** — implements the upstream
-  `1.17.0` statistical sentence path so `luna_pinyin` SENTENCE + full-page LATTICE
-  output matches the captured oracle, with the former `zhongguo` phrase and
-  full-page sentence-lattice blockers now active in `upstream_luna_pinyin_parity.rs`.
-  Grounded finding that
-  makes it tractable: `luna_pinyin` ships an `essay.txt` vocabulary but **no `.gram`
-  model**, so the oracle's poet runs the `grammar == nullptr` branch where
-  `Grammar::Evaluate` returns `entry_weight + kPenalty` with
-  `kPenalty = -13.815510557964274` (`ln(1e-6)`) — a fixed per-word log-prob penalty,
-  *not* a learned bigram. M17 owns a new `poet` module in `yune-core` (log-space
-  Viterbi/beam DP over a dictionary `WordGraph` with that constant and `MakeSentences`
-  multi-candidate beam) behind a named `luna_pinyin`/upstream profile, **without**
-  disturbing the TypeDuck `sentence_candidate` heuristic (the `21.0` jyut6ping3
-  penalty) or the upstream-first ABI, capturing both goldens non-circularly from the
-  pinned `1.17.0` binary. The Track-2 item is complete; it remains explicitly **not** required for
-  TypeDuck-Web parity. Octagram/`.gram` bigram models, the C++ plugin ABI, and
-  `contextual_translation` beyond the two named tests stay out of scope.
-  Detail: [`plans/archive/m17-plan-upstream-language-model-poet.md`](./plans/archive/m17-plan-upstream-language-model-poet.md).
-- **M18 — Deployment & processor depth (complete)** — turned the dictionary subsystem from
-  read-and-plan into read-write and teaches the Engine the punctuation-processor
-  behaviors the M12 harness left blocked. Yune now parses source YAML and compiled
-  `.table.bin`/`.prism.bin`/`.reverse.bin`, and `rime_dict_rebuild_plan` decisions can be
-  executed by public writers. M18 added a pure-Rust darts double-array, a `speller/algebra`-driven
-  prism generator, and public `build_table_bin`/`build_reverse_bin`/`build_prism_bin`
-  writers (Yune's own round-trippable table/reverse format, not marisa) plus a rebuild
-  executor. On the processor side it wires `ascii_punct` into an upstream no-op bypass
-  and adds immediate-commit/confirm-unique/pair/list punctuation from upstream
-  `punctuator.cc`, un-ignoring the two M12 blockers with fresh upstream fixtures.
-  Detail: [`plans/archive/m18-plan-deployment-and-processor-depth.md`](./plans/archive/m18-plan-deployment-and-processor-depth.md).
-- **M19 — Breadth (toward B, complete)** — onboards three common upstream schemas — Shuangpin
-  (`double_pinyin`), Cangjie (`cangjie5`), Zhuyin (`bopomofo`) — into Yune's named
-  compatibility set, each measured against the upstream `1.17.0` oracle through the
-  existing M12 harness (`oracle-rime-probe.cs` capture → provenance-stamped
-  `upstream-1.17.0/` fixtures → an owning parity test per schema modeled on
-  `upstream_luna_pinyin_parity.rs`). It reuses Yune primitives — `SpellingAlgebra`
-  (`xform`/`xlit`/`derive`/`fuzz`/`abbrev`/`erase`), `StaticTableTranslator`
-  (`with_spelling_algebra`/`with_show_full_code`), the schema-driven `SpellerProcessor`
-  — adding only the per-schema gaps a captured oracle case proves; sentence/lattice
-  cases outside the M17-owned `luna_pinyin` fixtures need their own future oracle
-  evidence before implementation. In parallel M19 *names* (does not
-  package) the TypeDuck-profile ABI surface M10 later used: the fork-only
-  `config_list_append_{string,bool,int,double}` slots already exist as `#[no_mangle]`
-  symbols in `config_api.rs` but are absent from the default `rime_get_api()` table, so
-  M19 exposes them through an explicitly named opt-in profile accessor while keeping the
-  default upstream `1.17.0` ABI byte-for-byte unchanged — satisfying graduation-contract
-  item (1) of `typeduck-windows-backend-requirements.md` without reopening Windows
-  packaging.
-  Detail: [`plans/archive/m19-plan-breadth-schemas.md`](./plans/archive/m19-plan-breadth-schemas.md).
-- **M22 — TypeDuck-Web playground feature-completeness + multi-schema + engine
-  debug inspector** — the M20 successor (playground build-out, *not* M21's
-  product-comparison protocol). Surfaces more of Yune's engine in the internal
-  `third_party/typeduck-web/` harness across three separate buckets. **(1) Missing
-  honest toggles:** the browser-safe user-facing controls M20 skipped —
-  `traditionalization`, `disabled`, `extended_charset` (via `setOption()`; the option
-  the always-on `CharsetFilter` reads, `filter/mod.rs:65-69`), and deploy-time
-  `dictionary_exclude` (`schema_install.rs:281-297`); each active control now has
-  browser evidence through status, candidate, or persisted-config output.
-  `ascii_punct` remains absent because no browser-visible before/after evidence
-  was captured for it. **(2)
-  Read-only debug inspector (complete):** an opt-in per-keystroke panel observes
-  segments + `segment_tags`, each candidate's source/quality/preedit/comment,
-  spelling-algebra expansion, the filter pipeline, prediction scores vs the
-  threshold, and AI staging with additive debug JSON only and **no default
-  `RimeApi`/`RimeCandidate` ABI change**; Bucket 2 evidence lives under
-  `third_party/typeduck-web/e2e/results/m22-bucket2-inspector/`, while the
-  completed M22 evidence lives under
-  `third_party/typeduck-web/e2e/results/m22-remaining-buckets/`. **(3)
-  Multi-schema (highest leverage):**
-  load three schemas — `jyut6ping3_mobile` + `cangjie5` + `luna_pinyin` — behind a
-  schema-switcher that cleans up and re-initializes the browser runtime with the
-  selected schema, with reverse lookup on both new schemas; unblocks `show_full_code` and the schema-switch
-  surface M20 could only mark browser-surface N/A as a single-schema harness, and gives
-  M21 a multi-schema surface. M18 removed the dictionary-build blocker, and M22
-  records measured M18/M19-derived browser asset sizes for both new schemas.
-  Honesty-gate
-  exclusions (`uniquifier_filter`, `single_char_filter`, always-on `charset_filter`,
-  schema-owned templates, internal `_`-prefixed options) stay inspect-only or
-  always-on — never toggles.
-  Detail: [`plans/archive/m22-plan-web-playground-multischema-inspector.md`](./plans/archive/m22-plan-web-playground-multischema-inspector.md).
-- **AI-native frontend expansion** — the proven TypeDuck-Web surface stays
-  default-off; Windows and other native frontend exposure wait for their own
-  safety evidence.
-- **iOS keyboard developer track** — future TypeDuck iOS or third-party keyboard
-  work should build on the closed Cantonese engine-parity behavior, then define a
-  Yune-native iOS package/host contract. Cantoboard/TypeDuck iOS build repos are
-  reference material for static-linking, resource deployment, and keyboard-host
-  constraints, not a C++ implementation template.
+- **M26 - performance hardening (active)** - turns the post-M25 performance review into a closeable measurement and optimization milestone. M26 adds native large-real-asset benchmarks for TypeDuck and upstream profiles, browser keydown-to-paint diagnostics, startup attribution below the coarse `runtime:initialized` timer, and one measured optimization with before/after evidence. It explicitly separates native engine costs from WASM worker, browser scheduling, React rendering, and TypeDuck-Web UI costs. Detail: [`plans/m26-plan-performance-hardening.md`](./plans/m26-plan-performance-hardening.md).
+- **M25 - TypeDuck-Web dogfooding round 2 (complete)** - closed the second manual play-testing batch for the internal `third_party/typeduck-web/` playground with 10/10 `M25-DOGFOOD-*` rows closed. The batch moved the browser build to release-mode WASM, preserved deploy-state reuse instead of forced invalidation, separated normal typing from the global loading state, wired `menu/page_size` through the 3-10 control and rendered candidate cap, changed current Jyutping web-profile reverse lookup to bare `` ` `` for `luna_pinyin`, moved retained Loengfan/Cangjie side lookups to explicit `` `vl`` / `` `vc`` triggers, and listed those triggers in the web UI. It also completed the requested top-control layout, settings order/alignment, checkbox affordance, and radio menu-layout polish while preserving the Vite + React + Tailwind CSS + small local components stack. Browser evidence is committed under `third_party/typeduck-web/e2e/results/m25-dogfooding/`, and the source changes are tracked through `third_party/typeduck-web/patches/yune-typeduck-runtime.patch`. Candidate or ranking semantics remain fixture-gated against TypeDuck `v1.1.2` or upstream `1.17.0`; M25 did not treat `typeduck.hk/web` as a hard oracle. Detail: [`plans/archive/m25-plan-typeduck-web-dogfooding-round-2.md`](./plans/archive/m25-plan-typeduck-web-dogfooding-round-2.md).
+- **M24 — TypeDuck-Web dogfooding and demo hardening (complete)** — closed the first manual play-testing, bug-triage, performance, and UI-polish batch for the internal `third_party/typeduck-web/` playground. The 13 closed `M24-DOGFOOD-*` rows cover startup evidence, comment-control cleanup, compact candidate/detail layout, oracle-backed `jigaajiusihaa` ordering, Cantonese-first grouped settings, checklist display languages, the `menu/page_size` browser/runtime key, frontend-only horizontal/vertical menu layout, a labeled engine status strip, real schema names, Jyutping `` `pzhe `` reverse lookup, full Chinese typeface names, and DaisyUI removal in favor of Vite + React + Tailwind CSS + small local components. Candidate/ranking behavior remains fixture-gated against TypeDuck `v1.1.2` or upstream `1.17.0`; M24 did not treat `typeduck.hk/web` as a hard oracle. Detail: [`plans/archive/m24-plan-typeduck-web-dogfooding.md`](./plans/archive/m24-plan-typeduck-web-dogfooding.md).
+- **P2-WIN-02 - TypeDuck Windows boundary compatibility (active)** - fixes the Yune-side boundary incompatibility found by TypeDuck-Windows Phase 0C before product/frontend work resumes. The first target is `jyut6ping3` `ngohaig`: TypeDuck-Windows evidence shows Yune's candidate texts match the TypeDuck `v1.1.2` oracle, but rich dictionary-panel comment bytes do not yet match the `\f\r1,` payload shape that the Windows path expects. This milestone promotes that evidence into Yune fixtures/tests, fixes the TypeDuck profile behavior without widening default `RimeApi` or `RimeCandidate`, rebuilds the Windows package, and reruns IPC plus Notepad smoke before P2-WIN-01 can continue. Detail: [`plans/p2-win02-plan-typeduck-boundary-compat.md`](./plans/p2-win02-plan-typeduck-boundary-compat.md).
+- **P2-WIN-01 — TypeDuck-Windows next product/frontend planning (draft)** — remains the Phase 2 Yune-first Windows IME product track. The engine direction is Yune-only; old librime/Weasel code is reference material and a platform-shell extraction source, not a runtime fallback requirement. This plan is currently blocked by P2-WIN-02; resume it at the repo/process/product decision checkpoint only after the Yune boundary fix has a rerun Windows smoke result. Detail: [`plans/p2-win01-plan-typeduck-windows-next.md`](./plans/p2-win01-plan-typeduck-windows-next.md).
+- **M17 — Upstream sentence / language model (poet) (complete)** — implements the upstream `1.17.0` statistical sentence path so `luna_pinyin` SENTENCE + full-page LATTICE output matches the captured oracle, with the former `zhongguo` phrase and full-page sentence-lattice blockers now active in `upstream_luna_pinyin_parity.rs`. Grounded finding that makes it tractable: `luna_pinyin` ships an `essay.txt` vocabulary but **no `.gram` model**, so the oracle's poet runs the `grammar == nullptr` branch where `Grammar::Evaluate` returns `entry_weight + kPenalty` with `kPenalty = -13.815510557964274` (`ln(1e-6)`) — a fixed per-word log-prob penalty, _not_ a learned bigram. M17 owns a new `poet` module in `yune-core` (log-space Viterbi/beam DP over a dictionary `WordGraph` with that constant and `MakeSentences` multi-candidate beam) behind a named `luna_pinyin`/upstream profile, **without** disturbing the TypeDuck `sentence_candidate` heuristic (the `21.0` jyut6ping3 penalty) or the upstream-first ABI, capturing both goldens non-circularly from the pinned `1.17.0` binary. The Track-2 item is complete; it remains explicitly **not** required for TypeDuck-Web parity. Octagram/`.gram` bigram models, the C++ plugin ABI, and `contextual_translation` beyond the two named tests stay out of scope. Detail: [`plans/archive/m17-plan-upstream-language-model-poet.md`](./plans/archive/m17-plan-upstream-language-model-poet.md).
+- **M18 — Deployment & processor depth (complete)** — turned the dictionary subsystem from read-and-plan into read-write and teaches the Engine the punctuation-processor behaviors the M12 harness left blocked. Yune now parses source YAML and compiled `.table.bin`/`.prism.bin`/`.reverse.bin`, and `rime_dict_rebuild_plan` decisions can be executed by public writers. M18 added a pure-Rust darts double-array, a `speller/algebra`-driven prism generator, and public `build_table_bin`/`build_reverse_bin`/`build_prism_bin` writers (Yune's own round-trippable table/reverse format, not marisa) plus a rebuild executor. On the processor side it wires `ascii_punct` into an upstream no-op bypass and adds immediate-commit/confirm-unique/pair/list punctuation from upstream `punctuator.cc`, un-ignoring the two M12 blockers with fresh upstream fixtures. Detail: [`plans/archive/m18-plan-deployment-and-processor-depth.md`](./plans/archive/m18-plan-deployment-and-processor-depth.md).
+- **M19 — Breadth (toward B, complete)** — onboards three common upstream schemas — Shuangpin (`double_pinyin`), Cangjie (`cangjie5`), Zhuyin (`bopomofo`) — into Yune's named compatibility set, each measured against the upstream `1.17.0` oracle through the existing M12 harness (`oracle-rime-probe.cs` capture → provenance-stamped `upstream-1.17.0/` fixtures → an owning parity test per schema modeled on `upstream_luna_pinyin_parity.rs`). It reuses Yune primitives — `SpellingAlgebra` (`xform`/`xlit`/`derive`/`fuzz`/`abbrev`/`erase`), `StaticTableTranslator` (`with_spelling_algebra`/`with_show_full_code`), the schema-driven `SpellerProcessor` — adding only the per-schema gaps a captured oracle case proves; sentence/lattice cases outside the M17-owned `luna_pinyin` fixtures need their own future oracle evidence before implementation. In parallel M19 _names_ (does not package) the TypeDuck-profile ABI surface M10 later used: the fork-only `config_list_append_{string,bool,int,double}` slots already exist as `#[no_mangle]` symbols in `config_api.rs` but are absent from the default `rime_get_api()` table, so M19 exposes them through an explicitly named opt-in profile accessor while keeping the default upstream `1.17.0` ABI byte-for-byte unchanged — satisfying graduation-contract item (1) of `typeduck-windows-backend-requirements.md` without reopening Windows packaging. Detail: [`plans/archive/m19-plan-breadth-schemas.md`](./plans/archive/m19-plan-breadth-schemas.md).
+- **M22 — TypeDuck-Web playground feature-completeness + multi-schema + engine debug inspector** — the M20 successor (playground build-out, _not_ M21's product-comparison protocol). Surfaces more of Yune's engine in the internal `third_party/typeduck-web/` harness across three separate buckets. **(1) Missing honest toggles:** the browser-safe user-facing controls M20 skipped — `traditionalization`, `disabled`, `extended_charset` (via `setOption()`; the option the always-on `CharsetFilter` reads, `filter/mod.rs:65-69`), and deploy-time `dictionary_exclude` (`schema_install.rs:281-297`); each active control now has browser evidence through status, candidate, or persisted-config output. `ascii_punct` remains absent because no browser-visible before/after evidence was captured for it. **(2) Read-only debug inspector (complete):** an opt-in per-keystroke panel observes segments + `segment_tags`, each candidate's source/quality/preedit/comment, spelling-algebra expansion, the filter pipeline, prediction scores vs the threshold, and AI staging with additive debug JSON only and **no default `RimeApi`/`RimeCandidate` ABI change**; Bucket 2 evidence lives under `third_party/typeduck-web/e2e/results/m22-bucket2-inspector/`, while the completed M22 evidence lives under `third_party/typeduck-web/e2e/results/m22-remaining-buckets/`. **(3) Multi-schema (highest leverage):** load three schemas — `jyut6ping3_mobile` + `cangjie5` + `luna_pinyin` — behind a schema-switcher that cleans up and re-initializes the browser runtime with the selected schema, with reverse lookup on both new schemas; unblocks `show_full_code` and the schema-switch surface M20 could only mark browser-surface N/A as a single-schema harness, and gives M21 a multi-schema surface. M18 removed the dictionary-build blocker, and M22 records measured M18/M19-derived browser asset sizes for both new schemas. Honesty-gate exclusions (`uniquifier_filter`, `single_char_filter`, always-on `charset_filter`, schema-owned templates, internal `_`-prefixed options) stay inspect-only or always-on — never toggles. Detail: [`plans/archive/m22-plan-web-playground-multischema-inspector.md`](./plans/archive/m22-plan-web-playground-multischema-inspector.md).
+- **AI-native frontend expansion** — the proven TypeDuck-Web surface stays default-off; Windows and other native frontend exposure wait for their own safety evidence.
+- **iOS keyboard developer track** — future TypeDuck iOS or third-party keyboard work should build on the closed Cantonese engine-parity behavior, then define a Yune-native iOS package/host contract. Cantoboard/TypeDuck iOS build repos are reference material for static-linking, resource deployment, and keyboard-host constraints, not a C++ implementation template.
 
 ## Scope ledger
 
-A living map so "parity" always names a target. Deferred rows move into *in
-scope* only as a named target needs them; nothing here commits to a timeline, and
-the *Non-goal* column is not a backlog. Standing deferrals also appear in
-*Deferred / future* below.
+A living map so "parity" always names a target. Deferred rows move into _in scope_ only as a named target needs them; nothing here commits to a timeline, and the _Non-goal_ column is not a backlog. Standing deferrals also appear in _Deferred / future_ below.
 
 | In scope — target-driven, measured | Deferred — implement when a target needs it | Non-goal |
-|---|---|---|
+| --- | --- | --- |
 | `luna_pinyin` core vs upstream `1.17.0` oracle, including M17 null-grammar sentence/lattice and M18 punctuation processor slices | Learned `.gram`/octagram grammar, contextual translation, and broader plugin-backed gears until a named target needs them | Bit-for-bit parity with librime internals |
 | TypeDuck `jyut6ping3` profile vs `v1.1.2` oracle | Browser/userdb UI evidence after M15 engine parity; broader OpenCC phrase/config breadth beyond the checked-in `hk2s` source chain | librime C++ plugin ABI as a requirement |
 | Common RIME schemas, as breadth (B) is added | Spelling-algebra prism generation; binary-dict / deployment writing | Cloud inference as a hard dependency |
@@ -760,11 +307,7 @@ the *Non-goal* column is not a backlog. Standing deferrals also appear in
 
 - **librime C++ plugin ABI** (Lua, octagram, predict, proto): deferred until a concrete frontend or distribution requires it; prefer Yune-native extension points first.
 - **AI-native input layer (future native/frontend expansion)** - after M13, TypeDuck-Web has a default-off local AI surface with browser safety evidence. Remaining AI-native product integration is exposing equivalent gates in additional real frontends without changing upstream-core, TypeDuck-Web classic behavior, or the completed TypeDuck-Windows compatibility profile. The architecture remains in [`plans/m11-design-ai-native.md`](./plans/m11-design-ai-native.md); CLI evidence lives in [`plans/archive/m11-plan-ai-native-cli-slice.md`](./plans/archive/m11-plan-ai-native-cli-slice.md), and web exposure evidence lives in [`plans/archive/m13-plan-ai-native-frontend-exposure.md`](./plans/archive/m13-plan-ai-native-frontend-exposure.md).
-- **iOS keyboard developer support** - future TypeDuck iOS work needs its own
-  track. The fork-parity ledger now classifies the Cantoboard/TypeDuck iOS build
-  rows as deferred platform integration: useful for Apple build/static-linking,
-  resource deployment, and keyboard-extension constraints, but outside the
-  completed engine-parity backlog.
+- **iOS keyboard developer support** - future TypeDuck iOS work needs its own track. The fork-parity ledger now classifies the Cantoboard/TypeDuck iOS build rows as deferred platform integration: useful for Apple build/static-linking, resource deployment, and keyboard-extension constraints, but outside the completed engine-parity backlog.
 
 ## Principles (carried forward)
 

@@ -27,7 +27,7 @@ harness = false
 ## Run metadata
 
 | Field | Value |
-|---|---|
+| --- | --- |
 | Plan | 06-04 |
 | Harness | `crates/yune-rime-api/benches/frontend_baselines.rs` |
 | Benchmark layer | `rime_get_api` / `RimeApi` function table |
@@ -45,7 +45,7 @@ harness = false
 Command output from `cargo bench -p yune-rime-api --bench frontend_baselines`:
 
 | benchmark | operations | fixture | data_size | total_ms | us_per_op |
-|---|---:|---|---|---:|---:|
+| --- | --: | --- | --- | --: | --: |
 | session_create_destroy | 200 | synthetic-basic-schema | sessions=200 | 0.143 | 0.716 |
 | per_key_simple_ascii_rime_process_key | 600 | default-echo-schema | keys=600 status/context/commit/free cycles=600 | 13.159 | 21.931 |
 | per_key_schema_loaded_lookup_rime_process_key | 400 | lookup-schema-table-dictionary | dictionary_entries=4 sessions=200 status/context/commit/free cycles=200 | 125.187 | 312.967 |

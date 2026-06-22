@@ -10,9 +10,9 @@
 
 **1. The provider runs in Rust, never in JS.** The `LocalModelProvider` is reused verbatim from M11; JS carries **no** provider logic. yune-rime-api already depends on yune-core, so the provider is importable into the WASM module.
 
-**2. Two-pass, so the per-key path never invokes provider code (preserves M11 invariant #1 literally).** M11 requires the synchronous per-key path to *never* run provider/model code — it only reads an already-staged result ([m11-design-ai-native.md §2.1](../m11-design-ai-native.md)). M13 honors this with two calls per keystroke:
+**2. Two-pass, so the per-key path never invokes provider code (preserves M11 invariant #1 literally).** M11 requires the synchronous per-key path to _never_ run provider/model code — it only reads an already-staged result ([m11-design-ai-native.md §2.1](../m11-design-ai-native.md)). M13 honors this with two calls per keystroke:
 
-- `yune_typeduck_process_key` is **unchanged** — it returns the classic response (plus any AI already staged for the *current* input from a prior pass) and **never runs the provider**. AI-off is therefore byte-identical by construction, and even AI-on's *first* response for a new input is classic-only.
+- `yune_typeduck_process_key` is **unchanged** — it returns the classic response (plus any AI already staged for the _current_ input from a prior pass) and **never runs the provider**. AI-off is therefore byte-identical by construction, and even AI-on's _first_ response for a new input is classic-only.
 - A **new** `yune_typeduck_stage_ai(state)` export runs `LocalModelProvider::provide(engine.context(), budget)` **synchronously**, calls `engine.stage_ai_result(result)`, and returns the AI-augmented response. The TypeDuck-Web Web Worker calls it **after** posting the classic result to the UI (e.g. next microtask), so classic candidates are never delayed; AI rows arrive as a bounded **second-pass update**.
 
 **Honest latency claim:** classic input is never blocked or slowed (returned first, and the worker is off the main UI thread); AI adds bounded second-pass latency on the worker only. The roadmap states it this way — M13 does **not** claim zero-added-latency for the AI path itself.
@@ -69,6 +69,7 @@
 - [x] **Leave `yune_typeduck_process_key` unchanged.** Register both exports; append symbols to `typeduck-exports.txt`.
 
 **Acceptance:**
+
 - `process_key` output is **byte-identical** to before this task for all inputs (it is the unchanged shipping code).
 - With `ai_enabled = true`: calling `process_key` then `stage_ai` yields a visible AI candidate **after the classic top candidate**, with **index 0 still the classic top**; a `Pending`/empty result changes nothing.
 - `stage_ai` with `ai_enabled = false` returns the classic response (no provider run).
@@ -100,10 +101,10 @@
 - [x] Add `enableAI: boolean` to `RimePreferences`; **default `false`** in `usePreferences()` (`hooks.ts:69`).
 - [x] Add `setAiEnabled(enabled)` + `stageAi()` to the runtime wrapper, calling the two new exports.
 - [x] In `customize()` (`adapter.ts:405`), map `enableAI` → `runtime.setAiEnabled(...)` (a runtime flag, **not** a deployed `customize` config key).
-- [x] **Deliver the second pass as a separate serialized worker action** (the worker protocol resolves one result per action). Register a new `stageAi` action in `rime.ts` `allActions` and the `worker.ts` `actions` map ([rime.ts:72](../../../third_party/typeduck-web/source/src/rime.ts), [worker.ts:256](../../../third_party/typeduck-web/source/src/worker.ts)); it returns a `RimeResult` rendered through the **existing `handleRimeResult` path**. Per keystroke the worker calls `processKey` (render classic), then **only if `enableAI`** calls `stageAi` (render the AI-augmented update). The existing request/response **serialization** guarantees ordering — a `processKey` for the next key cannot interleave — and the engine's `matches_input` check makes a late pass safe (silently dropped if input moved on). *(A push `aiResultUpdated` listener — the worker already supports `type: "listener"` messages — is an acceptable alternative; the serialized second action is simpler.)*
+- [x] **Deliver the second pass as a separate serialized worker action** (the worker protocol resolves one result per action). Register a new `stageAi` action in `rime.ts` `allActions` and the `worker.ts` `actions` map ([rime.ts:72](../../../third_party/typeduck-web/source/src/rime.ts), [worker.ts:256](../../../third_party/typeduck-web/source/src/worker.ts)); it returns a `RimeResult` rendered through the **existing `handleRimeResult` path**. Per keystroke the worker calls `processKey` (render classic), then **only if `enableAI`** calls `stageAi` (render the AI-augmented update). The existing request/response **serialization** guarantees ordering — a `processKey` for the next key cannot interleave — and the engine's `matches_input` check makes a late pass safe (silently dropped if input moved on). _(A push `aiResultUpdated` listener — the worker already supports `type: "listener"` messages — is an acceptable alternative; the serialized second action is simpler.)_
 - [x] Add the toggle to `Preferences.tsx` and the `App.tsx` customize effect.
 
-**Acceptance:** fresh load shows AI off and output identical to today; toggling on makes AI rows appear as a second-pass update without a redeploy; toggling off calls `set_ai_enabled(false)`, which **clears any staged AI for the current input**, so the current composition *and* the next `process_key` are byte-identical classic and the second pass stops.
+**Acceptance:** fresh load shows AI off and output identical to today; toggling on makes AI rows appear as a second-pass update without a redeploy; toggling off calls `set_ai_enabled(false)`, which **clears any staged AI for the current input**, so the current composition _and_ the next `process_key` are byte-identical classic and the second pass stops.
 
 ---
 
@@ -169,7 +170,8 @@ npm --prefix third_party/typeduck-web/e2e install
 npx --prefix third_party/typeduck-web/e2e playwright test yune-typeduck.spec.ts
 ```
 
-  Completion **requires** committed real-browser evidence (screenshots + state JSON + `browser-run.log`) for the AI scenarios; a green written gate without this does not close M13.
+Completion **requires** committed real-browser evidence (screenshots + state JSON + `browser-run.log`) for the AI scenarios; a green written gate without this does not close M13.
+
 - [x] Stage explicit paths only; commit M13 as its **own scoped commit**, then archive this plan in a separate docs commit.
 
 ---

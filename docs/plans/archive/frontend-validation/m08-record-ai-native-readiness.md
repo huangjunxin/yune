@@ -13,7 +13,7 @@ The validated ABI foundation is strong enough for design of provider/ranker inte
 ## Evidence
 
 | Evidence area | Phase 06 artifact | Readiness signal |
-|---|---|---|
+| --- | --- | --- |
 | Native host lifecycle | `fixtures/frontend-traces/native-host-lifecycle.json`, Plan 06-01 summary | `rime_get_api`, setup, initialize, deploy/maintenance, schema selection, session lifecycle, key processing, context/status/commit reads, notifications, stale sessions, and teardown are validated through the Cargo-built cdylib boundary. |
 | Frontend mismatch capture | Plan 06-01, 06-02, and 06-03 summaries | Frontend-observed behavior is captured as sanitized traces, blocker notes, or focused tests before future fixes, satisfying the Phase 06 mismatch-capture discipline. |
 | TypeDuck-Web wrapper path | `fixtures/frontend-traces/typeduck-web-basic.json`, `docs/plans/archive/frontend-validation/m08-record-typeduck-web.md` | The browser/WebAssembly wrapper-shaped path completes through Yune-owned `RimeApi` calls without a Yune ABI/runtime mismatch; Emscripten worker lifecycle, IDBFS persistence, and unavailable native dynamic loading are documented as browser/WASM limits. |

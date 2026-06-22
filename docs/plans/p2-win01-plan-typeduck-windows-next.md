@@ -28,6 +28,7 @@ This plan is deliberately **not** a Yune core-engine milestone.
 - TypeDuck-Windows Phase 0A was attempted on `dev` in commit `03d3608` (`Document Yune Windows Phase 0 audit`): the Yune-backed IPC console smoke passed, setup/deployer registration passed, but the real Notepad TSF smoke hung/crashed in `TypeDuckServer.exe` while consuming/rendering candidates.
 - TypeDuck-Windows Phase 0C then completed on `dev` in commits `4ac2510` (`Document Phase 0C candidate boundary evidence`) and `c7ddedb` (`Document Phase 0C verifier evidence`). It classified the blocker as a **Yune TypeDuck-profile compatibility / boundary bug**.
 - P2-WIN-02 now owns the Yune-side fix: promote the `ngohaig` boundary evidence into Yune fixtures/tests, make TypeDuck `v1.1.2` rich `\f\r1,` comments byte-compatible for the Windows-facing `jyut6ping3` path, investigate the AppVerifier `RimeCreateSession` / `RimeSelectSchema` hang, rebuild the package, and rerun IPC plus Notepad smoke.
+- TypeDuck-Web saw a related visible symptom in M24 (`M24-DOGFOOD-02` literal `\f` leakage), but that was fixed by the browser candidate parser/display layer. It does not prove raw `RimeCandidate.comment` bytes are TypeDuck-compatible, so P2-WIN-02 must still close the engine boundary and then rerun the web comment-rendering gates.
 - M24 produced a Cantonese-first TypeDuck-Web dogfood UI on Vite + React + Tailwind + local components, including settings, status, typeface, candidate-layout, and dictionary/detail surfaces. Treat it as a reuse candidate for Windows settings/dictionary UI through WebView2, not as a candidate-window rendering engine.
 - The local TypeDuck-Windows checkout is at `C:\Users\laubonghaudoi\Documents\GitHub\TypeDuck-Windows` on `dev`, with untracked planning/workflow artifacts already present. Do not sweep those into unrelated commits.
 - Existing TypeDuck-Windows modules worth auditing:
@@ -64,15 +65,12 @@ The repo direction should be **decision-gated**, with this default bias:
 
 ### Phase 0A - Existing Build Interactive TSF Smoke
 
-**Goal:** Close the real post-M10 frontend gap before choosing a repo strategy:
-prove the already-buildable TypeDuck-Windows shell can type through Yune in a
-real Windows text field.
+**Goal:** Close the real post-M10 frontend gap before choosing a repo strategy: prove the already-buildable TypeDuck-Windows shell can type through Yune in a real Windows text field.
 
-**Why first:** M10 proved stock server/client IPC, not interactive TSF typing.
-This smoke gives an immediate dogfood target and prevents a repo rewrite from
-masking a platform-shell issue.
+**Why first:** M10 proved stock server/client IPC, not interactive TSF typing. This smoke gives an immediate dogfood target and prevents a repo rewrite from masking a platform-shell issue.
 
 **Checklist:**
+
 - [ ] Start from the pinned TypeDuck-Windows checkout and the M10-proven Yune package path.
 - [ ] Rebuild the existing TypeDuck-Windows solution/server/test artifacts from a clean command sequence.
 - [ ] Install/register the existing TSF IME on a Windows host.
@@ -82,15 +80,14 @@ masking a platform-shell issue.
 - [ ] Save logs/screenshots under a deterministic evidence directory in the Windows working repo.
 - [ ] Record exact remaining blockers if interactive TSF typing cannot be completed.
 
-**Acceptance gate:** A reviewer can see whether the existing TypeDuck-Windows
-platform shell can already dogfood Yune interactively, before any fresh-repo or
-extraction decision is made.
+**Acceptance gate:** A reviewer can see whether the existing TypeDuck-Windows platform shell can already dogfood Yune interactively, before any fresh-repo or extraction decision is made.
 
 ### Phase 0B - Audit, Process Model, And Repo Decision
 
 **Goal:** Decide fresh repo, existing repo, or hybrid extraction with evidence.
 
 **Files to read in TypeDuck-Windows:**
+
 - `INTEGRATION_PLAN.md`
 - `LIBRIME_INTEGRATION_PLAN.md`
 - `docs/commit-inventory.md`
@@ -105,11 +102,13 @@ extraction decision is made.
 - `WeaselSetup/**`
 
 **Required outputs:**
+
 - `docs/windows-next-audit.md` in the Windows working repo.
 - `docs/windows-next-repo-decision.md` in the Windows working repo.
 - `docs/windows-next-process-model.md` in the Windows working repo.
 
 **Checklist:**
+
 - [ ] Record the current branch, remote, dirty files, and untracked planning artifacts.
 - [ ] Build or reproduce the current TypeDuck-Windows baseline from a clean command sequence.
 - [ ] Re-run the Yune-backed M10 stock IPC smoke and save the evidence path.
@@ -126,25 +125,18 @@ extraction decision is made.
   - `hybrid-extraction` if a fresh repo is still desired but the first milestone imports minimal shell code.
 - [ ] Name the first executable smoke target before product UI work starts.
 
-**Acceptance gate:** A reviewer can read the audit and understand exactly why
-the process model and repo strategy were chosen, which old modules are allowed
-to survive, how Yune is loaded, and how the first dogfoodable Windows IME smoke
-will be reached.
+**Acceptance gate:** A reviewer can read the audit and understand exactly why the process model and repo strategy were chosen, which old modules are allowed to survive, how Yune is loaded, and how the first dogfoodable Windows IME smoke will be reached.
 
 ### Phase 0C - Boundary Crash Diagnosis
 
-**Status:** Completed as diagnosis in the TypeDuck-Windows repo. Follow-up
-implementation moved to Yune
-[`p2-win02-plan-typeduck-boundary-compat.md`](./p2-win02-plan-typeduck-boundary-compat.md).
+**Status:** Completed as diagnosis in the TypeDuck-Windows repo. Follow-up implementation moved to Yune [`p2-win02-plan-typeduck-boundary-compat.md`](./p2-win02-plan-typeduck-boundary-compat.md).
 
-**Goal:** Localize the interactive Notepad crash before any rewrite or product
-spike hides the real compatibility problem.
+**Goal:** Localize the interactive Notepad crash before any rewrite or product spike hides the real compatibility problem.
 
-**Why now:** The IPC console path proves Yune can generate candidates through
-the server path. It does not prove the TypeDuck-Windows UI consumes Yune's
-candidate structs, ownership model, or rich comment bytes correctly.
+**Why now:** The IPC console path proves Yune can generate candidates through the server path. It does not prove the TypeDuck-Windows UI consumes Yune's candidate structs, ownership model, or rich comment bytes correctly.
 
 **Checklist:**
+
 - [x] Run `TypeDuckServer.exe` under PageHeap/Application Verifier and capture the diagnostic stack. AppVerifier changed the original crash into a pre-candidate hang inside Yune-backed `RimeCreateSession` / `RimeSelectSchema`.
 - [x] Confirm the frontend strides and owns the candidate array according to the exact `RimeCandidate` layout exported by the packaged Yune headers.
 - [x] Compare Yune's `ngohaig` candidate text/comment bytes against stock TypeDuck-Windows backed by the TypeDuck `librime` fork oracle for the same input.
@@ -154,18 +146,16 @@ candidate structs, ownership model, or rich comment bytes correctly.
 - [x] Save curated crash and diff evidence under `docs/evidence/` in the Windows repo.
 - [ ] Re-run the Notepad TSF smoke after P2-WIN-02 fixes or isolates the Yune boundary issue and commit the result.
 
-**Acceptance gate:** A reviewer can tell whether the crash was caused by Yune
-candidate/comment compatibility, the frontend renderer, or an explicitly
-isolated platform-shell issue.
+**Acceptance gate:** A reviewer can tell whether the crash was caused by Yune candidate/comment compatibility, the frontend renderer, or an explicitly isolated platform-shell issue.
 
 ### Phase 1 - Yune Host Contract Spike
 
-**Do not start this phase until P2-WIN-02 is complete and the rerun Windows smoke
-has been reviewed.**
+**Do not start this phase until P2-WIN-02 is complete and the rerun Windows smoke has been reviewed.**
 
 **Goal:** Build the smallest Windows executable that loads packaged Yune and drives a real session without old frontend UI.
 
 **Expected components:**
+
 - `YuneHost` wrapper around `rime.dll`, `rime_get_api()`, and `rime_get_typeduck_profile_api()`.
 - deterministic lifecycle: setup, initialize, deploy, create session, select `jyut6ping3`, process keys, read status/context/candidates, destroy session, cleanup.
 - default-off AI staging seam modeled on TypeDuck-Web's `stage_ai` flow. It may be a no-op in this milestone, but the host/IPC contract must reserve a way to request labeled second-pass AI candidates later without changing the main key-processing path.
@@ -173,6 +163,7 @@ has been reviewed.**
 - log file with package path, schema id, session id, key events, candidate count, and errors.
 
 **Checklist:**
+
 - [ ] Load the Yune package produced by `scripts/package-typeduck-windows.ps1`.
 - [ ] Reject startup if the TypeDuck profile accessor is missing.
 - [ ] Create a session and confirm `status.schema_id=jyut6ping3`.
@@ -191,6 +182,7 @@ has been reviewed.**
 **Working assumption:** C++20 / C++/WinRT is the default because TSF is COM-heavy and existing Weasel/TypeDuck examples are C++.
 
 **Checklist:**
+
 - [ ] Implement or extract TSF registration and unregistration.
 - [ ] Implement key event sink, composition lifecycle, edit session commit, and cleanup.
 - [ ] Route key events to the Phase 1 Yune host through the Phase 0-selected process model.
@@ -207,6 +199,7 @@ has been reviewed.**
 **Goal:** Replace log-only candidate display with a fast, stable, readable candidate window.
 
 **Checklist:**
+
 - [ ] Render horizontal and vertical candidate list modes.
 - [ ] Support page size, page navigation, highlighted candidate, numbering, and selection.
 - [ ] Render candidate comments and dictionary-panel details without inline control markers.
@@ -219,12 +212,10 @@ has been reviewed.**
 
 **Goal:** Build a modern TypeDuck settings experience without carrying old Weasel settings debt.
 
-**Working assumption:** WebView2 hosting the M24 React/Tailwind settings and
-dictionary-panel UI is the first settings/product-UI spike. WinUI 3 / Windows
-App SDK is the native fallback if WebView2 reuse fails packaging, accessibility,
-host-command, or lifecycle gates.
+**Working assumption:** WebView2 hosting the M24 React/Tailwind settings and dictionary-panel UI is the first settings/product-UI spike. WinUI 3 / Windows App SDK is the native fallback if WebView2 reuse fails packaging, accessibility, host-command, or lifecycle gates.
 
 **Checklist:**
+
 - [ ] Cantonese-first labels with clear English support text.
 - [ ] Decide whether the M24 React settings/dictionary UI can be reused directly through WebView2.
 - [ ] Schema selection and current engine status.
@@ -241,6 +232,7 @@ host-command, or lifecycle gates.
 **Goal:** Make the IME installable, diagnosable, and maintainable outside a developer shell.
 
 **Checklist:**
+
 - [ ] Package Yune runtime, schema assets, TSF shell, server/host process, settings app, and candidate UI.
 - [ ] Install and register TSF service with clear rollback on failure.
 - [ ] Uninstall cleanly, including service shutdown and registry cleanup.
@@ -255,6 +247,7 @@ host-command, or lifecycle gates.
 **Goal:** Turn the prototype into a daily-usable Windows IME.
 
 **Checklist:**
+
 - [ ] App compatibility matrix: Notepad, Chromium, Edge, Office, VS Code, terminal, Electron apps, UWP/WinUI apps.
 - [ ] Accessibility matrix: screen-reader behavior, keyboard-only settings navigation, contrast, high-DPI.
 - [ ] Performance matrix: first activation, first key latency, candidate render latency, deploy time, memory use.
@@ -266,7 +259,7 @@ host-command, or lifecycle gates.
 ## Repo Decision Matrix
 
 | Choice | Choose when | Avoid when |
-|---|---|---|
+| --- | --- | --- |
 | Fresh repo | We can isolate TSF/IPC/server/installer shell contracts; old UI/settings are mostly debt; product UX needs a clean architecture | TSF/server/installer extraction becomes the main project and blocks basic typing |
 | Existing repo | The old platform shell is too intertwined to extract safely; build/release path already works; fastest daily-dogfood path matters most | In-place work keeps old librime assumptions, stale UI architecture, or branch drift as permanent constraints |
 | Hybrid extraction | We want fresh architecture but need proven TSF/IPC/server/installer/caret-positioning pieces to reduce risk | The extracted code becomes an unreviewed copy of the old repo with a new name |
@@ -275,34 +268,19 @@ host-command, or lifecycle gates.
 
 ## External Review Follow-Up
 
-The first external strategic review agreed with the Yune-only direction and the
-decision-gated repo strategy, but required five plan changes before handoff:
+The first external strategic review agreed with the Yune-only direction and the decision-gated repo strategy, but required five plan changes before handoff:
 
-- Make the process-model decision explicit. The default is the shared
-  server/IPC model because it fits Yune's process-global singleton and userdb
-  model; in-process TSF-per-app loading must prove itself.
-- Reuse the M24 React/Tailwind settings and dictionary UI through WebView2 if
-  packaging/accessibility/security gates pass; keep the latency-critical inline
-  candidate window native.
-- Reserve a default-off `stage_ai`-style second-pass candidate seam in the host
-  and IPC contract from the start.
-- Map TSF password/secure contexts into Yune's sensitive-context privacy gate:
-  no learning, no AI staging, and no typed-content logs.
-- Add Phase 0A interactive Notepad typing with the existing build before any
-  repo rewrite or extraction commitment.
+- Make the process-model decision explicit. The default is the shared server/IPC model because it fits Yune's process-global singleton and userdb model; in-process TSF-per-app loading must prove itself.
+- Reuse the M24 React/Tailwind settings and dictionary UI through WebView2 if packaging/accessibility/security gates pass; keep the latency-critical inline candidate window native.
+- Reserve a default-off `stage_ai`-style second-pass candidate seam in the host and IPC contract from the start.
+- Map TSF password/secure contexts into Yune's sensitive-context privacy gate: no learning, no AI staging, and no typed-content logs.
+- Add Phase 0A interactive Notepad typing with the existing build before any repo rewrite or extraction commitment.
 
-The second external review of the Phase 0A/0B deliverables endorsed the process
-model, repo decision, evidence discipline, and privacy/AI/WebView2 boundaries,
-but corrected one important attribution risk:
+The second external review of the Phase 0A/0B deliverables endorsed the process model, repo decision, evidence discipline, and privacy/AI/WebView2 boundaries, but corrected one important attribution risk:
 
-- Do not call the Notepad crash "frontend-only" yet. IPC success proves Yune
-  candidate generation, but not native consumption/rendering of Yune candidate
-  structs and rich comment bytes.
-- Phase 0C is now complete in TypeDuck-Windows and classified the blocker as a
-  Yune TypeDuck-profile compatibility/boundary bug. P2-WIN-02 is the blocking
-  implementation milestone before YuneHost/WebView2 work resumes.
-- Re-evaluate the repo decision immediately after the first passing Notepad
-  interactive smoke, before temporary work in the old repo becomes permanent.
+- Do not call the Notepad crash "frontend-only" yet. IPC success proves Yune candidate generation, but not native consumption/rendering of Yune candidate structs and rich comment bytes.
+- Phase 0C is now complete in TypeDuck-Windows and classified the blocker as a Yune TypeDuck-profile compatibility/boundary bug. P2-WIN-02 is the blocking implementation milestone before YuneHost/WebView2 work resumes.
+- Re-evaluate the repo decision immediately after the first passing Notepad interactive smoke, before temporary work in the old repo becomes permanent.
 
 ## Open Questions For Review
 

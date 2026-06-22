@@ -1,13 +1,8 @@
 # Requirements: Yune
 
-**Defined:** 2026-04-28
-**Core Value:** Yune should preserve predictable classic RIME input while making AI/LLM assistance a first-class, local-first, non-blocking source of candidates, ranking, context, and memory.
+**Defined:** 2026-04-28 **Core Value:** Yune should preserve predictable classic RIME input while making AI/LLM assistance a first-class, local-first, non-blocking source of candidates, ranking, context, and memory.
 
-> **Note (2026-06-17):** The GSD `.planning/` system has been retired. This requirement
-> list and its statuses are preserved here; the **Phase** references (e.g. in the
-> Traceability table) are historical GSD labels — now only in git history — kept for
-> context. The live roadmap is [`roadmap.md`](./roadmap.md); decisions are in
-> [`decisions.md`](./decisions.md); conventions in [`CONVENTIONS.md`](./CONVENTIONS.md).
+> **Note (2026-06-17):** The GSD `.planning/` system has been retired. This requirement list and its statuses are preserved here; the **Phase** references (e.g. in the Traceability table) are historical GSD labels — now only in git history — kept for context. The live roadmap is [`roadmap.md`](./roadmap.md); decisions are in [`decisions.md`](./decisions.md); conventions in [`CONVENTIONS.md`](./CONVENTIONS.md).
 
 ## v1 Requirements
 
@@ -75,29 +70,9 @@ Requirements for the next validation milestone before AI-native product work.
 
 ## TypeDuck-Web Browser Integration Requirements
 
-Requirements for the next integration milestone. These requirements turn the
-Phase 6 TypeDuck-Web validation and the seed Rust adapter into a browser-usable
-path before AI-native product work begins.
+Requirements for the next integration milestone. These requirements turn the Phase 6 TypeDuck-Web validation and the seed Rust adapter into a browser-usable path before AI-native product work begins.
 
-**M9 completed real-assets validation.** The build-out (WASM export contract,
-TS bridge, browser filesystem) landed, and the WASM artifact now builds as
-loadable Emscripten `yune-typeduck.js`/`.wasm` with a Node smoke for one
-`yune_typeduck_*` call plus one `FS` operation. A post-review audit found the
-first WI-4 browser matrix used the placeholder echo path for candidate evidence.
-HR-1 proves the patched TypeDuck-Web worker can load real
-`jyut6ping3_mobile` assets and render `nei` candidates (`你`, `呢`, `尼`) in a
-real browser. HR-2 resolves the startup `setOption` export/wrapper/adapter gap,
-HR-3 proves browser `deploy()` returns true with real assets after adding the
-plain `jyut6ping3.schema.yaml` preload, and HR-4 proves live-worker persistence
-sync plus real reload survival. HR-5 reruns the full browser matrix against real
-assets, including paging, deletion, phrase commit, dictionary-panel rendering,
-and zero warning/error console entries after the post-review pure-modifier
-delete-path fix. Rich dictionary-comment byte parity is committed in
-`cantonese_parity`; the browser-shaped native rich-comment test also asserts the
-full real-assets path when local v1.1.2 oracle build assets are present. HR-6
-locks the shared reverse-lookup joiner and schema-prompt bytes against the
-TypeDuck v1.1.2 oracle. HR-7 closes
-M9 with **GO WITH CONDITIONS** for gated AI-native frontend exposure.
+**M9 completed real-assets validation.** The build-out (WASM export contract, TS bridge, browser filesystem) landed, and the WASM artifact now builds as loadable Emscripten `yune-typeduck.js`/`.wasm` with a Node smoke for one `yune_typeduck_*` call plus one `FS` operation. A post-review audit found the first WI-4 browser matrix used the placeholder echo path for candidate evidence. HR-1 proves the patched TypeDuck-Web worker can load real `jyut6ping3_mobile` assets and render `nei` candidates (`你`, `呢`, `尼`) in a real browser. HR-2 resolves the startup `setOption` export/wrapper/adapter gap, HR-3 proves browser `deploy()` returns true with real assets after adding the plain `jyut6ping3.schema.yaml` preload, and HR-4 proves live-worker persistence sync plus real reload survival. HR-5 reruns the full browser matrix against real assets, including paging, deletion, phrase commit, dictionary-panel rendering, and zero warning/error console entries after the post-review pure-modifier delete-path fix. Rich dictionary-comment byte parity is committed in `cantonese_parity`; the browser-shaped native rich-comment test also asserts the full real-assets path when local v1.1.2 oracle build assets are present. HR-6 locks the shared reverse-lookup joiner and schema-prompt bytes against the TypeDuck v1.1.2 oracle. HR-7 closes M9 with **GO WITH CONDITIONS** for gated AI-native frontend exposure.
 
 ### WASM Build And Export Contract
 
@@ -128,12 +103,7 @@ M9 with **GO WITH CONDITIONS** for gated AI-native frontend exposure.
 
 ## M12 Upstream Oracle And Behavioral Parity Requirements
 
-**Status: complete.** Upstream `rime/librime 1.17.0` is the default core
-oracle target. TypeDuck `v1.1.2` remains a compatibility-profile oracle for
-TypeDuck-Web/Windows only. The official upstream Windows MSVC release binary is
-the behavioral-capture oracle; local source builds are a reproducibility check
-rather than the primary capture source. Later M17/M18 closeouts resolved the
-former sentence/lattice and processor blockers with fresh upstream fixtures.
+**Status: complete.** Upstream `rime/librime 1.17.0` is the default core oracle target. TypeDuck `v1.1.2` remains a compatibility-profile oracle for TypeDuck-Web/Windows only. The official upstream Windows MSVC release binary is the behavioral-capture oracle; local source builds are a reproducibility check rather than the primary capture source. Later M17/M18 closeouts resolved the former sentence/lattice and processor blockers with fresh upstream fixtures.
 
 - [x] **UPSTREAM-ORACLE-01**: Upstream `rime/librime 1.17.0` and commit `33e78140250125871856cdc5b42ddc6a5fcd3cd4` are pinned as the default core oracle in docs and fixture provenance.
 - [x] **UPSTREAM-ORACLE-02**: Oracle fixture/golden naming distinguishes upstream core fixtures from TypeDuck profile fixtures, e.g. `upstream-1.17.0/` vs `typeduck-v1.1.2/`.
@@ -148,18 +118,7 @@ former sentence/lattice and processor blockers with fresh upstream fixtures.
 
 ## TypeDuck-Windows Native IME Contract Requirements
 
-**Status: complete as a TypeDuck compatibility profile.** A first pass landed
-(Phases 11-16), M9 web validation is complete, and the archived pre-M12 native
-Windows package smoke has been superseded by current M10 T1/T2 profile package,
-build/link, packaged lifecycle evidence, and stock TypeDuck-Windows real-server
-IPC smoke evidence against `rime_get_typeduck_profile_api()`. The shared comment
-requirement is covered for the current v1.1.2 oracle slices; captured Cantonese
-engine fixtures are active, and the M10 T3 smoke now proves key input/output
-through the native TypeDuck-Windows/weasel IPC path. This T3 proof is a stock
-server/client IPC smoke, not an interactive TSF typing or visible candidate-panel
-rendering smoke; those move to the Phase 2 Windows product/frontend track. These
-requirements target that native path and no longer define Yune's active core
-oracle milestone.
+**Status: complete as a TypeDuck compatibility profile.** A first pass landed (Phases 11-16), M9 web validation is complete, and the archived pre-M12 native Windows package smoke has been superseded by current M10 T1/T2 profile package, build/link, packaged lifecycle evidence, and stock TypeDuck-Windows real-server IPC smoke evidence against `rime_get_typeduck_profile_api()`. The shared comment requirement is covered for the current v1.1.2 oracle slices; captured Cantonese engine fixtures are active, and the M10 T3 smoke now proves key input/output through the native TypeDuck-Windows/weasel IPC path. This T3 proof is a stock server/client IPC smoke, not an interactive TSF typing or visible candidate-panel rendering smoke; those move to the Phase 2 Windows product/frontend track. These requirements target that native path and no longer define Yune's active core oracle milestone.
 
 - [x] **WIN-TEST-01**: Windows `cargo test --workspace` has a trustworthy green baseline, including portable signature timestamp shape and test-only poison-lock recovery.
 - [x] **WIN-ABI-01**: `config_list_append_{string,bool,int,double}` helper behavior is implemented and exposed through the named, opt-in M19 TypeDuck-profile accessor; the default upstream `rime_get_api()` does not expose these fork-only slots.
@@ -185,24 +144,14 @@ Deferred beyond the TypeDuck-Web browser integration milestone. Tracked but not 
 
 ### iOS Keyboard Developer Track
 
-- **IOS-DEV-01**: Yune provides a documented iOS package/host contract for
-  keyboard developers, separate from the default upstream `RimeApi` table and
-  without changing `RimeCandidate`.
-- **IOS-DEV-02**: iOS resource deployment is explicit: schemas, dictionaries,
-  OpenCC data, and userdb storage are bundled or generated in a sandbox-safe
-  location without arbitrary filesystem paths or startup recompilation surprises.
-- **IOS-DEV-03**: Swift/Obj-C integration defines keyboard-extension lifecycle,
-  memory, persistence, and privacy constraints before TypeDuck iOS exposure is
-  claimed.
-- **IOS-DEV-04**: Mobile-specific behavior such as near-key correction maps or
-  keyboard-layout differences is data/config-driven or UI-owned, not hardcoded
-  as desktop-vs-mobile engine branches.
+- **IOS-DEV-01**: Yune provides a documented iOS package/host contract for keyboard developers, separate from the default upstream `RimeApi` table and without changing `RimeCandidate`.
+- **IOS-DEV-02**: iOS resource deployment is explicit: schemas, dictionaries, OpenCC data, and userdb storage are bundled or generated in a sandbox-safe location without arbitrary filesystem paths or startup recompilation surprises.
+- **IOS-DEV-03**: Swift/Obj-C integration defines keyboard-extension lifecycle, memory, persistence, and privacy constraints before TypeDuck iOS exposure is claimed.
+- **IOS-DEV-04**: Mobile-specific behavior such as near-key correction maps or keyboard-layout differences is data/config-driven or UI-owned, not hardcoded as desktop-vs-mobile engine branches.
 
 ### AI Extension Layer
 
-- [x] **AI-01**: Engine exposes an `AiCandidateProvider` interface and staged,
-  input-keyed AI results without replacing classic translators. S1 implements
-  this for the direct CLI mock path.
+- [x] **AI-01**: Engine exposes an `AiCandidateProvider` interface and staged, input-keyed AI results without replacing classic translators. S1 implements this for the direct CLI mock path.
 - [x] **AI-02**: Candidate ranking supports local model and rule-backed implementations with deterministic timeout/fallback behavior. S2 covers the background worker, input-keyed fallback, fixed-point confidence metadata, and confidence-ordered AI merge; S5 adds the local rule-backed provider.
 - [x] **AI-03**: Contextual phrase and sentence completion can produce source-labeled AI candidates without allowing AI candidates to auto-commit by default. S1 covers source labeling and the no-default-auto-commit gate; S5 adds contextual local-model completions.
 - [x] **AI-04**: Context providers define what app, field, preceding text, cursor, schema, and candidate-list data may be shared with AI providers. S3 implements `AiContext` plus `EngineAiContextProvider` snapshots.
@@ -212,9 +161,7 @@ Deferred beyond the TypeDuck-Web browser integration milestone. Tracked but not 
 
 ## M13 AI-native Frontend Exposure Requirements
 
-**Status: complete for TypeDuck-Web.** M13 exposes the M11 local AI layer through
-TypeDuck-Web only, default-off and local-first, with the key path still
-provider-free. Additional native frontend exposure remains future work.
+**Status: complete for TypeDuck-Web.** M13 exposes the M11 local AI layer through TypeDuck-Web only, default-off and local-first, with the key path still provider-free. Additional native frontend exposure remains future work.
 
 - [x] **M13-AI-01**: `yune_typeduck_process_key` remains provider-free and classic-first; AI provider work runs only through the second-pass `yune_typeduck_stage_ai` path.
 - [x] **M13-AI-02**: Browser AI is default-off, can be toggled without redeploy, and `set_ai_enabled(false)` clears any staged result for the current input.
@@ -225,11 +172,7 @@ provider-free. Additional native frontend exposure remains future work.
 
 ## M14–M16 TypeDuck-Web Fork Parity Requirements
 
-**Status: M14 capture complete; M15 engine parity complete; M16 browser validation complete with documented browser-surface limits.** Complete the TypeDuck
-`jyut6ping3` target so the TypeDuck-Web example behaves like the fork.
-Oracle-measured against TypeDuck-HK v1.1.2; `jyut6ping3` is dictionary-driven
-and does **not** require the upstream language model (Track 2 / M17). See
-roadmap M14–M16 and `decisions.md` D-27.
+**Status: M14 capture complete; M15 engine parity complete; M16 browser validation complete with documented browser-surface limits.** Complete the TypeDuck `jyut6ping3` target so the TypeDuck-Web example behaves like the fork. Oracle-measured against TypeDuck-HK v1.1.2; `jyut6ping3` is dictionary-driven and does **not** require the upstream language model (Track 2 / M17). See roadmap M14–M16 and `decisions.md` D-27.
 
 - [x] **TYPEDUCK-PARITY-01**: A v1.1.2 capture path is established by parameterizing the scenario-capable upstream probe's oracle identity (modules/distribution/provenance) — or a thin v1.1.2 wrapper — and Cantonese goldens are captured from the v1.1.2 oracle binary for `combine_candidates`, `show_full_code`, `enable_sentence`, completion/prediction, and correction at multiple input lengths.
 - [x] **TYPEDUCK-PARITY-02**: The oracle-observable surface for schema-menu hiding (`hide_lone_schema`/`hide_caret`) is identified (config API, schema-list/switcher API, or TypeDuck-Web UI state) and emitted behavior is captured — not static config inspection alone.
@@ -241,12 +184,7 @@ roadmap M14–M16 and `decisions.md` D-27.
 
 ## Fork Parity Backlog — Cantonese engine-parity (complete)
 
-**Status: complete.** Derived from the full Cantoboard + TypeDuck fork-vs-`1.17.0` audit in
-[`fork-parity-ledger.md`](./fork-parity-ledger.md). These were genuine fork deltas Yune
-needed to preserve or explicitly decline (distinct from the upstream-depth Track 2 M17–M19 work). M14–M16
-closed the *captured* browser surface; these were the *uncaptured / partial* deltas the
-goldens did not exercise. Each completed implementation was measured against the v1.1.2
-oracle or closed by an explicit product decision.
+**Status: complete.** Derived from the full Cantoboard + TypeDuck fork-vs-`1.17.0` audit in [`fork-parity-ledger.md`](./fork-parity-ledger.md). These were genuine fork deltas Yune needed to preserve or explicitly decline (distinct from the upstream-depth Track 2 M17–M19 work). M14–M16 closed the _captured_ browser surface; these were the _uncaptured / partial_ deltas the goldens did not exercise. Each completed implementation was measured against the v1.1.2 oracle or closed by an explicit product decision.
 
 - [x] **FORK-PARITY-01**: The Cantonese 容錯 (fuzzy) spelling-algebra ruleset (`lv1_laanjam`, `lv2_upper`, `shortcuts`, `lv2_lower`, abbreviation — including the `ng→m` rule behind the F1 `m` case) runs on the real ~127k-entry `jyut6ping3` dictionary, with a real-dictionary golden.
 - [x] **FORK-PARITY-02**: `PreferUserPhrase` weighted gate — a user-dictionary phrase outranks a competing system phrase only with a longer code, or equal-length code and weight ≥ the system phrase.
@@ -260,155 +198,62 @@ oracle or closed by an explicit product decision.
 
 ## M20 Web Demo Showcase Controls Requirements
 
-**Status: complete.** M20 is a web/demo track for this repo's patched internal
-TypeDuck-Web harness, not a reopened M13 and not the separately cloned
-`TypeDuck-HK/TypeDuck-Web` product. It exposes already-supported Yune behavior
-through honest UI controls and guided scenarios while preserving the M9/M13/M16
-browser gates and the upstream-first ABI constraints. Browser evidence is under
-`third_party/typeduck-web/e2e/results/m20-showcase-controls/`.
+**Status: complete.** M20 is a web/demo track for this repo's patched internal TypeDuck-Web harness, not a reopened M13 and not the separately cloned `TypeDuck-HK/TypeDuck-Web` product. It exposes already-supported Yune behavior through honest UI controls and guided scenarios while preserving the M9/M13/M16 browser gates and the upstream-first ABI constraints. Browser evidence is under `third_party/typeduck-web/e2e/results/m20-showcase-controls/`.
 
-- [x] **M20-DEMO-01**: TypeDuck-Web exposes only runtime-backed active controls:
-  schema/deploy-time controls flow through `customize()` plus deploy, live
-  session controls flow through `setOption()`, display-only controls are grouped
-  separately, and no new `RimeApi`, `RimeCandidate`, or `yune_typeduck_*` export
-  is added for UI convenience.
-- [x] **M20-DEMO-02**: Prediction controls are honest and profile-aligned:
-  `prediction_never_first` defaults on, and the UI exposes one prediction
-  threshold control because the frequency/weight config aliases drive the same
-  engine threshold; the fine-grained threshold UI has a real-assets-calibrated
-  `santai` cutoff plus documented range bounds in browser evidence.
-- [x] **M20-DEMO-03**: Static or default-on engine features are guided
-  scenarios, not fake toggles: long-entry prediction (`santai` -> `身體健康`),
-  Cantonese fuzzy/容錯, letter-to-tone, reverse lookup/dictionary panels, and
-  AI second-pass behavior are demonstrable without misrepresenting their
-  configurability.
-- [x] **M20-DEMO-04**: The internal TypeDuck-Web harness and
-  `@yune-ime/typeduck-runtime` subtrees have local `AGENTS.md` guidance covering
-  patch discipline, runtime wrapper boundaries, browser evidence, the
-  control-honesty rule, and the distinction between the harness, the runtime
-  bridge, and the real TypeDuck-Web web IME product.
-- [x] **M20-DEMO-05**: Real browser evidence includes an honesty gate proving
-  supported controls with visible before/after output where the
-  `jyut6ping3_mobile` browser surface can render it: AI candidates,
-  `combine_candidates`, `prediction_never_first`, prediction threshold, live
-  `setOption()` controls, display-language/Jyutping rendering, and guided
-  scenarios. Deploy-time controls whose current browser panel effect is not
-  independently visible keep real persisted `jyut6ping3_mobile.custom.yaml`
-  assertions, but are not counted as candidate-output proof. Input Memory has a
-  visible learned-prediction on-state and an explicit browser-surface N/A for
-  memory-off suppression; Auto-correction now has real `nri` browser
-  before/after evidence, with correction off rendering the v1.1.2 prefix
-  fallback rows and correction on rendering `你` first. The full oracle row set
-  and commit previews remain engine-proven by `cantonese_parity`.
-  `ascii_punct` now has M18 engine behavior but remains absent as a working
-  browser toggle until a browser-visible evidence slice proves it. The fixed
-  `jyut6ping3_mobile` browser schema lacks a
-  `cangjie` namespace, so Reverse code display / Cangjie / `show_full_code` are
-  labeled current-surface N/A rather than fake working toggles.
-- [x] **M20-DEMO-06**: The internal TypeDuck-Web harness is documented and
-  maintained as Yune's canonical browser playground: every browser-safe
-  supported engine feature is reachable through an active control or guided
-  scenario, and unsupported or deferred behavior is clearly absent or labeled
-  rather than partially exposed.
-- [x] **M20-DEMO-07**: Headline TypeDuck profile toggles are not lost in the
-  playground: `translator/combine_candidates` is an active control whose
-  UI default is documented as an M20 grouped-candidate demo choice while the raw
-  mobile browser assets still record `common:/separate_candidates`, and
-  `show_full_code` is either exercised through a browser-reachable Cangjie
-  side-lookup scenario/control or explicitly recorded as N/A for the current
-  `jyut6ping3_mobile`-only surface.
+- [x] **M20-DEMO-01**: TypeDuck-Web exposes only runtime-backed active controls: schema/deploy-time controls flow through `customize()` plus deploy, live session controls flow through `setOption()`, display-only controls are grouped separately, and no new `RimeApi`, `RimeCandidate`, or `yune_typeduck_*` export is added for UI convenience.
+- [x] **M20-DEMO-02**: Prediction controls are honest and profile-aligned: `prediction_never_first` defaults on, and the UI exposes one prediction threshold control because the frequency/weight config aliases drive the same engine threshold; the fine-grained threshold UI has a real-assets-calibrated `santai` cutoff plus documented range bounds in browser evidence.
+- [x] **M20-DEMO-03**: Static or default-on engine features are guided scenarios, not fake toggles: long-entry prediction (`santai` -> `身體健康`), Cantonese fuzzy/容錯, letter-to-tone, reverse lookup/dictionary panels, and AI second-pass behavior are demonstrable without misrepresenting their configurability.
+- [x] **M20-DEMO-04**: The internal TypeDuck-Web harness and `@yune-ime/typeduck-runtime` subtrees have local `AGENTS.md` guidance covering patch discipline, runtime wrapper boundaries, browser evidence, the control-honesty rule, and the distinction between the harness, the runtime bridge, and the real TypeDuck-Web web IME product.
+- [x] **M20-DEMO-05**: Real browser evidence includes an honesty gate proving supported controls with visible before/after output where the `jyut6ping3_mobile` browser surface can render it: AI candidates, `combine_candidates`, `prediction_never_first`, prediction threshold, live `setOption()` controls, display-language/Jyutping rendering, and guided scenarios. Deploy-time controls whose current browser panel effect is not independently visible keep real persisted `jyut6ping3_mobile.custom.yaml` assertions, but are not counted as candidate-output proof. Input Memory has a visible learned-prediction on-state and an explicit browser-surface N/A for memory-off suppression; Auto-correction now has real `nri` browser before/after evidence, with correction off rendering the v1.1.2 prefix fallback rows and correction on rendering `你` first. The full oracle row set and commit previews remain engine-proven by `cantonese_parity`. `ascii_punct` now has M18 engine behavior but remains absent as a working browser toggle until a browser-visible evidence slice proves it. The fixed `jyut6ping3_mobile` browser schema lacks a `cangjie` namespace, so Reverse code display / Cangjie / `show_full_code` are labeled current-surface N/A rather than fake working toggles.
+- [x] **M20-DEMO-06**: The internal TypeDuck-Web harness is documented and maintained as Yune's canonical browser playground: every browser-safe supported engine feature is reachable through an active control or guided scenario, and unsupported or deferred behavior is clearly absent or labeled rather than partially exposed.
+- [x] **M20-DEMO-07**: Headline TypeDuck profile toggles are not lost in the playground: `translator/combine_candidates` is an active control whose UI default is documented as an M20 grouped-candidate demo choice while the raw mobile browser assets still record `common:/separate_candidates`, and `show_full_code` is either exercised through a browser-reachable Cangjie side-lookup scenario/control or explicitly recorded as N/A for the current `jyut6ping3_mobile`-only surface.
 
 ## M22 Web Playground Requirements
 
-- [x] **M22-PLAY-01**: The internal TypeDuck-Web playground has an opt-in
-  read-only engine inspector showing segment tags, candidate source/quality/
-  preedit/comment details, spelling-algebra expansion, filter audit, prediction
-  score/threshold data, and AI staging state.
-- [x] **M22-PLAY-02**: The inspector is off by default, preserves classic
-  candidate response identity when disabled, has committed browser evidence, and
-  does not change the default `RimeApi`, `RimeCandidate`, or ABI layout files.
-- [x] **M22-PLAY-03**: Remaining browser-safe controls
-  (`traditionalization`, `extended_charset`, `disabled`, `dictionary_exclude`,
-  and any `ascii_punct` exposure after M18) are exposed only when they clear the
-  M20 honesty gate with real browser before/after evidence; otherwise they are
-  documented as browser-surface N/A. M22 exposes the first four controls with
-  status/candidate/persisted-config evidence and keeps `ascii_punct` absent.
-- [x] **M22-PLAY-04**: The playground loads `jyut6ping3_mobile`, `cangjie5`,
-  and `luna_pinyin` through a real schema switcher with reverse lookup for the
-  new schemas, using generated or provenance-stamped compiled artifacts with
-  measured browser asset sizes.
+- [x] **M22-PLAY-01**: The internal TypeDuck-Web playground has an opt-in read-only engine inspector showing segment tags, candidate source/quality/ preedit/comment details, spelling-algebra expansion, filter audit, prediction score/threshold data, and AI staging state.
+- [x] **M22-PLAY-02**: The inspector is off by default, preserves classic candidate response identity when disabled, has committed browser evidence, and does not change the default `RimeApi`, `RimeCandidate`, or ABI layout files.
+- [x] **M22-PLAY-03**: Remaining browser-safe controls (`traditionalization`, `extended_charset`, `disabled`, `dictionary_exclude`, and any `ascii_punct` exposure after M18) are exposed only when they clear the M20 honesty gate with real browser before/after evidence; otherwise they are documented as browser-surface N/A. M22 exposes the first four controls with status/candidate/persisted-config evidence and keeps `ascii_punct` absent.
+- [x] **M22-PLAY-04**: The playground loads `jyut6ping3_mobile`, `cangjie5`, and `luna_pinyin` through a real schema switcher with reverse lookup for the new schemas, using generated or provenance-stamped compiled artifacts with measured browser asset sizes.
 
 ## M24 TypeDuck-Web Dogfooding Requirements
 
-**Status: complete.** M24 closed the first manual dogfooding/demo-hardening
-batch for the internal TypeDuck-Web playground. The closed issue ledger and
-evidence index live in
-[`plans/archive/m24-plan-typeduck-web-dogfooding.md`](./plans/archive/m24-plan-typeduck-web-dogfooding.md),
-with browser evidence under
-`third_party/typeduck-web/e2e/results/m24-dogfooding/`.
+**Status: complete.** M24 closed the first manual dogfooding/demo-hardening batch for the internal TypeDuck-Web playground. The closed issue ledger and evidence index live in [`plans/archive/m24-plan-typeduck-web-dogfooding.md`](./plans/archive/m24-plan-typeduck-web-dogfooding.md), with browser evidence under `third_party/typeduck-web/e2e/results/m24-dogfooding/`.
 
-- [x] **M24-DOGFOOD-REQ-01**: The dogfood browser harness records issue-scoped
-  evidence under `m24-dogfooding/<issue-id>/`, and startup evidence includes the
-  worker phase markers, `yune-typeduck.js`/`.wasm` asset identity, and loaded
-  shared schema assets.
-- [x] **M24-DOGFOOD-REQ-02**: Candidate rendering strips literal `\f`, `\r`,
-  and `\v` controls from visible rows while preserving dictionary parsing, and
-  compound candidates keep row text compact with details in the dictionary panel.
-- [x] **M24-DOGFOOD-REQ-03**: Browser/runtime correctness fixes remain
-  fixture-backed where engine output is involved: `jigaajiusihaa` ordering is
-  locked to TypeDuck `v1.1.2`, page-size customization writes `menu/page_size`,
-  and the historical M24 Jyutping reverse lookup path uses packaged browser
-  assets; M25 updates the current web profile to bare `` `zhe `` for
-  `luna_pinyin`.
-- [x] **M24-DOGFOOD-REQ-04**: The TypeDuck-Web playground settings are
-  Cantonese-first and grouped by engine/session/display/frontend purpose, with
-  checklist display languages, real schema names, labeled engine status, and full
-  Chinese typeface family names.
-- [x] **M24-DOGFOOD-REQ-05**: The dogfood UI stack is Vite + React + Tailwind CSS
-  plus small local components only; DaisyUI is removed from package metadata,
-  Tailwind config, and local component class usage.
+- [x] **M24-DOGFOOD-REQ-01**: The dogfood browser harness records issue-scoped evidence under `m24-dogfooding/<issue-id>/`, and startup evidence includes the worker phase markers, `yune-typeduck.js`/`.wasm` asset identity, and loaded shared schema assets.
+- [x] **M24-DOGFOOD-REQ-02**: Candidate rendering strips literal `\f`, `\r`, and `\v` controls from visible rows while preserving dictionary parsing, and compound candidates keep row text compact with details in the dictionary panel.
+- [x] **M24-DOGFOOD-REQ-03**: Browser/runtime correctness fixes remain fixture-backed where engine output is involved: `jigaajiusihaa` ordering is locked to TypeDuck `v1.1.2`, page-size customization writes `menu/page_size`, and the historical M24 Jyutping reverse lookup path uses packaged browser assets; M25 updates the current web profile to bare `` `zhe `` for `luna_pinyin`.
+- [x] **M24-DOGFOOD-REQ-04**: The TypeDuck-Web playground settings are Cantonese-first and grouped by engine/session/display/frontend purpose, with checklist display languages, real schema names, labeled engine status, and full Chinese typeface family names.
+- [x] **M24-DOGFOOD-REQ-05**: The dogfood UI stack is Vite + React + Tailwind CSS plus small local components only; DaisyUI is removed from package metadata, Tailwind config, and local component class usage.
 
 ## M25 TypeDuck-Web Dogfooding Round 2 Requirements
 
-**Status: complete.** M25 closed the second manual dogfooding round for the
-internal TypeDuck-Web playground. The archived ledger and closeout evidence
-index live in
-[`plans/archive/m25-plan-typeduck-web-dogfooding-round-2.md`](./plans/archive/m25-plan-typeduck-web-dogfooding-round-2.md),
-with browser evidence under
-`third_party/typeduck-web/e2e/results/m25-dogfooding/`.
+**Status: complete.** M25 closed the second manual dogfooding round for the internal TypeDuck-Web playground. The archived ledger and closeout evidence index live in [`plans/archive/m25-plan-typeduck-web-dogfooding-round-2.md`](./plans/archive/m25-plan-typeduck-web-dogfooding-round-2.md), with browser evidence under `third_party/typeduck-web/e2e/results/m25-dogfooding/`.
 
-- [x] **M25-DOGFOOD-REQ-01**: Every closed M25 row has issue-scoped browser
-  JSON/screenshot evidence, an owning Playwright or native test listed in the
-  ledger closeout table, and TypeDuck-Web source changes regenerated into
-  `third_party/typeduck-web/patches/yune-typeduck-runtime.patch` with
-  reverse/forward patch checks.
-- [x] **M25-DOGFOOD-REQ-02**: Browser startup uses the release-mode WASM build,
-  records phase timing evidence, reuses fresh deploy state instead of forcing
-  schema invalidation, and normal typing no longer shows the global loading
-  state.
-- [x] **M25-DOGFOOD-REQ-03**: Page size is an obvious 3-10 setting wired to
-  `menu/page_size`; native and browser tests prove the candidate panel cap and
-  page navigation at 3, 9, and 10 visible rows.
-- [x] **M25-DOGFOOD-REQ-04**: The current Jyutping web profile uses bare
-  `` ` `` for `luna_pinyin` reverse lookup, removes the vestigial bare
-  `reverse_lookup` slot, keeps retained Loengfan/Cangjie secondary lookups on
-  explicit non-bare triggers such as `` `vl`` / `` `vc``, and shows the trigger
-  map in the web UI.
-- [x] **M25-DOGFOOD-REQ-05**: The schema selector, Luna visible name, Cangjie
-  version control, Display/Live settings order, and IME Settings alignment are
-  browser-evidenced across desktop and narrow viewports.
-- [x] **M25-DOGFOOD-REQ-06**: Binary dogfood controls use checkbox-style
-  affordances, Candidate Menu Layout uses radio choices, and the UI stack
-  remains Vite + React + Tailwind CSS plus small local components only.
+- [x] **M25-DOGFOOD-REQ-01**: Every closed M25 row has issue-scoped browser JSON/screenshot evidence, an owning Playwright or native test listed in the ledger closeout table, and TypeDuck-Web source changes regenerated into `third_party/typeduck-web/patches/yune-typeduck-runtime.patch` with reverse/forward patch checks.
+- [x] **M25-DOGFOOD-REQ-02**: Browser startup uses the release-mode WASM build, records phase timing evidence, reuses fresh deploy state instead of forcing schema invalidation, and normal typing no longer shows the global loading state.
+- [x] **M25-DOGFOOD-REQ-03**: Page size is an obvious 3-10 setting wired to `menu/page_size`; native and browser tests prove the candidate panel cap and page navigation at 3, 9, and 10 visible rows.
+- [x] **M25-DOGFOOD-REQ-04**: The current Jyutping web profile uses bare `` ` `` for `luna_pinyin` reverse lookup, removes the vestigial bare `reverse_lookup` slot, keeps retained Loengfan/Cangjie secondary lookups on explicit non-bare triggers such as `` `vl`` / `` `vc``, and shows the trigger map in the web UI.
+- [x] **M25-DOGFOOD-REQ-05**: The schema selector, Luna visible name, Cangjie version control, Display/Live settings order, and IME Settings alignment are browser-evidenced across desktop and narrow viewports.
+- [x] **M25-DOGFOOD-REQ-06**: Binary dogfood controls use checkbox-style affordances, Candidate Menu Layout uses radio choices, and the UI stack remains Vite + React + Tailwind CSS plus small local components only.
 
-**Follow-on (no requirement IDs):** [`M21`](./plans/archive/m21-plan-typeduck-web-product-comparison.md) is complete as a post-M20 *comparison protocol* and hard-oracle closeout. It compared the Yune harness against the deployed `typeduck.hk/web` product as a behavior/feel target, but the `v1.1.2` fixtures remained the hard oracle. The final gap ledger has no remaining hard-oracle action rows: M21-GAP-01 is closed by `jyut6ping3-m21-sentence-composition.json`, M21-GAP-02 is closed by `jyut6ping3-m21-prediction-ranking.json` plus real `nri` browser before/after evidence, and `jyut6ping3-m21-closeout.json` locks the remaining baseline/fuzzy/sentence/`hk2s`/tone-letter/paging rows including the final `m` and `mgoi` fixes.
+## M26 Performance Hardening Requirements
+
+**Status: active.** M26 turns the post-M25 performance review into a measurement-first hardening milestone. It separates native engine cost from browser/WASM/worker/React latency before any optimization claims are accepted.
+
+- [ ] **M26-PERF-REQ-01**: Native large-real-asset benchmarks cover `jyut6ping3_mobile`, `luna_pinyin`, and a representative breadth schema, reporting median, p95, p99, max, and allocation/memory notes for startup, schema load, session create/destroy, per-key processing, candidate snapshot, paging/action, and teardown.
+- [ ] **M26-PERF-REQ-02**: Browser diagnostics record keydown-to-paint or the closest browser-supported proxy for normal typing, long phrases, page changes, reverse lookup, and cold/warm startup, without treating browser-only numbers as native engine latency.
+- [ ] **M26-PERF-REQ-03**: Startup diagnostics attribute the current coarse TypeDuck-Web `runtime:initialized` interval into engine/package load, virtual filesystem mount/sync, schema asset deploy/reuse, worker initialization, and UI readiness buckets.
+- [ ] **M26-PERF-REQ-04**: At least one measured optimization lands with before/after native and browser evidence. If the highest-value owner is too large for M26, the milestone lands a low-risk proven slice and records the larger follow-up.
+- [ ] **M26-PERF-REQ-05**: Compatibility gates remain green: upstream `luna_pinyin`, Cantonese parity, native `typeduck_web`, TypeScript runtime tests/build, TypeDuck-Web build, focused M26 browser evidence, and patch reverse/forward checks.
+
+**Follow-on (no requirement IDs):** [`M21`](./plans/archive/m21-plan-typeduck-web-product-comparison.md) is complete as a post-M20 _comparison protocol_ and hard-oracle closeout. It compared the Yune harness against the deployed `typeduck.hk/web` product as a behavior/feel target, but the `v1.1.2` fixtures remained the hard oracle. The final gap ledger has no remaining hard-oracle action rows: M21-GAP-01 is closed by `jyut6ping3-m21-sentence-composition.json`, M21-GAP-02 is closed by `jyut6ping3-m21-prediction-ranking.json` plus real `nri` browser before/after evidence, and `jyut6ping3-m21-closeout.json` locks the remaining baseline/fuzzy/sentence/`hk2s`/tone-letter/paging rows including the final `m` and `mgoi` fixes.
 
 ## Out of Scope
 
 Explicitly excluded from the current milestone.
 
 | Feature | Reason |
-|---------|--------|
+| --- | --- |
 | Full librime C++ plugin ABI compatibility | Expensive and not yet required by a concrete frontend or distribution migration path |
 | Cloud inference as a required dependency | Classic input behavior must remain local-first and predictable |
 | New GUI frontend | Native frontend integration should validate the ABI first; `yune-cli` is only a frontend surrogate |
@@ -420,7 +265,7 @@ Explicitly excluded from the current milestone.
 Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
-|-------------|-------|--------|
+| --- | --- | --- |
 | CLI-01 | Phase 1 | Complete |
 | CLI-02 | Phase 1 | Complete |
 | CLI-03 | Phase 1 | Complete |
@@ -541,8 +386,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | M25-DOGFOOD-REQ-04 | M25 | Complete - bare-grave Luna reverse lookup and explicit `vl`/`vc` side lookup triggers are native/browser tested |
 | M25-DOGFOOD-REQ-05 | M25 | Complete - top-control layout, settings order, and alignment are browser-evidenced |
 | M25-DOGFOOD-REQ-06 | M25 | Complete - checkbox and radio affordances preserve the local Tailwind component stack |
+| M26-PERF-REQ-01 | M26 | Active - native large-real-asset benchmark coverage |
+| M26-PERF-REQ-02 | M26 | Active - browser keydown-to-paint instrumentation |
+| M26-PERF-REQ-03 | M26 | Active - startup attribution below `runtime:initialized` |
+| M26-PERF-REQ-04 | M26 | Active - measured optimization with before/after evidence |
+| M26-PERF-REQ-05 | M26 | Active - compatibility and integration gates remain green |
 
 **Coverage:**
+
 - v1 requirements: 25 total
 - v2 validation requirements: 7 total
 - TypeDuck-Web integration requirements: 15 total
@@ -556,9 +407,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 - M22 web playground requirements: 4 total, 4 complete
 - M24 TypeDuck-Web dogfooding requirements: 5 total, 5 complete
 - M25 TypeDuck-Web dogfooding round 2 requirements: 6 total, 6 complete
-- Mapped to phases: 120
+- M26 performance hardening requirements: 5 total, 0 complete
+- Mapped to phases: 125
 - Unmapped: 0
 
 ---
-*Requirements defined: 2026-04-28*
-*Last updated: 2026-06-21 - M25 TypeDuck-Web dogfooding round 2 is complete with 10/10 rows closed, browser evidence, and regenerated TypeDuck-Web patch checks; M24 TypeDuck-Web dogfooding remains complete with 13/13 rows closed and browser evidence; M19 schema breadth and the named TypeDuck-profile ABI accessor are complete; M23 architecture hardening and M18 deployment/processor depth are complete; all M22 TypeDuck-Web playground buckets are complete with browser evidence; M21 TypeDuck-Web product comparison is complete as a hard-oracle closeout; M20 Web Demo Showcase Controls remain complete as a separate internal web/demo track; M10 TypeDuck-Windows is complete as a TypeDuck compatibility profile with T1/T2 package/profile smoke, build/link evidence, and stock T3 TypeDuckServer/TestTypeDuckIPC real-server IPC smoke*
+
+_Requirements defined: 2026-04-28_ _Last updated: 2026-06-22 - M26 performance hardening is active with five measurement-first requirements; M25 TypeDuck-Web dogfooding round 2 is complete with 10/10 rows closed, browser evidence, and regenerated TypeDuck-Web patch checks; M24 TypeDuck-Web dogfooding remains complete with 13/13 rows closed and browser evidence; M19 schema breadth and the named TypeDuck-profile ABI accessor are complete; M23 architecture hardening and M18 deployment/processor depth are complete; all M22 TypeDuck-Web playground buckets are complete with browser evidence; M21 TypeDuck-Web product comparison is complete as a hard-oracle closeout; M20 Web Demo Showcase Controls remain complete as a separate internal web/demo track; M10 TypeDuck-Windows is complete as a TypeDuck compatibility profile with T1/T2 package/profile smoke, build/link evidence, and stock T3 TypeDuckServer/TestTypeDuckIPC real-server IPC smoke_

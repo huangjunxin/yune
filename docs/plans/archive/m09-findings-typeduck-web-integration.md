@@ -6,267 +6,154 @@ This document records findings from integrating Yune with the upstream TypeDuck-
 
 ## Current Recommendation
 
-**Recommendation: GO WITH CONDITIONS** — the TypeDuck-Web browser path is proven
-for classic real-asset RIME flows, so AI-native frontend exposure may proceed
-only behind the separate M11 gating policy: AI remains off by default in real
-frontends until provider/ranking/privacy behavior is proven through the CLI
-slice and explicitly enabled. HR-5 proves the browser can run the real TypeDuck
-`jyut6ping3_mobile` matrix end to end: real candidates render, paging changes
-pages, Space commits the highlighted candidate, `ngohaigo` commits as a phrase,
-candidate deletion works, deploy/customize/persistence/reload pass, and
-dictionary-panel comments render from the v1.1.2 oracle-shaped payload. The
-post-review closeout fixed the `{Control_L}` modifier-key banner that appeared
-before `{Control+Delete}` and recaptured delete/backspace evidence with no
-visible runtime-error banner. A later post-review regression fixed partial-final
-sentence completion, matching the TypeDuck v1.1.2 oracle for `ngohaig -> 我係個`
-and recapturing clean browser evidence in `hr5-final-ngohaig-state.json`. HR-6
-also locks the shared reverse-lookup comment
-joiner and schema-prompt bytes. Clean-checkout dictionary-comment byte parity is
-guaranteed by the committed `cantonese_parity` fixture; the browser-shaped
-native rich-comment integration test runs its byte assertion only when the local
-TypeDuck v1.1.2 oracle build assets are present.
+**Recommendation: GO WITH CONDITIONS** — the TypeDuck-Web browser path is proven for classic real-asset RIME flows, so AI-native frontend exposure may proceed only behind the separate M11 gating policy: AI remains off by default in real frontends until provider/ranking/privacy behavior is proven through the CLI slice and explicitly enabled. HR-5 proves the browser can run the real TypeDuck `jyut6ping3_mobile` matrix end to end: real candidates render, paging changes pages, Space commits the highlighted candidate, `ngohaigo` commits as a phrase, candidate deletion works, deploy/customize/persistence/reload pass, and dictionary-panel comments render from the v1.1.2 oracle-shaped payload. The post-review closeout fixed the `{Control_L}` modifier-key banner that appeared before `{Control+Delete}` and recaptured delete/backspace evidence with no visible runtime-error banner. A later post-review regression fixed partial-final sentence completion, matching the TypeDuck v1.1.2 oracle for `ngohaig -> 我係個` and recapturing clean browser evidence in `hr5-final-ngohaig-state.json`. HR-6 also locks the shared reverse-lookup comment joiner and schema-prompt bytes. Clean-checkout dictionary-comment byte parity is guaranteed by the committed `cantonese_parity` fixture; the browser-shaped native rich-comment integration test runs its byte assertion only when the local TypeDuck v1.1.2 oracle build assets are present.
 
-> **Historical scope.** The Phase 10 blocker tables below describe the
-> 2026-05-05 validation attempt, before WI-1b produced a loadable
-> Emscripten JS/WASM module. The current WI-4 browser evidence is the
-> Phase 17 matrix in this file's final summary; the HR-1 note below supersedes
-> its echo-backed composition/candidate rows.
+> **Historical scope.** The Phase 10 blocker tables below describe the 2026-05-05 validation attempt, before WI-1b produced a loadable Emscripten JS/WASM module. The current WI-4 browser evidence is the Phase 17 matrix in this file's final summary; the HR-1 note below supersedes its echo-backed composition/candidate rows.
 
 ## HR-1 Real-Assets Browser Smoke
 
-**Date**: 2026-06-18
-**Status**: PASS for the real-assets candidate gate; full E2E matrix still open.
+**Date**: 2026-06-18 **Status**: PASS for the real-assets candidate gate; full E2E matrix still open.
 
 **What changed**:
-- TypeDuck-Web worker now selects `jyut6ping3_mobile` and dictionary
-  `jyut6ping3`, with deployed `schema/build/default.yaml` and
-  `schema/build/jyut6ping3_mobile.schema.yaml` preloaded before init.
-- `RimeGetContext` no longer rejects the mobile schema's
-  `menu/alternative_select_keys: "\x00"` sentinel when exporting context; the
-  sentinel remains available internally for selector behavior, but browser JSON
-  receives `select_keys: null`.
-- The Emscripten build uses a larger/growing memory configuration for the real
-  asset load.
+
+- TypeDuck-Web worker now selects `jyut6ping3_mobile` and dictionary `jyut6ping3`, with deployed `schema/build/default.yaml` and `schema/build/jyut6ping3_mobile.schema.yaml` preloaded before init.
+- `RimeGetContext` no longer rejects the mobile schema's `menu/alternative_select_keys: "\x00"` sentinel when exporting context; the sentinel remains available internally for selector behavior, but browser JSON receives `select_keys: null`.
+- The Emscripten build uses a larger/growing memory configuration for the real asset load.
 
 **Proof**:
-- Direct Node/Emscripten artifact instantiation with real assets returns
-  `schema: "jyut6ping3_mobile"`, `input: "nei"`, `preedit: "nei"`,
-  `select_keys: null`, and candidates beginning `你`, `呢`, `尼`.
-- Live browser at `http://127.0.0.1:5173/web/?debug&realAssets=1` renders the
-  candidate panel for `nei` with `1.你`, `2.呢`, `3.尼`, followed by real
-  TypeDuck dictionary candidates.
-- Browser logs record `initialized: true` and a `{i}` `processKey` success with
-  `isComposing: true`, `inputBuffer.before: "nei"`, and candidates beginning
-  `你`, `呢`, `尼`.
-- HR-1b committed the browser proof under
-  `third_party/typeduck-web/e2e/results/`: `browser-run.log`,
-  `browser-console.json`, `dom-snapshot-candidates.txt`, `blocker.md`, and
-  `screenshot-real-assets-nei.png`. These artifacts supersede the old
-  echo-backed WI-4 results for the real-assets candidate gate.
+
+- Direct Node/Emscripten artifact instantiation with real assets returns `schema: "jyut6ping3_mobile"`, `input: "nei"`, `preedit: "nei"`, `select_keys: null`, and candidates beginning `你`, `呢`, `尼`.
+- Live browser at `http://127.0.0.1:5173/web/?debug&realAssets=1` renders the candidate panel for `nei` with `1.你`, `2.呢`, `3.尼`, followed by real TypeDuck dictionary candidates.
+- Browser logs record `initialized: true` and a `{i}` `processKey` success with `isComposing: true`, `inputBuffer.before: "nei"`, and candidates beginning `你`, `呢`, `尼`.
+- HR-1b committed the browser proof under `third_party/typeduck-web/e2e/results/`: `browser-run.log`, `browser-console.json`, `dom-snapshot-candidates.txt`, `blocker.md`, and `screenshot-real-assets-nei.png`. These artifacts supersede the old echo-backed WI-4 results for the real-assets candidate gate.
 
 **Still open after HR-1**:
+
 - `setOption` was still throwing from the adapter stub; HR-2 resolves that gap.
 - Browser `deploy()` returned `false`; HR-3 resolves that gap.
-- HR-4 proves live-worker persistence sync before init, after customize/deploy,
-  and after a real reload.
-- Paging, deletion, and dictionary-panel comment bytes must be re-run against
-  real assets in HR-5.
+- HR-4 proves live-worker persistence sync before init, after customize/deploy, and after a real reload.
+- Paging, deletion, and dictionary-panel comment bytes must be re-run against real assets in HR-5.
 
 ---
 
 ## HR-2 setOption Export And Adapter Path
 
-**Date**: 2026-06-18
-**Status**: PASS for the `setOption` gap; full E2E matrix still open.
+**Date**: 2026-06-18 **Status**: PASS for the `setOption` gap; full E2E matrix still open.
 
 **What changed**:
-- Added the `yune_typeduck_set_option` C export, retained it in the Emscripten
-  linker anchor, and added it to `scripts/typeduck-exports.txt`.
+
+- Added the `yune_typeduck_set_option` C export, retained it in the Emscripten linker anchor, and added it to `scripts/typeduck-exports.txt`.
 - Added `TypeDuckRuntime.setOption` and the TypeScript binding signature.
-- Replaced the TypeDuck-Web adapter's throwing `setOption` stub with a call into
-  the active runtime.
+- Replaced the TypeDuck-Web adapter's throwing `setOption` stub with a call into the active runtime.
 
 **Proof**:
-- `cargo test -p yune-rime-api --test typeduck_web` includes
-  `typeduck_adapter_set_option_updates_session_status`.
-- `npm --prefix packages/yune-typeduck-runtime test` covers binding/runtime
-  forwarding.
-- `vitest run third_party/typeduck-web/yune-integration` covers adapter
-  forwarding.
-- `third_party/typeduck-web/e2e/results/set-option-browser.log` records a live
-  browser reload where startup `setOption` posts receive success responses, no
-  option-error toast is visible, and no browser error logs are emitted.
+
+- `cargo test -p yune-rime-api --test typeduck_web` includes `typeduck_adapter_set_option_updates_session_status`.
+- `npm --prefix packages/yune-typeduck-runtime test` covers binding/runtime forwarding.
+- `vitest run third_party/typeduck-web/yune-integration` covers adapter forwarding.
+- `third_party/typeduck-web/e2e/results/set-option-browser.log` records a live browser reload where startup `setOption` posts receive success responses, no option-error toast is visible, and no browser error logs are emitted.
 
 ---
 
 ## HR-3 Deploy With Real Assets
 
-**Date**: 2026-06-18
-**Status**: PASS for browser deploy with real TypeDuck assets; full E2E matrix
-still open.
+**Date**: 2026-06-18 **Status**: PASS for browser deploy with real TypeDuck assets; full E2E matrix still open.
 
 **What changed**:
-- Added the plain `jyut6ping3.schema.yaml` to the TypeDuck-Web worker preload
-  set. The real `default.custom.yaml` workspace path can reach this source
-  schema during deployment even though the active browser schema is
-  `jyut6ping3_mobile`.
-- Tightened the native `typeduck_web` contract test so its "browser real assets"
-  setup mirrors the curated browser preload list instead of copying the whole
-  schema directory.
+
+- Added the plain `jyut6ping3.schema.yaml` to the TypeDuck-Web worker preload set. The real `default.custom.yaml` workspace path can reach this source schema during deployment even though the active browser schema is `jyut6ping3_mobile`.
+- Tightened the native `typeduck_web` contract test so its "browser real assets" setup mirrors the curated browser preload list instead of copying the whole schema directory.
 
 **Proof**:
-- Node replay with the exact Emscripten artifact returned `deploy: 0` when the
-  curated preload list omitted `jyut6ping3.schema.yaml`, and `deploy: 1` after
-  adding it.
-- `third_party/typeduck-web/e2e/results/deploy-browser.log` records a live
-  browser run at `http://127.0.0.1:5173/web/?debug&realAssets=1` with
-  `initialized: true`, `customize` result `true`, `deploy` posted, and `deploy`
-  result `true`.
-- `cargo test -p yune-rime-api --test typeduck_web` passes 10 tests, including
-  deploy-after-init and deploy-after-customize with the browser-shaped real
-  asset set.
+
+- Node replay with the exact Emscripten artifact returned `deploy: 0` when the curated preload list omitted `jyut6ping3.schema.yaml`, and `deploy: 1` after adding it.
+- `third_party/typeduck-web/e2e/results/deploy-browser.log` records a live browser run at `http://127.0.0.1:5173/web/?debug&realAssets=1` with `initialized: true`, `customize` result `true`, `deploy` posted, and `deploy` result `true`.
+- `cargo test -p yune-rime-api --test typeduck_web` passes 10 tests, including deploy-after-init and deploy-after-customize with the browser-shaped real asset set.
 
 **Still open after HR-3**:
-- HR-4 must prove live-worker persistence sync before init and after mutations,
-  plus reload survival. HR-4 resolves this.
-- HR-5 must rerun paging, deletion, and dictionary-panel comment bytes against
-  the real assets.
+
+- HR-4 must prove live-worker persistence sync before init and after mutations, plus reload survival. HR-4 resolves this.
+- HR-5 must rerun paging, deletion, and dictionary-panel comment bytes against the real assets.
 
 ---
 
 ## HR-4 Live Persistence And Reload Survival
 
-**Date**: 2026-06-18
-**Status**: PASS for live-worker persistence sync and reload survival; full E2E
-matrix still open.
+**Date**: 2026-06-18 **Status**: PASS for live-worker persistence sync and reload survival; full E2E matrix still open.
 
 **What changed**:
-- The TypeDuck-Web adapter now emits structured persistence diagnostics around
-  `syncFromPersistenceBeforeInit`, runtime init, and every
-  `syncToPersistenceAfterMutation` boundary used by init, customize, deploy,
-  commit, select, and delete paths.
-- The worker forwards those diagnostics to the main page as debug diagnostics,
-  and the main page records them in the DOM under
-  `data-yune-persistence-diagnostics` for browser-captured evidence.
-- `deploy()` and `customize()` now call the runtime operation and then perform
-  the same persistence sync with a reason-tagged marker, so the live worker path
-  exposes the exact after-mutation boundary.
+
+- The TypeDuck-Web adapter now emits structured persistence diagnostics around `syncFromPersistenceBeforeInit`, runtime init, and every `syncToPersistenceAfterMutation` boundary used by init, customize, deploy, commit, select, and delete paths.
+- The worker forwards those diagnostics to the main page as debug diagnostics, and the main page records them in the DOM under `data-yune-persistence-diagnostics` for browser-captured evidence.
+- `deploy()` and `customize()` now call the runtime operation and then perform the same persistence sync with a reason-tagged marker, so the live worker path exposes the exact after-mutation boundary.
 
 **Proof**:
-- `third_party/typeduck-web/e2e/results/persistence-sync.log` records a fresh
-  browser origin where first load starts with no persisted
-  `/rime/jyut6ping3_mobile.custom.yaml`, then startup `customize` writes
-  `page_size: '6'`, and `deploy` syncs it to persistence.
-- The same log records a real page reload where
-  `syncFromPersistenceBeforeInit:pass` sees the persisted custom config with
-  `pageSize: "'6'"` before `runtime:init`.
-- The log's assertions are all PASS: before-init sync precedes runtime init,
-  customize syncs after mutation, deploy syncs after mutation, and reload
-  restores persisted state before re-init.
+
+- `third_party/typeduck-web/e2e/results/persistence-sync.log` records a fresh browser origin where first load starts with no persisted `/rime/jyut6ping3_mobile.custom.yaml`, then startup `customize` writes `page_size: '6'`, and `deploy` syncs it to persistence.
+- The same log records a real page reload where `syncFromPersistenceBeforeInit:pass` sees the persisted custom config with `pageSize: "'6'"` before `runtime:init`.
+- The log's assertions are all PASS: before-init sync precedes runtime init, customize syncs after mutation, deploy syncs after mutation, and reload restores persisted state before re-init.
 
 **Resolved by HR-5**:
-- Paging, deletion, phrase commit, reload, and dictionary-panel comment bytes now
-  have real-assets browser evidence.
+
+- Paging, deletion, phrase commit, reload, and dictionary-panel comment bytes now have real-assets browser evidence.
 
 ---
 
 ## HR-5 Real-Assets E2E Matrix
 
-**Date**: 2026-06-18
-**Status**: PASS for the real-assets browser matrix; HR-7 final recommendation
-recorded as GO WITH CONDITIONS.
+**Date**: 2026-06-18 **Status**: PASS for the real-assets browser matrix; HR-7 final recommendation recorded as GO WITH CONDITIONS.
 
 **What changed**:
-- The dictionary lookup filter install path now parses TypeDuck lookup
-  dictionaries in their real code-first `payload<TAB>text` shape, then matches
-  candidates after the translator form-feed prefix. Browser candidates now carry
-  dictionary-panel payload bytes instead of raw code-only comments.
-- TypeDuck-Web candidate and dictionary-panel table markup now uses valid table
-  children, removing React dev-console nesting warnings from the HR-5 browser
-  evidence.
-- The final matrix ran against live `jyut6ping3_mobile` browser assets and live
-  worker persistence diagnostics.
+
+- The dictionary lookup filter install path now parses TypeDuck lookup dictionaries in their real code-first `payload<TAB>text` shape, then matches candidates after the translator form-feed prefix. Browser candidates now carry dictionary-panel payload bytes instead of raw code-only comments.
+- TypeDuck-Web candidate and dictionary-panel table markup now uses valid table children, removing React dev-console nesting warnings from the HR-5 browser evidence.
+- The final matrix ran against live `jyut6ping3_mobile` browser assets and live worker persistence diagnostics.
 
 **Proof**:
-- `third_party/typeduck-web/e2e/results/hr5-real-assets-matrix.json` records
-  PASS for composition, candidate list, paging, selection, Space commit,
-  long-press candidate deletion, deploy, customize, persistence sync, reload,
-  and dictionary-panel comments, with zero browser warning/error console entries
-  in the final capture.
-- Post-review delete/backspace recaptures replaced the stale banner-bearing
-  artifacts. `hr5-final-delete-state.json` now records the root cause: the page
-  sent `{Control_L}` immediately before `{Control+Delete}`; the adapter now
-  treats pure modifier keydowns as pass-through, so the first `ngo` candidate is
-  removed without a visible runtime-error banner. `hr5-final-backspace-state.json`
-  also records `ngo` mutating to `ng` with no banner.
-- Screenshot evidence was captured as
-  `third_party/typeduck-web/e2e/results/screenshot-hr5-dictionary-panel.png`
-  and `third_party/typeduck-web/e2e/results/screenshot-hr5-after-delete.png`.
-- `cargo test -p yune-rime-api --test typeduck_web
-  typeduck_adapter_real_assets_emit_oracle_dictionary_panel_comments` asserts
-  the first `nei` candidate comment against the v1.1.2 fixture when the local
-  `target/typeduck-oracle/v1.1.2/rime-user/build` assets are present. If those
-  ignored local oracle-build assets are absent, the test emits an explicit skip
-  reason instead of passing against the degraded fallback. The committed
-  clean-checkout byte-parity guarantee is
-  `cargo test -p yune-core --test cantonese_parity`, which uses
-  `crates/yune-core/tests/fixtures/typeduck-v1.1.2/jyut6ping3-mobile-comments.json`.
-- The matrix artifact's reload row proves a real reload restored
-  `/rime/jyut6ping3_mobile.custom.yaml` with `pageSize: "'6'"` before runtime
-  init.
+
+- `third_party/typeduck-web/e2e/results/hr5-real-assets-matrix.json` records PASS for composition, candidate list, paging, selection, Space commit, long-press candidate deletion, deploy, customize, persistence sync, reload, and dictionary-panel comments, with zero browser warning/error console entries in the final capture.
+- Post-review delete/backspace recaptures replaced the stale banner-bearing artifacts. `hr5-final-delete-state.json` now records the root cause: the page sent `{Control_L}` immediately before `{Control+Delete}`; the adapter now treats pure modifier keydowns as pass-through, so the first `ngo` candidate is removed without a visible runtime-error banner. `hr5-final-backspace-state.json` also records `ngo` mutating to `ng` with no banner.
+- Screenshot evidence was captured as `third_party/typeduck-web/e2e/results/screenshot-hr5-dictionary-panel.png` and `third_party/typeduck-web/e2e/results/screenshot-hr5-after-delete.png`.
+- `cargo test -p yune-rime-api --test typeduck_web typeduck_adapter_real_assets_emit_oracle_dictionary_panel_comments` asserts the first `nei` candidate comment against the v1.1.2 fixture when the local `target/typeduck-oracle/v1.1.2/rime-user/build` assets are present. If those ignored local oracle-build assets are absent, the test emits an explicit skip reason instead of passing against the degraded fallback. The committed clean-checkout byte-parity guarantee is `cargo test -p yune-core --test cantonese_parity`, which uses `crates/yune-core/tests/fixtures/typeduck-v1.1.2/jyut6ping3-mobile-comments.json`.
+- The matrix artifact's reload row proves a real reload restored `/rime/jyut6ping3_mobile.custom.yaml` with `pageSize: "'6'"` before runtime init.
 
 ---
 
 ## HR-6 Shared Reverse-Lookup Parity
 
-**Date**: 2026-06-18
-**Status**: PASS for the reverse-lookup `"; "` joiner and schema-name prompt
-oracle cases; the five broader Cantonese parity goldens remain explicitly
-BLOCKED pending dedicated v1.1.2 captures.
+**Date**: 2026-06-18 **Status**: PASS for the reverse-lookup `"; "` joiner and schema-name prompt oracle cases; the five broader Cantonese parity goldens remain explicitly BLOCKED pending dedicated v1.1.2 captures.
 
 **What changed**:
-- Added `crates/yune-core/tests/fixtures/typeduck-v1.1.2/reverse-lookup-prompt.json`,
-  captured from the local TypeDuck-HK/librime v1.1.2 binary with a scratch
-  schema. The fixture records the prompt/preedit bytes for input `` `huo `` and
-  the selected candidate comment `ho; huo`.
-- Added core parity tests that lock the fixture metadata and assert
-  `ReverseLookupTranslator` joins multiple target pronunciations with `"; "`
-  against the v1.1.2 oracle expectation.
-- Loaded affix-segmentor `tips` into the Rime API schema path and exposed the
-  prompt-shaped preedit through `RimeGetContext`, with an ABI test asserting
-  preedit, cursor, commit preview, candidate text, and candidate comment against
-  the same v1.1.2 fixture.
+
+- Added `crates/yune-core/tests/fixtures/typeduck-v1.1.2/reverse-lookup-prompt.json`, captured from the local TypeDuck-HK/librime v1.1.2 binary with a scratch schema. The fixture records the prompt/preedit bytes for input `` `huo `` and the selected candidate comment `ho; huo`.
+- Added core parity tests that lock the fixture metadata and assert `ReverseLookupTranslator` joins multiple target pronunciations with `"; "` against the v1.1.2 oracle expectation.
+- Loaded affix-segmentor `tips` into the Rime API schema path and exposed the prompt-shaped preedit through `RimeGetContext`, with an ABI test asserting preedit, cursor, commit preview, candidate text, and candidate comment against the same v1.1.2 fixture.
 
 **Proof**:
-- `cargo test -p yune-core --test cantonese_parity` passes the four active
-  oracle-backed tests and reports the five uncaptured Cantonese cases as
-  ignored blockers.
-- `cargo test -p yune-rime-api
-  select_schema_affix_prompt_matches_typeduck_v112_reverse_lookup_fixture_commit_preview`
-  passes, proving the C ABI context path emits the oracle prompt/comment bytes.
+
+- `cargo test -p yune-core --test cantonese_parity` passes the four active oracle-backed tests and reports the five uncaptured Cantonese cases as ignored blockers.
+- `cargo test -p yune-rime-api select_schema_affix_prompt_matches_typeduck_v112_reverse_lookup_fixture_commit_preview` passes, proving the C ABI context path emits the oracle prompt/comment bytes.
 
 **Still blocked**:
+
 - `options_combine_candidates_show_full_code_enable_sentence_parity`
 - `completion_prediction_and_enable_completion_parity`
 - `correction_minimal_distance_and_m_abbreviation_parity`
 - `schema_menu_hiding_parity`
 - `per_entry_userdb_pronunciation_parity`
 
-Those tests remain `#[ignore = "blocked: ..."]` with `panic!()` bodies. They are
-not silent skips and should only be activated after dedicated TypeDuck v1.1.2
-oracle fixtures are captured.
+Those tests remain `#[ignore = "blocked: ..."]` with `panic!()` bodies. They are not silent skips and should only be activated after dedicated TypeDuck v1.1.2 oracle fixtures are captured.
 
 ---
 
 ## Plan 10-01: Upstream seam inspection
 
-**Date**: 2026-05-05
-**Upstream Commit**: 03f9afd2cf6ca75653197f2193f24d1cd0adbd83
-**Status**: Seam identified and documented (no source patching performed)
+**Date**: 2026-05-05 **Upstream Commit**: 03f9afd2cf6ca75653197f2193f24d1cd0adbd83 **Status**: Seam identified and documented (no source patching performed)
 
 ### Seam Overview
 
 TypeDuck-Web uses a worker-based architecture where:
+
 - Main thread (`src/rime.ts`) creates a Worker and queues action calls
 - Worker (`src/worker.ts`) loads Emscripten-generated `rime.js`, initializes librime C++ bridge, and processes actions through `Module.ccall`
 - Native bridge (`wasm/api.cpp`) implements librime-shaped C functions that forward to librime API
@@ -279,17 +166,20 @@ TypeDuck-Web uses a worker-based architecture where:
 **Role**: Worker implementation that bridges main-thread Actions to native librime calls
 
 **Module Initialization** (lines 97-125):
+
 - Defines `globalThis.Module` with `onRuntimeInitialized`, `printErr`, `locateFile`
 - Loads `rime.js` via `importScripts("rime.js")`
 - Waits for runtime initialization before processing actions
 
 **Filesystem/Persistence** (lines 55-59, 111-116):
+
 - Mounts IDBFS at `/rime` (RIME_USER_DIR)
 - Uses `Module.FS.syncfs(direction === "read")` for persistence
 - Syncs read before init, syncs write after commit/deploy
 - **Pattern**: `syncUserDirectory("read")` → `Module.ccall("init")` → `syncUserDirectory("write")`
 
 **Action Calls** (lines 61-93):
+
 - `setOption`: `Module.ccall("set_option", null, ["string", "number"], [option, +value])`
 - `processKey`: `Module.ccall("process_key", "string", ["string"], [input])` → returns JSON string parsed as RimeResult
 - `selectCandidate`: `Module.ccall("select_candidate", "string", ["number"], [index])`
@@ -299,6 +189,7 @@ TypeDuck-Web uses a worker-based architecture where:
 - `deploy`: `Module.ccall("deploy", "boolean", [], [])`
 
 **Notifications** (lines 35-49):
+
 - `globalThis.onRimeNotification` dispatches listener events (deploy, schema, option)
 - Callbacks: `deployStatusChanged`, `schemaChanged`, `optionChanged`, `initialized`
 
@@ -309,16 +200,19 @@ TypeDuck-Web uses a worker-based architecture where:
 **Role**: Facade that creates Worker and queues action calls
 
 **Worker Bridge** (lines 40-67):
+
 - Creates `new Worker("./worker.js")`
 - Queues one action at a time (serial execution)
 - Posts `{ name, args }` messages to worker
 - Receives `{ type: "success", result }` or `{ type: "error", error }` or `{ type: "listener", name, args }`
 
 **Actions API** (lines 75-88):
+
 - Dynamically registers `setOption`, `processKey`, `selectCandidate`, `deleteCandidate`, `flipPage`, `customize`, `deploy`
 - Each action returns Promise resolving to action result
 
 **Listeners** (lines 105-110):
+
 - `subscribe(type, callback)` registers listeners
 - Types: `deployStatusChanged`, `schemaChanged`, `optionChanged`, `initialized`
 
@@ -329,6 +223,7 @@ TypeDuck-Web uses a worker-based architecture where:
 **Role**: TypeScript interfaces defining action signatures and result shapes
 
 **Actions Interface** (lines 16-24):
+
 ```typescript
 interface Actions {
   setOption(option: string, value: boolean): Promise<void>;
@@ -342,11 +237,13 @@ interface Actions {
 ```
 
 **RimeResult Shape** (lines 26-54):
+
 - Composing state: `{ isComposing: true, inputBuffer: { before, active, after }, page, isLastPage, highlightedIndex, candidates: [{ label?, text, comment? }] }`
 - Non-composing state: `{ isComposing: false }`
 - Payload: `{ success: boolean, committed?: string }`
 
 **Listener Types** (lines 64-69):
+
 - `deployStatusChanged: [status: "start" | "success" | "failure"]`
 - `schemaChanged: [id: string, name: string]`
 - `optionChanged: [option: string, value: boolean]`
@@ -359,6 +256,7 @@ interface Actions {
 **Role**: Librime-shaped C exports called by Emscripten Module.ccall
 
 **Exports** (lines 97-166):
+
 - `bool init()` — Initialize librime with `/usr/share/rime-data` shared dir, `/rime` user dir, create session
 - `void set_option(const char* option, int value)` — Set session option via librime API
 - `const char* process_key(const char* input)` — Calls `rime->simulate_key_sequence(session_id, input)` and returns JSON result
@@ -377,6 +275,7 @@ interface Actions {
 **Role**: Defines Emscripten compile/link flags for WASM artifact
 
 **Exported Functions** (lines 5-12):
+
 ```typescript
 const exportedFunctions = [
   "_init",
@@ -391,16 +290,19 @@ const exportedFunctions = [
 ```
 
 **Runtime Methods** (line 22):
+
 ```typescript
 -s EXPORTED_RUNTIME_METHODS=["ccall","FS"]
 ```
 
 **Preload** (line 23):
+
 ```typescript
 --preload-file schema@/usr/share/rime-data
 ```
 
 **Output** (line 25):
+
 ```typescript
 -o public/rime.js
 ```
@@ -412,12 +314,14 @@ const exportedFunctions = [
 **Role**: UI component that captures keyboard input and calls Rime.processKey
 
 **Keyboard Flow** (lines 124-130, 133-137):
+
 - `document.addEventListener("keydown", onKeyDown)`
 - `document.addEventListener("keyup", onKeyUp)`
 - `processKey(`{${key}}`, event.key)` — sends string sequences like `{BackSpace}`
 - `processKey(`{Release+${key}}`)` — sends release sequences
 
 **Key Sequence Format**:
+
 - Printable keys sent directly (e.g., `a`, `b`)
 - Special keys wrapped in braces (e.g., `{BackSpace}`, `{Enter}`, `{Escape}`)
 - Release events prefixed (e.g., `{Release+BackSpace}`)
@@ -426,7 +330,7 @@ const exportedFunctions = [
 
 ### Librime/WASM Seam Call Flow
 
-```
+```text
 User types in textarea
   |
   v
@@ -475,38 +379,34 @@ CandidatePanel renders result
 
 #### Contract Mismatch: String Input vs. Keycode/Mask
 
-**Upstream**: `processKey(input: string)` sends key sequences like `{BackSpace}`, `a`
-**Yune**: `processKeyboardEvent(event)` or `processKey(keycode, mask)` uses integer keycode/modifier mask
+**Upstream**: `processKey(input: string)` sends key sequences like `{BackSpace}`, `a` **Yune**: `processKeyboardEvent(event)` or `processKey(keycode, mask)` uses integer keycode/modifier mask
 
 **Mitigation**: Either:
+
 1. Patch `CandidatePanel.tsx` to call `Rime.processKeyboardEvent(event)` with event-like object (preferred for clarity)
 2. Add compatibility adapter parsing string sequences to keycode/mask (less invasive but extra code)
 
 #### Contract Mismatch: RimeResult vs. TypeDuckResponse
 
-**Upstream**: `RimeResult` with `{ isComposing, inputBuffer?, page?, isLastPage?, highlightedIndex?, candidates?, success, committed? }`
-**Yune**: `TypeDuckResponse` with `{ handled, commits, context?, status?, error? }` where context has `{ preedit, caret, candidates, select_labels, ... }`
+**Upstream**: `RimeResult` with `{ isComposing, inputBuffer?, page?, isLastPage?, highlightedIndex?, candidates?, success, committed? }` **Yune**: `TypeDuckResponse` with `{ handled, commits, context?, status?, error? }` where context has `{ preedit, caret, candidates, select_labels, ... }`
 
 **Mitigation**: Worker adapter layer must translate Yune response to upstream RimeResult shape before returning to main thread.
 
 #### Missing Export: setOption
 
-**Upstream**: `Actions.setOption(option: string, value: boolean)`
-**Yune**: Current TypeDuck wrapper lacks `setOption` method
+**Upstream**: `Actions.setOption(option: string, value: boolean)` **Yune**: Current TypeDuck wrapper lacks `setOption` method
 
 **Mitigation**: Determine if E2E flows require `setOption`; if yes, either map through customize/status or add native/wrapper support.
 
 #### Persistence Timing
 
-**Upstream**: Explicit `syncUserDirectory("read")` before init, `"write"` after commit/deploy
-**Yune**: Phase 9 helpers `syncFromPersistenceBeforeInit`, `syncToPersistenceAfterMutation`, `deployAndSync`, `customizeAndSync`
+**Upstream**: Explicit `syncUserDirectory("read")` before init, `"write"` after commit/deploy **Yune**: Phase 9 helpers `syncFromPersistenceBeforeInit`, `syncToPersistenceAfterMutation`, `deployAndSync`, `customizeAndSync`
 
 **Mitigation**: Use Yune helpers in worker replacement; preserve sync boundaries.
 
 #### Asset Preload
 
-**Upstream**: Build script preloads `schema@/usr/share/rime-data`
-**Yune**: Caller-owned assets via `prepareTypeDuckFilesystem`, `assertTypeDuckAssetsReady`
+**Upstream**: Build script preloads `schema@/usr/share/rime-data` **Yune**: Caller-owned assets via `prepareTypeDuckFilesystem`, `assertTypeDuckAssetsReady`
 
 **Mitigation**: Yune worker must create shared/user/build layout with explicit assets before init; no build-time preload.
 
@@ -522,10 +422,7 @@ The following are explicitly deferred and not part of this plan:
 
 ### Seam Inspection Summary
 
-**Files Identified**: 6 key seam files documented with exact paths, line numbers, and call patterns
-**Call Flow**: Main thread → Worker queue → Emscripten Module → Native exports → Librime API
-**Contract Gaps**: String input vs keycode/mask, RimeResult vs TypeDuckResponse, missing setOption, different persistence helpers
-**Replacement Seam**: `src/worker.ts` is primary replacement target; preserve `src/rime.ts` facade and `Actions` interface
+**Files Identified**: 6 key seam files documented with exact paths, line numbers, and call patterns **Call Flow**: Main thread → Worker queue → Emscripten Module → Native exports → Librime API **Contract Gaps**: String input vs keycode/mask, RimeResult vs TypeDuckResponse, missing setOption, different persistence helpers **Replacement Seam**: `src/worker.ts` is primary replacement target; preserve `src/rime.ts` facade and `Actions` interface
 
 **Next Plan**: 10-02 will implement minimal seam replacement using `@yune-ime/typeduck-runtime` and document any remaining blockers.
 
@@ -533,8 +430,7 @@ The following are explicitly deferred and not part of this plan:
 
 ## Plan 10-02: Yune seam patch
 
-**Date**: 2026-05-05
-**Status**: Minimal patch generated, pending build gates and E2E asset configuration
+**Date**: 2026-05-05 **Status**: Minimal patch generated, pending build gates and E2E asset configuration
 
 ### Patch Scope
 
@@ -610,12 +506,14 @@ Created `third_party/typeduck-web/yune-integration/` directory with:
 Patch file: `third_party/typeduck-web/patches/yune-typeduck-runtime.patch`
 
 Generated via:
+
 ```bash
 cd third_party/typeduck-web/source
 git diff src/worker.ts package.json > ../patches/yune-typeduck-runtime.patch
 ```
 
 Patch contents:
+
 - package.json: Add Yune package alias dependency
 - src/worker.ts: Import Yune adapter, replace ccall with adapter calls, load Yune WASM artifact
 
@@ -690,6 +588,7 @@ Expected: All checks pass.
 ### Next Steps
 
 Task 3 will:
+
 - Run upstream build/typecheck (Bun) and document blockers
 - Run Yune runtime build (npm) and verify pass
 - Record categorized blockers in findings
@@ -699,14 +598,14 @@ Task 3 will:
 
 ## Plan 10-02: Build Gates
 
-**Date**: 2026-05-05
-**Status**: Build gates passed with documentation
+**Date**: 2026-05-05 **Status**: Build gates passed with documentation
 
 ### Repository-Owned Runtime Build
 
 **Command**: `npm --prefix packages/yune-typeduck-runtime run build`
 
 **Result**: PASSED
+
 - TypeScript compilation successful
 - Package builds without errors
 - Adapter exports available for import
@@ -716,6 +615,7 @@ Task 3 will:
 **Command**: `bun install` (from `third_party/typeduck-web/source`)
 
 **Result**: PASSED
+
 - Bun 1.3.11 available
 - Dependencies resolved successfully
 - Yune package alias resolved: `@yune-ime/typeduck-runtime@../../../packages/yune-typeduck-runtime`
@@ -726,6 +626,7 @@ Task 3 will:
 **Command**: `bun run worker` (esbuild)
 
 **Result**: PASSED
+
 - Patched worker.ts compiles successfully
 - Output: `public/worker.js` (3.4kb)
 - Integration layer imports resolve correctly
@@ -736,6 +637,7 @@ Task 3 will:
 **Command**: `bunx tsc --noEmit`
 
 **Result**: PASSED (patched files only)
+
 - No errors in `src/worker.ts`
 - No errors in `src/yune-integration/adapter.ts`
 - No errors in `src/yune-integration/assets.ts`
@@ -744,6 +646,7 @@ Task 3 will:
 ### Patch Refinement
 
 **Action**: Regenerated patch to include TypeScript resolution fixes
+
 - Added `tsconfig.json` modifications for path aliases (later reverted)
 - Copied `yune-integration/` into `src/yune-integration/` for module resolution
 - Fixed adapter.ts to use upstream types.ts imports instead of duplicate type definitions
@@ -751,6 +654,7 @@ Task 3 will:
 - Adjusted Module type conversion with `unknown` intermediate
 
 **Final patch scope**:
+
 - `package.json` — Yune package alias
 - `src/worker.ts` — Yune adapter imports, runtime calls
 - `tsconfig.json` — (removed, not needed after integration files moved to src)
@@ -761,12 +665,10 @@ Task 3 will:
 
 ### Build Gate Summary
 
-**Repository runtime**: PASSED (npm build)
-**Upstream package install**: PASSED (Bun available, alias resolved)
-**Upstream worker build**: PASSED (esbuild compiles patched worker)
-**Upstream typecheck**: PASSED (patched files error-free, pre-existing script errors out-of-scope)
+**Repository runtime**: PASSED (npm build) **Upstream package install**: PASSED (Bun available, alias resolved) **Upstream worker build**: PASSED (esbuild compiles patched worker) **Upstream typecheck**: PASSED (patched files error-free, pre-existing script errors out-of-scope)
 
 **Blockers documented per D-09**:
+
 - Bun available in environment — no blocker
 - Yune runtime build passes — no blocker
 - TypeScript errors resolved — no blocker
@@ -804,6 +706,7 @@ Task 3 will:
 #### Environment/tooling blockers
 
 **None** — All tooling available:
+
 - Bun 1.3.11 installed and functional
 - npm build passes
 - TypeScript compiler resolves patched imports
@@ -815,13 +718,11 @@ No deferred items implemented in build gates. AI-native behavior, new frontend, 
 
 ---
 
-*Updated: 2026-05-05T16:45:00Z*
----
+## _Updated: 2026-05-05T16:45:00Z_
 
 ## Plan 10-03: Real browser E2E/smoke validation
 
-**Date**: 2026-05-05
-**Status**: Browser E2E spec created, pending browser runner execution
+**Date**: 2026-05-05 **Status**: Browser E2E spec created, pending browser runner execution
 
 ### Browser E2E Scaffolding (Task 1)
 
@@ -832,6 +733,7 @@ Created `third_party/typeduck-web/e2e/` with explicit asset/result instructions:
 **File**: `e2e/assets/README.md`
 
 **Requirements**:
+
 - TypeDuck-Web-owned YAML assets mandatory (default.yaml, schema.yaml, dictionary.yaml)
 - NO fallback/dummy/placeholder schema or dictionary data
 - Assets must come from TypeDuck-Web source, CDN, or documented upstream
@@ -839,6 +741,7 @@ Created `third_party/typeduck-web/e2e/` with explicit asset/result instructions:
 - Grep-gate verifies no forbidden substitute patterns
 
 **Evidence**:
+
 - `asset-sources.log` — Documented asset paths/URLs
 - `asset-validation.log` — Runtime validation output
 - Forbidden pattern check PASSED (no fallback schema/dictionary wording in scaffolding)
@@ -848,12 +751,14 @@ Created `third_party/typeduck-web/e2e/` with explicit asset/result instructions:
 **File**: `e2e/results/README.md`
 
 **Required artifacts**:
+
 - `browser-run.log` — Browser runner output with flow evidence
 - `screenshot-*.png` — Screenshots for composition, candidates, paging, selection, persistence
 - `persistence-sync.log` — D-11 timing markers (before init, after mutation, reload)
 - `blocker.md` — Reproducible blockers with command/dependency/fallback
 
 **Blocker format** (per D-09):
+
 - Category: TypeDuck-Web app/source | Yune adapter/runtime | environment/tooling
 - Exact command attempted
 - Missing dependency/executable
@@ -866,6 +771,7 @@ Created `third_party/typeduck-web/e2e/` with explicit asset/result instructions:
 **File**: `e2e/yune-browser-smoke.md`
 
 **Manual browser smoke steps**:
+
 1. Apply patch (git apply patches/yune-typeduck-runtime.patch)
 2. Install/build upstream (bun install, bun run worker)
 3. Start dev server (bun run start)
@@ -880,6 +786,7 @@ Created `third_party/typeduck-web/e2e/` with explicit asset/result instructions:
 12. Record evidence (screenshots, console logs, persistence markers)
 
 **Evidence requirements**:
+
 - Manual smoke MUST use real browser (not package-local fake tests)
 - Persistence timing MUST verify sync-before-init, sync-after-mutation, reload-reinitialize
 
@@ -888,6 +795,7 @@ Created `third_party/typeduck-web/e2e/` with explicit asset/result instructions:
 **Discovery**: Upstream TypeDuck-Web has NO browser E2E test framework.
 
 **Evidence**:
+
 - package.json has NO test scripts
 - NO test framework dependencies (Vitest, Jest, Playwright, Cypress)
 - NO spec/test files found in upstream source
@@ -961,6 +869,7 @@ Created `third_party/typeduck-web/e2e/` with explicit asset/result instructions:
     - Screenshot: screenshot-persistence-after-reload.png
 
 **Evidence capture**:
+
 - `browser-run.log` — Test results appended per flow
 - `browser-console.log` — Console errors captured
 - `persistence-sync.log` — Persistence timing markers
@@ -968,6 +877,7 @@ Created `third_party/typeduck-web/e2e/` with explicit asset/result instructions:
 - `blocker.md` — Flows blocked by missing selectors/implementation
 
 **Selector assumptions** (require E2E execution verification):
+
 - Input field: `input[type='text'], textarea`
 - Candidate panel: `[data-candidates], .candidate-panel, .candidate-list`
 - Candidate items: `.candidate, [data-candidate]`
@@ -977,6 +887,7 @@ Created `third_party/typeduck-web/e2e/` with explicit asset/result instructions:
 - Notifications: `.toast, [data-deploy-status], .notification`
 
 **Testability gaps documented in blocker.md** (per D-09):
+
 - Missing selectors → TypeDuck-Web app/source blocker
 - Missing persistence markers → Yune adapter/runtime blocker
 - Missing browser runner → Environment/tooling blocker
@@ -986,6 +897,7 @@ Created `third_party/typeduck-web/e2e/` with explicit asset/result instructions:
 **Status**: Spec created, pending Playwright execution
 
 **Prerequisites for Task 3 execution**:
+
 1. Apply patch to upstream source
 2. Build Yune WASM artifact (Phase 7 blocker if not built)
 3. Build @yune-ime/typeduck-runtime package
@@ -993,6 +905,7 @@ Created `third_party/typeduck-web/e2e/` with explicit asset/result instructions:
 5. Install Playwright in worktree or use manual browser smoke
 
 **Expected blockers per D-09**:
+
 - Yune WASM artifact not built (Phase 7 blocker)
 - Asset configuration TODO in patched worker (placeholder YAML)
 - Missing testability selectors (TypeDuck-Web UI)
@@ -1001,7 +914,7 @@ Created `third_party/typeduck-web/e2e/` with explicit asset/result instructions:
 ### Flow Pass/Fail Tracking (superseded by WI-4)
 
 | Flow | D-08/D-10/D-11 Requirement | Status | Evidence |
-|------|----------------------------|--------|----------|
+| --- | --- | --- | --- |
 | Composition | Schema-valid keys -> preedit visible | PASS | `e2e/results/browser-run.log`, `e2e/results/browser-console.json` |
 | Candidate list | Visible after composition | PASS | `e2e/results/dom-snapshot-candidates.txt` |
 | Candidate paging | PageDown -> page change | FAIL | PageDown accepted but page remains `0`, `isLastPage: true`; paging buttons disabled |
@@ -1014,14 +927,11 @@ Created `third_party/typeduck-web/e2e/` with explicit asset/result instructions:
 | Persistence reload | sync-before-init + reload/reinitialize | FAIL | `persistence-sync.log`; reload survival not proven |
 | Dictionary-panel comment rendering | v1.1.2 candidate comment bytes render | FAIL | HR-1b shows raw code-style comments such as `\fnei5`; HR-5 must assert dictionary-panel oracle bytes |
 
-**Note**: WI-4 moved the flow matrix from blocked/pending to evidence-backed
-PASS/FAIL. Screenshots were not available from the Codex browser wrapper; the
-captured evidence is console JSON plus DOM snapshots.
+**Note**: WI-4 moved the flow matrix from blocked/pending to evidence-backed PASS/FAIL. Screenshots were not available from the Codex browser wrapper; the captured evidence is console JSON plus DOM snapshots.
 
 ---
 
-*Updated: 2026-05-05T00:26:00Z*
-*Plan: 10-03 (Real browser E2E/smoke validation)*
+_Updated: 2026-05-05T00:26:00Z_ _Plan: 10-03 (Real browser E2E/smoke validation)_
 
 ### Browser Execution Attempt (Task 3)
 
@@ -1042,13 +952,13 @@ captured evidence is console JSON plus DOM snapshots.
    - Command: `rustup target list --installed`
    - Error: `command not found: rustup`
    - Impact: Cannot install wasm32-unknown-emscripten target
-   - Install: https://rustup.rs
+   - Install: <https://rustup.rs>
 
 3. **emcc** — Emscripten compiler
    - Command: `emcc --version`
    - Error: `emcc not found`
    - Impact: Cannot compile WASM/JS glue
-   - Install: https://emscripten.org/docs/getting_started/downloads.html
+   - Install: <https://emscripten.org/docs/getting_started/downloads.html>
 
 #### WASM Artifact Blocker
 
@@ -1057,6 +967,7 @@ captured evidence is console JSON plus DOM snapshots.
 **Patch dependency**: `src/worker.ts` calls `importScripts("yune-typeduck.js")`
 
 **Build attempt**:
+
 ```bash
 $ ./scripts/typeduck-wasm-build.sh
 ./scripts/typeduck-wasm-build.sh: line 130: cargo: command not found
@@ -1067,6 +978,7 @@ $ ./scripts/typeduck-wasm-build.sh
 #### Asset Configuration Blocker
 
 **Patch placeholder** (`src/worker.ts` lines 246-251):
+
 ```typescript
 const assetsConfig: ExplicitTypeDuckAssets = {
   defaultYaml: { type: "content", content: "" }, // Placeholder for E2E
@@ -1081,24 +993,25 @@ const assetsConfig: ExplicitTypeDuckAssets = {
 
 #### Flow Execution Status (All BLOCKED)
 
-| Flow | D-08/D-10/D-11 | Status | Blocker |
-|------|----------------|--------|---------|
-| Composition | Keys → preedit | BLOCKED | WASM missing |
-| Candidate list | Visible | BLOCKED | WASM missing |
-| Candidate paging | PageDown | BLOCKED | WASM missing |
-| Candidate selection | Commit | BLOCKED | WASM missing |
-| Deletion | Delete key | BLOCKED | WASM missing |
-| Backspace mutation | Composition change | BLOCKED | WASM missing |
-| Deploy | Success/error visible | BLOCKED | WASM missing |
-| Customize | Success/error visible | BLOCKED | WASM missing |
-| Persistence sync | sync-after-mutation | BLOCKED | WASM missing |
-| Persistence reload | sync-before-init + reload | BLOCKED | WASM missing |
+| Flow                | D-08/D-10/D-11            | Status  | Blocker      |
+| ------------------- | ------------------------- | ------- | ------------ |
+| Composition         | Keys → preedit            | BLOCKED | WASM missing |
+| Candidate list      | Visible                   | BLOCKED | WASM missing |
+| Candidate paging    | PageDown                  | BLOCKED | WASM missing |
+| Candidate selection | Commit                    | BLOCKED | WASM missing |
+| Deletion            | Delete key                | BLOCKED | WASM missing |
+| Backspace mutation  | Composition change        | BLOCKED | WASM missing |
+| Deploy              | Success/error visible     | BLOCKED | WASM missing |
+| Customize           | Success/error visible     | BLOCKED | WASM missing |
+| Persistence sync    | sync-after-mutation       | BLOCKED | WASM missing |
+| Persistence reload  | sync-before-init + reload | BLOCKED | WASM missing |
 
 **Reason**: WASM artifact is prerequisite for all browser flows
 
 #### Fallback Evidence
 
 **Native fallback attempt** (per scripts/typeduck-wasm-build.sh):
+
 ```bash
 Native fallback: cargo test -p yune-rime-api --test typeduck_web
 Error: cargo: command not found
@@ -1107,6 +1020,7 @@ Error: cargo: command not found
 **Fallback BLOCKED**: Native tests also require cargo
 
 **Evidence captured**:
+
 - blocker.md — Documents missing cargo/rustup/emcc
 - No browser-run.log (browser never ran)
 - No screenshots (browser never ran)
@@ -1115,20 +1029,24 @@ Error: cargo: command not found
 #### Category Assignment (Per D-12)
 
 **Environment/tooling** (primary blockers):
+
 - cargo/rustup/emcc missing
 - WASM artifact not built
 - Native fallback blocked
 
 **TypeDuck-Web app/source**:
+
 - Asset configuration placeholder (needs explicit assets)
 
 **Yune adapter/runtime**:
-- Runtime JS built successfully (packages/yune-typeduck-runtime/dist/*.js)
+
+- Runtime JS built successfully (packages/yune-typeduck-runtime/dist/\*.js)
 - WASM artifact is Phase 7 build blocker (not adapter implementation)
 
 #### Upstream Build Status
 
 **Commands executed**:
+
 - `bun install` — PASSED (Bun 1.3.11 available)
 - `cp yune-integration/* source/src/yune-integration/` — PASSED (integration files copied)
 - `git apply patches/yune-typeduck-runtime.patch` — PASSED (patch applied)
@@ -1136,6 +1054,7 @@ Error: cargo: command not found
 - `npm --prefix packages/yune-typeduck-runtime run build` — PASSED (JS artifacts built)
 
 **Commands blocked**:
+
 - `./scripts/typeduck-wasm-build.sh` — BLOCKED (cargo missing)
 - Playwright browser tests — BLOCKED (WASM artifact missing)
 - Manual browser smoke — BLOCKED (WASM artifact missing)
@@ -1143,6 +1062,7 @@ Error: cargo: command not found
 #### Recommendation
 
 **For Plan 10-04**:
+
 1. Build WASM artifact in environment with cargo/rustup/emcc
 2. Provide explicit TypeDuck-Web YAML assets
 3. Run browser E2E spec or manual smoke
@@ -1153,23 +1073,20 @@ Error: cargo: command not found
 
 ---
 
-*Updated: 2026-05-05T00:30:00Z*
+_Updated: 2026-05-05T00:30:00Z_
 
 ---
 
 ## Final Phase 10 Evidence Summary
 
-**Generated**: 2026-05-05T16:38:00Z
-**Status**: Phase complete with blockers documented for WASM artifact generation
+**Generated**: 2026-05-05T16:38:00Z **Status**: Phase complete with blockers documented for WASM artifact generation
 
 ### Upstream Source and Seam
 
-**Repository**: https://github.com/TypeDuck-HK/TypeDuck-Web.git
-**Revision**: 03f9afd2cf6ca75653197f2193f24d1cd0adbd83 (main branch)
-**Clone path**: third_party/typeduck-web/source
-**Setup command**: bun install
+**Repository**: <https://github.com/TypeDuck-HK/TypeDuck-Web.git> **Revision**: 03f9afd2cf6ca75653197f2193f24d1cd0adbd83 (main branch) **Clone path**: third_party/typeduck-web/source **Setup command**: bun install
 
 **Seam files identified** (from 10-01):
+
 - src/worker.ts — Primary replacement seam (Module.ccall → Yune adapter)
 - src/rime.ts — Main-thread worker queue (preserve facade)
 - src/types.ts — Actions and RimeResult interface (preserve contract)
@@ -1178,7 +1095,8 @@ Error: cargo: command not found
 - src/CandidatePanel.tsx — Keyboard event handling (preserve UI)
 
 **Original librime/WASM call path**:
-```
+
+```text
 UI keyboard event → Rime.processKey(string) → Worker queue → Module.ccall("process_key") →
 Emscripten Module → api.cpp::process_key(const char*) → librime::simulate_key_sequence →
 RIME session → JSON result → Worker parse → Main thread render
@@ -1189,17 +1107,20 @@ RIME session → JSON result → Worker parse → Main thread render
 **Patch file**: third_party/typeduck-web/patches/yune-typeduck-runtime.patch
 
 **Minimal scope** (per D-03):
+
 - package.json — Yune package alias dependency (@yune-ime/typeduck-runtime)
 - src/worker.ts — Import Yune adapter, replace ccall with adapter exports, load Yune WASM artifact
 - src/yune-integration/ — Integration layer (adapter.ts, assets.ts, README.md, package-alias.md)
 
 **Contract mismatches addressed**:
+
 1. String input → keycode/mask: Adapter parses `{BackSpace}` sequences to keyboard event-like objects
 2. RimeResult vs TypeDuckResponse: Adapter translates Yune response to upstream shape
 3. Persistence timing: Yune helpers match upstream sync boundaries (before init, after mutation)
 4. setOption: HR-2 forwards option toggles through the TypeDuck runtime
 
 **Build gates passed** (from 10-02):
+
 - Repository runtime: npm build PASSED
 - Upstream package install: Bun 1.3.11 PASSED
 - Upstream worker build: esbuild PASSED (3.4kb output)
@@ -1210,6 +1131,7 @@ RIME session → JSON result → Worker parse → Main thread render
 **Browser E2E spec**: third_party/typeduck-web/e2e/yune-typeduck.spec.ts
 
 **Coverage** (per D-08/TYPEDUCK-E2E-03):
+
 1. Composition after schema-valid keys
 2. Candidate list visible
 3. Candidate paging (PageDown)
@@ -1221,14 +1143,12 @@ RIME session → JSON result → Worker parse → Main thread render
 9. Persistence sync after mutation (D-11)
 10. Persistence reload/reinitialize (D-11)
 
-HR-5 also records phrase-commit regressions from the `ngohaigo` browser bug and
-the later `ngohaig` partial-final sentence-completion bug as additional proof
-rows.
+HR-5 also records phrase-commit regressions from the `ngohaigo` browser bug and the later `ngohaig` partial-final sentence-completion bug as additional proof rows.
 
 **Flow status** (from HR-5 real-assets browser execution, 2026-06-18):
 
 | Flow | D-08/D-10/D-11 Requirement | Status | Evidence/Blocker |
-|------|----------------------------|--------|------------------|
+| --- | --- | --- | --- |
 | Composition | Schema-valid keys -> preedit visible | PASS | `hr5-final-nei-state.json`, `hr5-final-nei.png` show `nei` preedit with real candidates |
 | Candidate list | Visible after composition | PASS | `hr5-final-nei-state.json` shows real `nei` candidates and no echo placeholder path |
 | Candidate paging | PageDown -> page change | PASS | `hr5-final-paging-state.json`, before/after screenshots show `ngo` page advances |
@@ -1243,16 +1163,10 @@ rows.
 | Persistence reload | sync-before-init + reload/reinitialize | PASS | `hr5-final-reload-state.json`, `hr5-final-reload.png` prove a real reload restores `/rime/jyut6ping3_mobile.custom.yaml` before runtime init |
 | Dictionary-panel comment rendering | v1.1.2 candidate comment bytes render | PASS | `hr5-final-nei-state.json` shows rendered dictionary-panel fields; `cantonese_parity` is the committed byte-parity guarantee, while `typeduck_adapter_real_assets_emit_oracle_dictionary_panel_comments` byte-asserts the browser-shaped rich path only when local oracle build assets are present |
 
-**Reason**: The WASM/browser initialization blocker is cleared, real assets now
-render real Chinese candidates, `setOption` no longer errors, deploy returns
-true with the real workspace assets, live persistence sync plus reload survival
-are proven, and HR-5 captures PASS evidence for the formerly open
-paging/deletion/dictionary-comment rows. HR-6 now covers the reverse-lookup
-joiner and prompt oracle cases, with five broader Cantonese goldens documented
-as explicit capture blockers. HR-7 closes M9 with a GO WITH CONDITIONS
-recommendation for gated AI-native frontend exposure.
+**Reason**: The WASM/browser initialization blocker is cleared, real assets now render real Chinese candidates, `setOption` no longer errors, deploy returns true with the real workspace assets, live persistence sync plus reload survival are proven, and HR-5 captures PASS evidence for the formerly open paging/deletion/dictionary-comment rows. HR-6 now covers the reverse-lookup joiner and prompt oracle cases, with five broader Cantonese goldens documented as explicit capture blockers. HR-7 closes M9 with a GO WITH CONDITIONS recommendation for gated AI-native frontend exposure.
 
 **Evidence captured**:
+
 - `third_party/typeduck-web/e2e/results/hr5-real-assets-matrix.log`
 - `third_party/typeduck-web/e2e/results/hr5-final-nei-state.json`
 - `third_party/typeduck-web/e2e/results/hr5-final-nei.png`
@@ -1290,18 +1204,16 @@ Phase 10 blockers categorized per D-12 with status, evidence, affected requireme
 ### TypeDuck-Web app/source blockers
 
 | Blocker | Status | Evidence | Affected Requirement | Blocks AI-native frontend? |
-|---------|--------|----------|----------------------|---------------------------|
+| --- | --- | --- | --- | --- |
 | Candidate DOM nesting warning | resolved | HR-5 patched `Candidate.tsx`/`DictionaryPanel.tsx` table markup and captured zero warning/error console entries in `hr5-real-assets-matrix.json` | TYPEDUCK-E2E-03 | NO |
 | Browser reload evidence gap | resolved | HR-4 `persistence-sync.log` | TYPEDUCK-E2E-03 | NO — reload survival is browser-proven |
 
-**Explanation**: The app now loads explicit assets and the generated
-`yune-typeduck.js` / `.wasm` artifact. The HR-5 patch also removes the invalid
-candidate/dictionary table markup warnings from the browser evidence.
+**Explanation**: The app now loads explicit assets and the generated `yune-typeduck.js` / `.wasm` artifact. The HR-5 patch also removes the invalid candidate/dictionary table markup warnings from the browser evidence.
 
 ### Yune adapter/runtime mismatches
 
 | Blocker | Status | Evidence | Affected Requirement | Blocks AI-native frontend? |
-|---------|--------|----------|----------------------|---------------------------|
+| --- | --- | --- | --- | --- |
 | Dictionary comment oracle gap | resolved | HR-5 browser evidence renders dictionary-panel fields; `cantonese_parity` is the committed clean-checkout byte guarantee; the browser-shaped native real-assets test byte-asserts the first `nei` rich comment only when local v1.1.2 oracle build assets are present, otherwise it emits an explicit skip reason; HR-6 locks reverse-lookup `"; "` joining and schema-prompt bytes against a v1.1.2 fixture | TYPEDUCK-E2E-03, WI-6 | NO |
 | `{Control_L}` pre-delete runtime-error banner | resolved | Adapter now ignores pure modifier keydowns before modified key chords; `hr5-final-delete-state.json` recaptures `{Control+Delete}` deleting the first `ngo` candidate with no visible runtime-error banner | TYPEDUCK-E2E-03 | NO |
 | Candidate paging/deletion real-assets evidence | resolved | HR-5 `hr5-real-assets-matrix.log` and screenshots prove paging and `{Control+Delete}` deletion with real assets; post-review clean recapture proves no banner remains | TYPEDUCK-E2E-03 | NO |
@@ -1309,35 +1221,22 @@ candidate/dictionary table markup warnings from the browser evidence.
 | setOption startup evidence | resolved | `set-option-browser.log`, native/runtime/adapter tests | D-07, TYPEDUCK-E2E-03 | NO — startup option toggles no longer throw |
 | deploy returns false | resolved | `deploy-browser.log`, native browser-shaped asset tests | TYPEDUCK-E2E-03 | NO — deploy returns true with real assets |
 
-**Explanation**: Adapter shape bugs are fixed, `setOption` and deploy now pass in
-the browser, the core composition -> candidate -> commit seam works, and HR-5
-closes the real-assets paging/deletion/dictionary-comment browser matrix gaps.
+**Explanation**: Adapter shape bugs are fixed, `setOption` and deploy now pass in the browser, the core composition -> candidate -> commit seam works, and HR-5 closes the real-assets paging/deletion/dictionary-comment browser matrix gaps.
 
 ### Environment/tooling blockers
 
 | Blocker | Status | Evidence | Affected Requirement | Blocks AI-native frontend? |
-|---------|--------|----------|----------------------|---------------------------|
+| --- | --- | --- | --- | --- |
 | Full-matrix screenshot coverage pending | resolved | HR-5 captured `hr5-final-*.png`, `hr5-final-*-state.json`, and `hr5-real-assets-matrix.log` | WI-4/HR-5 evidence | NO |
 
-**Explanation**: Cargo, rustup, Emscripten, and the loadable WASM/JS artifact are
-available locally. The real-assets browser matrix executed and its evidence is
-captured in the repo.
+**Explanation**: Cargo, rustup, Emscripten, and the loadable WASM/JS artifact are available locally. The real-assets browser matrix executed and its evidence is captured in the repo.
 
 ---
 
-**Total current blockers**: 5 non-browser Cantonese parity capture blockers
-left as explicit ignored tests. The HR-5 real-browser matrix and post-review
-delete/backspace recaptures captured zero warning/error entries after the
-TypeDuck-Web DOM nesting and modifier-key fixes.
+**Total current blockers**: 5 non-browser Cantonese parity capture blockers left as explicit ignored tests. The HR-5 real-browser matrix and post-review delete/backspace recaptures captured zero warning/error entries after the TypeDuck-Web DOM nesting and modifier-key fixes.
 
-**Blocking AI-native frontend exposure**: HR-5 leaves no browser-matrix blocker
-for composition/candidates/paging/selection/deletion/phrase commit/deploy/
-persistence/reload/dictionary comments. Exposure is GO WITH CONDITIONS: keep
-AI-native behavior disabled by default in real frontends until the separate M11
-provider/ranking/privacy contracts are proven and explicitly enabled.
+**Blocking AI-native frontend exposure**: HR-5 leaves no browser-matrix blocker for composition/candidates/paging/selection/deletion/phrase commit/deploy/ persistence/reload/dictionary comments. Exposure is GO WITH CONDITIONS: keep AI-native behavior disabled by default in real frontends until the separate M11 provider/ranking/privacy contracts are proven and explicitly enabled.
 
 ---
 
-*Findings consolidated: 2026-06-18*
-*Phase: 17 / M9 (TypeDuck-Web Browser Validation)*
-*Requirement coverage: TYPEDUCK-E2E-01, TYPEDUCK-E2E-02, TYPEDUCK-E2E-03, TYPEDUCK-E2E-04*
+_Findings consolidated: 2026-06-18_ _Phase: 17 / M9 (TypeDuck-Web Browser Validation)_ _Requirement coverage: TYPEDUCK-E2E-01, TYPEDUCK-E2E-02, TYPEDUCK-E2E-03, TYPEDUCK-E2E-04_

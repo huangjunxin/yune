@@ -1,38 +1,31 @@
 # M19 — Breadth (Shuangpin, Cangjie, Zhuyin) + Named TypeDuck-Profile ABI Surface Implementation Plan
 
-> **Status:** Finished · **Milestone:** M19 (Breadth toward goal B) · **Closed:** 2026-06-21 · **Type:** execution plan
-> **For agentic workers:** implemented task-by-task; steps use checkbox (`- [x]`) syntax. Capture oracle goldens *before* writing or replacing any module (fixtures-before-module-replacement).
+> **Status:** Finished · **Milestone:** M19 (Breadth toward goal B) · **Closed:** 2026-06-21 · **Type:** execution plan **For agentic workers:** implemented task-by-task; steps use checkbox (`- [x]`) syntax. Capture oracle goldens _before_ writing or replacing any module (fixtures-before-module-replacement).
 
-**Goal:** Widen Yune's *named* compatibility set (goal **B** in [`roadmap.md`](../../roadmap.md)) by onboarding three common upstream schemas — **Shuangpin** (double-pinyin), **Cangjie**, and **Zhuyin/bopomofo** — each measured against the upstream `rime/librime 1.17.0` oracle through the M12 parity harness; and **name the TypeDuck-profile ABI surface** (the fork-only `config_list_append_*` table slots, plus the `start_quick`/levers expectations) needed to unblock the parked M10 TypeDuck-Windows backend, *without* reopening M10 packaging.
+**Goal:** Widen Yune's _named_ compatibility set (goal **B** in [`roadmap.md`](../../roadmap.md)) by onboarding three common upstream schemas — **Shuangpin** (double-pinyin), **Cangjie**, and **Zhuyin/bopomofo** — each measured against the upstream `rime/librime 1.17.0` oracle through the M12 parity harness; and **name the TypeDuck-profile ABI surface** (the fork-only `config_list_append_*` table slots, plus the `start_quick`/levers expectations) needed to unblock the parked M10 TypeDuck-Windows backend, _without_ reopening M10 packaging.
 
-**Architecture:** Reuse the M12 harness verbatim as the per-schema template: capture goldens from the official upstream `1.17.0` MSVC release binary via `scripts/oracle-rime-probe.cs`, compose provenance-stamped fixtures under `crates/yune-core/tests/fixtures/upstream-1.17.0/`, guard provenance in `oracle_fixture_provenance.rs`, and add one owning parity test per schema modeled on `upstream_luna_pinyin_parity.rs`. Each schema is an *own-each-slice* unit: an owning fixture, an owning parity test, an explicit non-circular oracle target. Schema behavior is built on existing primitives — the `SpellingAlgebra` (`crates/yune-core/src/spelling_algebra.rs`, supports `xform`/`xlit`/`derive`/`fuzz`/`abbrev`/`erase` at lines 120-133), the `StaticTableTranslator` with `with_spelling_algebra`/`with_show_full_code`/`with_affix` (`crates/yune-core/src/translator/mod.rs:313`, `:917`), and the schema-driven `SpellerProcessor` (`crates/yune-rime-api/src/processors/speller.rs:10` reads `alphabet`/`initials`/`finals`/`delimiter`/`max_code_length`/`auto_select`). For the ABI surface, expose the already-implemented but unwired `RimeConfigListAppend{String,Bool,Int,Double}` symbols (`crates/yune-rime-api/src/config_api.rs:425-485`) through a **named, opt-in profile table variant** — never by mutating the default upstream `rime_get_api()` table built in `crates/yune-rime-api/src/api_table.rs:63-165`.
+**Architecture:** Reuse the M12 harness verbatim as the per-schema template: capture goldens from the official upstream `1.17.0` MSVC release binary via `scripts/oracle-rime-probe.cs`, compose provenance-stamped fixtures under `crates/yune-core/tests/fixtures/upstream-1.17.0/`, guard provenance in `oracle_fixture_provenance.rs`, and add one owning parity test per schema modeled on `upstream_luna_pinyin_parity.rs`. Each schema is an _own-each-slice_ unit: an owning fixture, an owning parity test, an explicit non-circular oracle target. Schema behavior is built on existing primitives — the `SpellingAlgebra` (`crates/yune-core/src/spelling_algebra.rs`, supports `xform`/`xlit`/`derive`/`fuzz`/`abbrev`/`erase` at lines 120-133), the `StaticTableTranslator` with `with_spelling_algebra`/`with_show_full_code`/`with_affix` (`crates/yune-core/src/translator/mod.rs:313`, `:917`), and the schema-driven `SpellerProcessor` (`crates/yune-rime-api/src/processors/speller.rs:10` reads `alphabet`/`initials`/`finals`/`delimiter`/`max_code_length`/`auto_select`). For the ABI surface, expose the already-implemented but unwired `RimeConfigListAppend{String,Bool,Int,Double}` symbols (`crates/yune-rime-api/src/config_api.rs:425-485`) through a **named, opt-in profile table variant** — never by mutating the default upstream `rime_get_api()` table built in `crates/yune-rime-api/src/api_table.rs:63-165`.
 
 **Tech Stack:** Rust `yune-core` / `yune-rime-api`; C# `oracle-rime-probe.cs` + PowerShell capture wrappers (`scripts/capture-upstream-luna-pinyin.ps1` template); upstream `1.17.0` Windows MSVC release binary as behavioral-capture source; `serde_json` fixture format.
 
-**Closeout:** M19 landed the reusable `scripts/capture-upstream-schema.ps1`
-recipe, provenance-stamped upstream fixtures and owning parity tests for
-`double_pinyin`, `cangjie5`, and `bopomofo`, the minimal
-`SpellingAlgebra` replacement-normalization fix required by captured Shuangpin
-rules, and the opt-in `rime_get_typeduck_profile_api()` surface. Cangjie
-phrase/table-encoder/no-match behavior, Zhuyin digit/space key-event routing,
-and all sentence/lattice language-model behavior remain explicit ignored
-blockers rather than M19 parity claims. `start_quick`, Windows packaging, and
-real TypeDuck-Windows frontend E2E remain out of surface.
+**Closeout:** M19 landed the reusable `scripts/capture-upstream-schema.ps1` recipe, provenance-stamped upstream fixtures and owning parity tests for `double_pinyin`, `cangjie5`, and `bopomofo`, the minimal `SpellingAlgebra` replacement-normalization fix required by captured Shuangpin rules, and the opt-in `rime_get_typeduck_profile_api()` surface. Cangjie phrase/table-encoder/no-match behavior, Zhuyin digit/space key-event routing, and all sentence/lattice language-model behavior remain explicit ignored blockers rather than M19 parity claims. `start_quick`, Windows packaging, and real TypeDuck-Windows frontend E2E remain out of surface.
 
 ---
 
 ## Scope / Non-goals
 
 **In scope.**
+
 - A repeatable **per-schema onboarding recipe** (capture goldens → run through harness → fix gaps under own-each-slice), applied to Shuangpin, Cangjie, and Zhuyin against the `1.17.0` oracle.
 - Provenance/manifest extensions so the three new schemas live alongside `luna_pinyin` under `upstream-1.17.0/` with non-circular source provenance enforced by `oracle_fixture_provenance.rs`.
 - **Naming** the TypeDuck-profile ABI surface: a documented, opt-in profile table variant that adds the fork-only `config_list_append_*` slots (consumed at 7 sites in the Windows deployer per [`typeduck-windows-backend-requirements.md`](../../typeduck-windows-backend-requirements.md) §1), with a contract doc and a smoke test that the default table is unchanged.
 
 **Non-goals.**
+
 - Schemas no named user/target needs (do not onboard the full RIME catalog; only the three named here).
 - Bit-for-bit librime internals (oracle, not template): only match observable candidate/preedit/commit bytes for the captured cases.
 - The upstream statistical **language model / lattice** (that is M17). Zhuyin and Shuangpin onboarding is scoped to **single-syllable + exact-code + speller-layout** parity; sentence-LM cases are explicit ignored blockers, identical to the existing `zhongguo` pattern.
-- Reopening M10 **packaging** (`scripts/package-typeduck-windows.ps1`), the native `rime.dll` release smoke, or the real TypeDuck-Windows frontend E2E. M19 only *names and exposes* the profile ABI; resuming packaging waits for a later milestone.
+- Reopening M10 **packaging** (`scripts/package-typeduck-windows.ps1`), the native `rime.dll` release smoke, or the real TypeDuck-Windows frontend E2E. M19 only _names and exposes_ the profile ABI; resuming packaging waits for a later milestone.
 - Changing the default `rime_get_api()` table or widening `RimeCandidate` (upstream-first default ABI).
 
 ---
@@ -46,7 +39,7 @@ real TypeDuck-Windows frontend E2E remain out of surface.
 - [x] Document the recipe as a short "Adding a new upstream schema" section in the fixture-root `README.md` (capture → fixture → provenance test → parity test → fix-gaps), so future breadth schemas follow it mechanically.
 - [x] **Acceptance:** Re-capturing the existing `luna_pinyin` basic fixture through the new generalized wrapper produces byte-identical `cases` to `luna-pinyin-basic.json` (proves the generalization did not change capture semantics), and the recipe README documents every required provenance field.
 
-### Task 2 — Shuangpin (double-pinyin) onboarding — *capture goldens first*
+### Task 2 — Shuangpin (double-pinyin) onboarding — _capture goldens first_
 
 - [x] Pin and record the upstream Shuangpin schema data (e.g. `rime/rime-double-pinyin`, schema id `double_pinyin`) commit in the fixture provenance; capture goldens from the `1.17.0` binary for: single-syllable maps where the two-key shuangpin code resolves to the full pinyin syllable (e.g. a `flypy`/`MSPY` mapping the schema actually ships), exact-code candidate ordering with essay weights, and `Page_Down`/select/`{space}` actions (mirror the `luna-pinyin-actions.json` snapshot scenarios).
 - [x] Add `upstream-1.17.0/double-pinyin-basic.json` (+ a selection/actions fixture if the action surface differs from luna); extend `oracle_fixture_provenance.rs` with a `double_pinyin` source-row policy branch and a non-circular source-provenance assertion analogous to the `luna-pinyin-*` block (lines 33-61).
@@ -54,15 +47,15 @@ real TypeDuck-Windows frontend E2E remain out of surface.
 - [x] Wire the `SpellerProcessor` layout: ensure `speller/alphabet`/`initials`/`finals`/`delimiter`/`max_code_length` from the shuangpin `*.schema.yaml` flow through `install_schema_speller_processor` (`speller.rs:10`) and that `expecting_initial` (`speller.rs:175`) honors the shuangpin final set.
 - [x] **Acceptance:** A new `upstream_double_pinyin_parity.rs` test drives Yune's real parser → `SpellingAlgebra` → `StaticTableTranslator` → Engine and matches the captured first-page texts + commit preview for every non-sentence case; any sentence-LM case is an explicit `#[ignore]` blocker with a panic message naming the missing surface (same pattern as `zhongguo_phrase_mechanics_parity_is_blocked`).
 
-### Task 3 — Cangjie onboarding (build on existing short/full-code support) — *capture goldens first*
+### Task 3 — Cangjie onboarding (build on existing short/full-code support) — _capture goldens first_
 
 - [x] Pin the upstream Cangjie schema data (`rime/rime-cangjie`, ids `cangjie5`/`cangjie5_express`) commit; capture goldens from the `1.17.0` binary for exact 1–5 letter code lookups. Broader phrase/table-encoder interleave, option-specific full-code comments, `max_code_length` auto-select behavior, and no-match classification are recorded as explicit blockers because the first oracle probes resolved through phrase/wildcard/punctuation surfaces rather than a narrow exact-code oracle slice.
-- [x] Add `upstream-1.17.0/cangjie5-basic.json`; reuse the existing `xlit` root-letter formula shape (`xlit|abcde…|日月金木…|`, see the filter test) but capture it from the *upstream* `cangjie5.schema.yaml`, not from the TypeDuck jyut-derived cangjie sub-lookup (keep the upstream `cangjie5` slice distinct from the existing TypeDuck `jyut6ping3` cangjie reverse-lookup path — see `MEMORY.md` "don't conflate the three TypeDuck-Web things"; same conflation hazard applies here).
+- [x] Add `upstream-1.17.0/cangjie5-basic.json`; reuse the existing `xlit` root-letter formula shape (`xlit|abcde…|日月金木…|`, see the filter test) but capture it from the _upstream_ `cangjie5.schema.yaml`, not from the TypeDuck jyut-derived cangjie sub-lookup (keep the upstream `cangjie5` slice distinct from the existing TypeDuck `jyut6ping3` cangjie reverse-lookup path — see `MEMORY.md` "don't conflate the three TypeDuck-Web things"; same conflation hazard applies here).
 - [x] Extend `oracle_fixture_provenance.rs` with a `cangjie5` source-row policy branch.
 - [x] Confirm `table_translator`-style behavior: `StaticTableTranslator` columns parsing handles the captured shape-table rows (`columns: [text, code, stem]`), and the active parity slice preserves upstream default empty-comment exact-code behavior with `show_full_code` off. Full-code option comments and auto-select stay out of the active claim until separately captured.
 - [x] **Acceptance:** `upstream_cangjie_parity.rs` matches captured exact-code candidate texts and default comments through Yune's real dictionary/translator/Engine path; the test asserts the upstream provenance header and the `cangjie5` schema id, with the broader full-page phrase/table-encoder/no-match surface left as an ignored blocker.
 
-### Task 4 — Zhuyin / bopomofo onboarding (speller + layout) — *capture goldens first*
+### Task 4 — Zhuyin / bopomofo onboarding (speller + layout) — _capture goldens first_
 
 - [x] Pin upstream Zhuyin schema data (`rime/rime-bopomofo`, id `bopomofo`; note it is pinyin-derived via algebra + a bopomofo keyboard `xlit` layer); capture goldens for: single-syllable bopomofo-key input mapped to candidates, the tone-key handling (1/3/4/6 or space mapping per the schema's `speller`), exact-code ordering, and `Page_Down`/select/`{space}` actions.
 - [x] Add `upstream-1.17.0/bopomofo-basic.json` (+ actions fixture if needed); extend `oracle_fixture_provenance.rs` with a `bopomofo` source-row policy branch.

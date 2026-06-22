@@ -13,7 +13,7 @@ No TypeDuck-Web source is vendored into Yune per D-09. The wrapper shape was sou
 ## Wrapper to Yune ABI Map
 
 | TypeDuck-Web wrapper concern | Yune ABI validation path |
-|------------------------------|--------------------------|
+| --- | --- |
 | Obtain global RIME API pointer | `rime_get_api` returns the process-wide `RimeApi` table. |
 | Browser virtual shared/user paths | `setup` receives synthetic shared, user, prebuilt, and staging directories. |
 | Runtime initialization | `deployer_initialize` and `initialize` run against the synthetic browser-modeled paths. |
@@ -42,7 +42,7 @@ No TypeDuck-Web source is vendored into Yune per D-09. The wrapper shape was sou
 Per D-10, these are wrapper/browser limits, not Yune ABI failures:
 
 | Classification | Finding | Artifact/Test Reference |
-|----------------|---------|-------------------------|
+| --- | --- | --- |
 | `browser_wasm_limit` | Emscripten worker lifecycle is source-modeled only; the Rust test does not instantiate a browser worker. | `typeduck-web-basic.json` ordered call `browser_wasm_limit.emscripten_worker_lifecycle` |
 | `browser_wasm_limit` | IDBFS persistence is modeled with synthetic user/staging paths; browser persistence semantics are not native filesystem validation. | `typeduck-web-basic.json` ordered call `browser_wasm_limit.idbfs_persistence` |
 | `browser_wasm_limit` | Browser/WebAssembly cannot validate native dynamic-library loading. | `typeduck-web-basic.json` ordered call `browser_wasm_limit.native_dynamic_loading` |

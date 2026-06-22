@@ -116,7 +116,7 @@ If a report is ambiguous, classify it as **Needs triage**, capture the screensho
 ## Running Issue Ledger
 
 | ID | Status | Classification | User-visible issue | First repro / evidence | Owning surfaces | Close criteria |
-|---|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- | --- |
 | M24-DOGFOOD-01 | Closed | Browser integration / performance | First visit to `http://localhost:5173/web/` remains on `載入中 Loading...` for too long. | Fresh browser tab to `/web/`; user observed a long loading period before the IME becomes usable. | `third_party/typeduck-web/source/src/worker.ts`, `third_party/typeduck-web/source/src/yune-integration/adapter.ts`, `third_party/typeduck-web/source/src/yune-integration/assets.ts`, `packages/yune-typeduck-runtime/`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts` | Closed with startup marker and resource evidence under `third_party/typeduck-web/e2e/results/m24-dogfooding/M24-DOGFOOD-01/`; owned by Playwright `M24 startup timing trace records loading phases`. |
 | M24-DOGFOOD-02 | Closed | Browser integration / comment rendering | Long phrase candidates show a literal `\f` before Jyutping on following single-character candidates, while single-character input does not show it. | Type a long phrase such as `jigaajiusihaa`; screenshot shows candidates like `以 \fji5`. | `third_party/typeduck-web/source/src/CandidateInfo.ts`, `third_party/typeduck-web/source/src/Candidate.tsx`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`, candidate comments from `crates/yune-rime-api/tests/typeduck_web.rs` | Closed with clean candidate-row evidence under `third_party/typeduck-web/e2e/results/m24-dogfooding/M24-DOGFOOD-02/`; owned by Playwright `M24 phrase comments render without raw control markers`. |
 | M24-DOGFOOD-03 | Closed | UI polish / candidate layout | Compound-candidate dictionary glosses render horizontally next to the candidate text, making `而家要思考(compound 詞組) 而家 (now) 要 (want; need) 思考 (think; ponder)` read like one confusing inline candidate. | Type `jigaajiusihaa`; screenshot shows the first highlighted candidate widened across the horizontal row. | `third_party/typeduck-web/source/src/Candidate.tsx`, `third_party/typeduck-web/source/src/CandidatePanel.tsx`, `third_party/typeduck-web/source/src/DictionaryPanel.tsx`, `third_party/typeduck-web/source/src/index.css` | Closed with compact row and dictionary-panel evidence under `third_party/typeduck-web/e2e/results/m24-dogfooding/M24-DOGFOOD-03/`; owned by Playwright `M24 compound candidate rows stay compact with details in the dictionary panel`. |
@@ -136,6 +136,7 @@ If a report is ambiguous, classify it as **Needs triage**, capture the screensho
 ## Task 1: Baseline Capture And M24 Evidence Harness
 
 **Files:**
+
 - Modify: `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`
 - Create evidence during execution: `third_party/typeduck-web/e2e/results/m24-dogfooding/`
 
@@ -190,6 +191,7 @@ git commit -m "test: add M24 TypeDuck-Web dogfooding evidence helpers"
 ## Task 2: M24-DOGFOOD-01 Startup Loading Performance
 
 **Files:**
+
 - Modify: `third_party/typeduck-web/source/src/worker.ts`
 - Modify: `third_party/typeduck-web/source/src/yune-integration/adapter.ts`
 - Modify: `third_party/typeduck-web/source/src/yune-integration/assets.ts`
@@ -290,6 +292,7 @@ For cold-cache CI/browser runs where the WASM transfer alone exceeds 5000 ms, re
 ## Task 3: M24-DOGFOOD-02 Literal `\f` Comment-Control Leakage
 
 **Files:**
+
 - Modify: `third_party/typeduck-web/source/src/CandidateInfo.ts`
 - Inspect first, then modify only if parsing cannot be fixed in `CandidateInfo.ts`: `third_party/typeduck-web/source/src/Candidate.tsx`
 - Test: `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`
@@ -348,6 +351,7 @@ Expected: no visible `\f`, `\r`, or `\v` in candidate rows.
 ## Task 4: M24-DOGFOOD-03 Candidate Gloss Layout
 
 **Files:**
+
 - Modify: `third_party/typeduck-web/source/src/Candidate.tsx`
 - Modify: `third_party/typeduck-web/source/src/CandidatePanel.tsx`
 - Modify: `third_party/typeduck-web/source/src/DictionaryPanel.tsx`
@@ -409,6 +413,7 @@ Capture screenshots at default desktop width and a narrow viewport. The candidat
 ## Task 5: M24-DOGFOOD-04 `jigaajiusihaa` Word-Candidate Ordering
 
 **Files:**
+
 - Modify or add fixture: `crates/yune-core/tests/fixtures/typeduck-v1.1.2/jyut6ping3-m24-dogfooding.json`
 - Modify: `scripts/capture-typeduck-jyutping.ps1`
 - Modify: `crates/yune-core/tests/cantonese_parity.rs`
@@ -447,10 +452,7 @@ The fixture must record selected candidate texts, comments, highlighted index, p
 
 - [ ] **Step 3: Add a failing parity assertion before changing ranking**
 
-Add a focused test in `crates/yune-core/tests/cantonese_parity.rs`. Extend the
-existing fixture constants and helpers in the same style as
-`m21_closeout_fixture()`, `m21_closeout_case(...)`, and
-`selected_candidate_text(...)`:
+Add a focused test in `crates/yune-core/tests/cantonese_parity.rs`. Extend the existing fixture constants and helpers in the same style as `m21_closeout_fixture()`, `m21_closeout_case(...)`, and `selected_candidate_text(...)`:
 
 ```rust
 const M24_DOGFOOD_ORACLE: &str =
@@ -494,8 +496,7 @@ fn m24_jigaajiusihaa_word_candidates_match_typeduck_v112() {
 }
 ```
 
-This uses the production `typeduck_jyut6ping3_mobile_engine(false)` helper; do
-not invent a parallel engine harness.
+This uses the production `typeduck_jyut6ping3_mobile_engine(false)` helper; do not invent a parallel engine harness.
 
 - [ ] **Step 4: Diagnose source ordering before changing code**
 
@@ -527,6 +528,7 @@ If the pinned fixture differs from the live product, replace the expected list w
 ## Task 6: M24-DOGFOOD-05 Cantonese-First Settings Labels And Toggle Help
 
 **Files:**
+
 - Modify: `third_party/typeduck-web/source/src/Preferences.tsx`
 - Modify: `third_party/typeduck-web/source/src/Inputs.tsx`
 - Modify: `third_party/typeduck-web/source/src/Toolbar.tsx`
@@ -628,6 +630,7 @@ Save after screenshots under `third_party/typeduck-web/e2e/results/m24-dogfoodin
 ## Task 7: M24-DOGFOOD-06 Simplify Display-Language Selection
 
 **Files:**
+
 - Modify: `third_party/typeduck-web/source/src/Preferences.tsx`
 - Modify: `third_party/typeduck-web/source/src/Inputs.tsx`
 - Inspect first, then modify only if primary-definition behavior becomes unclear after removing visible radios: `third_party/typeduck-web/source/src/CandidateInfo.ts`
@@ -750,6 +753,7 @@ Save after screenshots under `third_party/typeduck-web/e2e/results/m24-dogfoodin
 ## Task 8: M24-DOGFOOD-07 Candidate Page-Size Control Wiring
 
 **Files:**
+
 - Modify: `third_party/typeduck-web/source/src/yune-integration/adapter.ts`
 - Inspect first, then modify only if the React state/effect is not firing: `third_party/typeduck-web/source/src/App.tsx`
 - Inspect first, then modify only if the slider emits the wrong value: `third_party/typeduck-web/source/src/Preferences.tsx`
@@ -883,6 +887,7 @@ Expected: the runtime reports `context.page_size` equal to the selected value, t
 ## Task 9: M24-DOGFOOD-08 Frontend Candidate-Menu Layout Control
 
 **Files:**
+
 - Modify: `third_party/typeduck-web/source/src/consts.ts`
 - Modify: `third_party/typeduck-web/source/src/types.ts`
 - Modify: `third_party/typeduck-web/source/src/Preferences.tsx`
@@ -1057,6 +1062,7 @@ Expected: both screenshots render clearly, the candidate text order is identical
 ## Task 10: M24-DOGFOOD-09 Explain The Engine Status Strip
 
 **Files:**
+
 - Modify: `third_party/typeduck-web/source/src/YuneStatusStrip.tsx`
 - Inspect first, then modify only if spacing needs adjustment: `third_party/typeduck-web/source/src/index.css`
 - Test: `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`
@@ -1165,6 +1171,7 @@ Expected: the strip is labeled and explained, status badges still update from th
 ## Task 11: M24-DOGFOOD-10 Show Real Schema Names In The Switcher
 
 **Files:**
+
 - Modify: `third_party/typeduck-web/source/src/consts.ts`
 - Modify: `third_party/typeduck-web/source/src/SchemaSwitcher.tsx`
 - Inspect first, then modify only if needed for agreement: `third_party/typeduck-web/source/src/YuneStatusStrip.tsx`
@@ -1290,6 +1297,7 @@ Expected: the schema switcher uses checked real schema names, the selected schem
 ## Task 12: M24-DOGFOOD-11 Add Jyutping Reverse Lookup To The Web Dogfood
 
 **Files:**
+
 - Modify: `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`
 - Modify: `crates/yune-rime-api/tests/typeduck_web.rs`
 - Modify after the failing native/browser tests identify the gap: `third_party/typeduck-web/source/schema/jyut6ping3_mobile.schema.yaml`
@@ -1480,6 +1488,7 @@ Expected: `jyut6ping3_mobile` still initializes from the browser app assets, `` 
 ## Task 13: M24-DOGFOOD-12 Replace The Sung/Hei Toggle With A Full Typeface Picker
 
 **Files:**
+
 - Modify: `third_party/typeduck-web/source/src/types.ts`
 - Modify: `third_party/typeduck-web/source/src/consts.ts`
 - Modify: `third_party/typeduck-web/source/src/hooks.ts`
@@ -1795,6 +1804,7 @@ Expected: the picker lists all eight full family names, selecting `Iansui` chang
 ## Task 14: M24-DOGFOOD-13 Remove DaisyUI And Keep Local Tailwind Components Only
 
 **Files:**
+
 - Modify: `third_party/typeduck-web/source/package.json`
 - Modify: `third_party/typeduck-web/source/tailwind.config.ts`
 - Modify: `third_party/typeduck-web/source/src/index.css`
@@ -2141,6 +2151,7 @@ Expected: the app builds without DaisyUI, the smoke UI remains visible, candidat
 ## Task 15: M24 Regression Sweep And Closeout Discipline
 
 **Files:**
+
 - Modify: this plan as issue rows close
 - Modify when TypeDuck-Web source changes: `third_party/typeduck-web/patches/yune-typeduck-runtime.patch`
 - Modify when Yune-owned integration changes: `third_party/typeduck-web/yune-integration/*`

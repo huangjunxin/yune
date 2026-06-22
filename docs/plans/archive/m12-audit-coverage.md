@@ -2,13 +2,10 @@
 
 > **Status:** Finished - **Milestone:** M12 (Upstream Oracle Refresh) - **Closed:** 2026-06-19 - **Type:** coverage audit reference
 
-M12 makes upstream `rime/librime 1.17.0` the default core oracle. TypeDuck
-`v1.1.2` remains a compatibility-profile oracle for TypeDuck-Web and parked
-TypeDuck-Windows work only. The default `rime_get_api()` table must not require
-TypeDuck fork-only slots such as `start_quick` or `config_list_append_*`.
+M12 makes upstream `rime/librime 1.17.0` the default core oracle. TypeDuck `v1.1.2` remains a compatibility-profile oracle for TypeDuck-Web and parked TypeDuck-Windows work only. The default `rime_get_api()` table must not require TypeDuck fork-only slots such as `start_quick` or `config_list_append_*`.
 
 | Path | Existing coverage | Classification | M12 action |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `crates/yune-rime-api/src/tests/abi.rs` | Default `RimeApi` slot layout and table size | upstream core | Refreshed to upstream `rime/librime 1.17.0`; default ABI parity is upstream-first. |
 | `crates/yune-rime-api/src/tests/config_api.rs` | Direct `RimeConfigListAppend*` helper behavior | TypeDuck profile | Keep as TypeDuck-profile implementation-only tests; default `rime_get_api()` no longer exposes `config_list_append_*`. |
 | `crates/yune-core/tests/cantonese_parity.rs` | Active Cantonese/Jyutping oracle parity slices | TypeDuck profile | Keep labeled as TypeDuck `v1.1.2` profile behavior; do not treat as upstream core proof. |
@@ -23,10 +20,6 @@ TypeDuck fork-only slots such as `start_quick` or `config_list_append_*`.
 
 ## Closeout Notes
 
-- `start_quick` is not an upstream `1.17.0` default ABI field and is not exported
-  as a flat default symbol in M12.
-- `config_list_append_*` helpers remain useful TypeDuck-profile implementation
-  code, but they are not part of the default upstream `RimeApi`.
-- TypeDuck-Windows packaging is blocked until Yune has an explicit named
-  TypeDuck-profile ABI surface and fresh slot evidence from the TypeDuck fork
-  header.
+- `start_quick` is not an upstream `1.17.0` default ABI field and is not exported as a flat default symbol in M12.
+- `config_list_append_*` helpers remain useful TypeDuck-profile implementation code, but they are not part of the default upstream `RimeApi`.
+- TypeDuck-Windows packaging is blocked until Yune has an explicit named TypeDuck-profile ABI surface and fresh slot evidence from the TypeDuck fork header.

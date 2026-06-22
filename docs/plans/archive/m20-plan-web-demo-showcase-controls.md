@@ -16,27 +16,11 @@
 
 M20 is a web/demo milestone, parallel to Track 2 (M17-M19). It may run before M17, but it is not an M13 follow-up: M13 remains completed and archived as the default-off AI frontend exposure milestone.
 
-For Yune development, this TypeDuck-Web build is the go-to playground. It should
-let maintainers quickly toggle options, trigger edge cases, compare before/after
-candidate behavior, capture browser evidence, and stress new engine features
-with real assets. When a new engine feature becomes browser-safe, the default
-expectation is to add either an active control or a guided scenario here; when a
-feature is not browser-safe or not implemented, document the deferral instead of
-leaving a confusing partial UI.
+For Yune development, this TypeDuck-Web build is the go-to playground. It should let maintainers quickly toggle options, trigger edge cases, compare before/after candidate behavior, capture browser evidence, and stress new engine features with real assets. When a new engine feature becomes browser-safe, the default expectation is to add either an active control or a guided scenario here; when a feature is not browser-safe or not implemented, document the deferral instead of leaving a confusing partial UI.
 
-Terminology guard: M20 targets only this repo's patched internal harness under
-`third_party/typeduck-web/` plus the reusable runtime bridge in
-`packages/yune-typeduck-runtime/`. A separately cloned `TypeDuck-HK/TypeDuck-Web`
-checkout is the real dedicated web IME product and belongs to a future named
-product-integration milestone. Do not touch, import from, or re-pull that product
-checkout for M20, and do not treat `packages/yune-typeduck-runtime/` as a UI app.
+Terminology guard: M20 targets only this repo's patched internal harness under `third_party/typeduck-web/` plus the reusable runtime bridge in `packages/yune-typeduck-runtime/`. A separately cloned `TypeDuck-HK/TypeDuck-Web` checkout is the real dedicated web IME product and belongs to a future named product-integration milestone. Do not touch, import from, or re-pull that product checkout for M20, and do not treat `packages/yune-typeduck-runtime/` as a UI app.
 
-For M20, **browser-safe** means the behavior can be exercised through the
-TypeDuck-Web worker with real checked-in browser assets, without changing the
-upstream `RimeApi` table, widening `RimeCandidate`, requiring a native
-platform-only frontend, requiring a remote provider, or collecting
-security-sensitive host context. A browser-safe feature also needs deterministic
-before/after evidence in Playwright or the manual smoke record.
+For M20, **browser-safe** means the behavior can be exercised through the TypeDuck-Web worker with real checked-in browser assets, without changing the upstream `RimeApi` table, widening `RimeCandidate`, requiring a native platform-only frontend, requiring a remote provider, or collecting security-sensitive host context. A browser-safe feature also needs deterministic before/after evidence in Playwright or the manual smoke record.
 
 M20 must preserve:
 
@@ -56,7 +40,7 @@ M20 must be broad but honest. A visible engine/runtime toggle or slider is allow
 These controls are allowed in the UI because they are already wired to runtime behavior. Future supported engine features should be added to this table or to Guided Scenarios so the playground remains a living coverage surface, not a stale demo.
 
 | UI control | Transport | Engine/config key | Default | Required proof |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | Auto-completion | `customize()` + `deploy()` | `translator/enable_completion` | On | Candidate/completion output changes |
 | Auto-correction | `customize()` + `deploy()` | `translator/enable_correction` | Off | Correction row appears/disappears |
 | Auto-composition | `customize()` + `deploy()` | `translator/enable_sentence` | On | Sentence row appears/disappears |
@@ -77,7 +61,7 @@ There is only one prediction-threshold control. `prediction_frequency_threshold`
 These controls are UI-only. They are still part of the playground, but their proof is a visible rendering change rather than an engine candidate/status change.
 
 | UI control | Transport | UI target | Default | Required proof |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | Display languages | UI-only | dictionary-panel column filter | English | Dictionary panel columns change |
 | Candidate Jyutping | UI-only | candidate rendering | Existing default | Candidate-panel code/comment display changes |
 | Reverse code display | UI-only | dictionary/candidate rendering | Existing default | Reverse-code visibility changes |
@@ -88,7 +72,7 @@ These controls are UI-only. They are still part of the playground, but their pro
 These are feature-launch buttons or compact scenario rows, not toggles:
 
 | Scenario | Input/action | Expected demo point |
-|---|---|---|
+| --- | --- | --- |
 | Baseline Cantonese | Type `nei` | Real `jyut6ping3_mobile` dictionary candidates render |
 | Long-entry prediction | Type `santai` | Long entry `身體健康` can appear, with ranking controlled by prediction controls |
 | Prediction never first | Commit/learn a long phrase, then type `ngo` | Classic `我` remains index 0 when never-first is on |
@@ -129,6 +113,7 @@ Do not touch `crates/yune-rime-api/src/abi.rs`, the `RimeApi` table layout, or `
 ## Task 1: Local Agent Instructions
 
 **Files:**
+
 - Create: `third_party/typeduck-web/AGENTS.md`
 - Create: `packages/yune-typeduck-runtime/AGENTS.md`
 
@@ -196,6 +181,7 @@ git commit -m "docs: add TypeDuck-Web agent guides"
 ## Task 2: Preference Model And Adapter Mapping
 
 **Files:**
+
 - Modify: `third_party/typeduck-web/source/src/types.ts`
 - Modify: `third_party/typeduck-web/source/src/consts.ts`
 - Modify: `third_party/typeduck-web/yune-integration/adapter.ts`
@@ -355,6 +341,7 @@ git commit -m "feat: wire TypeDuck-Web demo preferences"
 ## Task 3: UI Controls
 
 **Files:**
+
 - Modify: `third_party/typeduck-web/source/src/App.tsx`
 - Modify: `third_party/typeduck-web/source/src/Preferences.tsx`
 - Modify: `third_party/typeduck-web/source/src/Inputs.tsx` if needed
@@ -504,6 +491,7 @@ git commit -m "feat: add TypeDuck-Web showcase controls"
 ## Task 4: Guided Scenarios
 
 **Files:**
+
 - Create or modify: `third_party/typeduck-web/source/src/YuneFeatureShowcase.tsx`
 - Modify: `third_party/typeduck-web/source/src/App.tsx`
 - Modify: `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`
@@ -598,6 +586,7 @@ git commit -m "feat: add TypeDuck-Web guided scenarios"
 ## Task 5: Control Honesty Tests
 
 **Files:**
+
 - Modify: `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`
 - Modify: `third_party/typeduck-web/e2e/yune-browser-smoke.md`
 
@@ -685,6 +674,7 @@ git commit -m "test: prove TypeDuck-Web showcase controls"
 ## Task 6: Patch Regeneration And Reverse Check
 
 **Files:**
+
 - Modify: `third_party/typeduck-web/patches/yune-typeduck-runtime.patch`
 
 - [ ] **Step 1: Regenerate the maintained patch**
@@ -725,6 +715,7 @@ git commit -m "chore: refresh TypeDuck-Web showcase patch"
 ## Task 7: Final Verification
 
 **Files:**
+
 - Modify only evidence files under `third_party/typeduck-web/e2e/results/m20-showcase-controls/` if browser evidence is captured.
 
 - [ ] **Step 1: Format**

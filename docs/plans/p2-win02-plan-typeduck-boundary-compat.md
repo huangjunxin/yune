@@ -38,6 +38,12 @@ Important Phase 0C findings:
   - Yune currently emits a display marker for the sentence candidate and literal text like `\fngo5hai6` for later rows.
 - AppVerifier changes the original Phase 0A crash into a pre-candidate hang in Yune-backed `RimeCreateSession` / `RimeSelectSchema`. That blocker reproduces through console IPC, so it is not first explained by Notepad, DirectWrite, or WeaselUI rendering.
 
+Relationship to TypeDuck-Web:
+
+- The browser dogfood app was affected by the same family of comment-control symptoms in M24: `M24-DOGFOOD-02` closed the visible `\f` leakage by normalizing and stripping control markers in TypeDuck-Web candidate-row rendering.
+- That web fix is a display/parser insulation layer, not proof that Yune emits TypeDuck `v1.1.2` raw comment bytes at the ABI boundary.
+- P2-WIN-02 therefore owns the raw engine/profile compatibility fix, and its closeout must rerun TypeDuck-Web comment-rendering gates so the browser parser keeps handling the corrected rich payload without showing raw markers.
+
 ## Scope
 
 In scope:
@@ -46,6 +52,7 @@ In scope:
 - Make the TypeDuck `jyut6ping3` profile emit TypeDuck `v1.1.2` rich comment bytes for the Windows-facing `ngohaig` path.
 - Investigate and fix or explicitly separate the AppVerifier `RimeCreateSession` / `RimeSelectSchema` hang.
 - Rebuild the TypeDuck Windows package and verify the local TypeDuck-Windows IPC and Notepad smoke after the Yune fix.
+- Re-run the TypeDuck-Web comment-rendering/native adapter gates that cover `M24-DOGFOOD-02` and rich dictionary-panel comments, because the browser must remain insulated from raw control markers after the engine starts emitting byte-compatible rich payloads.
 - Update roadmap/plans/evidence with the final classification.
 
 Out of scope:
@@ -54,18 +61,21 @@ Out of scope:
 - Adding the TypeDuck fork `quality` field to the default ABI.
 - Starting YuneHost, WebView2, candidate-window rewrite, repo extraction, or other Windows product work.
 - Changing the separate M25 TypeDuck-Web dogfooding implementation unless a shared regression is proven.
+- Reopening M24 or treating the M24 web display fix as the engine-byte fix. M24 closed the visible browser symptom; P2-WIN-02 closes the raw ABI/profile compatibility issue.
 - Treating `typeduck.hk/web` as the hard oracle; the oracle for this milestone is TypeDuck-HK/librime `v1.1.2`.
 
 ## Execution Notes
 
 - This milestone should run in a clean Yune worktree after the active M25 edits are committed, or in a separate clean worktree created from current `origin/main`.
 - If the current Yune worktree contains M25 changes, stage only P2-WIN-02 files and do not sweep web dogfooding artifacts into this milestone.
+- Do not treat a passing TypeDuck-Web UI test as sufficient evidence for this milestone. The key P2-WIN-02 proof is raw `RimeCandidate.comment` byte compatibility plus a rerun that shows TypeDuck-Web still hides/parses those controls correctly.
 - Before any elevated Windows command, IME install/register step, AppVerifier enablement, or machine registry cleanup, pause for explicit user approval.
 - Disable AppVerifier and clean test IME registration before finishing any Windows smoke attempt.
 
 ## Task 0 - Prepare A Clean Yune Slice
 
 **Files:**
+
 - Read: `docs/roadmap.md`
 - Read: `docs/plans/p2-win01-plan-typeduck-windows-next.md`
 - Read: `C:\Users\laubonghaudoi\Documents\GitHub\TypeDuck-Windows\docs\evidence\p2-win01-phase0c-2026-06-21\README.md`
@@ -103,6 +113,7 @@ Expected:
 ## Task 1 - Promote Phase 0C Evidence Into Yune Fixtures
 
 **Files:**
+
 - Create: `crates/yune-core/tests/fixtures/typeduck-v1.1.2/jyut6ping3-windows-boundary-ngohaig.json`
 - Modify: `crates/yune-core/tests/fixtures/typeduck-v1.1.2/oracle-manifest.json`
 - Modify: `crates/yune-core/tests/fixtures/typeduck-v1.1.2/README.md`
@@ -188,6 +199,7 @@ Expected:
 ## Task 2 - Add Failing Yune Boundary Tests
 
 **Files:**
+
 - Modify: `crates/yune-core/tests/cantonese_parity.rs`
 - Modify or create: `crates/yune-rime-api/tests/typeduck_windows_boundary.rs`
 - Inspect: `crates/yune-core/src/filter/mod.rs`
@@ -263,6 +275,7 @@ Expected:
 ## Task 3 - Fix TypeDuck Rich Comment Byte Compatibility
 
 **Files:**
+
 - Primary modify: `crates/yune-core/src/filter/mod.rs`
 - Inspect and modify only if the failing test shows the escape is introduced before dictionary lookup filtering: `crates/yune-core/src/translator/mod.rs`
 - Inspect and modify only if the failing test shows the TypeDuck profile is not selecting the right lookup/comment formatter: `crates/yune-rime-api/src/schema_install.rs`
@@ -316,6 +329,7 @@ Expected:
 ## Task 4 - Investigate And Fix The Session-Creation Boundary Blocker
 
 **Files:**
+
 - Modify only if the failing stack identifies a Yune lifecycle issue: `crates/yune-rime-api/src/session.rs`
 - Modify only if schema selection is implicated: `crates/yune-rime-api/src/schema_selection.rs`
 - Modify only if schema install is implicated: `crates/yune-rime-api/src/schema_install.rs`
@@ -367,6 +381,7 @@ When approved, enable verifier only for `TypeDuckServer.exe`, reproduce, collect
 ## Task 5 - Rerun The Interactive Windows Smoke
 
 **Files:**
+
 - Update in TypeDuck-Windows if smoke evidence is captured there:
   - `docs/evidence/p2-win02-boundary-fix-YYYY-MM-DD/README.md`
   - `docs/windows-next-audit.md`
@@ -418,6 +433,7 @@ Before finishing:
 ## Task 6 - Final Gates And Docs
 
 **Files:**
+
 - Modify: `docs/roadmap.md`
 - Modify: `docs/plans/p2-win01-plan-typeduck-windows-next.md`
 - Modify: `docs/plans/p2-win02-plan-typeduck-boundary-compat.md`
@@ -448,7 +464,18 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\package-typeduck-win
 cargo test -p yune-rime-api --test typeduck_web
 ```
 
-If M25 touched web code in the same final merge window, coordinate with the M25 owner before running or interpreting browser gates.
+Also rerun the focused web-comment gates:
+
+```powershell
+cargo test -p yune-rime-api --test typeduck_web typeduck_adapter_real_assets_emit_oracle_dictionary_panel_comments
+npm.cmd --prefix third_party/typeduck-web/e2e run test:e2e -- --grep "M24 phrase comments render without raw control markers"
+```
+
+Expected:
+
+- The native TypeDuck-Web adapter either passes against local TypeDuck `v1.1.2` oracle build assets, or prints its documented skip message when those local oracle build assets are absent. A skip is acceptable only for the web adapter oracle-build dependency, not for the new P2-WIN-02 core/ABI boundary tests.
+- The browser candidate rows do not show literal `\f`, `\r`, or `\v` markers after Yune emits corrected rich comments.
+- If M25 touched web code in the same final merge window, coordinate with the M25 owner before running or interpreting browser gates.
 
 - [ ] **Step 6.3: Update docs with final classification**
 
@@ -499,6 +526,7 @@ P2-WIN-02 is complete only when:
 - `scripts/package-typeduck-windows.ps1` passes.
 - TypeDuck-Windows non-invasive IPC smoke passes with rich comments.
 - Interactive Notepad TSF smoke is rerun with the fixed package and either passes, or produces a newly classified non-Yune blocker with committed evidence.
+- TypeDuck-Web comment-rendering gates still pass or, for the local oracle-build-dependent native rich-comment test only, produce the documented skip while the core/ABI P2-WIN-02 tests pass.
 - Windows test registration/AppVerifier state is cleaned up after smoke attempts.
 
 ## Review Questions

@@ -1,0 +1,17 @@
+{
+  "globs": ["docs/**/*.md"],
+  "config": {
+    "default": true,
+    "MD013": false,
+    "MD010": {
+      "code_blocks": false
+    },
+    "MD024": {
+      "siblings_only": true
+    },
+    "MD028": false,
+    "MD036": false,
+    "MD038": false,
+    "MD060": false
+  }
+}

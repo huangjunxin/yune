@@ -4,28 +4,19 @@
 
 ## Scope and plan decisions
 
-Per D-05, ibus-rime and fcitx-rime validation is scoped after the macOS/Squirrel
-path. Per D-07, future Linux frontend fixes must first preserve the exact call
-sequence, expected behavior, observed behavior, blocker, and reproduction status
-as notes, fixtures, or focused tests.
+Per D-05, ibus-rime and fcitx-rime validation is scoped after the macOS/Squirrel path. Per D-07, future Linux frontend fixes must first preserve the exact call sequence, expected behavior, observed behavior, blocker, and reproduction status as notes, fixtures, or focused tests.
 
-The ordinary regression suite must keep Linux desktop daemons not mandatory. The
-source-modeled coverage that is safe on macOS/developer machines lives in
-`crates/yune-rime-api/tests/frontend_hosts/native_frontends.rs`, with the
-Squirrel fixture carrying Linux follow-up call-sequence markers for focus/reset,
-status/context/commit read ordering, and notification handling.
+The ordinary regression suite must keep Linux desktop daemons not mandatory. The source-modeled coverage that is safe on macOS/developer machines lives in `crates/yune-rime-api/tests/frontend_hosts/native_frontends.rs`, with the Squirrel fixture carrying Linux follow-up call-sequence markers for focus/reset, status/context/commit read ordering, and notification handling.
 
 ## ibus-rime follow-up
 
 Environment requirements:
 
 - Linux desktop session with IBus available.
-- Distribution packages or source builds for `ibus`, `ibus-rime`, librime headers
-  or equivalent development files, and a RIME schema distribution.
+- Distribution packages or source builds for `ibus`, `ibus-rime`, librime headers or equivalent development files, and a RIME schema distribution.
 - A running user session bus and IBus daemon.
 - A disposable RIME user data directory, not a real user profile.
-- A Yune `yune-rime-api` dynamic library build available to the frontend
-  experiment.
+- A Yune `yune-rime-api` dynamic library build available to the frontend experiment.
 
 Candidate commands or placeholders:
 
@@ -57,9 +48,7 @@ setup -> initialize -> set_notification_handler -> create_session
 
 Already covered without daemon dependency:
 
-- `native_frontends` source-model coverage validates focus-out clear before
-  destroy, context/status/commit free-pairing, notification replacement, stale
-  session rejection, sync/reinitialize, and finalize behavior through `RimeApi`.
+- `native_frontends` source-model coverage validates focus-out clear before destroy, context/status/commit free-pairing, notification replacement, stale session rejection, sync/reinitialize, and finalize behavior through `RimeApi`.
 
 Remaining manual validation:
 
@@ -72,12 +61,10 @@ Remaining manual validation:
 Environment requirements:
 
 - Linux desktop session with Fcitx 5 available.
-- Distribution packages or source builds for `fcitx5`, `fcitx5-rime`, librime
-  headers or equivalent development files, and a RIME schema distribution.
+- Distribution packages or source builds for `fcitx5`, `fcitx5-rime`, librime headers or equivalent development files, and a RIME schema distribution.
 - A running Fcitx daemon/session.
 - A disposable RIME user data directory, not a real user profile.
-- A Yune `yune-rime-api` dynamic library build available to the frontend
-  experiment.
+- A Yune `yune-rime-api` dynamic library build available to the frontend experiment.
 
 Candidate commands or placeholders:
 
@@ -93,8 +80,7 @@ Lifecycle areas to validate:
 - Reset/focus-out clears composition before destroy or reuse.
 - Key processing maps to `RimeProcessKey` and candidate actions through the ABI.
 - Status/context/commit read ordering matches candidate UI expectations.
-- Surrounding-text or preedit features that are frontend-specific are documented
-  as host requirements rather than hidden Yune ABI assumptions.
+- Surrounding-text or preedit features that are frontend-specific are documented as host requirements rather than hidden Yune ABI assumptions.
 - Notification callbacks propagate schema and option changes.
 - Stale sessions are rejected after destroy, cleanup, sync, or finalize.
 
@@ -109,9 +95,7 @@ setup -> initialize -> set_notification_handler -> create_session
 
 Already covered without daemon dependency:
 
-- `native_frontends` source-model coverage validates the common ABI lifecycle and
-  includes `linux_followup.fcitx_surrounding_text_scope` as a preserved marker for
-  the future daemon-backed run.
+- `native_frontends` source-model coverage validates the common ABI lifecycle and includes `linux_followup.fcitx_surrounding_text_scope` as a preserved marker for the future daemon-backed run.
 
 Remaining manual validation:
 
@@ -121,13 +105,7 @@ Remaining manual validation:
 
 ## Why Linux daemons are not mandatory in Cargo tests
 
-IBus and Fcitx require a Linux desktop/session bus, daemon lifecycle, installed
-frontend packages or source builds, and per-user input-method registration. Those
-external dependencies are not mandatory for ordinary `cargo test` because they
-would make the deterministic regression suite environment-specific. The safe
-regression boundary for this plan is the RIME ABI call sequence in
-`native_frontends`; daemon-backed validation remains a follow-up reproduction
-with sanitized notes or fixtures before any fix.
+IBus and Fcitx require a Linux desktop/session bus, daemon lifecycle, installed frontend packages or source builds, and per-user input-method registration. Those external dependencies are not mandatory for ordinary `cargo test` because they would make the deterministic regression suite environment-specific. The safe regression boundary for this plan is the RIME ABI call sequence in `native_frontends`; daemon-backed validation remains a follow-up reproduction with sanitized notes or fixtures before any fix.
 
 ## Fixture and documentation requirements for future fixes
 
@@ -140,6 +118,4 @@ Before changing Yune behavior for an ibus-rime or fcitx-rime finding, capture:
 - Observed behavior.
 - Blocker or mismatch classification.
 - reproduction status.
-- Sanitization confirmation that no personal paths, environment variables, raw
-  pointers, timestamps, process IDs, Cargo target paths, or real user dictionary
-  contents were committed.
+- Sanitization confirmation that no personal paths, environment variables, raw pointers, timestamps, process IDs, Cargo target paths, or real user dictionary contents were committed.

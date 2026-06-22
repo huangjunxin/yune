@@ -2,23 +2,17 @@
 
 > **Status:** Finished · **Milestone:** M22 (Web playground build-out; M20 successor) · **Updated:** 2026-06-21 · **Type:** execution plan
 
-> **For agentic workers:** implement task-by-task; steps use checkbox (`- [ ]`) syntax. Capture browser before/after evidence *before* claiming any ACTIVE control (M20 honesty gate is binding).
+> **For agentic workers:** implement task-by-task; steps use checkbox (`- [ ]`) syntax. Capture browser before/after evidence _before_ claiming any ACTIVE control (M20 honesty gate is binding).
 
 **Completion note (2026-06-21):** M22 is complete. Bucket 1 exposes only browser-honest controls (`dictionary_exclude`, `traditionalization`, `disabled`, `extended_charset`) and keeps `ascii_punct` absent without browser-visible before/after evidence. Bucket 2 remains the default-off read-only inspector. Bucket 3 loads `jyut6ping3_mobile`, `cangjie5`, and `luna_pinyin` with reverse lookup active for both new schemas. Evidence is under `third_party/typeduck-web/e2e/results/m22-remaining-buckets/`.
 
-**Goal:** Surface *more* of Yune's engine inside this repo's internal patched TypeDuck-Web playground (`third_party/typeduck-web/`) as **honest controls** plus a **read-only debug inspector**, and load **more schemas** with a schema-switcher and reverse lookup — extending M20's canonical browser workbench without reopening M13, without changing the default `RimeApi`/`RimeCandidate` ABI, and without representing any unsupported behavior as working.
+**Goal:** Surface _more_ of Yune's engine inside this repo's internal patched TypeDuck-Web playground (`third_party/typeduck-web/`) as **honest controls** plus a **read-only debug inspector**, and load **more schemas** with a schema-switcher and reverse lookup — extending M20's canonical browser workbench without reopening M13, without changing the default `RimeApi`/`RimeCandidate` ABI, and without representing any unsupported behavior as working.
 
 **Architecture:** M22 is the M20 successor (build-out), **not** M21 (M21 is the product-comparison protocol, complete once its gap-ledger is fully dispositioned). Three explicit, separately-tracked work buckets: (1) missing honest browser-safe toggles, (2) a read-only per-keystroke debug inspector, (3) multi-schema loading + schema switcher + reverse lookup. Runtime-changing controls flow through the existing `customize()` schema-key path (`adapter.ts:435-505`) or the `setOption()` session-option path (`adapter.ts:507-514`); browser schema switching uses the one-active-runtime cleanup/re-init path with the selected schema id instead of preserving the live session through `RimeSelectSchema`. The inspector adds only **opt-in debug JSON fields** in the TypeDuck response plus optional `yune_typeduck_*` read helpers; it must not widen `RimeCandidate`, reorder the `RimeApi` table, or move provider work into the per-key path. M18 can now build Yune-native `.table.bin`/`.prism.bin`/`.reverse.bin` artifacts; Bucket 3 should choose Yune-generated artifacts or pre-compiled upstream artifacts based on browser asset-budget and provenance needs.
 
 **Tech Stack:** Rust `yune-core` / `yune-rime-api`, Emscripten WASM, `@yune-ime/typeduck-runtime`, TypeDuck-Web React/TypeScript, Playwright.
 
-**Progress note (2026-06-20).** Bucket 2 is complete in `d548c9cf`
-(`Implement M22 Bucket 2 debug inspector`). The inspector is opt-in/off by
-default, preserves classic response identity when disabled, has committed
-Playwright evidence under
-`third_party/typeduck-web/e2e/results/m22-bucket2-inspector/`, and did not
-change the default ABI layout files. Bucket 1 honest controls and Bucket 3
-multi-schema/reverse-lookup work remain active.
+**Progress note (2026-06-20).** Bucket 2 is complete in `d548c9cf` (`Implement M22 Bucket 2 debug inspector`). The inspector is opt-in/off by default, preserves classic response identity when disabled, has committed Playwright evidence under `third_party/typeduck-web/e2e/results/m22-bucket2-inspector/`, and did not change the default ABI layout files. Bucket 1 honest controls and Bucket 3 multi-schema/reverse-lookup work remain active.
 
 ---
 
@@ -54,7 +48,7 @@ multi-schema/reverse-lookup work remain active.
 
 **Non-goals.**
 
-- **These must NOT become toggles** (inspect-only in Bucket 2, or left as always-on internals, because none has an honest user-facing before/after): `uniquifier_filter`, `single_char_filter`, `charset_filter` (**always-on** install gear; only its `extended_charset` *option* is a Bucket-1 toggle), schema-owned templates (`spelling_algebra`, `comment_format`, `preedit_format`, `tolerance_rules`, `prefix_suffix`, `segment_tags`), and internal `_`-prefixed options (`_vertical`, `_fold_options`, `_auto_commit`, `_chord_typing`, `_hide_candidate`). The inspector *shows* these; it does not expose them as controls.
+- **These must NOT become toggles** (inspect-only in Bucket 2, or left as always-on internals, because none has an honest user-facing before/after): `uniquifier_filter`, `single_char_filter`, `charset_filter` (**always-on** install gear; only its `extended_charset` _option_ is a Bucket-1 toggle), schema-owned templates (`spelling_algebra`, `comment_format`, `preedit_format`, `tolerance_rules`, `prefix_suffix`, `segment_tags`), and internal `_`-prefixed options (`_vertical`, `_fold_options`, `_auto_commit`, `_chord_typing`, `_hide_candidate`). The inspector _shows_ these; it does not expose them as controls.
 - **`ascii_punct` is engine-backed after M18 but still needs browser evidence.** Do not expose it as a working toggle until Bucket 1 proves a browser-visible before/after through the M20 honesty gate.
 - **No change to the default `RimeApi` table or `RimeCandidate` ABI.** No widening, no reorder, no new default-table slot. Inspector extensions are opt-in JSON + optional non-default `yune_typeduck_*` helpers only. (`abi.rs`, `api_table.rs`, `candidate_api.rs` stay diff-free.)
 - **AI invariants unchanged:** AI default-off, classic-first, second-pass-only; `yune_typeduck_process_key` stays provider-free; provider work only behind `stage_ai`.
@@ -102,9 +96,7 @@ multi-schema/reverse-lookup work remain active.
 
 ### Bucket 2 — Engine debug inspector (READ-ONLY, complete)
 
-Closed by `d548c9cf`. The checklist below is retained as the completed
-acceptance record; future M22 workers should not redo this bucket except for
-regression fixes.
+Closed by `d548c9cf`. The checklist below is retained as the completed acceptance record; future M22 workers should not redo this bucket except for regression fixes.
 
 #### Task 4 — Additive engine-state marshalling (no default-ABI change)
 
@@ -129,7 +121,7 @@ regression fixes.
 **Files:** `source/src/yune-integration/response.ts`, new `source/src/YuneInspector.tsx`, `source/src/App.tsx`
 
 - [ ] Pass the new optional debug fields through `translateResponse()` (`response.ts:26-64`) without altering the existing `RimeResult` shape used by the candidate panel (add an optional `debug` sub-object).
-- [ ] Build a read-only `YuneInspector.tsx` panel showing, per keystroke: segments + `segment_tags`, each candidate's source/quality/comment/preedit, spelling-algebra expansion, filter pipeline, prediction scores vs threshold, and AI staging. **No toggles** in this panel — it is observation only. The honesty-gate exclusion-list features (uniquifier/single_char/always-on charset_filter, schema-owned templates, `_`-prefixed options) are *shown here* rather than fake-toggled elsewhere.
+- [ ] Build a read-only `YuneInspector.tsx` panel showing, per keystroke: segments + `segment_tags`, each candidate's source/quality/comment/preedit, spelling-algebra expansion, filter pipeline, prediction scores vs threshold, and AI staging. **No toggles** in this panel — it is observation only. The honesty-gate exclusion-list features (uniquifier/single*char/always-on charset_filter, schema-owned templates, `*`-prefixed options) are _shown here_ rather than fake-toggled elsewhere.
 - [ ] Gate the panel behind an inspector on/off switch that calls `yune_typeduck_set_inspector_enabled`; default off.
 - [ ] **Acceptance:** the app builds; the panel renders live inspector data for `nei`/`santai`; classic candidate output is unchanged whether the inspector is on or off.
 

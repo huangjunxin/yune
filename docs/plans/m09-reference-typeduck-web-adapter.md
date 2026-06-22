@@ -15,9 +15,9 @@ The adapter exports prefixed symbols so it does not collide with librime-style A
 - `yune_typeduck_flip_page(state, backward) -> *mut YuneTypeDuckResponse`
 - `yune_typeduck_customize(state, config_id, key, value) -> Bool`
 - `yune_typeduck_deploy(state) -> Bool`
-- `yune_typeduck_set_option(state, option_name, value) -> Bool` *(M9: runtime option toggle)*
-- `yune_typeduck_set_ai_enabled(state, enabled) -> Bool` *(M13: default-off AI toggle; disabling clears staged AI)*
-- `yune_typeduck_stage_ai(state) -> *mut YuneTypeDuckResponse` *(M13: second-pass local AI; `process_key` stays provider-free)*
+- `yune_typeduck_set_option(state, option_name, value) -> Bool` _(M9: runtime option toggle)_
+- `yune_typeduck_set_ai_enabled(state, enabled) -> Bool` _(M13: default-off AI toggle; disabling clears staged AI)_
+- `yune_typeduck_stage_ai(state) -> *mut YuneTypeDuckResponse` _(M13: second-pass local AI; `process_key` stays provider-free)_
 - `yune_typeduck_cleanup(state)`
 - `yune_typeduck_response_json(response) -> *const c_char`
 - `yune_typeduck_response_handled(response) -> Bool`
@@ -269,7 +269,7 @@ await syncToPersistenceAfterMutation(Module.FS);
 The public wrapper operations map directly to the adapter contract:
 
 | Wrapper operation | Adapter operation |
-|-------------------|-------------------|
+| --- | --- |
 | `TypeDuckRuntime.init(...)` | `yune_typeduck_init` |
 | `runtime.processKey(keycode, mask)` | `yune_typeduck_process_key` |
 | `runtime.processKeyboardEvent(event)` | `keyEventToRimeKey(event)` plus `runtime.processKey(...)` |

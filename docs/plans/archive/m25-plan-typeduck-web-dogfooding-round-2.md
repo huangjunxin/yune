@@ -43,7 +43,7 @@ M25 evidence belongs under `third_party/typeduck-web/e2e/results/m25-dogfooding/
 Classify every report before editing code:
 
 | Classification | Use when | First evidence |
-|---|---|---|
+| --- | --- | --- |
 | Browser integration | Worker/runtime/assets/settings wiring fails or drifts from the intended browser contract. | Browser console logs, worker diagnostics, state JSON, screenshot. |
 | UI polish | The rendered app is confusing, cramped, mislabeled, inaccessible, or inefficient, but engine output is correct. | Screenshot plus the exact interaction path. |
 | Engine correctness | Candidate output, ranking, commit text, segmentation, correction, prediction, or reverse lookup seems wrong. | Pinned oracle fixture or a row marked blocked until fixture capture. |
@@ -64,7 +64,7 @@ Classify every report before editing code:
 Use this section as the high-level review map. The running ledger below remains the source of truth for exact evidence paths, owning files, and close criteria.
 
 | Execution group | Rows | Why this grouping matters |
-|---|---|---|
+| --- | --- | --- |
 | Performance and responsiveness blockers | `M25-DOGFOOD-01`, `M25-DOGFOOD-03` | These decide whether the app feels usable at all. Review first for measurement quality, startup phase attribution, and whether normal typing is separated from deploy/customize/loading work. |
 | Candidate/settings correctness | `M25-DOGFOOD-02`, `M25-DOGFOOD-08` | These affect user-visible IME behavior. `M25-DOGFOOD-02` must fix both the settings key path and rendered candidate cap; `M25-DOGFOOD-08` intentionally gives bare `` ` `` to the `luna_pinyin` affix translator inside `jyut6ping3`, deletes the vestigial bare-grave `reverse_lookup` slot unless a real consumer is proven, and moves useful secondary lookups into a `v`-prefixed namespace such as `` `vl`` / `` `vc``. |
 | Top-control and settings layout | `M25-DOGFOOD-04`, `M25-DOGFOOD-05`, `M25-DOGFOOD-06`, `M25-DOGFOOD-10` | These should be implemented together only after the correctness blockers are understood, because they share `App.tsx`, `Toolbar.tsx`, `SchemaSwitcher.tsx`, and `Preferences.tsx` layout surfaces. |
@@ -98,7 +98,7 @@ Before closing any row that changes TypeDuck-Web source:
 M25 intake began on 2026-06-21 with user-reported browser dogfooding regressions. Keep adding one row per distinct user-visible symptom using the next `M25-DOGFOOD-XX` id.
 
 | ID | Status | Classification | User-visible issue | First repro / evidence | Owning surfaces to inspect first | Close criteria |
-|---|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- | --- |
 | M25-DOGFOOD-01 | Open | Browser integration / performance | Refreshing `http://localhost:5173/web/` still leaves `載入中 Loading...` visible for too long; the user sees no practical improvement compared with the pre-M24 app and considers this unacceptable for real users. | Reproduced in the in-app browser on 2026-06-21: reload took `47.752s`; startup marker reported `totalMs=47331`, with `runtime:initialized` consuming nearly the entire delay after assets loaded. Evidence: `third_party/typeduck-web/e2e/results/m25-dogfooding/M25-DOGFOOD-01/reload-startup-repro.json`. | `third_party/typeduck-web/source/src/worker.ts`, `third_party/typeduck-web/source/src/yune-integration/adapter.ts`, `third_party/typeduck-web/source/src/yune-integration/assets.ts`, `packages/yune-typeduck-runtime/src/typeduck.ts`, `packages/yune-typeduck-runtime/src/module.ts`, `packages/yune-typeduck-runtime/src/filesystem.ts`, `crates/yune-rime-api/src/typeduck_web.rs`, schema deploy/init paths under `crates/yune-rime-api/src/`. | Close only after a measured startup optimization lands. Add a Playwright startup budget test that records phase timings, preserve `startup:complete` diagnostics, and capture before/after evidence under this issue id. Target: interactive shell visible quickly and warm reload IME readiness materially below the current ~47s baseline; any chosen budget must be written into the test and justified by local evidence. |
 | M25-DOGFOOD-02 | Open | Browser integration / settings and candidate pagination | The page-size control is hard to find after M24 UI changes, its allowed range is wrong for the requested behavior, and changing it still does not cap the rendered candidate list. The user expects a visible slider/control allowing 3-10 candidates, where setting 9 shows exactly 9 visible candidates. | User screenshot showed `hai` rendering far more than 10 rows. Reproduced in the in-app browser on 2026-06-21: DOM had page-size slider `min=4`, `max=10`, `value=6`, but typing `hai` rendered `50` visible candidate rows. Evidence: `third_party/typeduck-web/e2e/results/m25-dogfooding/M25-DOGFOOD-02/page-size-hai-repro.json`. | `third_party/typeduck-web/source/src/Preferences.tsx`, `third_party/typeduck-web/source/src/Inputs.tsx`, `third_party/typeduck-web/source/src/CandidatePanel.tsx`, `third_party/typeduck-web/source/src/App.tsx`, `third_party/typeduck-web/source/src/yune-integration/adapter.ts`, `crates/yune-rime-api/src/typeduck_web.rs`, `crates/yune-rime-api/src/context_api.rs`, `crates/yune-rime-api/tests/typeduck_web.rs`, `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`. | Close when the UI exposes an obvious 3-10 page-size control and the rendered candidate panel never exceeds the configured page size. Add/extend native `typeduck_web` coverage for `menu/page_size` at 3 and 9, add Playwright coverage that sets 3/9/10 and types `hai`, verify page navigation still works, regenerate and reverse/forward check `third_party/typeduck-web/patches/yune-typeduck-runtime.patch`, and capture browser JSON/screenshot evidence under this issue id. |
 | M25-DOGFOOD-03 | Open | Browser integration / typing responsiveness | Typing in the textbox can still show the global `è¼‰å…¥ä¸­ Loading...` state and can stall for about a second when entering a character. This makes the dogfood IME feel blocked even after the page becomes visible. | User-reported during manual dogfooding on 2026-06-21. Evidence placeholder with exact report: `third_party/typeduck-web/e2e/results/m25-dogfooding/M25-DOGFOOD-03/typing-latency-user-report.json`. Needs measured browser repro with keydown-to-candidate timing. | `third_party/typeduck-web/source/src/CandidatePanel.tsx`, `third_party/typeduck-web/source/src/rime.ts`, `third_party/typeduck-web/source/src/worker.ts`, `third_party/typeduck-web/source/src/App.tsx`, `third_party/typeduck-web/source/src/Toolbar.tsx`, `third_party/typeduck-web/source/src/yune-integration/adapter.ts`, `packages/yune-typeduck-runtime/src/typeduck.ts`, `crates/yune-rime-api/src/typeduck_web.rs`, `crates/yune-core/src/engine.rs`. | Close only after per-key latency is measured and improved. Add Playwright instrumentation for keydown-to-candidate update latency on `hai`, `nei`, and a long phrase; split queue wait, worker roundtrip, Rust `process_key`, and React render time; remove global loading from normal per-key composition; ensure typing remains responsive while startup/deploy/customize is in flight; save before/after latency JSON under this issue id. |
@@ -140,6 +140,7 @@ Patch discipline evidence: `third_party/typeduck-web/patches/yune-typeduck-runti
 ### Task 1: Convert User Feedback Into M25 Rows
 
 **Files:**
+
 - Modify: `docs/plans/m25-plan-typeduck-web-dogfooding-round-2.md`
 - Create evidence as needed: `third_party/typeduck-web/e2e/results/m25-dogfooding/<issue-id>/`
 
@@ -176,6 +177,7 @@ Patch discipline evidence: `third_party/typeduck-web/patches/yune-typeduck-runti
 ### Task 2: M25-DOGFOOD-01 Startup Performance Optimization
 
 **Files:**
+
 - Modify: `Cargo.toml`
 - Modify: `scripts/typeduck-wasm-build.sh`
 - Modify: `third_party/typeduck-web/source/src/worker.ts`
@@ -217,6 +219,7 @@ Patch discipline evidence: `third_party/typeduck-web/patches/yune-typeduck-runti
 ### Task 3: M25-DOGFOOD-02 Page-Size Slider And Candidate Cap
 
 **Files:**
+
 - Modify: `third_party/typeduck-web/source/src/Preferences.tsx`
 - Modify if needed: `third_party/typeduck-web/source/src/Inputs.tsx`
 - Modify if needed: `third_party/typeduck-web/source/src/CandidatePanel.tsx`
@@ -253,6 +256,7 @@ Patch discipline evidence: `third_party/typeduck-web/patches/yune-typeduck-runti
 ### Task 4: M25-DOGFOOD-03 Typing Responsiveness And Loading-State Separation
 
 **Files:**
+
 - Modify: `third_party/typeduck-web/source/src/CandidatePanel.tsx`
 - Modify: `third_party/typeduck-web/source/src/rime.ts`
 - Modify: `third_party/typeduck-web/source/src/worker.ts`
@@ -295,6 +299,7 @@ Patch discipline evidence: `third_party/typeduck-web/patches/yune-typeduck-runti
 ### Task 5: M25-DOGFOOD-04 Compact Schema Switcher And Luna Label
 
 **Files:**
+
 - Modify: `third_party/typeduck-web/source/src/App.tsx`
 - Modify: `third_party/typeduck-web/source/src/Toolbar.tsx`
 - Modify: `third_party/typeduck-web/source/src/SchemaSwitcher.tsx`
@@ -334,6 +339,7 @@ Patch discipline evidence: `third_party/typeduck-web/patches/yune-typeduck-runti
 ### Task 6: M25-DOGFOOD-05 Cangjie Version In Top Controls
 
 **Files:**
+
 - Modify: `third_party/typeduck-web/source/src/App.tsx`
 - Modify: `third_party/typeduck-web/source/src/Toolbar.tsx`
 - Modify: `third_party/typeduck-web/source/src/SchemaSwitcher.tsx` if the schema row becomes the shared top-control layout
@@ -373,6 +379,7 @@ Patch discipline evidence: `third_party/typeduck-web/patches/yune-typeduck-runti
 ### Task 7: M25-DOGFOOD-06 Display Controls Above Live Session Controls
 
 **Files:**
+
 - Modify: `third_party/typeduck-web/source/src/Preferences.tsx`
 - Modify if shared section markup needs a test hook: `third_party/typeduck-web/source/src/Inputs.tsx`
 - Test: `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`
@@ -405,6 +412,7 @@ Patch discipline evidence: `third_party/typeduck-web/patches/yune-typeduck-runti
 ### Task 8: M25-DOGFOOD-07 Checkbox Affordance For Binary Controls
 
 **Files:**
+
 - Modify: `third_party/typeduck-web/source/src/Inputs.tsx`
 - Modify: `third_party/typeduck-web/source/src/index.css`
 - Modify: `third_party/typeduck-web/source/src/App.tsx`
@@ -443,6 +451,7 @@ Patch discipline evidence: `third_party/typeduck-web/patches/yune-typeduck-runti
 ### Task 9: M25-DOGFOOD-08 Bare-Grave Luna Reverse Lookup Trigger And Namespace Reassignment
 
 **Files:**
+
 - Modify: `third_party/typeduck-web/source/schema/jyut6ping3.schema.yaml`
 - Modify: `third_party/typeduck-web/source/schema/jyut6ping3_mobile.schema.yaml`
 - Modify: `third_party/typeduck-web/source/src/consts.ts`
@@ -454,7 +463,7 @@ Patch discipline evidence: `third_party/typeduck-web/patches/yune-typeduck-runti
 
 - [ ] **Step 1: Preserve the trigger baseline and superseded assumption**
 
-  Keep `reverse-lookup-bare-grave-trigger-report.json` as the issue baseline. Current web schemas use ``luna_pinyin.prefix: "`p"`` and ``luna_pinyin: "^`p[a-z']*;?$"`` under `speller/algebra`; desktop `jyut6ping3.schema.yaml` also has `reverse_lookup.prefix: "`"` and `reverse_lookup: "^`[a-z']*;?$"`, but that tag has no translator/dictionary and currently produces no useful lookup. Functional secondary lookups are `loengfan` on `` `l`` and `cangjie` on `` `c``. TypeDuck v1.1.2 captured schema data also uses `` `p`` for `luna_pinyin`. Treat M25 as an intentional web-profile divergence that gives bare `` ` `` to `luna_pinyin`.
+  Keep `reverse-lookup-bare-grave-trigger-report.json` as the issue baseline. Current web schemas use ``luna_pinyin.prefix: "`p"`` and ``luna_pinyin: "^`p[a-z']*;?$"`` under `speller/algebra`; desktop `jyut6ping3.schema.yaml` also has `reverse_lookup.prefix: "`"`and`reverse_lookup: "^`[a-z']*;?$"`, but that tag has no translator/dictionary and currently produces no useful lookup. Functional secondary lookups are `loengfan` on `` `l`` and `cangjie` on `` `c``. TypeDuck v1.1.2 captured schema data also uses `` `p`` for `luna_pinyin`. Treat M25 as an intentional web-profile divergence that gives bare `` ` `` to `luna_pinyin`.
 
 - [ ] **Step 2: Add failing native/schema coverage**
 
@@ -466,7 +475,7 @@ Patch discipline evidence: `third_party/typeduck-web/patches/yune-typeduck-runti
 
 - [ ] **Step 4: Change the schema trigger**
 
-  Update the `luna_pinyin` affix translator settings in `jyut6ping3.schema.yaml` and `jyut6ping3_mobile.schema.yaml` so the prefix is bare `` ` `` and the alphabet regex accepts bare-grave Mandarin pinyin input, for example `` ^`[a-z']*;?$ ``. In desktop `jyut6ping3.schema.yaml`, remove the vestigial bare-grave `reverse_lookup` tag unless implementation finds a real translator/dictionary consumer. Move retained Loengfan and Cangjie side lookups out of single-letter pinyin-initial prefixes, preferably to a `v` namespace such as `` `vl`` and `` `vc``. If Yune/librime first-match ordering requires it, place specific `v`-prefixed affix segmentors before the bare-grave `luna_pinyin` catch-all and prove the order with the tests from Step 2. Keep any different `r`/`x`/`v` decision explicit in evidence.
+  Update the `luna_pinyin` affix translator settings in `jyut6ping3.schema.yaml` and `jyut6ping3_mobile.schema.yaml` so the prefix is bare `` ` `` and the alphabet regex accepts bare-grave Mandarin pinyin input, for example ``^`[a-z']*;?$``. In desktop `jyut6ping3.schema.yaml`, remove the vestigial bare-grave `reverse_lookup` tag unless implementation finds a real translator/dictionary consumer. Move retained Loengfan and Cangjie side lookups out of single-letter pinyin-initial prefixes, preferably to a `v` namespace such as `` `vl`` and `` `vc``. If Yune/librime first-match ordering requires it, place specific `v`-prefixed affix segmentors before the bare-grave `luna_pinyin` catch-all and prove the order with the tests from Step 2. Keep any different `r`/`x`/`v` decision explicit in evidence.
 
 - [ ] **Step 5: Update user-facing hints**
 
@@ -483,6 +492,7 @@ Patch discipline evidence: `third_party/typeduck-web/patches/yune-typeduck-runti
 ### Task 10: M25-DOGFOOD-09 Candidate Layout Radio Selection
 
 **Files:**
+
 - Modify: `third_party/typeduck-web/source/src/Preferences.tsx`
 - Modify if radio markup/styling needs adjustment: `third_party/typeduck-web/source/src/Inputs.tsx`
 - Modify if labels need copy changes: `third_party/typeduck-web/source/src/consts.ts`
@@ -516,6 +526,7 @@ Patch discipline evidence: `third_party/typeduck-web/patches/yune-typeduck-runti
 ### Task 11: M25-DOGFOOD-10 IME Settings Horizontal Alignment
 
 **Files:**
+
 - Modify: `third_party/typeduck-web/source/src/Preferences.tsx`
 - Modify if shared layout styling is introduced: `third_party/typeduck-web/source/src/App.tsx`
 - Modify if a reusable class is needed: `third_party/typeduck-web/source/src/index.css`
