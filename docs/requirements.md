@@ -246,6 +246,27 @@ Deferred beyond the TypeDuck-Web browser integration milestone. Tracked but not 
 - [x] **M26-PERF-REQ-04**: One measured optimization landed with before/after native and browser evidence. The largest measured owner was startup/schema-selection/runtime initialization, which is deferred to the named follow-up [`docs/plans/m27-plan-typeduck-web-startup-runtime-init.md`](./plans/m27-plan-typeduck-web-startup-runtime-init.md). The landed lower-risk M26 slice targets the measured TypeDuck dynamic-correction stress owner: `per_key_real_jyut6ping3_mobile_jigaajiusihaa_correction_engine_only` improved from median `451490.692us` / p95 `467909.308us` to median `121712.662us` / p95 `124420.115us` by pruning impossible-length candidates before the restricted-distance matrix. Evidence: `third_party/typeduck-web/e2e/results/m26-performance/optimization-choice.md`.
 - [x] **M26-PERF-REQ-05**: Compatibility gates remain green: upstream `luna_pinyin`, Cantonese parity, native `typeduck_web`, TypeScript runtime tests/build, TypeDuck-Web build, focused M26 browser evidence, and TypeDuck-Web patch reverse/forward checks. Evidence: `third_party/typeduck-web/e2e/results/m26-performance/task-5-gates.md` and `third_party/typeduck-web/e2e/results/m26-performance/patch-checks.md`.
 
+## M27 TypeDuck-Web Startup Runtime Init Requirements
+
+**Status: active.** M27 targets the startup/schema-selection/runtime-init owner measured by M26 and the TypeDuck-Web engine-control update surface. It is attribution-first but not measurement-only: native/browser path reconciliation, native owners, Windows process memory, browser-to-native mapping, startup bottleneck fix, and live-vs-deploy control classification must all land before closeout.
+
+- [ ] **M27-STARTUP-REQ-01**: Native startup benchmarks first reconcile the browser-paid path against native rows: cold deploy/build versus deploy-cache-hit/load-precompiled plus in-memory setup. The benchmark then splits the browser-paid `jyut6ping3_mobile` path into named owners, including setup, initialize, create session, schema selection, config load, compiled table load, compiled prism load, source dictionary parse if any, translator index build, filter install, userdb open/sync, teardown, and finalize where observable without ABI/export widening.
+- [ ] **M27-STARTUP-REQ-02**: Native startup evidence includes real Windows process-memory metrics for each startup sample: working set bytes and peak working set bytes, or a documented equivalent process memory metric. M27 cannot close with only "RSS unavailable".
+- [ ] **M27-STARTUP-REQ-03**: Browser startup evidence records fresh and reload paths, preserves the M26 startup markers, and maps browser `schema:select` / `runtime:init` timing back to native startup owners without treating browser timing as native engine timing.
+- [ ] **M27-STARTUP-REQ-04**: The evidenced top startup owner is fixed or materially reduced by behavior-preserving change(s), with native before/after timing, memory before/after, and browser fresh/reload before/after evidence. M27 cannot close by deferring the top owner and landing only a lower-risk unrelated slice; if the evidence proves a separate milestone is required, execution pauses after the Task 3 review for explicit user approval before splitting scope.
+- [ ] **M27-STARTUP-REQ-05**: Compatibility gates remain green: upstream `luna_pinyin`, Cantonese parity, native `typeduck_web`, workspace tests, frontend benchmarks, TypeScript runtime tests/build, TypeDuck-Web build, focused M27 startup browser evidence, focused M27 control-classification browser evidence, TypeDuck-Web patch checks if source changed, and `git diff --check`.
+- [ ] **M27-STARTUP-REQ-06**: TypeDuck-Web engine controls are classified as live, browser-only, or deploy-time. AI candidates must not emit runtime init, schema select, deploy markers, or visible `載入中 Loading...`; deploy-time controls such as auto-correction and auto-completion must have measured update/deploy evidence and benefit from M27 startup/deploy improvements rather than being incorrectly forced through live `setOption`.
+
+## M28 TypeDuck Partial Candidate Selection Requirements
+
+**Status: draft.** M28 owns segment-aware partial candidate selection. This is engine correctness work and must not be folded into M27 performance closeout without explicit scope change.
+
+- [ ] **M28-PARTIAL-REQ-01**: Git history and code evidence classify the `caksijathaacoenggeoizi` -> select `測` behavior as a regression or previously missing feature. The evidence must inspect `Engine::commit_candidate`, candidate span metadata, and relevant history.
+- [ ] **M28-PARTIAL-REQ-02**: TypeDuck-HK/librime `v1.1.2` oracle fixture captures partial-selection behavior for `caksijathaacoenggeoizi`, including first committed text, remaining input/preedit, next candidates, and final oracle flow. The fixture is capture-not-confirm: TypeDuck v1.1.2 values are authoritative if they diverge from the user's `測試一下長句子` feel target.
+- [ ] **M28-PARTIAL-REQ-03**: Native `yune-core` and `yune-rime-api` tests fail before implementation and pass after segment-aware partial commit/recomposition is implemented. The tests must also preserve FORK-PARITY-03 userdb pronunciation recovery: whole-sentence commits keep full primary codes, while true partial commits record only the consumed span.
+- [ ] **M28-PARTIAL-REQ-04**: TypeDuck-Web browser evidence proves selecting `測` does not commit raw `sijathaacoenggeoizi`, continues through the captured oracle flow, and records whether the user feel target `測試一下長句子` is reachable.
+- [ ] **M28-PARTIAL-REQ-05**: Full compatibility gates remain green: `cargo fmt --check`, workspace clippy, `cantonese_parity`, `typeduck_web`, workspace tests, TypeScript runtime tests/build, TypeDuck-Web build/evidence if touched, patch checks if source changed, and `git diff --check`.
+
 **Follow-on (no requirement IDs):** [`M21`](./plans/archive/m21-plan-typeduck-web-product-comparison.md) is complete as a post-M20 _comparison protocol_ and hard-oracle closeout. It compared the Yune harness against the deployed `typeduck.hk/web` product as a behavior/feel target, but the `v1.1.2` fixtures remained the hard oracle. The final gap ledger has no remaining hard-oracle action rows: M21-GAP-01 is closed by `jyut6ping3-m21-sentence-composition.json`, M21-GAP-02 is closed by `jyut6ping3-m21-prediction-ranking.json` plus real `nri` browser before/after evidence, and `jyut6ping3-m21-closeout.json` locks the remaining baseline/fuzzy/sentence/`hk2s`/tone-letter/paging rows including the final `m` and `mgoi` fixes.
 
 ## Out of Scope
@@ -391,6 +412,17 @@ Which phases cover which requirements. Updated during roadmap creation.
 | M26-PERF-REQ-03 | M26 | Complete - startup attribution below `runtime:initialized` |
 | M26-PERF-REQ-04 | M26 | Complete - startup owner deferred to M27; measured TypeDuck dynamic-correction optimization landed with before/after evidence |
 | M26-PERF-REQ-05 | M26 | Complete - compatibility, integration, and TypeDuck-Web patch discipline gates remain green |
+| M27-STARTUP-REQ-01 | M27 | Active - browser-paid startup-path reconciliation and native sub-attribution by owner |
+| M27-STARTUP-REQ-02 | M27 | Active - hard Windows process-memory evidence |
+| M27-STARTUP-REQ-03 | M27 | Active - browser fresh/reload startup evidence mapped to native owners |
+| M27-STARTUP-REQ-04 | M27 | Active - measured top-owner startup bottleneck fix with timing, memory, and browser before-after evidence |
+| M27-STARTUP-REQ-05 | M27 | Active - compatibility, integration, benchmark, browser, and patch discipline gates remain green |
+| M27-STARTUP-REQ-06 | M27 | Active - engine controls classified as live, browser-only, or deploy-time with marker evidence |
+| M28-PARTIAL-REQ-01 | M28 | Draft - classify partial-selection behavior as regression or missing feature |
+| M28-PARTIAL-REQ-02 | M28 | Draft - capture-not-confirm TypeDuck v1.1.2 oracle fixture for partial selection |
+| M28-PARTIAL-REQ-03 | M28 | Draft - native engine/API tests for segment-aware partial commit plus FORK-PARITY-03 learning preservation |
+| M28-PARTIAL-REQ-04 | M28 | Draft - TypeDuck-Web browser evidence for continued selection |
+| M28-PARTIAL-REQ-05 | M28 | Draft - compatibility and integration gates remain green |
 
 **Coverage:**
 
@@ -408,9 +440,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 - M24 TypeDuck-Web dogfooding requirements: 5 total, 5 complete
 - M25 TypeDuck-Web dogfooding round 2 requirements: 6 total, 6 complete
 - M26 performance hardening requirements: 5 total, 5 complete
-- Mapped to phases: 125
+- M27 TypeDuck-Web startup runtime init and control-classification requirements: 6 total, 0 complete
+- M28 TypeDuck partial candidate selection requirements: 5 total, 0 complete
+- Mapped to phases: 136
 - Unmapped: 0
 
 ---
 
-_Requirements defined: 2026-04-28_ _Last updated: 2026-06-22 - M26 performance hardening is complete with five measurement-first requirements, native/browser before-after evidence, and regenerated TypeDuck-Web patch checks; M25 TypeDuck-Web dogfooding round 2 is complete with 10/10 rows closed, browser evidence, and regenerated TypeDuck-Web patch checks; M24 TypeDuck-Web dogfooding remains complete with 13/13 rows closed and browser evidence; M19 schema breadth and the named TypeDuck-profile ABI accessor are complete; M23 architecture hardening and M18 deployment/processor depth are complete; all M22 TypeDuck-Web playground buckets are complete with browser evidence; M21 TypeDuck-Web product comparison is complete as a hard-oracle closeout; M20 Web Demo Showcase Controls remain complete as a separate internal web/demo track; M10 TypeDuck-Windows is complete as a TypeDuck compatibility profile with T1/T2 package/profile smoke, build/link evidence, and stock T3 TypeDuckServer/TestTypeDuckIPC real-server IPC smoke_
+_Requirements defined: 2026-04-28_ _Last updated: 2026-06-22 - M27 TypeDuck-Web startup/runtime init is active with six attribution-first and control-classification requirements, a hard Windows process-memory evidence gate, browser-paid startup path reconciliation, live-vs-deploy control evidence, and an explicit closeout rule that the evidenced startup bottleneck must be fixed or materially reduced before completion; M28 is drafted as a separate TypeDuck partial candidate selection engine milestone with capture-not-confirm TypeDuck v1.1.2 oracle fixture, native tests, FORK-PARITY-03 learning preservation, and browser evidence requirements; M26 performance hardening is complete with five measurement-first requirements, native/browser before-after evidence, and regenerated TypeDuck-Web patch checks; M25 TypeDuck-Web dogfooding round 2 is complete with 10/10 rows closed, browser evidence, and regenerated TypeDuck-Web patch checks; M24 TypeDuck-Web dogfooding remains complete with 13/13 rows closed and browser evidence; M19 schema breadth and the named TypeDuck-profile ABI accessor are complete; M23 architecture hardening and M18 deployment/processor depth are complete; all M22 TypeDuck-Web playground buckets are complete with browser evidence; M21 TypeDuck-Web product comparison is complete as a hard-oracle closeout; M20 Web Demo Showcase Controls remain complete as a separate internal web/demo track; M10 TypeDuck-Windows is complete as a TypeDuck compatibility profile with T1/T2 package/profile smoke, build/link evidence, and stock T3 TypeDuckServer/TestTypeDuckIPC real-server IPC smoke_
