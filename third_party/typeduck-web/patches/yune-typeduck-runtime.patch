@@ -721,7 +721,7 @@ index 0add9ac..1a5e419 100644
  	}
  
 diff --git a/src/CandidatePanel.tsx b/src/CandidatePanel.tsx
-index 298a42d..610990c 100644
+index 298a42d..6b36128 100644
 --- a/src/CandidatePanel.tsx
 +++ b/src/CandidatePanel.tsx
 @@ -1,4 +1,4 @@
@@ -730,7 +730,7 @@ index 298a42d..610990c 100644
  
  import Candidate from "./Candidate";
  import CandidateInfo from "./CandidateInfo";
-@@ -8,15 +8,30 @@ import DictionaryPanel from "./DictionaryPanel";
+@@ -8,18 +8,93 @@ import DictionaryPanel from "./DictionaryPanel";
  import Rime from "./rime";
  import { isPrintable, notify } from "./utils";
  
@@ -738,6 +738,40 @@ index 298a42d..610990c 100644
 +import type { InputState, Preferences, RimeResult, YuneInspectorDebug, YuneStatusSnapshot } from "./types";
  
 -export default function CandidatePanel({ runAsyncTask, textArea, prefs, deployStatus }: {
++interface ActionDiagnosticSnapshot {
++	action?: string;
++	input?: string;
++	enqueuedAt?: number;
++	sentAt?: number;
++	receivedAt?: number;
++	workerStartedAt?: number;
++	workerFinishedAt?: number;
++	queueWaitMs?: number;
++	workerRoundtripMs?: number;
++	workerMs?: number;
++	totalMs?: number;
++}
++
++interface PendingPerfDiagnostic {
++	input: string;
++	key?: string;
++	keydownAt: number;
++	workerQueuedAt: number;
++	workerStartedAt: number;
++	workerFinishedAt: number;
++	responseReceivedAt: number;
++	responseMappingFinishedAt: number;
++	workerQueueWaitMs?: number;
++	workerProcessMs?: number;
++	workerRoundtripMs?: number;
++	responseMappingMs: number;
++	totalWorkerActionMs?: number;
++}
++
++function nowMs() {
++	return performance.timeOrigin + performance.now();
++}
++
 +function appendTypingDiagnostic(diagnostic: {
 +	action: "processKey";
 +	input?: string;
@@ -747,6 +781,31 @@ index 298a42d..610990c 100644
 +	const diagnostics = existing ? JSON.parse(existing) as typeof diagnostic[] : [];
 +	diagnostics.push(diagnostic);
 +	document.documentElement.dataset.yuneTypingDiagnostics = JSON.stringify(diagnostics.slice(-100));
++}
++
++function readLatestProcessKeyActionDiagnostic(input: string): ActionDiagnosticSnapshot | undefined {
++	const existing = document.documentElement.dataset.yuneActionDiagnostics;
++	const diagnostics = existing ? JSON.parse(existing) as ActionDiagnosticSnapshot[] : [];
++	return diagnostics
++		.slice()
++		.reverse()
++		.find(diagnostic => diagnostic.action === "processKey" && diagnostic.input === input);
++}
++
++function appendPerfDiagnostic(diagnostic: PendingPerfDiagnostic & {
++	stateAppliedAt: number;
++	paintObservedAt: number;
++	candidateCount: number;
++	totalCandidateCount: number;
++	firstCandidateText?: string;
++	reactUpdateMs: number;
++	paintProxyMs: number;
++	totalKeydownToPaintMs: number;
++}) {
++	const existing = document.documentElement.dataset.yunePerfDiagnostics;
++	const diagnostics = existing ? JSON.parse(existing) as typeof diagnostic[] : [];
++	diagnostics.push(diagnostic);
++	document.documentElement.dataset.yunePerfDiagnostics = JSON.stringify(diagnostics.slice(-100));
 +}
 +
 +export default function CandidatePanel({ textArea, prefs, deployStatus, aiStatus, onInspectorDebug, onStatus }: {
@@ -764,23 +823,31 @@ index 298a42d..610990c 100644
  	const [showDictionaryIndex, setShowDictionaryIndex] = useState<number | undefined>();
  	const candidateList = useRef<HTMLTableElement>(null);
  	const dictionaryPanel = useRef<HTMLDivElement>(null);
-@@ -32,10 +47,14 @@ export default function CandidatePanel({ runAsyncTask, textArea, prefs, deploySt
++	const pendingPerfDiagnostics = useRef<PendingPerfDiagnostic[]>([]);
+ 
+ 	const hideDictionary = useCallback(() => {
+ 		setShowDictionaryIndex(undefined);
+@@ -31,11 +106,17 @@ export default function CandidatePanel({ runAsyncTask, textArea, prefs, deploySt
+ 		textArea.selectionStart = textArea.selectionEnd = selectionStart + newText.length;
  	}, [textArea]);
  
- 	const handleRimeResult = useCallback((promise: Promise<RimeResult>, key?: string) =>
+-	const handleRimeResult = useCallback((promise: Promise<RimeResult>, key?: string) =>
 -		runAsyncTask(async () => {
++	const handleRimeResult = useCallback((promise: Promise<RimeResult>, key?: string, keydownContext?: { input: string; key?: string; keydownAt: number }) =>
 +		{
 +			const startedAt = performance.now();
 +			void (async () => {
  			let type: "warning" | "error" | undefined;
  			try {
  				const result = await promise;
++				const responseReceivedAt = nowMs();
++				const responseMappingStartedAt = nowMs();
 +				onInspectorDebug?.(result.isComposing ? result.debug : undefined);
 +				onStatus?.(result.status);
  				if (!result.success) {
  					type = "warning";
  				}
-@@ -44,12 +63,12 @@ export default function CandidatePanel({ runAsyncTask, textArea, prefs, deploySt
+@@ -44,19 +125,45 @@ export default function CandidatePanel({ runAsyncTask, textArea, prefs, deploySt
  						inputBuffer: result.inputBuffer,
  						highlightedIndex: result.highlightedIndex,
  						candidates: result.candidates.map(
@@ -792,12 +859,31 @@ index 298a42d..610990c 100644
  					}
 -					: inputState;
 +					: inputStateRef.current;
++				const responseMappingFinishedAt = nowMs();
  				if (result.committed) {
  					insert(result.committed);
  				}
-@@ -57,6 +76,13 @@ export default function CandidatePanel({ runAsyncTask, textArea, prefs, deploySt
+ 				else if (!state && key && isPrintable(key)) {
  					insert(key);
  				}
++				if (keydownContext) {
++					const actionDiagnostic = readLatestProcessKeyActionDiagnostic(keydownContext.input);
++					pendingPerfDiagnostics.current.push({
++						input: result.isComposing ? result.inputBuffer.active || result.inputBuffer.before : keydownContext.input,
++						key: keydownContext.key,
++						keydownAt: keydownContext.keydownAt,
++						workerQueuedAt: actionDiagnostic?.enqueuedAt ?? keydownContext.keydownAt,
++						workerStartedAt: actionDiagnostic?.workerStartedAt ?? actionDiagnostic?.sentAt ?? responseReceivedAt,
++						workerFinishedAt: actionDiagnostic?.workerFinishedAt ?? responseReceivedAt,
++						responseReceivedAt: actionDiagnostic?.receivedAt ?? responseReceivedAt,
++						responseMappingFinishedAt,
++						workerQueueWaitMs: actionDiagnostic?.queueWaitMs,
++						workerProcessMs: actionDiagnostic?.workerMs,
++						workerRoundtripMs: actionDiagnostic?.workerRoundtripMs,
++						responseMappingMs: Math.round(responseMappingFinishedAt - responseMappingStartedAt),
++						totalWorkerActionMs: actionDiagnostic?.totalMs,
++					});
++				}
  				setInputState(result.isComposing ? state : undefined);
 +				requestAnimationFrame(() => {
 +					appendTypingDiagnostic({
@@ -809,7 +895,7 @@ index 298a42d..610990c 100644
  				hideDictionary();
  			}
  			catch {
-@@ -66,12 +92,36 @@ export default function CandidatePanel({ runAsyncTask, textArea, prefs, deploySt
+@@ -66,12 +173,36 @@ export default function CandidatePanel({ runAsyncTask, textArea, prefs, deploySt
  				notify(type, "執行操作", "performing the operation");
  			}
  			textArea.focus();
@@ -818,9 +904,9 @@ index 298a42d..610990c 100644
 +		}, [hideDictionary, insert, onInspectorDebug, onStatus, textArea]);
  
 -	const processKey = useCallback((input: string, key?: string) => handleRimeResult(Rime.processKey(input), key), [handleRimeResult]);
-+	const processKey = useCallback((input: string, key?: string) => {
++	const processKey = useCallback((input: string, key?: string, keydownAt?: number) => {
 +		const classicResult = Rime.processKey(input);
-+		handleRimeResult(classicResult, key);
++		handleRimeResult(classicResult, key, keydownAt === undefined ? undefined : { input, key, keydownAt });
 +		if (prefs.enableAI) {
 +			void classicResult.then(result => {
 +				if (result.isComposing) {
@@ -848,7 +934,7 @@ index 298a42d..610990c 100644
  
  	const parseKey = useCallback((event: KeyboardEvent) => {
  		const { code, key } = event;
-@@ -118,6 +168,9 @@ export default function CandidatePanel({ runAsyncTask, textArea, prefs, deploySt
+@@ -118,13 +249,19 @@ export default function CandidatePanel({ runAsyncTask, textArea, prefs, deploySt
  
  	useEffect(() => {
  		function onKeyDown(event: KeyboardEvent) {
@@ -858,7 +944,8 @@ index 298a42d..610990c 100644
  			const key = parseKey(event);
  			if (key) {
  				event.preventDefault();
-@@ -125,6 +178,9 @@ export default function CandidatePanel({ runAsyncTask, textArea, prefs, deploySt
+-				processKey(`{${key}}`, event.key);
++				processKey(`{${key}}`, event.key, nowMs());
  			}
  		}
  		function onKeyUp(event: KeyboardEvent) {
@@ -868,7 +955,7 @@ index 298a42d..610990c 100644
  			if (inputState) {
  				const key = parseKey(event);
  				if (key) processKey(`{Release+${key}}`);
-@@ -136,13 +192,23 @@ export default function CandidatePanel({ runAsyncTask, textArea, prefs, deploySt
+@@ -136,13 +273,46 @@ export default function CandidatePanel({ runAsyncTask, textArea, prefs, deploySt
  			document.removeEventListener("keydown", onKeyDown);
  			document.removeEventListener("keyup", onKeyUp);
  		};
@@ -882,7 +969,30 @@ index 298a42d..610990c 100644
  
 +	useLayoutEffect(() => {
 +		inputStateRef.current = inputState;
-+	}, [inputState]);
++		const pending = pendingPerfDiagnostics.current.splice(0);
++		if (pending.length === 0) {
++			return;
++		}
++		const stateAppliedAt = nowMs();
++		const renderedCandidates = inputState?.candidates.slice(0, prefs.pageSize) ?? [];
++		const totalCandidateCount = inputState?.candidates.length ?? 0;
++		for (const diagnostic of pending) {
++			requestAnimationFrame(() => {
++				const paintObservedAt = nowMs();
++				appendPerfDiagnostic({
++					...diagnostic,
++					stateAppliedAt,
++					paintObservedAt,
++					candidateCount: renderedCandidates.length,
++					totalCandidateCount,
++					firstCandidateText: renderedCandidates[0]?.text,
++					reactUpdateMs: Math.round(stateAppliedAt - diagnostic.responseMappingFinishedAt),
++					paintProxyMs: Math.round(paintObservedAt - stateAppliedAt),
++					totalKeydownToPaintMs: Math.round(paintObservedAt - diagnostic.keydownAt),
++				});
++			});
++		}
++	}, [inputState, prefs.pageSize]);
 +
 +	useEffect(() => {
 +		if (inputStateRef.current) {
@@ -893,7 +1003,7 @@ index 298a42d..610990c 100644
  	const hideDictionaryOnLeaveCandidate = useCallback(() => {
  		function hideDictionaryOnLeaveDictionaryPanel() {
  			if (!candidateList.current?.matches(":hover")) {
-@@ -161,7 +227,8 @@ export default function CandidatePanel({ runAsyncTask, textArea, prefs, deploySt
+@@ -161,7 +331,8 @@ export default function CandidatePanel({ runAsyncTask, textArea, prefs, deploySt
  	}, [hideDictionary]);
  
  	const shouldShowDictionary = typeof showDictionaryIndex === "number";
@@ -903,7 +1013,7 @@ index 298a42d..610990c 100644
  		<div>
  			<div className="flex">
  				<div className="flex-1 text-[15pt]">
-@@ -169,17 +236,17 @@ export default function CandidatePanel({ runAsyncTask, textArea, prefs, deploySt
+@@ -169,17 +340,17 @@ export default function CandidatePanel({ runAsyncTask, textArea, prefs, deploySt
  					{inputState.inputBuffer.active && <span className="p-1 inline-block rounded-md bg-accent text-accent-content">{inputState.inputBuffer.active}</span>}
  					{inputState.inputBuffer.after && <span className="m-1 inline-block">{inputState.inputBuffer.after}</span>}
  				</div>
@@ -925,7 +1035,7 @@ index 298a42d..610990c 100644
  					<Candidate
  						key={index}
  						info={candidate}
-@@ -192,6 +259,6 @@ export default function CandidatePanel({ runAsyncTask, textArea, prefs, deploySt
+@@ -192,6 +363,6 @@ export default function CandidatePanel({ runAsyncTask, textArea, prefs, deploySt
  				)}
  			</table>
  		</div>
@@ -2262,20 +2372,24 @@ index 9dc742c..9c1974b 100644
  	}
  }
 diff --git a/src/rime.ts b/src/rime.ts
-index 4393a9e..388e9a5 100644
+index 4393a9e..a529d28 100644
 --- a/src/rime.ts
 +++ b/src/rime.ts
-@@ -11,14 +11,22 @@ type ListenerPayload = {
+@@ -11,14 +11,26 @@ type ListenerPayload = {
  interface SuccessPayload {
  	type: "success";
  	result: ReturnType<Actions[keyof Actions]>;
 +	elapsedMs?: number;
++	workerStartedAt?: number;
++	workerFinishedAt?: number;
  }
  
  interface ErrorPayload {
  	type: "error";
  	error: unknown;
 +	elapsedMs?: number;
++	workerStartedAt?: number;
++	workerFinishedAt?: number;
  }
  
 -type Payload = ListenerPayload | SuccessPayload | ErrorPayload;
@@ -2289,14 +2403,14 @@ index 4393a9e..388e9a5 100644
  
  type Listeners = { [K in keyof ListenerArgsMap]: (this: Worker, ...args: ListenerArgsMap[K]) => void };
  
-@@ -36,13 +44,37 @@ const listeners = {} as { [K in keyof Listeners]: Listeners[K][] };
+@@ -36,13 +48,37 @@ const listeners = {} as { [K in keyof Listeners]: Listeners[K][] };
  for (const type of allListenerTypes) {
  	listeners[type] = [];
  }
 +const lastListenerArgs = {} as Partial<{ [K in keyof ListenerArgsMap]: ListenerArgsMap[K] }>;
  
 -const worker = new Worker("./worker.js");
-+const YUNE_TYPEDUCK_WORKER_VERSION = "m24-dogfood-v3";
++const YUNE_TYPEDUCK_WORKER_VERSION = "m26-performance-v1";
 +const debugWindow = window as typeof window & { __YUNE_RIME_VERSION__?: string };
 +debugWindow.__YUNE_RIME_VERSION__ = YUNE_TYPEDUCK_WORKER_VERSION;
 +document.documentElement.dataset.yuneRimeVersion = YUNE_TYPEDUCK_WORKER_VERSION;
@@ -2329,13 +2443,19 @@ index 4393a9e..388e9a5 100644
  		for (const listener of listeners[name]) {
  			// @ts-expect-error Unactionable
  			listener.apply(worker, args);
-@@ -50,6 +82,14 @@ worker.addEventListener("message", ({ data }: MessageEvent<Payload>) => {
+@@ -50,6 +86,20 @@ worker.addEventListener("message", ({ data }: MessageEvent<Payload>) => {
  	}
  	else if (running) {
  		const { resolve, reject } = running;
-+		const receivedAt = performance.now();
++		const receivedAt = nowMs();
 +		appendActionDiagnostic({
 +			action: running.name,
++			input: typeof running.args[0] === "string" ? running.args[0] : undefined,
++			enqueuedAt: running.enqueuedAt,
++			sentAt: running.sentAt,
++			receivedAt,
++			workerStartedAt: data.workerStartedAt,
++			workerFinishedAt: data.workerFinishedAt,
 +			queueWaitMs: Math.round(((running.sentAt ?? receivedAt) - (running.enqueuedAt ?? receivedAt))),
 +			workerRoundtripMs: Math.round(receivedAt - (running.sentAt ?? receivedAt)),
 +			workerMs: data.elapsedMs,
@@ -2344,13 +2464,18 @@ index 4393a9e..388e9a5 100644
  		const nextMessage = queue.shift();
  		if (nextMessage) {
  			postMessage(nextMessage);
-@@ -67,14 +107,41 @@ worker.addEventListener("message", ({ data }: MessageEvent<Payload>) => {
+@@ -66,15 +116,52 @@ worker.addEventListener("message", ({ data }: MessageEvent<Payload>) => {
+ 	}
  });
  
++function nowMs() {
++	return performance.timeOrigin + performance.now();
++}
++
  function postMessage(message: Message) {
 -	if (process.env.NODE_ENV !== "production" || location.search === "?debug") console.log("post", message);
 +	if (shouldLogDebugMessages()) console.log("post", JSON.stringify({ name: message.name, args: message.args }));
-+	message.sentAt = performance.now();
++	message.sentAt = nowMs();
  	const { name, args } = running = message;
  	worker.postMessage({ name, args });
  }
@@ -2368,6 +2493,12 @@ index 4393a9e..388e9a5 100644
 +
 +function appendActionDiagnostic(diagnostic: {
 +	action: keyof Actions;
++	input?: string;
++	enqueuedAt?: number;
++	sentAt?: number;
++	receivedAt: number;
++	workerStartedAt?: number;
++	workerFinishedAt?: number;
 +	queueWaitMs: number;
 +	workerRoundtripMs: number;
 +	workerMs?: number;
@@ -2387,16 +2518,16 @@ index 4393a9e..388e9a5 100644
  	"selectCandidate",
  	"deleteCandidate",
  	"flipPage",
-@@ -92,7 +159,7 @@ function registerAction<K extends keyof Actions>(name: K): Actions[K] {
+@@ -92,7 +179,7 @@ function registerAction<K extends keyof Actions>(name: K): Actions[K] {
  	// @ts-expect-error Unactionable
  	return (...args: Parameters<Actions[K]>) =>
  		new Promise((resolve, reject) => {
 -			const message: Message = { name, args, resolve, reject };
-+			const message: Message = { name, args, resolve, reject, enqueuedAt: performance.now() };
++			const message: Message = { name, args, resolve, reject, enqueuedAt: nowMs() };
  			if (running) {
  				queue.push(message);
  			}
-@@ -104,6 +171,14 @@ function registerAction<K extends keyof Actions>(name: K): Actions[K] {
+@@ -104,6 +191,14 @@ function registerAction<K extends keyof Actions>(name: K): Actions[K] {
  
  export function subscribe<K extends keyof Listeners>(type: K, callback: Listeners[K]) {
  	listeners[type].push(callback);
@@ -2504,10 +2635,10 @@ index 5d47525..45547e5 100644
  	showReverseCode: boolean;
  }
 diff --git a/src/worker.ts b/src/worker.ts
-index 92b9a90..9e1fcbb 100644
+index 92b9a90..6a8b173 100644
 --- a/src/worker.ts
 +++ b/src/worker.ts
-@@ -1,137 +1,378 @@
+@@ -1,137 +1,394 @@
 -import type { Actions, ListenerArgsMap, Message, RimeResult, RimeAPI, RimeNotification, RimeDeployStatus } from "./types";
 -
 -type TypeToString<T> = T extends number ? "number"
@@ -2801,6 +2932,10 @@ index 92b9a90..9e1fcbb 100644
 +let loadedExtraSharedAssets: { path: string; content: string | Uint8Array }[] = [];
 +let activeSchemaId: RimeSchemaId = DEFAULT_SCHEMA_ID;
 +
++function nowMs(): number {
++  return performance.timeOrigin + performance.now();
++}
++
 +// Yune runtime initialization
 +const loadRime = (async () => {
 +  const startupStartedAt = performance.now();
@@ -2809,9 +2944,11 @@ index 92b9a90..9e1fcbb 100644
 +    startupMarkers.push({ phase, ms: Math.round(performance.now() - startupStartedAt) });
 +  };
 +  try {
++    markStartup("runtime:init:start");
 +    markStartup("worker:start");
 +    importScripts(`yune-typeduck.js?v=${YUNE_TYPEDUCK_ASSET_VERSION}`);
 +    markStartup("wasm-glue:loaded");
++    markStartup("wasm:module:create:start");
 +    const module = await createYuneTypeduckModule({
 +      printErr,
 +      noInitialRun: true,
@@ -2822,16 +2959,20 @@ index 92b9a90..9e1fcbb 100644
 +        return path;
 +      },
 +    });
++    markStartup("wasm:module:create:finish");
 +    markStartup("module:created");
 +
 +    if (module.IDBFS === undefined || module.IDBFS === null) {
 +      throw new Error("Yune Emscripten module missing IDBFS runtime method");
 +    }
 +
++    markStartup("filesystem:mount:start");
 +    mountTypeDuckPersistence(module.FS, module.IDBFS, {}, RIME_USER_DIR);
 +    yuneModule = module;
++    markStartup("filesystem:mount:finish");
 +    markStartup("persistence:mounted");
 +
++    markStartup("assets:load:start");
 +    loadedExtraSharedAssets = await loadExtraSharedAssets([
 +      "default.custom.yaml",
 +      "common.yaml",
@@ -2873,9 +3014,13 @@ index 92b9a90..9e1fcbb 100644
 +      "luna_pinyin.reverse.bin",
 +      "luna_pinyin.prism.bin",
 +    ], true));
++    markStartup("assets:load:finish");
 +    markStartup("assets:loaded");
 +
++    markStartup("schema:select:start");
 +    await selectYuneSchema(DEFAULT_SCHEMA_ID);
++    markStartup("schema:select:finish");
++    markStartup("runtime:init:finish");
 +    markStartup("runtime:initialized");
 +
 +    loading = false;
@@ -2986,14 +3131,16 @@ index 92b9a90..9e1fcbb 100644
 -		postMessage({ type: "error", error });
 -	}
 +  if (loading) await loadRime;
-+  const actionStartedAt = performance.now();
++  const workerStartedAt = nowMs();
 +  try {
 +    // @ts-expect-error Unactionable
 +    const result = await actions[name](...args);
-+    postMessage({ type: "success", result, elapsedMs: Math.round(performance.now() - actionStartedAt) });
++    const workerFinishedAt = nowMs();
++    postMessage({ type: "success", result, elapsedMs: Math.round(workerFinishedAt - workerStartedAt), workerStartedAt, workerFinishedAt });
 +  }
 +  catch (error) {
-+    postMessage({ type: "error", error, elapsedMs: Math.round(performance.now() - actionStartedAt) });
++    const workerFinishedAt = nowMs();
++    postMessage({ type: "error", error, elapsedMs: Math.round(workerFinishedAt - workerStartedAt), workerStartedAt, workerFinishedAt });
 +  }
 +});
 +
@@ -3249,10 +3396,10 @@ index 0000000..f943e18
 +**Status**: Integration layer created, pending patch application and build gates
 diff --git a/src/yune-integration/adapter.ts b/src/yune-integration/adapter.ts
 new file mode 100644
-index 0000000..d2d974c
+index 0000000..6e1aa43
 --- /dev/null
 +++ b/src/yune-integration/adapter.ts
-@@ -0,0 +1,962 @@
+@@ -0,0 +1,978 @@
 +/**
 + * Yune seam adapter for TypeDuck-Web
 + *
@@ -3394,6 +3541,12 @@ index 0000000..d2d974c
 +type PersistenceDiagnosticPhase =
 +  | "deploy:cache-hit"
 +  | "deploy:cache-miss"
++  | "runtime:init:start"
++  | "runtime:init:finish"
++  | "rime:init:start"
++  | "rime:init:finish"
++  | "schema:deploy:start"
++  | "schema:deploy:finish"
 +  | "syncFromPersistenceBeforeInit:start"
 +  | "syncFromPersistenceBeforeInit:pass"
 +  | "syncToPersistenceAfterMutation:start"
@@ -3482,11 +3635,14 @@ index 0000000..d2d974c
 +  currentPrepareOptions = prepareOptions;
 +  currentExtraSharedAssets = extraSharedAssets;
 +
++  emitPersistenceDiagnostic(fs, prepareOptions, "runtime:init:start", "before-init");
++
 +  // Load persisted user/build state before writing fresh app-owned assets.
 +  emitPersistenceDiagnostic(fs, prepareOptions, "syncFromPersistenceBeforeInit:start", "before-init");
 +  await syncFromPersistenceBeforeInit(fs);
 +  emitPersistenceDiagnostic(fs, prepareOptions, "syncFromPersistenceBeforeInit:pass", "before-init");
 +
++  emitPersistenceDiagnostic(fs, prepareOptions, "schema:deploy:start", "before-init");
 +  const deployCacheFresh = isDeployCacheFresh(
 +    fs,
 +    prepareOptions,
@@ -3505,13 +3661,17 @@ index 0000000..d2d974c
 +  for (const asset of extraSharedAssets) {
 +    writeExtraSharedAsset(fs, options.sharedDataDir, asset);
 +  }
++  emitPersistenceDiagnostic(fs, prepareOptions, "schema:deploy:finish", "before-init");
 +
 +  // Initialize runtime
++  emitPersistenceDiagnostic(fs, prepareOptions, "rime:init:start", "after-init");
 +  currentRuntime = TypeDuckRuntime.init(module, options);
++  emitPersistenceDiagnostic(fs, prepareOptions, "rime:init:finish", "after-init");
 +  emitPersistenceDiagnostic(fs, prepareOptions, "runtime:init", "after-init");
 +
 +  // Sync after init to persist initial state
 +  await syncToPersistenceWithDiagnostic(fs, prepareOptions, "after-init");
++  emitPersistenceDiagnostic(fs, prepareOptions, "runtime:init:finish", "after-init");
 +}
 +
 +/**
@@ -3708,8 +3868,10 @@ index 0000000..d2d974c
 +    writeExtraSharedAsset(currentFs, currentPrepareOptions.sharedDataDir, asset);
 +  }
 +
++  emitPersistenceDiagnostic(currentFs, currentPrepareOptions, "schema:deploy:start", "deploy");
 +  if (isDeployCacheFresh(currentFs, currentPrepareOptions, currentExtraSharedAssets, currentAssetVersion)) {
 +    emitPersistenceDiagnostic(currentFs, currentPrepareOptions, "deploy:cache-hit", "deploy");
++    emitPersistenceDiagnostic(currentFs, currentPrepareOptions, "schema:deploy:finish", "deploy");
 +    return true;
 +  }
 +
@@ -3719,6 +3881,7 @@ index 0000000..d2d974c
 +  if (deployed) {
 +    writeDeployStamp(currentFs, currentPrepareOptions, currentExtraSharedAssets, currentAssetVersion);
 +  }
++  emitPersistenceDiagnostic(currentFs, currentPrepareOptions, "schema:deploy:finish", "deploy");
 +  await syncCurrentStateToPersistence("deploy");
 +  return deployed;
 +}

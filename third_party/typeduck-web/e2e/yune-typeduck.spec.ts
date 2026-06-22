@@ -24,6 +24,8 @@ const EVIDENCE_DIR = process.env.TYPEDUCK_EVIDENCE_DIR || "../e2e/results";
 let currentEvidenceScope = "unscoped";
 const M24_EVIDENCE_DIR = "m24-dogfooding";
 const M25_EVIDENCE_DIR = "m25-dogfooding";
+const M26_EVIDENCE_DIR = "m26-performance";
+const M26_EVIDENCE_LABEL = process.env.M26_EVIDENCE_LABEL || "latest";
 
 const ACTIVE_SHOWCASE_CONTROLS = [
   /Auto-completion/,
@@ -167,6 +169,7 @@ interface PersistenceDiagnosticSnapshot {
     reason?: string;
     action?: string;
     totalMs?: number;
+    ms?: number;
     queueWaitMs?: number;
     workerRoundtripMs?: number;
     workerMs?: number;
@@ -182,6 +185,44 @@ interface PersistenceDiagnosticSnapshot {
       settings?: Record<string, string | null>;
     };
   };
+}
+
+interface ActionDiagnosticSnapshot {
+  action?: string;
+  input?: string;
+  enqueuedAt?: number;
+  sentAt?: number;
+  receivedAt?: number;
+  workerStartedAt?: number;
+  workerFinishedAt?: number;
+  queueWaitMs?: number;
+  workerRoundtripMs?: number;
+  workerMs?: number;
+  totalMs?: number;
+}
+
+interface PerfDiagnosticSnapshot {
+  input: string;
+  key?: string;
+  keydownAt: number;
+  workerQueuedAt: number;
+  workerStartedAt: number;
+  workerFinishedAt: number;
+  responseReceivedAt: number;
+  responseMappingFinishedAt: number;
+  stateAppliedAt: number;
+  paintObservedAt: number;
+  candidateCount: number;
+  totalCandidateCount: number;
+  firstCandidateText?: string;
+  workerQueueWaitMs?: number;
+  workerProcessMs?: number;
+  workerRoundtripMs?: number;
+  responseMappingMs: number;
+  reactUpdateMs: number;
+  paintProxyMs: number;
+  totalWorkerActionMs?: number;
+  totalKeydownToPaintMs: number;
 }
 
 interface ElementBoxSnapshot {
@@ -258,6 +299,19 @@ async function takeM25Screenshot(page: Page, issueId: string, filename: string):
   const screenshotPath = await m25EvidencePath(issueId, `screenshot-${filename}.png`);
   await fs.mkdir(path.dirname(screenshotPath), { recursive: true });
   await page.screenshot({ path: screenshotPath, fullPage: false });
+}
+
+async function m26EvidencePath(filename: string): Promise<string> {
+  const path = await import("path");
+  return path.join(EVIDENCE_DIR, M26_EVIDENCE_DIR, filename);
+}
+
+async function saveM26Json(filename: string, payload: unknown): Promise<void> {
+  const fs = await import("fs/promises");
+  const path = await import("path");
+  const jsonPath = await m26EvidencePath(filename);
+  await fs.mkdir(path.dirname(jsonPath), { recursive: true });
+  await fs.writeFile(jsonPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
 }
 
 async function findRepoRoot(): Promise<string> {
@@ -561,6 +615,62 @@ async function setAiToggle(page: Page, enabled: boolean): Promise<void> {
 async function readPersistenceDiagnostics(page: Page): Promise<PersistenceDiagnosticSnapshot[]> {
   const raw = await page.evaluate(() => document.documentElement.dataset.yunePersistenceDiagnostics ?? "[]");
   return JSON.parse(raw) as PersistenceDiagnosticSnapshot[];
+}
+
+async function readActionDiagnostics(page: Page): Promise<ActionDiagnosticSnapshot[]> {
+  const raw = await page.evaluate(() => document.documentElement.dataset.yuneActionDiagnostics ?? "[]");
+  return JSON.parse(raw) as ActionDiagnosticSnapshot[];
+}
+
+async function readPerfDiagnostics(page: Page): Promise<PerfDiagnosticSnapshot[]> {
+  const raw = await page.evaluate(() => document.documentElement.dataset.yunePerfDiagnostics ?? "[]");
+  return JSON.parse(raw) as PerfDiagnosticSnapshot[];
+}
+
+async function resetM26PerfDiagnostics(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    document.documentElement.dataset.yuneActionDiagnostics = "[]";
+    document.documentElement.dataset.yuneTypingDiagnostics = "[]";
+    document.documentElement.dataset.yunePerfDiagnostics = "[]";
+  });
+}
+
+function expectNondecreasingTimeline(diagnostic: PerfDiagnosticSnapshot): void {
+  const fields = [
+    diagnostic.keydownAt,
+    diagnostic.workerQueuedAt,
+    diagnostic.workerStartedAt,
+    diagnostic.workerFinishedAt,
+    diagnostic.responseReceivedAt,
+    diagnostic.responseMappingFinishedAt,
+    diagnostic.stateAppliedAt,
+    diagnostic.paintObservedAt,
+  ];
+  for (let index = 1; index < fields.length; index += 1) {
+    expect(fields[index]).toBeGreaterThanOrEqual(fields[index - 1] - 2);
+  }
+}
+
+function markerPhases(diagnostics: PersistenceDiagnosticSnapshot[]): Set<string> {
+  const phases = new Set<string>();
+  for (const diagnostic of diagnostics) {
+    const phase = diagnostic.marker.phase;
+    if (phase) {
+      phases.add(phase);
+    }
+    for (const marker of diagnostic.marker.markers ?? []) {
+      phases.add(marker.phase);
+    }
+  }
+  return phases;
+}
+
+function expectStartupMarkerOrder(startup: PersistenceDiagnosticSnapshot): void {
+  const markers = startup.marker.markers ?? [];
+  expect(markers.length).toBeGreaterThan(0);
+  for (let index = 1; index < markers.length; index += 1) {
+    expect(markers[index].ms).toBeGreaterThanOrEqual(markers[index - 1].ms);
+  }
 }
 
 async function latestPersistedSettings(page: Page): Promise<Record<string, string | null>> {
@@ -868,6 +978,153 @@ test.describe("TypeDuck-Web Browser E2E", () => {
     expect(processKeyActions.length).toBeGreaterThanOrEqual(3);
     expect(processKeyTyping.length).toBeGreaterThanOrEqual(3);
     expect(p95).toBeLessThanOrEqual(750);
+    expect(consoleFailures(consoleErrors)).toEqual([]);
+  });
+
+  test("M26 PERF startup attribution records nested initialization owners", async ({ page }) => {
+    let startup: PersistenceDiagnosticSnapshot | undefined;
+    await expect.poll(async () => {
+      const diagnostics = await readPersistenceDiagnostics(page);
+      startup = diagnostics.find((diagnostic) => diagnostic.source === "yune-startup");
+      return startup?.marker.phase ?? "";
+    }, { timeout: TIMEOUT_MS }).toBe("startup:complete");
+    expect(startup).toBeDefined();
+    expect(startup?.marker.wasmBuildProfile).toBe("release");
+    expect(startup?.marker.wasmBinary).toBe("yune-typeduck.wasm");
+    expectStartupMarkerOrder(startup as PersistenceDiagnosticSnapshot);
+
+    const freshDiagnostics = await readPersistenceDiagnostics(page);
+    const freshPhases = markerPhases(freshDiagnostics);
+    const requiredPhases = [
+      "runtime:init:start",
+      "wasm:module:create:start",
+      "wasm:module:create:finish",
+      "filesystem:mount:start",
+      "filesystem:mount:finish",
+      "assets:load:start",
+      "assets:load:finish",
+      "rime:init:start",
+      "rime:init:finish",
+      "schema:deploy:start",
+      "schema:deploy:finish",
+      "schema:select:start",
+      "schema:select:finish",
+      "runtime:init:finish",
+    ];
+    for (const phase of requiredPhases) {
+      expect(freshPhases.has(phase), `fresh startup missing ${phase}`).toBe(true);
+    }
+
+    await page.reload({ waitUntil: "domcontentloaded", timeout: TIMEOUT_MS });
+    await waitForAppReady(page);
+    const reloadDiagnostics = await readPersistenceDiagnostics(page);
+    const reloadStartup = reloadDiagnostics
+      .slice()
+      .reverse()
+      .find((diagnostic) => diagnostic.source === "yune-startup");
+    expect(reloadStartup?.marker.phase).toBe("startup:complete");
+    expect(reloadStartup?.marker.wasmBuildProfile).toBe("release");
+    expectStartupMarkerOrder(reloadStartup as PersistenceDiagnosticSnapshot);
+
+    const reloadPhases = markerPhases(reloadDiagnostics);
+    for (const phase of requiredPhases) {
+      expect(reloadPhases.has(phase), `reload startup missing ${phase}`).toBe(true);
+    }
+
+    const resources = await page.evaluate(() =>
+      performance.getEntriesByType("resource")
+        .filter(entry => /yune-typeduck|schema|\.bin|\.ocd2/.test(entry.name))
+        .map(entry => ({
+          name: entry.name,
+          duration: entry.duration,
+          transferSize: "transferSize" in entry ? (entry as PerformanceResourceTiming).transferSize : 0,
+        })),
+    );
+
+    await saveM26Json(`startup-attribution-${M26_EVIDENCE_LABEL}.json`, {
+      label: M26_EVIDENCE_LABEL,
+      freshStartup: startup,
+      freshDiagnostics,
+      reloadStartup,
+      reloadDiagnostics,
+      resources,
+    });
+    expect(consoleFailures(consoleErrors)).toEqual([]);
+  });
+
+  test("M26 PERF keydown-to-paint diagnostics cover typing, paging, and reverse lookup", async ({ page }) => {
+    const inputField = page.locator("input[type='text'], textarea").first();
+    const scenarios: Record<string, unknown> = {};
+
+    await resetM26PerfDiagnostics(page);
+    await clearComposition(page);
+    await inputField.focus();
+    await inputField.type("hai", { delay: 40 });
+    await expect(page.locator(".candidate-panel .candidates tbody").first()).toBeVisible({ timeout: 10000 });
+    await expect.poll(async () => readPerfDiagnostics(page), { timeout: 10000 })
+      .toHaveLength(3);
+    const haiPerf = await readPerfDiagnostics(page);
+    const haiActions = await readActionDiagnostics(page);
+    for (const diagnostic of haiPerf) {
+      expectNondecreasingTimeline(diagnostic);
+      expect(diagnostic.candidateCount).toBeGreaterThan(0);
+      expect(diagnostic.totalKeydownToPaintMs).toBeGreaterThanOrEqual(0);
+    }
+    scenarios.hai = { perf: haiPerf, actions: haiActions, state: await readCandidatePanelSnapshot(page, false) };
+
+    await clearComposition(page);
+    await resetM26PerfDiagnostics(page);
+    await inputField.focus();
+    await inputField.type(M24_DOGFOOD_INPUT, { delay: 40 });
+    await expect.poll(async () =>
+      (await readCandidatePanelSnapshot(page, false)).candidates[0]?.text ?? null,
+      { timeout: 10000 },
+    ).toBe(M24_DOGFOOD_TOP);
+    const longState = await readCandidatePanelSnapshot(page, false);
+    await expect.poll(async () => readPerfDiagnostics(page), { timeout: 10000 })
+      .toHaveLength(M24_DOGFOOD_INPUT.length);
+    const longPerf = await readPerfDiagnostics(page);
+    for (const diagnostic of longPerf) {
+      expectNondecreasingTimeline(diagnostic);
+    }
+    scenarios.longPhrase = { perf: longPerf, actions: await readActionDiagnostics(page), state: longState };
+
+    await resetM26PerfDiagnostics(page);
+    const firstPageFirst = longState.candidates[0]?.text;
+    await page.keyboard.press("PageDown");
+    await expect.poll(async () =>
+      (await readCandidatePanelSnapshot(page, false)).candidates[0]?.text ?? null,
+      { timeout: 5000 },
+    ).not.toBe(firstPageFirst ?? null);
+    await expect.poll(async () => readPerfDiagnostics(page), { timeout: 10000 })
+      .toHaveLength(1);
+    const pagingPerf = await readPerfDiagnostics(page);
+    expect(pagingPerf[0].key).toBe("PageDown");
+    expectNondecreasingTimeline(pagingPerf[0]);
+    scenarios.paging = { perf: pagingPerf, actions: await readActionDiagnostics(page), state: await readCandidatePanelSnapshot(page, false) };
+
+    await clearComposition(page);
+    await resetM26PerfDiagnostics(page);
+    await inputField.focus();
+    await inputField.type("`zhe", { delay: 40 });
+    await expect.poll(async () =>
+      (await readCandidatePanelSnapshot(page, false)).candidates.map((candidate) => candidate.text),
+      { timeout: 10000 },
+    ).toContain("\u9019");
+    const reverseState = await readCandidatePanelSnapshot(page, false);
+    await expect.poll(async () => readPerfDiagnostics(page), { timeout: 10000 })
+      .toHaveLength(4);
+    const reversePerf = await readPerfDiagnostics(page);
+    for (const diagnostic of reversePerf) {
+      expectNondecreasingTimeline(diagnostic);
+    }
+    scenarios.reverseLookup = { perf: reversePerf, actions: await readActionDiagnostics(page), state: reverseState };
+
+    await saveM26Json(`typing-keydown-to-paint-${M26_EVIDENCE_LABEL}.json`, {
+      label: M26_EVIDENCE_LABEL,
+      scenarios,
+      loadingIndicatorCount: await page.locator("[data-yune-loading-indicator]").count(),
+    });
     expect(consoleFailures(consoleErrors)).toEqual([]);
   });
 

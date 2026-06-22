@@ -238,13 +238,13 @@ Deferred beyond the TypeDuck-Web browser integration milestone. Tracked but not 
 
 ## M26 Performance Hardening Requirements
 
-**Status: active.** M26 turns the post-M25 performance review into a measurement-first hardening milestone. It separates native engine cost from browser/WASM/worker/React latency before any optimization claims are accepted.
+**Status: complete.** M26 turned the post-M25 performance review into a measurement-first hardening milestone. It separates native engine cost from browser/WASM/worker/React latency before any optimization claims are accepted.
 
-- [ ] **M26-PERF-REQ-01**: Native large-real-asset benchmarks cover `jyut6ping3_mobile`, `luna_pinyin`, and a representative breadth schema, reporting median, p95, p99, max, and allocation/memory notes for startup, schema load, session create/destroy, per-key processing, candidate snapshot, paging/action, and teardown.
-- [ ] **M26-PERF-REQ-02**: Browser diagnostics record keydown-to-paint or the closest browser-supported proxy for normal typing, long phrases, page changes, reverse lookup, and cold/warm startup, without treating browser-only numbers as native engine latency.
-- [ ] **M26-PERF-REQ-03**: Startup diagnostics attribute the current coarse TypeDuck-Web `runtime:initialized` interval into engine/package load, virtual filesystem mount/sync, schema asset deploy/reuse, worker initialization, and UI readiness buckets.
-- [ ] **M26-PERF-REQ-04**: At least one measured optimization lands with before/after native and browser evidence. If the highest-value owner is too large for M26, the milestone lands a low-risk proven slice and records the larger follow-up.
-- [ ] **M26-PERF-REQ-05**: Compatibility gates remain green: upstream `luna_pinyin`, Cantonese parity, native `typeduck_web`, TypeScript runtime tests/build, TypeDuck-Web build, focused M26 browser evidence, and patch reverse/forward checks.
+- [x] **M26-PERF-REQ-01**: Native large-real-asset benchmarks cover `jyut6ping3_mobile`, `luna_pinyin`, representative `cangjie5`, and the TypeDuck dynamic-correction path, reporting median, p95, p99, max, cold-first-key versus warm steady-state, operation count, full-ABI versus engine-only cost, and allocation/RSS notes. Evidence: `third_party/typeduck-web/e2e/results/m26-performance/native-before.md` and `third_party/typeduck-web/e2e/results/m26-performance/native-after.md`.
+- [x] **M26-PERF-REQ-02**: Browser diagnostics record keydown-to-paint or the closest browser-supported proxy for normal typing, long phrases, page changes, reverse lookup, and cold/warm startup, without treating browser-only numbers as native engine latency. Evidence: `third_party/typeduck-web/e2e/results/m26-performance/typing-keydown-to-paint-before.json` and `third_party/typeduck-web/e2e/results/m26-performance/typing-keydown-to-paint-after.json`.
+- [x] **M26-PERF-REQ-03**: Startup diagnostics attribute the current coarse TypeDuck-Web `runtime:initialized` interval into worker/package load, WASM module creation, filesystem mount/sync, schema asset deploy/reuse, `TypeDuckRuntime.init`, schema selection, and startup complete buckets. Evidence: `third_party/typeduck-web/e2e/results/m26-performance/startup-attribution-before.json` and `third_party/typeduck-web/e2e/results/m26-performance/startup-attribution-after.json`.
+- [x] **M26-PERF-REQ-04**: One measured optimization landed with before/after native and browser evidence. The largest measured owner was startup/schema-selection/runtime initialization, which is deferred to the named follow-up [`docs/plans/m27-plan-typeduck-web-startup-runtime-init.md`](./plans/m27-plan-typeduck-web-startup-runtime-init.md). The landed lower-risk M26 slice targets the measured TypeDuck dynamic-correction stress owner: `per_key_real_jyut6ping3_mobile_jigaajiusihaa_correction_engine_only` improved from median `451490.692us` / p95 `467909.308us` to median `121712.662us` / p95 `124420.115us` by pruning impossible-length candidates before the restricted-distance matrix. Evidence: `third_party/typeduck-web/e2e/results/m26-performance/optimization-choice.md`.
+- [x] **M26-PERF-REQ-05**: Compatibility gates remain green: upstream `luna_pinyin`, Cantonese parity, native `typeduck_web`, TypeScript runtime tests/build, TypeDuck-Web build, focused M26 browser evidence, and TypeDuck-Web patch reverse/forward checks. Evidence: `third_party/typeduck-web/e2e/results/m26-performance/task-5-gates.md` and `third_party/typeduck-web/e2e/results/m26-performance/patch-checks.md`.
 
 **Follow-on (no requirement IDs):** [`M21`](./plans/archive/m21-plan-typeduck-web-product-comparison.md) is complete as a post-M20 _comparison protocol_ and hard-oracle closeout. It compared the Yune harness against the deployed `typeduck.hk/web` product as a behavior/feel target, but the `v1.1.2` fixtures remained the hard oracle. The final gap ledger has no remaining hard-oracle action rows: M21-GAP-01 is closed by `jyut6ping3-m21-sentence-composition.json`, M21-GAP-02 is closed by `jyut6ping3-m21-prediction-ranking.json` plus real `nri` browser before/after evidence, and `jyut6ping3-m21-closeout.json` locks the remaining baseline/fuzzy/sentence/`hk2s`/tone-letter/paging rows including the final `m` and `mgoi` fixes.
 
@@ -386,11 +386,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | M25-DOGFOOD-REQ-04 | M25 | Complete - bare-grave Luna reverse lookup and explicit `vl`/`vc` side lookup triggers are native/browser tested |
 | M25-DOGFOOD-REQ-05 | M25 | Complete - top-control layout, settings order, and alignment are browser-evidenced |
 | M25-DOGFOOD-REQ-06 | M25 | Complete - checkbox and radio affordances preserve the local Tailwind component stack |
-| M26-PERF-REQ-01 | M26 | Active - native large-real-asset benchmark coverage |
-| M26-PERF-REQ-02 | M26 | Active - browser keydown-to-paint instrumentation |
-| M26-PERF-REQ-03 | M26 | Active - startup attribution below `runtime:initialized` |
-| M26-PERF-REQ-04 | M26 | Active - measured optimization with before/after evidence |
-| M26-PERF-REQ-05 | M26 | Active - compatibility and integration gates remain green |
+| M26-PERF-REQ-01 | M26 | Complete - native large-real-asset benchmark coverage with cold/warm, full-ABI/engine-only, correction-path, and memory/allocation reporting |
+| M26-PERF-REQ-02 | M26 | Complete - browser keydown-to-paint instrumentation for normal typing, long phrases, paging, and reverse lookup |
+| M26-PERF-REQ-03 | M26 | Complete - startup attribution below `runtime:initialized` |
+| M26-PERF-REQ-04 | M26 | Complete - startup owner deferred to M27; measured TypeDuck dynamic-correction optimization landed with before/after evidence |
+| M26-PERF-REQ-05 | M26 | Complete - compatibility, integration, and TypeDuck-Web patch discipline gates remain green |
 
 **Coverage:**
 
@@ -407,10 +407,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 - M22 web playground requirements: 4 total, 4 complete
 - M24 TypeDuck-Web dogfooding requirements: 5 total, 5 complete
 - M25 TypeDuck-Web dogfooding round 2 requirements: 6 total, 6 complete
-- M26 performance hardening requirements: 5 total, 0 complete
+- M26 performance hardening requirements: 5 total, 5 complete
 - Mapped to phases: 125
 - Unmapped: 0
 
 ---
 
-_Requirements defined: 2026-04-28_ _Last updated: 2026-06-22 - M26 performance hardening is active with five measurement-first requirements; M25 TypeDuck-Web dogfooding round 2 is complete with 10/10 rows closed, browser evidence, and regenerated TypeDuck-Web patch checks; M24 TypeDuck-Web dogfooding remains complete with 13/13 rows closed and browser evidence; M19 schema breadth and the named TypeDuck-profile ABI accessor are complete; M23 architecture hardening and M18 deployment/processor depth are complete; all M22 TypeDuck-Web playground buckets are complete with browser evidence; M21 TypeDuck-Web product comparison is complete as a hard-oracle closeout; M20 Web Demo Showcase Controls remain complete as a separate internal web/demo track; M10 TypeDuck-Windows is complete as a TypeDuck compatibility profile with T1/T2 package/profile smoke, build/link evidence, and stock T3 TypeDuckServer/TestTypeDuckIPC real-server IPC smoke_
+_Requirements defined: 2026-04-28_ _Last updated: 2026-06-22 - M26 performance hardening is complete with five measurement-first requirements, native/browser before-after evidence, and regenerated TypeDuck-Web patch checks; M25 TypeDuck-Web dogfooding round 2 is complete with 10/10 rows closed, browser evidence, and regenerated TypeDuck-Web patch checks; M24 TypeDuck-Web dogfooding remains complete with 13/13 rows closed and browser evidence; M19 schema breadth and the named TypeDuck-profile ABI accessor are complete; M23 architecture hardening and M18 deployment/processor depth are complete; all M22 TypeDuck-Web playground buckets are complete with browser evidence; M21 TypeDuck-Web product comparison is complete as a hard-oracle closeout; M20 Web Demo Showcase Controls remain complete as a separate internal web/demo track; M10 TypeDuck-Windows is complete as a TypeDuck compatibility profile with T1/T2 package/profile smoke, build/link evidence, and stock T3 TypeDuckServer/TestTypeDuckIPC real-server IPC smoke_

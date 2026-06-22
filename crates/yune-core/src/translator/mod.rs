@@ -487,6 +487,11 @@ impl StaticTableTranslator {
                     if canonical_code == lookup_code {
                         continue;
                     }
+                    if typeduck_length_distance_lower_bound(canonical_code, lookup_code)
+                        > TYPEDUCK_CORRECTION_MAX_DISTANCE
+                    {
+                        continue;
+                    }
                     if !self.enable_correction
                         && has_exact_lookup
                         && !lookup_code.starts_with(canonical_code)
@@ -1272,6 +1277,10 @@ fn typeduck_restricted_distance(left: &str, right: &str, threshold: usize) -> us
     }
 
     distance[index(left_len, right_len)]
+}
+
+fn typeduck_length_distance_lower_bound(left: &str, right: &str) -> usize {
+    left.len().abs_diff(right.len()) * 2
 }
 
 fn typeduck_substitution_cost(left: u8, right: u8) -> usize {
