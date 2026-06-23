@@ -9,18 +9,18 @@ index 5803fa4..35e77f9 100644
 -		<title>TypeDuck 網頁版</title>
 -		<link rel="icon" type="image/png" href="/images/favicon.png" />
 -		<link rel="preload" type="image/png" href="/images/logo.png" as="image" />
-+		<title>粵韻輸入法引擎</title>
- 		<meta name="description" content="設有少數族裔語言提示粵拼輸入法 Cantonese input keyboard with minority language prompts" />
++		<title>新韻輸入法引擎</title>
+ 		<meta name="description" content="爲語言復興而生，原生 AI 支援，兼容中州韻輸入法引擎 Compatible with librime" />
 -		<meta property="og:title" content="TypeDuck 網頁版" />
-+		<meta property="og:title" content="粵韻輸入法引擎" />
- 		<meta property="og:description" content="設有少數族裔語言提示粵拼輸入法 Cantonese input keyboard with minority language prompts" />
++		<meta property="og:title" content="新韻輸入法引擎" />
+ 		<meta property="og:description" content="爲語言復興而生，原生 AI 支援，兼容中州韻輸入法引擎 Compatible with librime" />
  		<meta property="og:type" content="website" />
 -		<meta property="og:url" content="https://typeduck.hk/web/" />
 +		<meta property="og:url" content="https://typeduck.hk/" />
  		<meta property="og:image" content="https://typeduck.hk/images/og-image.png" />
 -		<meta name="twitter:title" content="TypeDuck 網頁版" />
-+		<meta name="twitter:title" content="粵韻輸入法引擎" />
- 		<meta name="twitter:description" content="設有少數族裔語言提示粵拼輸入法 Cantonese input keyboard with minority language prompts" />
++		<meta name="twitter:title" content="新韻輸入法引擎" />
+ 		<meta name="twitter:description" content="爲語言復興而生，原生 AI 支援，兼容中州韻輸入法引擎 Compatible with librime" />
  		<meta name="twitter:card" content="summary_large_image" />
  		<meta name="twitter:image" content="https://typeduck.hk/images/og-image.png" />
 diff --git a/package.json b/package.json
@@ -78,7 +78,7 @@ index cb2146e..7e0ed75 100644
 @@ -34,12 +33,6 @@ engine:
  translator:
    __patch: include:/letter_to_tone
- 
+
 -reverse_lookup:
 -  tag: reverse_lookup
 -  prefix: "`"
@@ -116,7 +116,7 @@ index cb2146e..7e0ed75 100644
    tips: 〔倉頡五代〕
    comment_format:
 @@ -90,10 +83,9 @@ cangjie:
- 
+
  recognizer:
    patterns:
 -    luna_pinyin: "^`p[a-z']*;?$"
@@ -126,7 +126,7 @@ index cb2146e..7e0ed75 100644
 +    loengfan: "^`vl[a-z']*;?$"
 +    cangjie: "^`vc[a-z']*;?$"
 +    luna_pinyin: "^`[a-z']*;?$"
- 
+
  __patch:
    - common:/disable_completion?
 diff --git a/schema/jyut6ping3_mobile.schema.yaml b/schema/jyut6ping3_mobile.schema.yaml
@@ -164,7 +164,7 @@ index 31a7c80..b1c985d 100644
 +  filters:
 +    - dictionary_lookup_filter
 +    - simplifier
- 
+
  menu:
    __patch: include:/no_candidate_selection
 @@ -13,6 +40,30 @@ menu:
@@ -195,7 +195,7 @@ index 31a7c80..b1c985d 100644
 +  import_preset: default
 +  patterns:
 +    luna_pinyin: "^`[a-z']*;?$"
- 
+
  __patch:
    - common:/disable_completion?
 diff --git a/schema/luna_pinyin.schema.yaml b/schema/luna_pinyin.schema.yaml
@@ -203,7 +203,7 @@ index b12be76..d3e508a 100644
 --- a/schema/luna_pinyin.schema.yaml
 +++ b/schema/luna_pinyin.schema.yaml
 @@ -5,7 +5,7 @@ __include: template:/
- 
+
  schema:
    schema_id: luna_pinyin
 -  name: 普通話
@@ -237,9 +237,9 @@ index c43ccbc..89bc736 100644
 @@ -1,20 +1,29 @@
 -import { useEffect, useReducer, useState } from "react";
 +import { useCallback, useEffect, useReducer, useRef, useState } from "react";
- 
+
  import { ToastContainer } from "react-toastify";
- 
+
  import CandidatePanel from "./CandidatePanel";
 -import { NO_AUTO_FILL } from "./consts";
 +import { CHINESE_TYPEFACE_BY_ID, NO_AUTO_FILL } from "./consts";
@@ -254,11 +254,11 @@ index c43ccbc..89bc736 100644
 +import YuneStatusStrip from "./YuneStatusStrip";
 +
 +import type { TypeDuckUserdbSnapshot, YuneInspectorDebug, YuneStatusSnapshot } from "./types";
- 
+
  export default function App() {
  	const [textArea, setTextArea] = useState<HTMLTextAreaElement | null>(null);
  	const [loading, runAsyncTask, startAsyncTask] = useLoading();
- 
+
 +	useEffect(() => {
 +		document.documentElement.dataset.yuneLoading = String(loading);
 +	}, [loading]);
@@ -268,7 +268,7 @@ index c43ccbc..89bc736 100644
  		return subscribe("initialized", success => {
 @@ -26,32 +35,99 @@ export default function App() {
  	}, [startAsyncTask]);
- 
+
  	useEffect(() => {
 -		let resolve!: () => void;
 -		let reject!: () => void;
@@ -294,7 +294,7 @@ index c43ccbc..89bc736 100644
  			}
  		});
  	}, [startAsyncTask]);
- 
+
  	const [deployStatus, updateDeployStatus] = useReducer((n: number) => n + 1, 0);
 +	const [aiStatus, updateAiStatus] = useReducer((n: number) => n + 1, 0);
 +	const [isInspectorEnabled, setIsInspectorEnabled] = useState(false);
@@ -464,7 +464,7 @@ index c43ccbc..89bc736 100644
 +		}
 +		void refreshUserdbSnapshot();
 +	}, [isInspectorEnabled, activeSchema, deployStatus, userdbRefreshStatus, refreshUserdbSnapshot]);
- 
+
  	return <>
 -		<header className="p-8 border-b border-base-300 flex items-center">
 -			<a className="mr-4 w-48" href="/">
@@ -475,7 +475,7 @@ index c43ccbc..89bc736 100644
 +		<header className="border-b border-base-300 py-5">
 +			<div className="mx-auto flex w-full max-w-[84rem] items-center px-8">
 +				<a className="yd-anchor flex-1 text-xl font-bold" href="/">
-+					粵韻輸入法引擎
++					新韻輸入法引擎
 +				</a>
 +				<ThemeSwitcher />
 +			</div>
@@ -551,11 +551,11 @@ index f0c2b50..d7287bf 100644
 +++ b/src/Candidate.tsx
 @@ -3,7 +3,7 @@ import { useEffect, useRef } from "react";
  import { useLongPress } from "react-use";
- 
+
  import CandidateInfo from "./CandidateInfo";
 -import { LANGUAGE_CODES, ShowRomanization, definitionLayout } from "./consts";
 +import { CHINESE_TYPEFACE_BY_ID, ShowRomanization } from "./consts";
- 
+
  import type { InterfacePreferences } from "./types";
  import type { MouseEvent } from "react";
 @@ -37,60 +37,57 @@ export default function Candidate({ isHighlighted, info, selectCandidate, delete
@@ -672,7 +672,7 @@ index 0add9ac..1a5e419 100644
 @@ -10,14 +10,18 @@ export default class CandidateInfo {
  	note: string;
  	entries: CandidateEntry[];
- 
+
 -	constructor(public label: string, public text: string, commentString = "") {
 -		const comment = new ConsumedString(commentString);
 +	constructor(public label: string, public text: string, commentString = "", public source?: string) {
@@ -691,7 +691,7 @@ index 0add9ac..1a5e419 100644
 +					.map(pron => new CandidateEntry({ honzi: text, jyutping: pron }))
  			: [];
  	}
- 
+
 @@ -28,6 +32,21 @@ export default class CandidateInfo {
  	hasDictionaryEntry(preferences: InterfacePreferences) {
  		return this.entries.some(entry => entry.isDictionaryEntry(preferences));
@@ -712,10 +712,10 @@ index 0add9ac..1a5e419 100644
 +function stripCommentControls(value: string | undefined): string {
 +	return normalizeCommentControls(value ?? "").replace(/[\f\r\v]/g, "").trim();
  }
- 
+
  export class CandidateEntry {
 @@ -52,7 +71,8 @@ export class CandidateEntry {
- 
+
  	constructor(value: string | { honzi: string; jyutping: string }) {
  		if ((this.isJyutpingOnly = typeof value === "object")) {
 -			Object.assign(this, value);
@@ -760,7 +760,7 @@ index 0add9ac..1a5e419 100644
 +			}
  		};
  	}
- 
+
 diff --git a/src/CandidatePanel.tsx b/src/CandidatePanel.tsx
 index 298a42d..cf43462 100644
 --- a/src/CandidatePanel.tsx
@@ -768,16 +768,16 @@ index 298a42d..cf43462 100644
 @@ -1,4 +1,4 @@
 -import { useState, useEffect, useRef, useCallback } from "react";
 +import { useState, useEffect, useRef, useCallback, useLayoutEffect } from "react";
- 
+
  import Candidate from "./Candidate";
  import CandidateInfo from "./CandidateInfo";
 @@ -8,18 +8,94 @@ import DictionaryPanel from "./DictionaryPanel";
  import Rime from "./rime";
  import { isPrintable, notify } from "./utils";
- 
+
 -import type { InputState, InterfacePreferences, RimeResult } from "./types";
 +import type { InputState, Preferences, RimeResult, YuneInspectorDebug, YuneStatusSnapshot } from "./types";
- 
+
 -export default function CandidatePanel({ runAsyncTask, textArea, prefs, deployStatus }: {
 +interface ActionDiagnosticSnapshot {
 +	action?: string;
@@ -866,13 +866,13 @@ index 298a42d..cf43462 100644
  	const candidateList = useRef<HTMLTableElement>(null);
  	const dictionaryPanel = useRef<HTMLDivElement>(null);
 +	const pendingPerfDiagnostics = useRef<PendingPerfDiagnostic[]>([]);
- 
+
  	const hideDictionary = useCallback(() => {
  		setShowDictionaryIndex(undefined);
 @@ -31,11 +107,17 @@ export default function CandidatePanel({ runAsyncTask, textArea, prefs, deploySt
  		textArea.selectionStart = textArea.selectionEnd = selectionStart + newText.length;
  	}, [textArea]);
- 
+
 -	const handleRimeResult = useCallback((promise: Promise<RimeResult>, key?: string) =>
 -		runAsyncTask(async () => {
 +	const handleRimeResult = useCallback((promise: Promise<RimeResult>, key?: string, keydownContext?: { input: string; key?: string; keydownAt: number }) =>
@@ -945,7 +945,7 @@ index 298a42d..cf43462 100644
 -		}), [hideDictionary, inputState, insert, runAsyncTask, textArea]);
 +		})();
 +		}, [hideDictionary, insert, onInspectorDebug, onStatus, onUserdbChange, textArea]);
- 
+
 -	const processKey = useCallback((input: string, key?: string) => handleRimeResult(Rime.processKey(input), key), [handleRimeResult]);
 +	const processKey = useCallback((input: string, key?: string, keydownAt?: number) => {
 +		const classicResult = Rime.processKey(input);
@@ -974,12 +974,12 @@ index 298a42d..cf43462 100644
 +		selectCandidate(index);
 +		return true;
 +	}, [prefs.pageSize, selectCandidate]);
- 
+
  	const parseKey = useCallback((event: KeyboardEvent) => {
  		const { code, key } = event;
 @@ -117,15 +250,24 @@ export default function CandidatePanel({ runAsyncTask, textArea, prefs, deploySt
  	}, [inputState, textArea]);
- 
+
  	useEffect(() => {
 +		function isModifierRelease(event: KeyboardEvent) {
 +			return /^(Control|Meta|Alt|Shift)(Left|Right)$/.test(event.code);
@@ -1010,12 +1010,12 @@ index 298a42d..cf43462 100644
  		};
 -	}, [inputState, parseKey, processKey]);
 +	}, [inputState, parseKey, processKey, selectCandidateFromDigitKey]);
- 
+
  	useEffect(() => {
  		setInputState(undefined);
  		hideDictionary();
  	}, [deployStatus, setInputState, hideDictionary]);
- 
+
 +	useLayoutEffect(() => {
 +		inputStateRef.current = inputState;
 +		const pending = pendingPerfDiagnostics.current.splice(0);
@@ -1055,7 +1055,7 @@ index 298a42d..cf43462 100644
 @@ -160,8 +335,19 @@ export default function CandidatePanel({ runAsyncTask, textArea, prefs, deploySt
  		}
  	}, [hideDictionary]);
- 
+
 -	const shouldShowDictionary = typeof showDictionaryIndex === "number";
 -	return inputState && <CaretFollower textArea={textArea} className="candidate-panel">
 +	if (!inputState) {
@@ -1115,14 +1115,14 @@ index d58fbab..b6cf889 100644
 +++ b/src/DictionaryPanel.tsx
 @@ -1,12 +1,13 @@
  import { forwardRef } from "react";
- 
+
 -import { LANGUAGE_CODES } from "./consts";
 +import { CHINESE_TYPEFACE_BY_ID, LANGUAGE_CODES } from "./consts";
  import { letSome } from "./utils";
- 
+
  import type CandidateInfo from "./CandidateInfo";
  import type { InterfacePreferences } from "./types";
- 
+
  const DictionaryPanel = forwardRef<HTMLDivElement, { info: CandidateInfo; prefs: InterfacePreferences }>(function DictionaryPanel({ info, prefs }, ref) {
 +	const chineseTypefaceClass = CHINESE_TYPEFACE_BY_ID[prefs.chineseTypeface].className;
  	return info.hasDictionaryEntry(prefs) && <div className="dictionary-panel" ref={ref}>
@@ -1189,10 +1189,10 @@ index d5451b8..3d4fe92 100644
 +++ b/src/Inputs.tsx
 @@ -1,76 +1,119 @@
  import { NO_AUTO_FILL } from "./consts";
- 
+
 -import type { Dispatch } from "react";
 +import type { Dispatch, ReactNode } from "react";
- 
+
  interface CheckboxProps {
 -	label: string;
 +	label: ReactNode;
@@ -1200,7 +1200,7 @@ index d5451b8..3d4fe92 100644
  	setChecked: Dispatch<boolean>;
 +	description?: ReactNode;
  }
- 
+
  interface RadioProps<T> {
  	name: string;
 -	label: string;
@@ -1210,7 +1210,7 @@ index d5451b8..3d4fe92 100644
  	value: T;
 +	description?: ReactNode;
  }
- 
+
 -export function Toggle({ label, checked, setChecked }: CheckboxProps) {
 -	return <label className="cursor-pointer label gap-2">
 -		<span className="text-lg text-base-content-200 flex-1">{label}</span>
@@ -1249,7 +1249,7 @@ index d5451b8..3d4fe92 100644
  			onChange={event => setChecked(event.target.checked)} />
  	</label>;
  }
- 
+
 -export function Radio<T>({ name, label, state, setState, value }: RadioProps<T>) {
 -	return <label className="cursor-pointer label gap-2">
 +export function Checkbox({ label, checked, setChecked, description }: CheckboxProps) {
@@ -1272,7 +1272,7 @@ index d5451b8..3d4fe92 100644
 +		</span>
  	</label>;
  }
- 
+
 -export function Segment<T>({ name, label, state, setState, value }: RadioProps<T>) {
 -	return <label className={`btn btn-outline btn-primary btn-sm join-item${state === value ? " btn-active" : ""}`}>
 +export function Range({ label, min, max, step, value, setValue, description }: RangeProps) {
@@ -1312,7 +1312,7 @@ index d5451b8..3d4fe92 100644
 +		</span>
  	</label>;
  }
- 
+
 -export function RadioCheckbox<T>({ name, label, state, setState, value, checked, setChecked }: RadioProps<T> & CheckboxProps) {
 -	return <div className="label gap-2">
 +export function Segment<T>({ name, label, state, setState, value }: RadioProps<T>) {
@@ -1355,9 +1355,9 @@ index 820a2e0..0f439e5 100644
 +	ShowRomanization,
 +} from "./consts";
 +import { Checkbox, Radio, Range, Section, Toggle } from "./Inputs";
- 
+
  import type { PreferencesWithSetter } from "./types";
- 
+
 +const DICTIONARY_EXCLUDE_BY_SCHEMA = {
 +	jyut6ping3_mobile: ["你"],
 +	cangjie5: ["日"],
@@ -1677,7 +1677,7 @@ index 28fe97b..2ec146b 100644
 @@ -17,13 +17,12 @@ export default function ThemeSwitcher() {
  		document.documentElement.dataset["theme"] = theme;
  	}, [theme]);
- 
+
 -	// From https://daisyui.com/components/theme-controller/#theme-controller-using-a-toggle-with-icons-inside
  	return <label className="cursor-pointer grid place-items-center">
  		<input
@@ -1695,11 +1695,11 @@ index ff262af..60b2029 100644
 +++ b/src/Toolbar.tsx
 @@ -1,8 +1,36 @@
  import { useEffect, useRef, useState } from "react";
- 
+
 -import { useRimeOption } from "./hooks";
 +import { Segment } from "./Inputs";
 +import SchemaSwitcher from "./SchemaSwitcher";
- 
+
 -export default function Toolbar({ loading, deployStatus }: { loading: boolean; deployStatus: number }) {
 +import type { RimeSchemaId } from "./types";
 +import type { Dispatch, SetStateAction } from "react";
@@ -1743,7 +1743,7 @@ index ff262af..60b2029 100644
 +		setDebouncedLoading(false);
 +		return clear();
  	}, [loading]);
- 
+
 -	useRimeOption("soft_cursor", true, deployStatus); // Not modifiable by user
 -	const [isASCIIMode, toggleIsASCIIMode] = useRimeOption("ascii_mode", false, deployStatus);
 -	const [isSimplified, toggleIsSimplified] = useRimeOption("simplification", false, deployStatus);
@@ -2177,13 +2177,13 @@ index 25ec3bf..25c8380 100644
  import type { CandidateEntry } from "./CandidateInfo";
 -import type { Preferences } from "./types";
 +import type { Preferences, RimeSchemaId } from "./types";
- 
+
  export const enum Language {
  	Eng = "eng",
 @@ -15,6 +15,104 @@ export const enum ShowRomanization {
  	Never = "never",
  }
- 
+
 +export interface SchemaOption {
 +	id: RimeSchemaId;
 +	label: string;
@@ -2320,16 +2320,16 @@ index ef2a4f3..dd5645f 100644
 @@ -3,10 +3,11 @@ import { useCallback, useEffect, useState } from "react";
  import { useSet } from "react-use";
  import useLocalStorageState from "use-local-storage-state";
- 
+
 -import { DEFAULT_PREFERENCES, Language } from "./consts";
 +import { CHINESE_TYPEFACE_BY_ID, DEFAULT_PREFERENCES, Language } from "./consts";
  import Rime, { subscribe } from "./rime";
  import { notify } from "./utils";
- 
+
 +import type { ChineseTypefaceId } from "./consts";
  import type { Preferences, PreferencesWithSetter } from "./types";
  import type { DispatchWithoutAction } from "react";
- 
+
 @@ -69,15 +70,26 @@ export function useRimeOption(option: string, defaultValue: boolean, deployStatu
  export function usePreferences() {
  	return Object.fromEntries(
@@ -2733,7 +2733,7 @@ index 4393a9e..3301ee7 100644
 +	workerStartedAt?: number;
 +	workerFinishedAt?: number;
  }
- 
+
  interface ErrorPayload {
  	type: "error";
  	error: unknown;
@@ -2741,7 +2741,7 @@ index 4393a9e..3301ee7 100644
 +	workerStartedAt?: number;
 +	workerFinishedAt?: number;
  }
- 
+
 -type Payload = ListenerPayload | SuccessPayload | ErrorPayload;
 +interface DiagnosticPayload {
 +	type: "diagnostic";
@@ -2750,15 +2750,15 @@ index 4393a9e..3301ee7 100644
 +}
 +
 +type Payload = ListenerPayload | SuccessPayload | ErrorPayload | DiagnosticPayload;
- 
+
  type Listeners = { [K in keyof ListenerArgsMap]: (this: Worker, ...args: ListenerArgsMap[K]) => void };
- 
+
 @@ -36,13 +48,37 @@ const listeners = {} as { [K in keyof Listeners]: Listeners[K][] };
  for (const type of allListenerTypes) {
  	listeners[type] = [];
  }
 +const lastListenerArgs = {} as Partial<{ [K in keyof ListenerArgsMap]: ListenerArgsMap[K] }>;
- 
+
 -const worker = new Worker("./worker.js");
 +const YUNE_TYPEDUCK_WORKER_VERSION = "m27-startup-runtime-v1";
 +const debugWindow = window as typeof window & { __YUNE_RIME_VERSION__?: string };
@@ -2817,7 +2817,7 @@ index 4393a9e..3301ee7 100644
 @@ -66,15 +116,53 @@ worker.addEventListener("message", ({ data }: MessageEvent<Payload>) => {
  	}
  });
- 
+
 +function nowMs() {
 +	return performance.timeOrigin + performance.now();
 +}
@@ -2829,7 +2829,7 @@ index 4393a9e..3301ee7 100644
  	const { name, args } = running = message;
  	worker.postMessage({ name, args });
  }
- 
+
 +function shouldLogDebugMessages() {
 +	return process.env.NODE_ENV !== "production" || new URLSearchParams(location.search).has("debug");
 +}
@@ -2879,7 +2879,7 @@ index 4393a9e..3301ee7 100644
  				queue.push(message);
  			}
 @@ -104,6 +192,14 @@ function registerAction<K extends keyof Actions>(name: K): Actions[K] {
- 
+
  export function subscribe<K extends keyof Listeners>(type: K, callback: Listeners[K]) {
  	listeners[type].push(callback);
 +	const cachedArgs = lastListenerArgs[type];
@@ -2903,13 +2903,13 @@ index 5d47525..0d1c3ae 100644
 +import type { CandidateMenuLayout, ChineseTypefaceId, Language, ShowRomanization } from "./consts";
  import type { Dispatch, SetStateAction } from "react";
 +import type { TypeDuckInspectorDebug, TypeDuckStatus } from "@yune-ime/typeduck-runtime";
- 
+
  export interface RimeAPI {
  	init(): boolean;
 @@ -13,13 +14,43 @@ export interface RimeAPI {
  	deploy(): boolean;
  }
- 
+
 +export interface TypeDuckUserdbRow {
 +	text: string;
 +	code: string;
@@ -2950,7 +2950,7 @@ index 5d47525..0d1c3ae 100644
 +	customize(preferences: Partial<RimePreferences>): Promise<boolean>;
  	deploy(): Promise<boolean>;
  }
- 
+
 @@ -39,7 +70,12 @@ interface RimeComposing {
  		label?: string;
  		text: string;
@@ -2962,7 +2962,7 @@ index 5d47525..0d1c3ae 100644
  	}[];
 +	debug?: TypeDuckInspectorDebug;
  }
- 
+
  interface RimeNotComposing {
 @@ -49,9 +85,13 @@ interface RimeNotComposing {
  interface RimePayload {
@@ -2970,14 +2970,14 @@ index 5d47525..0d1c3ae 100644
  	committed?: string;
 +	status?: TypeDuckStatus;
  }
- 
+
  export type RimeResult = (RimeComposing | RimeNotComposing) & RimePayload;
 +export type YuneInspectorDebug = TypeDuckInspectorDebug;
 +export type YuneStatusSnapshot = TypeDuckStatus;
 +export type RimeSchemaId = "jyut6ping3_mobile" | "cangjie5" | "luna_pinyin";
- 
+
  export type RimeDeployStatus = "start" | "success" | "failure";
- 
+
 @@ -73,6 +113,8 @@ interface NamedMessage<K extends keyof Actions> {
  	args: Parameters<Actions[K]>;
  	resolve: (value: ReturnType<Actions[K]>) => void;
@@ -2985,7 +2985,7 @@ index 5d47525..0d1c3ae 100644
 +	enqueuedAt?: number;
 +	sentAt?: number;
  }
- 
+
  export type Message = NamedMessage<keyof Actions>;
 @@ -91,13 +133,26 @@ export interface RimePreferences {
  	enableCorrection: boolean;
@@ -3004,7 +3004,7 @@ index 5d47525..0d1c3ae 100644
 +	isSimplification: boolean;
  	isCangjie5: boolean;
  }
- 
+
  export interface InterfacePreferences {
  	displayLanguages: Set<Language>;
  	mainLanguage: Language;
@@ -3095,13 +3095,13 @@ index 92b9a90..977d54d 100644
 +  name: string;
 +  dictionaryId: string;
  }
- 
+
 -declare const Module: Module;
 +interface StartupMarker {
 +  phase: string;
 +  ms: number;
 +}
- 
+
 -interface PredefinedModule {
 -	printErr: (message: string) => void;
 -	onRuntimeInitialized: () => void;
@@ -3111,7 +3111,7 @@ index 92b9a90..977d54d 100644
 +  mtime?: Date | number | string;
 +  mtimeMs?: number;
  }
- 
+
 +type TypeDuckFilesystemWithStat = TypeDuckFilesystem & {
 +  stat?(path: string): TypeDuckFilesystemStat;
 +};
@@ -3122,7 +3122,7 @@ index 92b9a90..977d54d 100644
 +  onRimeNotification<T extends keyof RimeNotification>(type: T, value: RimeNotification[T]): void;
 +  onYunePersistenceDiagnostic?: (marker: YunePersistenceDiagnostic) => void;
  };
- 
+
 +declare function importScripts(...urls: string[]): void;
 +declare function createYuneTypeduckModule(
 +  options: CreateYuneTypeduckModuleOptions,
@@ -3157,7 +3157,7 @@ index 92b9a90..977d54d 100644
 +    }
 +  }
  };
- 
+
 -function dispatch<K extends keyof ListenerArgsMap>(name: K, ...args: ListenerArgsMap[K]) {
 -	postMessage({ type: "listener", name, args });
 -}
@@ -3171,7 +3171,7 @@ index 92b9a90..977d54d 100644
 +    marker: { phase: "worker:diagnostic-ready", timestamp: new Date().toISOString() },
 +  });
 +}, 0);
- 
+
 -function syncUserDirectory(direction: "read" | "write") {
 -	return new Promise<void>((resolve, reject) => {
 -		Module.FS.syncfs(direction === "read", (err?: Error) => err ? reject(err) : resolve());
@@ -3179,7 +3179,7 @@ index 92b9a90..977d54d 100644
 +function dispatch<K extends keyof ListenerArgsMap>(name: K, ...args: ListenerArgsMap[K]) {
 +  postMessage({ type: "listener", name, args });
  }
- 
+
 +// Yune adapter Actions implementation
  const actions: Actions = {
 -	async setOption(option, value) {
@@ -3270,7 +3270,7 @@ index 92b9a90..977d54d 100644
 +    }
 +  },
  };
- 
+
 +function activeUserdbSnapshot(): TypeDuckUserdbSnapshot {
 +  const module = yuneModule;
 +  if (module === null) {
@@ -3636,7 +3636,7 @@ index 92b9a90..977d54d 100644
 +  activeSchemaId = schema.id;
 +  dispatch("schemaChanged", schema.id, schema.name);
 +}
- 
+
  addEventListener("message", async ({ data: { name, args } }: MessageEvent<Message>) => {
 -	if (loading) await loadRime;
 -	try {
@@ -5404,7 +5404,7 @@ index 801c076..e5eaade 100644
 -
 -import type { Config as DaisyUIConfig } from "daisyui";
  import type { Config } from "tailwindcss";
- 
+
  export default {
 @@ -17,74 +14,42 @@ export default {
  			"kai-fallback-hei": ["var(--font-kai)", "var(--font-hei)", "var(--font-sans)", "var(--font-emoji)"],
@@ -5512,7 +5512,7 @@ index 694391b..0482afd 100644
 +++ b/vite.config.ts
 @@ -7,7 +7,6 @@ import tailwindcssNesting from "tailwindcss/nesting";
  import type { UserConfig } from "vite";
- 
+
  export default {
 -	base: "/web/",
  	plugins: [react()],
