@@ -1,6 +1,6 @@
 # P2-WIN-02 TypeDuck Boundary Compatibility Implementation Plan
 
-> **Status:** Active - **Milestone:** P2-WIN-02 (TypeDuck Windows boundary compatibility) - **Updated:** 2026-06-21 - **Type:** execution plan
+> **Status:** Active - **Milestone:** P2-WIN-02 (TypeDuck Windows boundary compatibility) - **Updated:** 2026-06-22 - **Type:** execution plan
 >
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -66,8 +66,9 @@ Out of scope:
 
 ## Execution Notes
 
-- This milestone should run in a clean Yune worktree after the active M25 edits are committed, or in a separate clean worktree created from current `origin/main`.
-- If the current Yune worktree contains M25 changes, stage only P2-WIN-02 files and do not sweep web dogfooding artifacts into this milestone.
+- M30 is complete; this is now the next Yune-side Windows blocker before P2-WIN-01 product/frontend work resumes.
+- This milestone should run in a clean Yune worktree, or in a separate clean worktree created from current `origin/main` if another session has active changes.
+- If the current Yune worktree contains active M31/M32 or other unrelated changes, stage only P2-WIN-02 files and do not sweep web/deployment/AI artifacts into this milestone.
 - Do not treat a passing TypeDuck-Web UI test as sufficient evidence for this milestone. The key P2-WIN-02 proof is raw `RimeCandidate.comment` byte compatibility plus a rerun that shows TypeDuck-Web still hides/parses those controls correctly.
 - Before any elevated Windows command, IME install/register step, AppVerifier enablement, or machine registry cleanup, pause for explicit user approval.
 - Disable AppVerifier and clean test IME registration before finishing any Windows smoke attempt.
