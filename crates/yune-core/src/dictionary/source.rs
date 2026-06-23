@@ -100,6 +100,7 @@ pub struct TableDictionaryAdvancedData {
     pub encoder: TableEncoder,
     pub corrections: Vec<RimeCorrectionEntry>,
     pub tolerance_rules: Vec<RimeToleranceRule>,
+    pub lookup_records: HashMap<String, Vec<DictionaryLookupRecord>>,
     pub preset_vocabulary: Vec<PresetVocabularyEntry>,
 }
 
@@ -121,7 +122,7 @@ impl TableDictionary {
             encoder: advanced.encoder,
             corrections: advanced.corrections,
             tolerance_rules: advanced.tolerance_rules,
-            lookup_records: HashMap::new(),
+            lookup_records: advanced.lookup_records,
             preset_vocabulary: advanced.preset_vocabulary,
         }
     }

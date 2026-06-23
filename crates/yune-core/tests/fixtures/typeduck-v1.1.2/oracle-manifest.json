@@ -5,7 +5,12 @@
     "engine_tag": "v1.1.2",
     "engine_commit": "74cb52b78fb2411137a7643f6c8bc6517acfde69",
     "canonical_repository": "https://github.com/TypeDuck-HK/librime",
-    "release_url": "https://github.com/TypeDuck-HK/librime/releases/tag/v1.1.2"
+    "release_url": "https://github.com/TypeDuck-HK/librime/releases/tag/v1.1.2",
+    "schema_repository": "TypeDuck-HK/schema",
+    "schema_commit": "1bed1ae6a0ab48055f073774d7dfd152a171c548",
+    "dictionary_lookup_plugin": "TypeDuck-HK/rime-dictionary-lookup-filter",
+    "dictionary_lookup_plugin_commit": "3e4605c4fae99f068df2edb85aaeab5a97752795"
   },
+  "latest_windows_boundary_fixture": "jyut6ping3-windows-boundary-ngohaig.json",
   "profile_only": true
 }

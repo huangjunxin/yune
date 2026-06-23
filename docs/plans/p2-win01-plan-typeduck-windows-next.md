@@ -1,6 +1,6 @@
 # P2-WIN-01 TypeDuck-Windows Next Product Plan
 
-> **Status:** Draft / external review incorporated - **Track:** Phase 2 Windows frontend product - **Created:** 2026-06-21 - **Updated:** 2026-06-21 - **Type:** strategy and execution-gate plan
+> **Status:** Draft / external review incorporated; P2-WIN-02 boundary closed and TSF input-delivery blocker classified - **Track:** Phase 2 Windows frontend product - **Created:** 2026-06-21 - **Updated:** 2026-06-22 - **Type:** strategy and execution-gate plan
 >
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -27,8 +27,9 @@ This plan is deliberately **not** a Yune core-engine milestone.
 - M10 did **not** prove interactive TSF typing into a real application or visible candidate-window rendering. The first Phase 2 smoke should close that gap before any large rewrite.
 - TypeDuck-Windows Phase 0A was attempted on `dev` in commit `03d3608` (`Document Yune Windows Phase 0 audit`): the Yune-backed IPC console smoke passed, setup/deployer registration passed, but the real Notepad TSF smoke hung/crashed in `TypeDuckServer.exe` while consuming/rendering candidates.
 - TypeDuck-Windows Phase 0C then completed on `dev` in commits `4ac2510` (`Document Phase 0C candidate boundary evidence`) and `c7ddedb` (`Document Phase 0C verifier evidence`). It classified the blocker as a **Yune TypeDuck-profile compatibility / boundary bug**.
-- P2-WIN-02 now owns the Yune-side fix: promote the `ngohaig` boundary evidence into Yune fixtures/tests, make TypeDuck `v1.1.2` rich `\f\r1,` comments byte-compatible for the Windows-facing `jyut6ping3` path, investigate the AppVerifier `RimeCreateSession` / `RimeSelectSchema` hang, rebuild the package, and rerun IPC plus Notepad smoke.
-- TypeDuck-Web saw a related visible symptom in M24 (`M24-DOGFOOD-02` literal `\f` leakage), but that was fixed by the browser candidate parser/display layer. It does not prove raw `RimeCandidate.comment` bytes are TypeDuck-compatible, so P2-WIN-02 must still close the engine boundary and then rerun the web comment-rendering gates.
+- P2-WIN-02 has implemented the Yune-side fix and passed its required gates: the `ngohaig` boundary evidence is now a Yune fixture, TypeDuck `v1.1.2` rich `\f\r1,` comments are byte-compatible for the Windows-facing `jyut6ping3` path, the uninitialized-config boundary is covered, the package rebuild passes, TypeDuck-Web comment parsing still passes, and stock `TypeDuckServer.exe` + `TestTypeDuckIPC.exe /console` reaches `ngohaig` with rich comment payloads. Evidence: `docs/reports/evidence/p2-win02-boundary-compat-2026-06-22/`.
+- The approved interactive Notepad TSF smoke was run twice after the P2-WIN-02 implementation. Both runs kept Notepad and the Yune-backed `TypeDuckServer.exe` responsive. The second run used session-scoped `ITfInputProcessorProfileMgr::ActivateProfile(flags=0x20000004)` before launch and after Notepad focus, and both checks reported active TypeDuck profile state, but Notepad still received raw ASCII. This closes P2-WIN-02 through the newly classified non-Yune blocker path: the first P2-WIN-01 implementation checkpoint is TSF input-delivery/frontend-shell behavior, not Yune raw comment/session compatibility.
+- TypeDuck-Web saw a related visible symptom in M24 (`M24-DOGFOOD-02` literal `\f` leakage), but that was fixed by the browser candidate parser/display layer. P2-WIN-02 has now separately closed the raw `RimeCandidate.comment` byte boundary and rerun the TypeDuck-Web comment-rendering gate.
 - M24 produced a Cantonese-first TypeDuck-Web dogfood UI on Vite + React + Tailwind + local components, including settings, status, typeface, candidate-layout, and dictionary/detail surfaces. Treat it as a reuse candidate for Windows settings/dictionary UI through WebView2, not as a candidate-window rendering engine.
 - The local TypeDuck-Windows checkout is at `C:\Users\laubonghaudoi\Documents\GitHub\TypeDuck-Windows` on `dev`, with untracked planning/workflow artifacts already present. Do not sweep those into unrelated commits.
 - Existing TypeDuck-Windows modules worth auditing:
@@ -129,7 +130,7 @@ The repo direction should be **decision-gated**, with this default bias:
 
 ### Phase 0C - Boundary Crash Diagnosis
 
-**Status:** Completed as diagnosis in the TypeDuck-Windows repo. Follow-up implementation moved to Yune [`p2-win02-plan-typeduck-boundary-compat.md`](./p2-win02-plan-typeduck-boundary-compat.md).
+**Status:** Completed as diagnosis in the TypeDuck-Windows repo. Follow-up implementation completed in Yune [`p2-win02-plan-typeduck-boundary-compat.md`](./archive/p2-win02-plan-typeduck-boundary-compat.md).
 
 **Goal:** Localize the interactive Notepad crash before any rewrite or product spike hides the real compatibility problem.
 
@@ -144,13 +145,13 @@ The repo direction should be **decision-gated**, with this default bias:
 - [x] Yune output differs in a renderer-incompatible way, so the issue is filed as a Yune TypeDuck-profile compatibility/boundary bug.
 - [x] Candidate layout mismatch is ruled out for the active adapter boundary; WeaselUI/DirectWrite debt is not the first classification.
 - [x] Save curated crash and diff evidence under `docs/evidence/` in the Windows repo.
-- [ ] Re-run the Notepad TSF smoke after P2-WIN-02 fixes or isolates the Yune boundary issue and commit the result.
+- [x] Re-run the Notepad TSF smoke after P2-WIN-02 fixes or isolates the Yune boundary issue and commit the result.
 
 **Acceptance gate:** A reviewer can tell whether the crash was caused by Yune candidate/comment compatibility, the frontend renderer, or an explicitly isolated platform-shell issue.
 
 ### Phase 1 - Yune Host Contract Spike
 
-**Do not start this phase until P2-WIN-02 is complete and the rerun Windows smoke has been reviewed.**
+**P2-WIN-02 has satisfied this gate through the newly classified non-Yune blocker path. Start this phase only after the TSF input-delivery/frontend-shell checkpoint is accepted as the first Windows shell task or has a documented owner.**
 
 **Goal:** Build the smallest Windows executable that loads packaged Yune and drives a real session without old frontend UI.
 
@@ -279,8 +280,8 @@ The first external strategic review agreed with the Yune-only direction and the 
 The second external review of the Phase 0A/0B deliverables endorsed the process model, repo decision, evidence discipline, and privacy/AI/WebView2 boundaries, but corrected one important attribution risk:
 
 - Do not call the Notepad crash "frontend-only" yet. IPC success proves Yune candidate generation, but not native consumption/rendering of Yune candidate structs and rich comment bytes.
-- Phase 0C is now complete in TypeDuck-Windows and classified the blocker as a Yune TypeDuck-profile compatibility/boundary bug. P2-WIN-02 is the blocking implementation milestone before YuneHost/WebView2 work resumes.
-- Re-evaluate the repo decision immediately after the first passing Notepad interactive smoke, before temporary work in the old repo becomes permanent.
+- Phase 0C is now complete in TypeDuck-Windows and classified the original blocker as a Yune TypeDuck-profile compatibility/boundary bug. P2-WIN-02 completed that Yune-side fix and IPC proof, then approved TSF reruns classified the remaining raw-ASCII behavior as non-Yune TSF input-delivery/frontend-shell work.
+- Re-evaluate the repo decision before temporary TSF shell/input-delivery work in the old repo becomes permanent.
 
 ## Open Questions For Review
 

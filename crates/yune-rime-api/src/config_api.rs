@@ -9,9 +9,10 @@ use serde_yaml::{Mapping, Value};
 use crate::{
     bool_from, c_string_key, clear_schema_list, config_child_path, config_iterator_begin,
     config_lookup, config_lookup_key, config_scalar_bool, config_scalar_double, config_scalar_int,
-    config_set, config_state_mut, config_string_value, copy_c_string_with_strncpy_semantics,
-    find_config_value, find_config_value_mut, free_schema_list_fields,
-    librime_signature_modified_time, open_runtime_config, reset_config_iterator_for_begin,
+    config_set, config_state_is_owned, config_state_mut, config_string_value,
+    copy_c_string_with_strncpy_semantics, find_config_value, find_config_value_mut,
+    free_schema_list_fields, librime_signature_modified_time, open_runtime_config,
+    register_config_state, release_config_state, reset_config_iterator_for_begin,
     resource_id::{validate_config_api_resource_id, validate_schema_config_resource_id},
     runtime_paths, set_config_value, Bool, ConfigIteratorState, ConfigOpenKind, ConfigState,
     RimeConfig, RimeConfigIterator, RimeSchemaList, FALSE, RIME_VERSION_BYTES, TRUE,
@@ -98,14 +99,17 @@ pub unsafe extern "C" fn RimeConfigInit(config: *mut RimeConfig) -> Bool {
         return FALSE;
     }
     // SAFETY: `config` is non-null and points to caller-owned storage.
-    if unsafe { !(*config).ptr.is_null() } {
+    let existing = unsafe { (*config).ptr };
+    if config_state_is_owned(existing) {
         return FALSE;
     }
 
     let state = Box::new(ConfigState::default());
     // SAFETY: `config` is non-null and writable.
     unsafe {
-        (*config).ptr = Box::into_raw(state).cast::<c_void>();
+        let ptr = Box::into_raw(state).cast::<c_void>();
+        register_config_state(ptr);
+        (*config).ptr = ptr;
     }
     TRUE
 }
@@ -126,7 +130,10 @@ pub unsafe extern "C" fn RimeConfigLoadString(
         return FALSE;
     }
     // SAFETY: `config` is non-null and writable.
-    if unsafe { (*config).ptr.is_null() && RimeConfigInit(config) == FALSE } {
+    if unsafe {
+        ((*config).ptr.is_null() || !config_state_is_owned((*config).ptr))
+            && RimeConfigInit(config) == FALSE
+    } {
         return FALSE;
     }
     // SAFETY: `yaml` is non-null and caller promises a valid C string.
@@ -161,9 +168,15 @@ pub unsafe extern "C" fn RimeConfigClose(config: *mut RimeConfig) -> Bool {
     if ptr.is_null() {
         return FALSE;
     }
-    // SAFETY: `ptr` was returned by `Box::into_raw` in `RimeConfigInit`.
+    // SAFETY: `ptr` is released only if the ownership registry proves it was
+    // returned by this API.
+    if unsafe { !release_config_state(ptr) } {
+        unsafe {
+            (*config).ptr = ptr::null_mut();
+        }
+        return FALSE;
+    }
     unsafe {
-        drop(Box::from_raw(ptr.cast::<ConfigState>()));
         (*config).ptr = ptr::null_mut();
     }
     TRUE

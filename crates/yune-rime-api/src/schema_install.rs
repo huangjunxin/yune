@@ -968,7 +968,7 @@ fn load_schema_source_dictionary_yaml(dictionary_name: &str) -> Option<String> {
     fs::read_to_string(dictionary_path).ok()
 }
 
-fn has_typeduck_lookup_source_rows(dictionary_yaml: &str) -> bool {
+pub(crate) fn has_typeduck_lookup_source_rows(dictionary_yaml: &str) -> bool {
     let mut in_body = false;
     let mut comments_enabled = true;
 

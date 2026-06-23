@@ -82,6 +82,7 @@ fn append_advanced_payload(bytes: &mut Vec<u8>, dict: &TableDictionary) {
     }
 
     append_correction_tolerance_payload(bytes, dict.corrections(), dict.tolerance_rules());
+    append_lookup_record_payload(bytes, dict);
 }
 
 fn append_correction_tolerance_payload(
@@ -101,6 +102,24 @@ fn append_correction_tolerance_payload(
         put_u32_le_extend(bytes, rule.candidate_codes.len() as u32);
         for candidate in &rule.candidate_codes {
             put_len_string(bytes, candidate);
+        }
+    }
+}
+
+fn append_lookup_record_payload(bytes: &mut Vec<u8>, dict: &TableDictionary) {
+    bytes.extend_from_slice(b"YUNE-LOOKUP\0");
+    let mut records_by_text = dict.lookup_records.iter().collect::<Vec<_>>();
+    records_by_text.sort_by(|left, right| left.0.cmp(right.0));
+    put_u32_le_extend(bytes, records_by_text.len() as u32);
+    for (text, records) in records_by_text {
+        put_len_string(bytes, text);
+        put_u32_le_extend(bytes, records.len() as u32);
+        for record in records {
+            put_len_string(bytes, &record.code);
+            put_u32_le_extend(bytes, record.fields.len() as u32);
+            for field in &record.fields {
+                put_len_string(bytes, field);
+            }
         }
     }
 }

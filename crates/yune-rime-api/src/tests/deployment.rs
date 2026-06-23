@@ -2073,6 +2073,85 @@ schema:\n  schema_id: luna\n  name: Luna\n  version: '1'\nengine:\n  translators
 }
 
 #[test]
+fn workspace_update_rebuilds_typeduck_dictionary_lookup_filter_artifacts() {
+    let _guard = test_guard();
+    RimeCleanupAllSessions();
+    let root = unique_temp_dir("workspace-typeduck-lookup-rebuild");
+    let shared = root.join("shared");
+    let user = root.join("user");
+    fs::create_dir_all(&shared).expect("shared dir should be created");
+    fs::write(
+        shared.join("default.yaml"),
+        "config_version: '1.0'\nschema_list:\n  - schema: jyut\n",
+    )
+    .expect("default config should be written");
+    fs::write(
+        shared.join("jyut.schema.yaml"),
+        "\
+schema:\n  schema_id: jyut\n  name: Jyut\nengine:\n  translators:\n    - table_translator\n  filters:\n    - dictionary_lookup_filter\ntranslator:\n  dictionary: jyut\ndictionary_lookup_filter:\n  dictionary: jyut_lookup\n",
+    )
+    .expect("schema should be written");
+    fs::write(
+        shared.join("jyut.dict.yaml"),
+        "\
+---\nname: jyut\nversion: '1'\nsort: by_weight\n...\n\n我係\tngo5hai6\t1\n我喺\tngo5hai2\t1\n",
+    )
+    .expect("target dictionary should be written");
+    fs::write(
+        shared.join("jyut_lookup.dict.yaml"),
+        "\
+---\nname: jyut_lookup\nversion: '1'\nsort: original\n...\n\nngo5hai6,1,0,,oth,ver,,,我是,,,I am,,,,\t我係\nngo5hai2,1,0,,oth,ver,,,,,,I am at,,,,\t我喺\n",
+    )
+    .expect("lookup dictionary should be written");
+    let shared_c = CString::new(shared.to_string_lossy().as_ref()).expect("path should be valid");
+    let user_c = CString::new(user.to_string_lossy().as_ref()).expect("path should be valid");
+    let workspace_task = CString::new("workspace_update").expect("task should be valid");
+    let mut traits = empty_traits();
+    traits.shared_data_dir = shared_c.as_ptr();
+    traits.user_data_dir = user_c.as_ptr();
+
+    // SAFETY: traits points to a valid RimeTraits object with valid strings.
+    unsafe { RimeDeployerInitialize(&traits) };
+    assert_eq!(RimeRunTask(workspace_task.as_ptr()), TRUE);
+    let reports = workspace_dictionary_rebuild_reports();
+    assert!(
+        reports
+            .iter()
+            .any(|report| report.dictionary_id == "jyut_lookup"
+                && report.report.table == yune_core::RimeDictArtifactStatus::Rebuilt),
+        "workspace_update should rebuild the dictionary_lookup_filter side dictionary: {reports:?}"
+    );
+    for file_name in [
+        "jyut_lookup.table.bin",
+        "jyut_lookup.prism.bin",
+        "jyut_lookup.reverse.bin",
+    ] {
+        assert!(
+            user.join("build").join(file_name).is_file(),
+            "missing rebuilt lookup artifact {file_name}"
+        );
+    }
+    let lookup_table = yune_core::parse_rime_table_bin_dictionary(
+        fs::read(user.join("build").join("jyut_lookup.table.bin"))
+            .expect("lookup table should be readable"),
+    )
+    .expect("lookup table should parse");
+    let records = lookup_table
+        .lookup_records_for("我係")
+        .expect("compiled lookup table should preserve TypeDuck lookup records");
+    assert_eq!(records[0].code, "ngo5hai6");
+    assert_eq!(
+        records[0].fields[1],
+        "ngo5hai6,1,0,,oth,ver,,,我是,,,I am,,,,"
+    );
+
+    let reset_traits = empty_traits();
+    // SAFETY: reset traits points to valid storage.
+    unsafe { RimeSetup(&reset_traits) };
+    fs::remove_dir_all(root).expect("temp dirs should be removed");
+}
+
+#[test]
 fn workspace_update_rebuilds_after_pack_changes_and_honors_force_flags() {
     let _guard = test_guard();
     RimeCleanupAllSessions();

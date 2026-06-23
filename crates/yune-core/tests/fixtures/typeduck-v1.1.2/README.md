@@ -68,6 +68,12 @@ composition surface for `loengnincin`, `leoicijyu`, `ngohaigo`, and three
 analogous cross-boundary dictionary inputs. The fixture is the hard oracle for
 this gap; the deployed `typeduck.hk/web` product remains a feel target only.
 
+`jyut6ping3-windows-boundary-ngohaig.json` is a focused 2026-06-21 Phase 0C
+capture from TypeDuck-Windows. It locks the TypeDuck v1.1.2 `jyut6ping3`
+Windows boundary payload for `ngohaig`, including the raw `\f\r1,` rich comment
+bytes expected by the native frontend and the observed Yune mismatch rows that
+triggered P2-WIN-02.
+
 The `comment` fields intentionally preserve the raw fork bytes as JSON escapes,
 including leading `\f`, record separators `\r`, and multilingual dictionary
 columns. Do not normalize these strings when using them as goldens.

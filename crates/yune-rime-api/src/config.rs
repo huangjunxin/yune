@@ -1,7 +1,9 @@
 use std::{
+    collections::HashSet,
     ffi::{c_void, CStr, CString},
     os::raw::{c_char, c_int},
     ptr,
+    sync::{Mutex, OnceLock},
 };
 
 use serde_yaml::{Mapping, Number, Value};
@@ -27,6 +29,48 @@ impl Default for ConfigState {
     }
 }
 
+fn config_state_registry() -> &'static Mutex<HashSet<usize>> {
+    static CONFIG_STATE_REGISTRY: OnceLock<Mutex<HashSet<usize>>> = OnceLock::new();
+    CONFIG_STATE_REGISTRY.get_or_init(|| Mutex::new(HashSet::new()))
+}
+
+pub(crate) fn config_state_is_owned(ptr: *mut c_void) -> bool {
+    if ptr.is_null() {
+        return false;
+    }
+    config_state_registry()
+        .lock()
+        .expect("config state registry should not be poisoned")
+        .contains(&(ptr as usize))
+}
+
+pub(crate) fn register_config_state(ptr: *mut c_void) {
+    if ptr.is_null() {
+        return;
+    }
+    config_state_registry()
+        .lock()
+        .expect("config state registry should not be poisoned")
+        .insert(ptr as usize);
+}
+
+pub(crate) unsafe fn release_config_state(ptr: *mut c_void) -> bool {
+    if ptr.is_null() {
+        return false;
+    }
+    let owned = config_state_registry()
+        .lock()
+        .expect("config state registry should not be poisoned")
+        .remove(&(ptr as usize));
+    if owned {
+        // SAFETY: registry membership proves this pointer came from
+        // `Box::into_raw` for a `ConfigState` in this API and has not been
+        // released yet.
+        unsafe { drop(Box::from_raw(ptr.cast::<ConfigState>())) };
+    }
+    owned
+}
+
 pub(crate) unsafe fn config_state_mut(config: *mut RimeConfig) -> Option<&'static mut ConfigState> {
     if config.is_null() {
         return None;
@@ -34,6 +78,9 @@ pub(crate) unsafe fn config_state_mut(config: *mut RimeConfig) -> Option<&'stati
     // SAFETY: callers promise `config` points to valid RimeConfig storage.
     let ptr = unsafe { (*config).ptr };
     if ptr.is_null() {
+        return None;
+    }
+    if !config_state_is_owned(ptr) {
         return None;
     }
     // SAFETY: non-null config pointers are created by `RimeConfigInit`.

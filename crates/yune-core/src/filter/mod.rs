@@ -196,7 +196,10 @@ impl CandidateFilter for DictionaryLookupFilter {
         for candidate in candidates {
             if !matches!(
                 candidate.source,
-                CandidateSource::Table | CandidateSource::Completion | CandidateSource::Sentence
+                CandidateSource::Table
+                    | CandidateSource::PartialTable { .. }
+                    | CandidateSource::Completion
+                    | CandidateSource::Sentence
             ) {
                 continue;
             }

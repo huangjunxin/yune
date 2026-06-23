@@ -1,6 +1,6 @@
 use super::{
-    RimeCorrectionEntry, RimeToleranceRule, TableDictionary, TableDictionaryAdvancedData,
-    TableEncoder, TableEntry,
+    DictionaryLookupRecord, RimeCorrectionEntry, RimeToleranceRule, TableDictionary,
+    TableDictionaryAdvancedData, TableEncoder, TableEntry,
 };
 use crate::dictionary::compiled::{
     parse_rime_format_version_for_payload, read_f32_le, read_i32_le, read_u32_le,
@@ -10,6 +10,9 @@ use std::collections::HashMap;
 const MAX_CORRECTION_COUNT: usize = 4096;
 const MAX_TOLERANCE_RULE_COUNT: usize = 4096;
 const MAX_TOLERANCE_CANDIDATE_COUNT: usize = 64;
+const MAX_LOOKUP_TEXT_COUNT: usize = 1_000_000;
+const MAX_LOOKUP_RECORD_COUNT: usize = 1_000_000;
+const MAX_LOOKUP_FIELD_COUNT: usize = 64;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum RimeTableBinParseError {
@@ -225,10 +228,16 @@ fn read_yune_table_advanced_payload(
             .map_err(|_| RimeTableBinParseError::InvalidLength)?;
     }
 
-    let (corrections, tolerance_rules) = if cursor < bytes.len() {
+    let (corrections, tolerance_rules, next_cursor) = if cursor < bytes.len() {
         read_correction_tolerance_payload(bytes, cursor)?
     } else {
-        (Vec::new(), Vec::new())
+        (Vec::new(), Vec::new(), cursor)
+    };
+    cursor = next_cursor;
+    let lookup_records = if cursor < bytes.len() {
+        read_lookup_record_payload(bytes, cursor)?
+    } else {
+        HashMap::new()
     };
 
     Ok(AdvancedTablePayload {
@@ -238,6 +247,7 @@ fn read_yune_table_advanced_payload(
             encoder,
             corrections,
             tolerance_rules,
+            lookup_records,
             ..TableDictionaryAdvancedData::default()
         },
     })
@@ -246,7 +256,7 @@ fn read_yune_table_advanced_payload(
 fn read_correction_tolerance_payload(
     bytes: &[u8],
     mut cursor: usize,
-) -> Result<(Vec<RimeCorrectionEntry>, Vec<RimeToleranceRule>), RimeTableBinParseError> {
+) -> Result<(Vec<RimeCorrectionEntry>, Vec<RimeToleranceRule>, usize), RimeTableBinParseError> {
     if !bytes[cursor..].starts_with(b"YUNE-CORR-TOL\0") {
         return Err(RimeTableBinParseError::UnsupportedSection {
             role: "correction/tolerance payload".to_owned(),
@@ -297,7 +307,69 @@ fn read_correction_tolerance_payload(
         }
         tolerance_rules.push(RimeToleranceRule::new(near_code, candidate_codes));
     }
-    Ok((corrections, tolerance_rules))
+    Ok((corrections, tolerance_rules, cursor))
+}
+
+fn read_lookup_record_payload(
+    bytes: &[u8],
+    mut cursor: usize,
+) -> Result<HashMap<String, Vec<DictionaryLookupRecord>>, RimeTableBinParseError> {
+    if !bytes[cursor..].starts_with(b"YUNE-LOOKUP\0") {
+        return Err(RimeTableBinParseError::UnsupportedSection {
+            role: "lookup record payload".to_owned(),
+        });
+    }
+    cursor = cursor
+        .checked_add(b"YUNE-LOOKUP\0".len())
+        .ok_or(RimeTableBinParseError::OutOfBounds)?;
+    let text_count = read_count(bytes, cursor)?;
+    if text_count > MAX_LOOKUP_TEXT_COUNT {
+        return Err(RimeTableBinParseError::InvalidCount);
+    }
+    cursor = cursor
+        .checked_add(4)
+        .ok_or(RimeTableBinParseError::OutOfBounds)?;
+
+    let mut lookup_records = HashMap::with_capacity(text_count);
+    for _ in 0..text_count {
+        let (text, next) = read_len_string(bytes, cursor)?;
+        cursor = next;
+        let record_count = read_count(bytes, cursor)?;
+        if record_count > MAX_LOOKUP_RECORD_COUNT {
+            return Err(RimeTableBinParseError::InvalidCount);
+        }
+        cursor = cursor
+            .checked_add(4)
+            .ok_or(RimeTableBinParseError::OutOfBounds)?;
+
+        let mut records = Vec::with_capacity(record_count);
+        for _ in 0..record_count {
+            let (code, next) = read_len_string(bytes, cursor)?;
+            cursor = next;
+            let field_count = read_count(bytes, cursor)?;
+            if field_count > MAX_LOOKUP_FIELD_COUNT {
+                return Err(RimeTableBinParseError::InvalidCount);
+            }
+            cursor = cursor
+                .checked_add(4)
+                .ok_or(RimeTableBinParseError::OutOfBounds)?;
+
+            let mut fields = Vec::with_capacity(field_count);
+            for _ in 0..field_count {
+                let (field, next) = read_len_string(bytes, cursor)?;
+                cursor = next;
+                fields.push(field);
+            }
+            records.push(DictionaryLookupRecord { code, fields });
+        }
+        lookup_records.insert(text, records);
+    }
+    if cursor != bytes.len() {
+        return Err(RimeTableBinParseError::UnsupportedSection {
+            role: "trailing table payload".to_owned(),
+        });
+    }
+    Ok(lookup_records)
 }
 
 fn read_entry_list(

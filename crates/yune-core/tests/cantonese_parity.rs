@@ -25,6 +25,8 @@ const M24_DOGFOODING_ORACLE: &str =
     include_str!("fixtures/typeduck-v1.1.2/jyut6ping3-m24-dogfooding.json");
 const M28_PARTIAL_SELECTION_ORACLE: &str =
     include_str!("fixtures/typeduck-v1.1.2/jyut6ping3-m28-partial-selection.json");
+const WINDOWS_BOUNDARY_NGOHAIG_ORACLE: &str =
+    include_str!("fixtures/typeduck-v1.1.2/jyut6ping3-windows-boundary-ngohaig.json");
 const M28_UPSTREAM_JYUTPING_COMPOSITION_ORACLE: &str =
     include_str!("fixtures/upstream-jyutping/jyutping-m28-followup-composition.json");
 const FORK_PARITY_01_REAL_DICTIONARY_FUZZY_ORACLE: &str =
@@ -90,6 +92,11 @@ fn m24_dogfooding_fixture() -> Value {
 fn m28_partial_selection_fixture() -> Value {
     serde_json::from_str(M28_PARTIAL_SELECTION_ORACLE)
         .expect("TypeDuck v1.1.2 M28 partial-selection fixture should be valid JSON")
+}
+
+fn windows_boundary_ngohaig_fixture() -> Value {
+    serde_json::from_str(WINDOWS_BOUNDARY_NGOHAIG_ORACLE)
+        .expect("TypeDuck v1.1.2 Windows boundary fixture should be valid JSON")
 }
 
 fn m28_upstream_jyutping_composition_fixture() -> Value {
@@ -190,6 +197,83 @@ fn typeduck_v112_jyutping_oracle_fixture_is_locked() {
             );
         }
     }
+}
+
+#[test]
+fn typeduck_v112_windows_boundary_ngohaig_fixture_is_locked() {
+    let fixture = windows_boundary_ngohaig_fixture();
+    assert_eq!(fixture["oracle"]["engine"], "TypeDuck-HK/librime");
+    assert_eq!(fixture["oracle"]["engine_tag"], "v1.1.2");
+    assert_eq!(
+        fixture["oracle"]["engine_commit"],
+        "74cb52b78fb2411137a7643f6c8bc6517acfde69"
+    );
+    assert_eq!(
+        fixture["oracle"]["schema_commit"],
+        "1bed1ae6a0ab48055f073774d7dfd152a171c548"
+    );
+    assert_eq!(
+        fixture["oracle"]["plugin_commit"],
+        "3e4605c4fae99f068df2edb85aaeab5a97752795"
+    );
+    assert_eq!(fixture["schema"], "jyut6ping3");
+    assert_eq!(
+        fixture["module_list"],
+        serde_json::json!(["default", "dictionary_lookup"])
+    );
+    assert_eq!(
+        fixture["capture"]["candidate_layout"]["active_size_x64"],
+        24
+    );
+    assert_eq!(
+        fixture["capture"]["candidate_layout"]["active_offsets_x64"],
+        serde_json::json!({"text": 0, "comment": 8, "reserved": 16})
+    );
+
+    let case = fixture["cases"]
+        .as_array()
+        .expect("Windows boundary fixture should have cases")
+        .first()
+        .expect("Windows boundary fixture should capture ngohaig");
+    assert_eq!(case["schema_id"], "jyut6ping3");
+    assert_eq!(case["input"], "ngohaig");
+    assert_eq!(case["preedit"], "ngo hai g");
+    assert_eq!(case["commit_text_preview"], "\u{6211}\u{4fc2}\u{500b}");
+    assert_eq!(case["page_size"], 6);
+
+    let candidates = case["selected_candidates"]
+        .as_array()
+        .expect("selected candidates should be an array");
+    let expected_texts = [
+        "\u{6211}\u{4fc2}\u{500b}",
+        "\u{6211}\u{4fc2}",
+        "\u{6211}\u{55ba}",
+        "\u{6211}",
+    ];
+    assert_eq!(candidates.len(), expected_texts.len());
+    for (candidate, expected_text) in candidates.iter().zip(expected_texts) {
+        assert_eq!(candidate["text"], expected_text);
+        assert_eq!(candidate["comment_first4_hex"], "0c0d312c");
+        let comment = candidate["comment"]
+            .as_str()
+            .expect("candidate comment should be a string");
+        assert!(
+            comment.as_bytes().starts_with(&[0x0c, 0x0d, b'1', b',']),
+            "TypeDuck Windows boundary comment should start with form-feed, CR, 1, comma"
+        );
+    }
+    assert!(candidates[0]["comment"]
+        .as_str()
+        .expect("candidate comment should be a string")
+        .contains("composition"));
+
+    let yune_rows = fixture["yune_phase0c_observed"]["selected_candidates"]
+        .as_array()
+        .expect("Phase 0C Yune rows should be captured");
+    assert_eq!(yune_rows[0]["comment"], " \u{262f} ");
+    assert_eq!(yune_rows[1]["comment"], "\\fngo5hai6");
+    assert_eq!(yune_rows[0]["has_form_feed"], false);
+    assert_eq!(yune_rows[1]["has_form_feed"], false);
 }
 
 #[test]
@@ -1141,6 +1225,15 @@ fn m21_sentence_case<'a>(fixture: &'a Value, input: &str) -> &'a Value {
         .unwrap_or_else(|| panic!("M21 sentence-composition fixture should capture {input}"))
 }
 
+fn windows_boundary_ngohaig_case(fixture: &Value) -> &Value {
+    fixture["cases"]
+        .as_array()
+        .expect("Windows boundary cases should be an array")
+        .iter()
+        .find(|case| case["input"] == "ngohaig")
+        .expect("Windows boundary fixture should capture ngohaig")
+}
+
 fn m21_prediction_case<'a>(fixture: &'a Value, input: &str) -> &'a Value {
     fixture["cases"]
         .as_array()
@@ -1763,6 +1856,64 @@ fn m21_sentence_composition_matches_typeduck_v112_real_dictionary_goldens() {
             first.comment.starts_with(&expected_composition_record),
             "input {input} should preserve the oracle composition row; got {:?}",
             first.comment
+        );
+    }
+}
+
+#[test]
+fn yune_jyut6ping3_ngohaig_comments_match_windows_boundary_oracle() {
+    let fixture = windows_boundary_ngohaig_fixture();
+    let case = windows_boundary_ngohaig_case(&fixture);
+    let lookup_source_comments = [0, 2, 3]
+        .into_iter()
+        .map(|index| selected_candidate_comment(case, index))
+        .collect::<Vec<_>>();
+    let lookup_dictionary =
+        TableDictionary::parse_rime_dict_yaml(&dictionary_yaml_from_oracle_comments(
+            "windows_boundary_ngohaig_lookup",
+            &lookup_source_comments,
+        ))
+        .expect("Windows boundary oracle comments should parse into lookup rows");
+    let form_feed_comment = vec!["xform/^/\\f/".to_owned()];
+    let translator = StaticTableTranslator::new([
+        ("ngo5hai6", "\u{6211}\u{4fc2}"),
+        ("go3", "\u{500b}"),
+        ("ngo5hai2", "\u{6211}\u{55ba}"),
+        ("ngo5", "\u{6211}"),
+        ("ngo4", "\u{4fc4}"),
+        ("o1", "\u{67ef}"),
+    ])
+    .with_completion(true)
+    .with_sentence(true)
+    .with_sentence_word_penalty(TYPEDUCK_SENTENCE_WORD_PENALTY)
+    .with_spelling_algebra(&jyut6ping3_mobile_spelling_algebra())
+    .with_comment_format(&form_feed_comment)
+    .with_prefix_fallback(true);
+
+    let mut candidates = translator.translate("ngohaig");
+    DictionaryLookupFilter::new(lookup_dictionary).apply(&mut candidates);
+
+    assert!(
+        candidates.len() >= 4,
+        "ngohaig should produce at least the first four Windows boundary candidates: {candidates:?}"
+    );
+    for (index, candidate) in candidates.iter().enumerate().take(4) {
+        assert_eq!(
+            candidate.text,
+            selected_candidate_text(case, index),
+            "candidate {index} text should match the TypeDuck Windows boundary oracle"
+        );
+        assert_eq!(
+            candidate.comment,
+            selected_candidate_comment(case, index),
+            "candidate {index} comment should match raw TypeDuck Windows boundary bytes"
+        );
+        assert!(
+            candidate
+                .comment
+                .as_bytes()
+                .starts_with(&[0x0c, 0x0d, b'1', b',']),
+            "candidate {index} comment should start with TypeDuck rich-comment control bytes"
         );
     }
 }

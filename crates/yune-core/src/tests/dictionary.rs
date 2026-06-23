@@ -150,6 +150,33 @@ fn table_and_reverse_writers_round_trip_through_existing_readers() {
 }
 
 #[test]
+fn table_writer_preserves_typeduck_lookup_records_for_compiled_path() {
+    let dictionary = TableDictionary::parse_typeduck_lookup_dict_yaml(
+        "---\n\
+name: lookup\n\
+version: '0.1'\n\
+sort: original\n\
+...\n\
+\n\
+ngo5hai6,1,0,,oth,ver,,,我是,,,I am,,,,\t我係\n",
+    )
+    .expect("typeduck lookup dictionary should parse");
+
+    let table_bytes = build_table_bin(&dictionary, 0x1234_5678);
+    let reparsed = parse_rime_table_bin_dictionary(&table_bytes).expect("table should round-trip");
+    let records = reparsed
+        .lookup_records_for("我係")
+        .expect("compiled dictionary should preserve TypeDuck lookup rows");
+
+    assert_eq!(records.len(), 1);
+    assert_eq!(records[0].code, "ngo5hai6");
+    assert_eq!(
+        records[0].fields,
+        ["我係", "ngo5hai6,1,0,,oth,ver,,,我是,,,I am,,,,"]
+    );
+}
+
+#[test]
 fn rebuild_plan_executor_writes_only_requested_artifacts() {
     let root = std::env::temp_dir().join(format!("yune-m18-rebuild-{}", std::process::id()));
     if root.exists() {

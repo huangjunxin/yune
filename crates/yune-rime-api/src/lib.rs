@@ -1559,12 +1559,16 @@ pub(crate) unsafe fn install_config_root(config: *mut RimeConfig, root: Value) -
 
     // SAFETY: `config` is non-null and points to caller-owned writable storage.
     // If it already owns config state from this shim, replace it to avoid
-    // leaking when callers reuse a `RimeConfig` slot.
+    // leaking when callers reuse a `RimeConfig` slot. Unknown non-null values
+    // are treated as uninitialized caller storage and overwritten without
+    // freeing, matching native frontends that pass stack garbage in this slot.
     unsafe {
         if !(*config).ptr.is_null() {
-            drop(Box::from_raw((*config).ptr.cast::<ConfigState>()));
+            let _ = release_config_state((*config).ptr);
         }
-        (*config).ptr = Box::into_raw(state).cast::<c_void>();
+        let ptr = Box::into_raw(state).cast::<c_void>();
+        register_config_state(ptr);
+        (*config).ptr = ptr;
     }
     TRUE
 }

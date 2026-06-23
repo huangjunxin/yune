@@ -932,6 +932,18 @@ fn static_table_translator_applies_librime_comment_format() {
 }
 
 #[test]
+fn static_table_translator_comment_format_decodes_rime_control_escapes() {
+    let formulas = vec!["xform/^/\\f/".to_owned(), "xform/$/\\r1/".to_owned()];
+    let translator =
+        StaticTableTranslator::new([("nei", "\u{4f60}")]).with_comment_format(&formulas);
+
+    let candidates = translator.translate("nei");
+
+    assert_eq!(candidates[0].comment, "\u{000c}nei\r1");
+    assert_ne!(candidates[0].comment, "\\fnei\\r1");
+}
+
+#[test]
 fn static_table_translator_combines_duplicate_text_candidates_with_lookup_codes() {
     let formulas = vec!["xform/^/\u{000c}/".to_owned()];
     let translator = StaticTableTranslator::new([("hou2", "好"), ("hou3", "好"), ("hou6", "號")])

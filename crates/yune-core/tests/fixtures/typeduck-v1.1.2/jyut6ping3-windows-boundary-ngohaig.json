@@ -1,0 +1,173 @@
+{
+  "oracle": {
+    "engine": "TypeDuck-HK/librime",
+    "engine_tag": "v1.1.2",
+    "engine_commit": "74cb52b78fb2411137a7643f6c8bc6517acfde69",
+    "canonical_repository": "https://github.com/TypeDuck-HK/librime",
+    "release_url": "https://github.com/TypeDuck-HK/librime/releases/tag/v1.1.2",
+    "release_asset": "rime-TypeDuck-v1.1.2-Windows-msvc-x64.7z",
+    "dependency_asset": "rime-deps-TypeDuck-v1.1.2-Windows-msvc-x64.7z",
+    "plugin": "TypeDuck-HK/rime-dictionary-lookup-filter",
+    "plugin_commit": "3e4605c4fae99f068df2edb85aaeab5a97752795",
+    "schema": "TypeDuck-HK/schema",
+    "schema_commit": "1bed1ae6a0ab48055f073774d7dfd152a171c548",
+    "capture_date": "2026-06-21",
+    "captured_from": "TypeDuck-Windows Phase 0C",
+    "capture_command": "TypeDuck-Windows direct rime.dll boundary harness",
+    "candidate_boundary_evidence_commit": "4ac2510",
+    "verifier_evidence_commit": "c7ddedb",
+    "host": "Windows"
+  },
+  "schema": "jyut6ping3",
+  "schemas": [
+    "jyut6ping3"
+  ],
+  "module_list": [
+    "default",
+    "dictionary_lookup"
+  ],
+  "scenarios": [
+    "p2-win02-windows-boundary"
+  ],
+  "capture": {
+    "schema_data": "TypeDuck-HK/schema",
+    "schema_data_commit": "1bed1ae6a0ab48055f073774d7dfd152a171c548",
+    "dictionary": "jyut6ping3.dict.yaml",
+    "lookup_dictionary": "jyut6ping3_scolar.dict.yaml",
+    "source_row_policy": "typeduck_v112_windows_boundary_phase0c",
+    "candidate_layout": {
+      "active_size_x64": 24,
+      "active_offsets_x64": {
+        "text": 0,
+        "comment": 8,
+        "reserved": 16
+      },
+      "fork_header_size_x64": 32,
+      "fork_header_quality_offset_x64": 16,
+      "raw_candidates_do_not_cross_type_duck_ipc": true
+    },
+    "source_files": [
+      "TypeDuck-Windows/docs/evidence/p2-win01-phase0c-2026-06-21/typeduck-v112-direct-jyut6ping3-ngohaig.json",
+      "TypeDuck-Windows/docs/evidence/p2-win01-phase0c-2026-06-21/yune-direct-jyut6ping3-ngohaig.json",
+      "TypeDuck-Windows/docs/evidence/p2-win01-phase0c-2026-06-21/ngohaig-candidate-boundary-diff-summary.json",
+      "TypeDuck-Windows/docs/evidence/p2-win01-phase0c-2026-06-21/rime-candidate-layout-probe.txt"
+    ],
+    "input_sequence": [
+      "ngohaig"
+    ]
+  },
+  "cases": [
+    {
+      "schema_id": "jyut6ping3",
+      "schema_name": "jyut6ping3",
+      "input": "ngohaig",
+      "rime_get_input": "ngohaig",
+      "processed": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "is_composing": true,
+      "is_ascii_mode": false,
+      "preedit": "ngo hai g",
+      "commit_text_preview": "\u6211\u4fc2\u500b",
+      "highlighted_candidate_index": 0,
+      "page_size": 6,
+      "page_no": 0,
+      "is_last_page": false,
+      "selected_candidates": [
+        {
+          "index": 0,
+          "text": "\u6211\u4fc2\u500b",
+          "text_utf8_hex": "e68891e4bf82e5808b",
+          "comment": "\f\r1,\u6211\u4fc2\u500b,ngo5hai6go3,1,0,,,,composition,,,,,,,,,\r1,\u6211\u4fc2,ngo5hai6,1,0,,oth,ver,,,\u6211\u662f,,,I am,,,,\r1,\u500b,go3,1,0,,mw,,,,,,\u500b\u4eba\uff0c\u500b\u6848\uff0c\u500b\u6027,item of,(measure),,(measure),(satuan benda)",
+          "comment_first4_hex": "0c0d312c",
+          "comment_len_chars": 164,
+          "quality": 0.0
+        },
+        {
+          "index": 1,
+          "text": "\u6211\u4fc2",
+          "text_utf8_hex": "e68891e4bf82",
+          "comment": "\f\r1,\u6211\u4fc2,ngo5hai6,1,0,,oth,ver,,,\u6211\u662f,,,I am,,,,",
+          "comment_first4_hex": "0c0d312c",
+          "comment_len_chars": 44,
+          "quality": -0.9998060999865925
+        },
+        {
+          "index": 2,
+          "text": "\u6211\u55ba",
+          "text_utf8_hex": "e68891e596ba",
+          "comment": "\f\r1,\u6211\u55ba,ngo5hai2,1,0,,oth,ver,,,,,,I am at,,,,",
+          "comment_first4_hex": "0c0d312c",
+          "comment_len_chars": 45,
+          "quality": -0.9999794399999765
+        },
+        {
+          "index": 3,
+          "text": "\u6211",
+          "text_utf8_hex": "e68891",
+          "comment": "\f\r1,\u6211,ngo5,1,0,,n,,,,,,,\"I, me\",\u0645\u06cc\u06ba,\u092e \u0939\u094b,\u092e\u0948\u0902,saya",
+          "comment_first4_hex": "0c0d312c",
+          "comment_len_chars": 49,
+          "quality": -0.9583452032408242
+        }
+      ]
+    }
+  ],
+  "yune_phase0c_observed": {
+    "text_match_rows": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "comment_match_rows": [],
+    "selected_candidates": [
+      {
+        "index": 0,
+        "text": "\u6211\u4fc2\u500b",
+        "comment": " \u262f ",
+        "comment_first4_hex": "20e298af",
+        "has_form_feed": false,
+        "has_cr_rows": false
+      },
+      {
+        "index": 1,
+        "text": "\u6211\u4fc2",
+        "comment": "\\fngo5hai6",
+        "comment_first4_hex": "5c666e67",
+        "has_form_feed": false,
+        "has_cr_rows": false
+      },
+      {
+        "index": 2,
+        "text": "\u6211\u55ba",
+        "comment": "\\fngo5hai2",
+        "comment_first4_hex": "5c666e67",
+        "has_form_feed": false,
+        "has_cr_rows": false
+      },
+      {
+        "index": 3,
+        "text": "\u6211",
+        "comment": "\\fngo5",
+        "comment_first4_hex": "5c666e67",
+        "has_form_feed": false,
+        "has_cr_rows": false
+      },
+      {
+        "index": 4,
+        "text": "\u7317",
+        "comment": "\\fngo5",
+        "comment_first4_hex": "5c666e67",
+        "has_form_feed": false,
+        "has_cr_rows": false
+      }
+    ]
+  }
+}

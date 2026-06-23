@@ -71,7 +71,7 @@ impl CommentFormatFormula {
         }
         Some(Self::Transform {
             pattern: Regex::new(args[1]).ok()?,
-            replacement: args[2].to_owned(),
+            replacement: decode_rime_replacement_escapes(args[2]),
         })
     }
 
@@ -121,4 +121,29 @@ impl CommentFormatFormula {
             }
         }
     }
+}
+
+fn decode_rime_replacement_escapes(value: &str) -> String {
+    let mut decoded = String::new();
+    let mut chars = value.chars();
+    while let Some(ch) = chars.next() {
+        if ch != '\\' {
+            decoded.push(ch);
+            continue;
+        }
+        match chars.next() {
+            Some('f') => decoded.push('\u{000c}'),
+            Some('r') => decoded.push('\r'),
+            Some('n') => decoded.push('\n'),
+            Some('t') => decoded.push('\t'),
+            Some('v') => decoded.push('\u{000b}'),
+            Some('\\') => decoded.push('\\'),
+            Some(other) => {
+                decoded.push('\\');
+                decoded.push(other);
+            }
+            None => decoded.push('\\'),
+        }
+    }
+    decoded
 }

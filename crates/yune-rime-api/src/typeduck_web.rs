@@ -1,5 +1,5 @@
 use std::{
-    ffi::{c_void, CStr, CString},
+    ffi::{CStr, CString},
     mem,
     os::raw::{c_char, c_int},
     ptr,
@@ -14,7 +14,7 @@ use yune_core::{
 };
 
 use crate::{
-    rime_get_api, rime_levers_get_api, Bool, ConfigState, RimeCandidate, RimeCommit,
+    install_config_root, rime_get_api, rime_levers_get_api, Bool, RimeCandidate, RimeCommit,
     RimeComposition, RimeConfig, RimeContext, RimeLeversApi, RimeMenu, RimeSessionId, RimeStatus,
     RimeTraits, FALSE, TRUE,
 };
@@ -300,16 +300,14 @@ pub unsafe extern "C" fn yune_typeduck_customize(
             return FALSE;
         };
         let mut config = RimeConfig {
-            ptr: Box::into_raw(Box::new(ConfigState {
-                root: exclude_list,
-                cstring_borrows: Vec::new(),
-            }))
-            .cast::<c_void>(),
+            ptr: ptr::null_mut(),
         };
-        let customized = unsafe { customize_item(settings, key.as_ptr(), &mut config) } == TRUE;
-        unsafe {
-            drop(Box::from_raw(config.ptr.cast::<ConfigState>()));
+        if unsafe { install_config_root(&mut config, exclude_list) } != TRUE {
+            unsafe { destroy(settings) };
+            return FALSE;
         }
+        let customized = unsafe { customize_item(settings, key.as_ptr(), &mut config) } == TRUE;
+        let _ = unsafe { crate::RimeConfigClose(&mut config) };
         customized
     } else {
         (unsafe { customize_string(settings, key.as_ptr(), value.as_ptr()) }) == TRUE

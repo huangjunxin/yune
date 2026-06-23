@@ -1,5 +1,5 @@
 use std::{
-    collections::{BTreeSet, HashSet},
+    collections::{BTreeMap, BTreeSet, HashSet},
     fs,
     os::raw::{c_char, c_int},
     path::{Path, PathBuf},
@@ -22,9 +22,10 @@ use crate::{
     config_scalar_string, cstring_from_lossless_str, find_config_value, load_runtime_config_root,
     normalize_config_resource_id, optional_c_string, path_join,
     resource_id::validate_data_resource_id, runtime_paths, runtime_user_data_sync_dir,
-    service_started, set_build_info, set_config_value, source_modified_secs,
-    source_uses_auto_custom_patch, sync_all_user_dicts, user_dict_upgrade, Bool, ConfigOpenKind,
-    RimeCleanupAllSessions, RimeSetup, RimeTraits, FALSE, RIME_VERSION_BYTES, TRUE,
+    schema_install::has_typeduck_lookup_source_rows, service_started, set_build_info,
+    set_config_value, source_modified_secs, source_uses_auto_custom_patch, sync_all_user_dicts,
+    user_dict_upgrade, Bool, ConfigOpenKind, RimeCleanupAllSessions, RimeSetup, RimeTraits, FALSE,
+    RIME_VERSION_BYTES, TRUE,
 };
 
 /// Initializes the runtime using the same trait handling as `RimeSetup`.
@@ -702,10 +703,11 @@ struct DictionaryArtifactRequest {
     packs: Vec<String>,
     force_rebuild_table: bool,
     force_rebuild_prism: bool,
+    typeduck_lookup_filter: bool,
 }
 
 fn schema_dictionary_artifact_requests(schema_config: &Value) -> Vec<DictionaryArtifactRequest> {
-    let mut namespaces = BTreeSet::new();
+    let mut namespaces = BTreeMap::new();
     if let Some(Value::Sequence(translators)) =
         find_config_value(schema_config, "engine/translators")
     {
@@ -720,7 +722,9 @@ fn schema_dictionary_artifact_requests(schema_config: &Value) -> Vec<DictionaryA
                     | "r10n_translator"
                     | "reverse_lookup_translator"
             ) {
-                namespaces.insert(namespace.unwrap_or("translator").to_owned());
+                namespaces
+                    .entry(namespace.unwrap_or("translator").to_owned())
+                    .or_insert(false);
             }
         }
     }
@@ -730,14 +734,22 @@ fn schema_dictionary_artifact_requests(schema_config: &Value) -> Vec<DictionaryA
                 continue;
             };
             if component == "reverse_lookup_filter" {
-                namespaces.insert(namespace.unwrap_or("reverse_lookup").to_owned());
+                namespaces
+                    .entry(namespace.unwrap_or("reverse_lookup").to_owned())
+                    .or_insert(false);
+            }
+            if component == "dictionary_lookup_filter" {
+                namespaces.insert(
+                    namespace.unwrap_or("dictionary_lookup_filter").to_owned(),
+                    true,
+                );
             }
         }
     }
 
     let mut requests = Vec::new();
     let mut seen = BTreeSet::new();
-    for namespace in namespaces {
+    for (namespace, typeduck_lookup_filter) in namespaces {
         let Some(raw_dictionary_id) =
             find_config_value(schema_config, &format!("{namespace}/dictionary"))
                 .and_then(Value::as_str)
@@ -750,6 +762,7 @@ fn schema_dictionary_artifact_requests(schema_config: &Value) -> Vec<DictionaryA
                 packs: Vec::new(),
                 force_rebuild_table: false,
                 force_rebuild_prism: false,
+                typeduck_lookup_filter,
             });
             continue;
         };
@@ -767,6 +780,7 @@ fn schema_dictionary_artifact_requests(schema_config: &Value) -> Vec<DictionaryA
                 schema_config,
                 &format!("{namespace}/force_rebuild_prism"),
             ),
+            typeduck_lookup_filter,
         });
     }
     requests
@@ -863,6 +877,7 @@ fn workspace_update_dictionary_artifact(
                 source_yaml.as_ref()?,
                 &request.packs,
                 &shared_data_dir,
+                request.typeduck_lookup_filter,
             )?)
         } else {
             None
@@ -901,7 +916,11 @@ fn load_workspace_table_dictionary(
     source_yaml: &str,
     packs: &[String],
     shared_data_dir: &Path,
+    typeduck_lookup_filter: bool,
 ) -> Option<TableDictionary> {
+    if typeduck_lookup_filter && has_typeduck_lookup_source_rows(source_yaml) {
+        return TableDictionary::parse_typeduck_lookup_dict_yaml(source_yaml).ok();
+    }
     TableDictionary::parse_rime_dict_yaml_with_imports_packs_and_vocabulary(
         source_yaml,
         packs,
