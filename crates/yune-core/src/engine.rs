@@ -8,10 +8,10 @@ use crate::punctuation::{
 use crate::AiContext;
 use crate::{
     parse_key_sequence, AiDecision, AiResult, Candidate, CandidateFilter, CandidateRanker,
-    CandidateSource, CommitRecord, Composition, Context, EchoTranslator, EngineInspectorSnapshot,
-    FilterAuditRecord, KeyCode, KeyEvent, KeyModifiers, KeySequenceParseError, MemoryStore,
-    RerankResult, SegmentDebug, Snapshot, StagedAiCandidates, Status, Translator, UserDb,
-    UserDbCommitMetadata, UserDbLookupRequest, UserDbLookupResult,
+    CandidateRequest, CandidateSource, CommitRecord, Composition, Context, EchoTranslator,
+    EngineInspectorSnapshot, FilterAuditRecord, KeyCode, KeyEvent, KeyModifiers,
+    KeySequenceParseError, MemoryStore, RerankResult, SegmentDebug, Snapshot, StagedAiCandidates,
+    Status, Translator, UserDb, UserDbCommitMetadata, UserDbLookupRequest, UserDbLookupResult,
 };
 
 pub struct Engine {
@@ -28,11 +28,13 @@ pub struct Engine {
     ai_memory: MemoryStore,
     userdb: UserDb,
     prediction_never_first: bool,
+    candidate_list_complete: bool,
     pending_userdb_learning: Option<UserDbCommitMetadata>,
     commit_tick: u64,
 }
 
 const DEFAULT_PAGE_SIZE: usize = 5;
+const BOUNDED_REFRESH_SURPLUS: usize = 15;
 const TYPEDUCK_E_SQUARED: f32 = 7.389_056;
 const TYPEDUCK_EXP_E_SQUARED: f32 = 1618.178;
 
@@ -166,6 +168,7 @@ impl Default for Engine {
             ai_memory: MemoryStore::default(),
             userdb: UserDb::default(),
             prediction_never_first: false,
+            candidate_list_complete: true,
             pending_userdb_learning: None,
             commit_tick: 0,
         }
@@ -655,6 +658,9 @@ impl Engine {
     }
 
     pub fn select_candidate(&mut self, index: usize) -> Option<String> {
+        if index >= self.context.candidates.len() && !self.candidate_list_complete {
+            self.ensure_complete_candidates();
+        }
         self.commit_candidate(index, CommitIntent::ExplicitSelection)
     }
 
@@ -663,6 +669,9 @@ impl Engine {
     }
 
     pub fn highlight_candidate(&mut self, index: usize) -> bool {
+        if index >= self.context.candidates.len() && !self.candidate_list_complete {
+            self.ensure_complete_candidates();
+        }
         if index >= self.context.candidates.len() {
             return false;
         }
@@ -679,6 +688,9 @@ impl Engine {
     }
 
     pub fn delete_candidate(&mut self, index: usize) -> bool {
+        if !self.candidate_list_complete {
+            self.ensure_complete_candidates();
+        }
         if index >= self.context.candidates.len() {
             return false;
         }
@@ -711,6 +723,9 @@ impl Engine {
         }
 
         let page_size = page_size.max(1);
+        if !backward && !self.candidate_list_complete {
+            self.ensure_complete_candidates();
+        }
         let current_index = self.context.highlighted;
         let next_index = if backward {
             current_index.saturating_sub(page_size)
@@ -739,6 +754,9 @@ impl Engine {
             return false;
         }
         let next_index = self.context.highlighted + 1;
+        if next_index >= self.context.candidates.len() && !self.candidate_list_complete {
+            self.ensure_complete_candidates();
+        }
         if next_index >= self.context.candidates.len() {
             return true;
         }
@@ -764,6 +782,7 @@ impl Engine {
         self.context.composition = Composition::default();
         self.context.candidates.clear();
         self.context.highlighted = 0;
+        self.candidate_list_complete = true;
         self.staged_ai_result = None;
     }
 
@@ -795,6 +814,7 @@ impl Engine {
             quality: 1.0,
         }];
         self.context.highlighted = 0;
+        self.candidate_list_complete = true;
     }
 
     pub fn set_punctuation_preview(&mut self, text: impl Into<String>) {
@@ -805,6 +825,7 @@ impl Engine {
         self.context.composition.preedit = text;
         self.context.candidates.clear();
         self.context.highlighted = 0;
+        self.candidate_list_complete = true;
     }
 
     pub fn set_punctuation_candidate_list(
@@ -832,6 +853,7 @@ impl Engine {
             })
             .collect();
         self.context.highlighted = highlighted.min(self.context.candidates.len().saturating_sub(1));
+        self.candidate_list_complete = true;
     }
 
     pub fn record_commit(&mut self, text: impl Into<String>) -> String {
@@ -941,7 +963,17 @@ impl Engine {
         Snapshot {
             context: self.context.clone(),
             status: self.status(),
+            candidate_list_complete: self.candidate_list_complete,
         }
+    }
+
+    #[must_use]
+    pub fn candidate_list_complete(&self) -> bool {
+        self.candidate_list_complete
+    }
+
+    pub fn ensure_complete_candidate_list(&mut self) {
+        self.ensure_complete_candidates();
     }
 
     #[must_use]
@@ -1069,6 +1101,10 @@ impl Engine {
             return None;
         }
         let page_start = (self.context.highlighted / DEFAULT_PAGE_SIZE) * DEFAULT_PAGE_SIZE;
+        if page_start + page_index >= self.context.candidates.len() && !self.candidate_list_complete
+        {
+            self.ensure_complete_candidates();
+        }
         self.commit_candidate(page_start + page_index, CommitIntent::ExplicitSelection)
     }
 
@@ -1159,19 +1195,81 @@ impl Engine {
     }
 
     fn refresh_candidates(&mut self) {
-        let input = self.context.composition.input.clone();
-        let mut candidates = self
-            .translators
+        self.refresh_candidates_with_request(self.candidate_request_for_refresh());
+    }
+
+    fn ensure_complete_candidates(&mut self) {
+        if self.candidate_list_complete {
+            return;
+        }
+        let highlighted = self.context.highlighted;
+        self.refresh_candidates_with_request(CandidateRequest::unbounded());
+        if !self.context.candidates.is_empty() {
+            self.context.highlighted = highlighted.min(self.context.candidates.len() - 1);
+        }
+    }
+
+    fn candidate_request_for_refresh(&self) -> CandidateRequest {
+        if !self.can_use_bounded_refresh() {
+            return CandidateRequest::unbounded();
+        }
+        let filter_extended_cjk = self
+            .filters
             .iter()
-            .flat_map(|translator| {
-                translator.translate_with_context(
+            .any(|filter| filter.name() == "charset_filter")
+            && !self
+                .options
+                .get("extended_charset")
+                .copied()
+                .unwrap_or(false);
+        CandidateRequest::bounded(DEFAULT_PAGE_SIZE + BOUNDED_REFRESH_SURPLUS)
+            .with_filter_extended_cjk(filter_extended_cjk)
+    }
+
+    fn can_use_bounded_refresh(&self) -> bool {
+        self.status.schema_id == "luna_pinyin"
+            && self.context.composition.input.chars().count() <= 2
+            && self.rankers.is_empty()
+            && self.userdb.entries().is_empty()
+            && self
+                .filters
+                .iter()
+                .all(|filter| filter.name() == "charset_filter")
+    }
+
+    fn refresh_candidates_with_request(&mut self, request: CandidateRequest) {
+        let input = self.context.composition.input.clone();
+        let (mut candidates, candidate_list_complete) = if request.limit.is_some() {
+            let mut candidates = Vec::new();
+            let mut candidate_list_complete = true;
+            for translator in &self.translators {
+                let result = translator.translate_with_context_and_request(
                     &input,
                     &self.status,
                     &self.options,
                     &self.context,
-                )
-            })
-            .collect::<Vec<_>>();
+                    request,
+                );
+                candidate_list_complete &= result.is_complete;
+                candidates.extend(result.candidates);
+            }
+            (candidates, candidate_list_complete)
+        } else {
+            (
+                self.translators
+                    .iter()
+                    .flat_map(|translator| {
+                        translator.translate_with_context(
+                            &input,
+                            &self.status,
+                            &self.options,
+                            &self.context,
+                        )
+                    })
+                    .collect::<Vec<_>>(),
+                true,
+            )
+        };
         candidates.sort_by(|left, right| {
             right
                 .quality
@@ -1204,6 +1302,7 @@ impl Engine {
         self.context.candidates =
             merge_classic_and_staged_ai(&input, candidates, self.staged_ai_result.as_ref());
         self.context.highlighted = 0;
+        self.candidate_list_complete = candidate_list_complete;
     }
 }
 

@@ -328,4 +328,5 @@ impl Default for Status {
 pub struct Snapshot {
     pub context: Context,
     pub status: Status,
+    pub candidate_list_complete: bool,
 }

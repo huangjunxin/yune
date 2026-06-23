@@ -6,11 +6,12 @@ use std::{
 
 use serde_json::Value;
 
+use crate::dictionary::TableLookup;
 use crate::{
     build_prism_bin, build_reverse_bin, build_table_bin, execute_rebuild_plan,
     parse_rime_prism_bin_payload, parse_rime_reverse_bin_dictionary,
-    parse_rime_table_bin_dictionary, parse_rime_table_bin_metadata, DartsDoubleArray,
-    RimeCorrectionEntry, RimeDictArtifactStatus, RimeDictRebuildExecutionReport,
+    parse_rime_table_bin_dictionary, parse_rime_table_bin_metadata, Candidate, CandidateSource,
+    DartsDoubleArray, RimeCorrectionEntry, RimeDictArtifactStatus, RimeDictRebuildExecutionReport,
     RimeDictRebuildPlan, RimeDictRebuildSources, RimePrismSpellingDescriptor, RimeToleranceRule,
     TableDictionary, TableDictionaryAdvancedData, TableEncoder, TableEntry,
 };
@@ -36,6 +37,47 @@ fn darts_double_array_exact_and_prefix_search_round_trip_inserted_keys() {
     let reparsed =
         DartsDoubleArray::from_units(double_array.units().to_vec()).expect("units should parse");
     assert_eq!(reparsed.exact_match("bai"), Some(9));
+}
+
+#[test]
+fn heap_table_lookup_exposes_exact_prefix_and_all_code_queries() {
+    let mut lookup = BTreeMap::<String, Vec<Candidate>>::new();
+    for (code, text, quality) in [
+        ("ni", "exact", 2.0),
+        ("nia", "completion-a", 4.0),
+        ("nib", "completion-b", 3.0),
+        ("hao", "other", 1.0),
+    ] {
+        lookup.entry(code.to_owned()).or_default().push(Candidate {
+            text: text.to_owned(),
+            comment: code.to_owned(),
+            preedit: None,
+            source: CandidateSource::Table,
+            quality,
+        });
+    }
+
+    assert!(lookup.has_code("ni"));
+    assert!(!lookup.has_code("n"));
+    assert_eq!(
+        lookup.exact_candidates("ni").expect("exact row")[0].text,
+        "exact"
+    );
+    assert_eq!(
+        lookup
+            .prefix_candidates("ni")
+            .map(|(code, candidates)| (code.to_owned(), candidates[0].text.clone()))
+            .collect::<Vec<_>>(),
+        [
+            ("ni".to_owned(), "exact".to_owned()),
+            ("nia".to_owned(), "completion-a".to_owned()),
+            ("nib".to_owned(), "completion-b".to_owned())
+        ]
+    );
+    assert_eq!(
+        lookup.all_codes().collect::<Vec<_>>(),
+        ["hao", "ni", "nia", "nib"]
+    );
 }
 
 #[test]

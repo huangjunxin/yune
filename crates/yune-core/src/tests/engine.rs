@@ -207,6 +207,93 @@ fn prediction_never_first_keeps_learned_prefix_prediction_behind_table_top() {
 }
 
 #[test]
+fn bounded_refresh_expands_to_full_list_when_paging_past_window() {
+    let dictionary = bounded_refresh_dictionary();
+    let mut engine = Engine::new();
+    engine.set_schema("luna_pinyin", "Luna Pinyin");
+    engine.add_translator(
+        StaticTableTranslator::parse_rime_dict_yaml(&dictionary)
+            .expect("dictionary should parse")
+            .with_completion(true)
+            .with_sentence(false),
+    );
+
+    engine.set_input("n");
+
+    let bounded_len = engine.context().candidates.len();
+    assert!(
+        bounded_len < 31,
+        "initial refresh should retain a bounded window"
+    );
+    assert!(!engine.snapshot().candidate_list_complete);
+    assert_eq!(engine.context().candidates[0].text, "candidate-00");
+
+    assert!(engine.highlight_candidate(25));
+    assert!(
+        engine.context().candidates.len() > bounded_len,
+        "out-of-window access should force a complete refresh"
+    );
+    assert!(engine.snapshot().candidate_list_complete);
+    assert_eq!(engine.context().highlighted, 25);
+    assert_eq!(engine.context().candidates[25].text, "candidate-25");
+}
+
+#[test]
+fn bounded_refresh_completes_before_candidate_deletion() {
+    let dictionary = bounded_refresh_dictionary();
+    let mut engine = Engine::new();
+    engine.set_schema("luna_pinyin", "Luna Pinyin");
+    engine.add_translator(
+        StaticTableTranslator::parse_rime_dict_yaml(&dictionary)
+            .expect("dictionary should parse")
+            .with_completion(true)
+            .with_sentence(false),
+    );
+
+    engine.set_input("n");
+
+    let bounded_len = engine.context().candidates.len();
+    assert!(
+        bounded_len < 31,
+        "initial refresh should retain a bounded window"
+    );
+    assert!(engine.delete_candidate(0));
+    assert!(engine.snapshot().candidate_list_complete);
+    assert!(!engine
+        .context()
+        .candidates
+        .iter()
+        .any(|candidate| candidate.text == "candidate-00"));
+
+    assert!(engine.highlight_candidate(24));
+    assert!(!engine
+        .context()
+        .candidates
+        .iter()
+        .any(|candidate| candidate.text == "candidate-00"));
+}
+
+fn bounded_refresh_dictionary() -> String {
+    let mut dictionary = String::from(
+        r#"
+---
+name: sample
+version: "0.1"
+sort: by_weight
+...
+
+"#,
+    );
+    for index in 0..30 {
+        dictionary.push_str(&format!(
+            "candidate-{index:02}\tn{index:02}\t{}\n",
+            100.0 - index as f32
+        ));
+    }
+    dictionary
+}
+
+#[test]
 fn escape_clears_composition_like_librime_editor_cancel() {
     let mut engine = Engine::new();
     engine.add_translator(StaticTableTranslator::new([("ni", "你")]));

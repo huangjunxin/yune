@@ -175,7 +175,8 @@ pub unsafe extern "C" fn RimeGetContext(
                 (*context).menu.page_size =
                     c_int::try_from(page_size).expect("menu page size should fit in c_int");
                 (*context).menu.page_no = page_no as c_int;
-                (*context).menu.is_last_page = bool_from(page_end == candidates.len());
+                (*context).menu.is_last_page =
+                    bool_from(snapshot.candidate_list_complete && page_end == candidates.len());
                 (*context).menu.highlighted_candidate_index = (highlighted - page_start)
                     .min(page_candidates.len().saturating_sub(1))
                     as c_int;
@@ -237,7 +238,8 @@ pub unsafe extern "C" fn RimeGetContext(
             (*context).menu.page_size =
                 c_int::try_from(page_size).expect("menu page size should fit in c_int");
             (*context).menu.page_no = page_no as c_int;
-            (*context).menu.is_last_page = bool_from(page_end == candidates.len());
+            (*context).menu.is_last_page =
+                bool_from(snapshot.candidate_list_complete && page_end == candidates.len());
             (*context).menu.highlighted_candidate_index =
                 (highlighted - page_start).min(num_candidates.saturating_sub(1)) as c_int;
             (*context).menu.num_candidates = num_candidates as c_int;

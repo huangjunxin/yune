@@ -1,6 +1,6 @@
 # M34 Lazy Candidate Pipeline And Queryable Table+Prism Performance Plan
 
-> **Status:** Draft - **Milestone:** M34 (lazy candidate pipeline and queryable table+prism lookup performance) - **Created:** 2026-06-23 - **Type:** execution plan
+> **Status:** Complete · **Milestone:** M34 (lazy candidate pipeline and queryable table+prism lookup performance) · **Closed:** 2026-06-23 · **Type:** archived execution record
 >
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -21,9 +21,83 @@ The local `LibreService/my_rime` clone is a useful reference point, but not a be
 
 ---
 
+## Closeout - 2026-06-23
+
+M34 closed as a bounded lazy-candidate-pipeline and lookup-abstraction
+milestone. It did not implement M31 public-demo delivery/cache/Cloudflare work,
+did not change runtime/browser files, did not widen the public `RimeApi`, did
+not change `RimeCandidate`, and did not alter TypeDuck-profile ABI isolation.
+Opened: 2026-06-23 at user request.
+
+Implemented:
+
+- Fresh fair M33-surface baseline and after-runs under
+  `docs/reports/evidence/m34-queryable-table-prism/`.
+- Internal `CandidateRequest` / `TranslationResult` and
+  `Translator::translate_with_context_and_request(...)`, with eager translation
+  retained as the compatibility fallback.
+- Safe bounded `StaticTableTranslator` materialization for short first-page
+  `luna_pinyin` typing: prefix enumeration remains complete under the current
+  code-ordered heap map, while expensive candidate materialization is bounded
+  with stable tie preservation.
+- Engine lazy candidate windows for safe short `luna_pinyin` input, with
+  full-list expansion for out-of-window actions and candidate-list iterator APIs.
+- `Snapshot::candidate_list_complete` so `RimeGetContext` can report
+  `is_last_page` honestly without forcing full materialization on every
+  first-page context read.
+- Internal heap-backed `TableLookup` abstraction as the precondition for future
+  storage swaps.
+- Native `luna_pinyin` `hao` benchmark rows for future comparison.
+
+Measured result:
+
+- Native `per_key_real_luna_pinyin_ni_full_abi`: `1,760.250us` ->
+  `1,132.950us` (`-35.6%`).
+- Native `per_key_real_luna_pinyin_zhongguo_full_abi`: `12,697.600us` ->
+  `12,119.013us` (`-4.6%`).
+- TypeDuck full-ABI watch rows stayed within the accepted guard:
+  `hai` `+5.7%`, `jigaajiusihaa` `-6.0%`, correction-on
+  `jigaajiusihaa` `-5.5%`.
+- Fair cross-engine after-run remains far behind librime:
+  `hao` `348.1x`, `ni` `198.4x`, `zhongguo` `26.0x` slower; peak working
+  set remains about `8.1x` librime.
+
+Deferred:
+
+- Queryable compiled `.table.bin` runtime storage.
+- Prism/table candidate lookup integration.
+- Storage hot-path swap away from retained `entries_by_code`.
+- Mmap/borrowed storage.
+- Browser startup/typing claims.
+
+Gate outcomes:
+
+| Gate | Outcome |
+| --- | --- |
+| `M34-PERF-01` | Complete: fresh native and fair cross-engine M33-surface baselines captured. |
+| `M34-PERF-02` | Complete: attribution recorded with fresh full-ABI/engine rows plus a temporary diagnostic artifact for `ni` and `hao`; no diagnostic instrumentation is retained in production code. |
+| `M34-PERF-03` | Complete: full-list readers audited before changing retained table state. |
+| `M34-PERF-04` | Complete: internal bounded request/result contract added without public ABI change. |
+| `M34-PERF-05` | Complete: safe short `luna_pinyin` first-page refresh uses bounded materialization and lazy full-list expansion. |
+| `M34-PERF-06` | Complete: heap-backed `TableLookup` abstraction added and tested. |
+| `M34-PERF-07` | Closed by no-go: compiled `.table.bin` query storage was not implemented because current compiled readers still materialize owned dictionaries and payload parity work remains. |
+| `M34-PERF-08` | Closed by no-go: prism/table candidate integration was not implemented because the prism does not carry candidate payload bytes and needs a table-backed payload query path first. |
+| `M34-PERF-09` | Complete: upstream and TypeDuck parity gates stayed byte-identical. |
+| `M34-PERF-10` | Complete with caveat: native first-page `luna_pinyin` full-ABI rows improved, but Yune remains far behind librime on fair cross-engine typing rows. |
+| `M34-PERF-11` | Closed by no-go: mmap/borrowed storage was not attempted because compact queryable table/prism storage did not land. |
+| `M34-PERF-12` | Complete: Rust, focused parity, workspace, benchmark, report, and diff gates run; no runtime/browser gates were required. |
+| `M34-PERF-13` | Complete: `my_rime` reference split recorded with delivery/cache work routed to M31. |
+
+The public report is safe to show only with the caveats above: M34 is a narrow
+native first-page win and an architecture step toward future storage work, not a
+claim that Yune is faster than librime or that browser delivery improved.
+
 ## Status
 
-Draft. M34 is the deep follow-up to the M33 finding that native `luna_pinyin` still trails librime badly on per-key rows, cold start, and memory. It should run only when the user explicitly prioritizes classic engine latency over immediate public-demo or Windows product work.
+Complete. M34 is the deep follow-up to the M33 finding that native
+`luna_pinyin` still trails librime badly on per-key rows, cold start, and
+memory. It closed the bounded candidate-pipeline subset and deferred storage
+representation work behind explicit evidence gates.
 
 ## Scope
 

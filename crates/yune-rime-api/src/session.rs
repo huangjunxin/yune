@@ -275,6 +275,17 @@ pub(crate) fn session_candidates_snapshot(
     Some(session.engine.context().candidates.clone())
 }
 
+pub(crate) fn session_complete_candidates_snapshot(
+    session_id: RimeSessionId,
+) -> Option<Vec<yune_core::Candidate>> {
+    let mut registry = sessions()
+        .lock()
+        .expect("session registry should not be poisoned");
+    let session = registry.get_session_mut(session_id)?;
+    session.engine.ensure_complete_candidate_list();
+    Some(session.engine.context().candidates.clone())
+}
+
 pub(crate) fn session_inspector_snapshot(
     session_id: RimeSessionId,
 ) -> Option<(

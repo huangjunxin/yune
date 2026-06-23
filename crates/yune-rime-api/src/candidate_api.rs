@@ -1,7 +1,7 @@
 use std::{ffi::c_void, ffi::CString, os::raw::c_int, ptr};
 
 use crate::{
-    free_candidate_fields, session_candidates_snapshot, Bool, RimeCandidate,
+    free_candidate_fields, session_complete_candidates_snapshot, Bool, RimeCandidate,
     RimeCandidateListIterator, RimeSessionId, FALSE, TRUE,
 };
 
@@ -43,7 +43,7 @@ pub unsafe extern "C" fn RimeCandidateListFromIndex(
         return FALSE;
     }
 
-    let Some(candidates) = session_candidates_snapshot(session_id) else {
+    let Some(candidates) = session_complete_candidates_snapshot(session_id) else {
         return FALSE;
     };
     if candidates.is_empty() {

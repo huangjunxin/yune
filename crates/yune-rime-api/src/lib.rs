@@ -1522,6 +1522,11 @@ fn candidate_index_on_current_page(session: &SessionState, index: usize) -> Opti
 }
 
 fn highlight_candidate_clamped_like_librime(session: &mut SessionState, index: usize) -> bool {
+    if !session.engine.candidate_list_complete()
+        && index >= session.engine.context().candidates.len()
+    {
+        session.engine.ensure_complete_candidate_list();
+    }
     let candidate_count = session.engine.context().candidates.len();
     if candidate_count == 0 {
         return false;

@@ -53,6 +53,8 @@ fn main() {
         run_real_per_key_engine_only(RealSchema::Jyut6ping3Mobile, "loengjathau", false),
         run_real_per_key_full_abi_with_correction(api, "jigaajiusihaa"),
         run_real_per_key_engine_only(RealSchema::Jyut6ping3Mobile, "jigaajiusihaa", true),
+        run_real_per_key_full_abi_for_schema(api, RealSchema::LunaPinyin, "hao"),
+        run_real_per_key_engine_only(RealSchema::LunaPinyin, "hao", false),
         run_real_per_key_full_abi_for_schema(api, RealSchema::LunaPinyin, "ni"),
         run_real_per_key_engine_only(RealSchema::LunaPinyin, "ni", false),
         run_real_per_key_full_abi_for_schema(api, RealSchema::LunaPinyin, "zhongguo"),
@@ -917,6 +919,7 @@ fn build_real_engine(schema: RealSchema, enable_correction: bool) -> Engine {
     }
 
     let mut engine = Engine::new();
+    engine.set_schema(schema.schema_id(), schema.schema_id());
     if prediction_never_first {
         engine.set_prediction_never_first(true);
     }

@@ -3,14 +3,14 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::Mutex;
 
 use crate::comment_format::CommentFormat;
-use crate::dictionary::normalize_table_code;
+use crate::dictionary::{normalize_table_code, TableLookup};
 use crate::filter::contains_extended_cjk;
 use crate::poet::UpstreamSentenceModel;
 use crate::spelling_algebra::{ExpandedSpellingEntry, SpellingAlgebra};
 use crate::{
-    Candidate, CandidateSource, Context, PresetVocabularyEntry, RimeCorrectionEntry,
-    RimeToleranceRule, SpellingAlgebraDebug, Status, TableDictionary, TableDictionaryParseError,
-    TableEntry, Translator,
+    Candidate, CandidateRequest, CandidateSource, Context, PresetVocabularyEntry,
+    RimeCorrectionEntry, RimeToleranceRule, SpellingAlgebraDebug, Status, TableDictionary,
+    TableDictionaryParseError, TableEntry, TranslationResult, Translator,
 };
 
 const TYPEDUCK_CORRECTION_CREDIBILITY: f32 = -16.118_095; // log(1e-7)
@@ -76,6 +76,14 @@ impl PendingLookupCandidate {
         }
         quality
     }
+}
+
+struct PendingLookupCandidateRef<'a> {
+    entry_code: &'a str,
+    lookup_code: &'a str,
+    candidate: &'a Candidate,
+    correction_distance: Option<usize>,
+    emission_order: usize,
 }
 
 fn sentence_piece_quality(raw_quality: f32, word_penalty: f32) -> f32 {
@@ -716,6 +724,173 @@ impl StaticTableTranslator {
         candidate
     }
 
+    fn bounded_request_supported(&self, lookup_specs: &[LookupCodeSpec]) -> bool {
+        !self.enable_correction
+            && !self.dynamic_correction_lookup
+            && self.corrections.is_empty()
+            && self.tolerance_rules.is_empty()
+            && !self.combine_candidates
+            && !self.prediction_never_first
+            && self.prediction_candidate_limit.is_none()
+            && !self.prefix_fallback
+            && !self.enable_sentence
+            && !self.sentence_over_completion
+            && self.upstream_sentence_model.is_none()
+            && lookup_specs.iter().all(|spec| {
+                spec.correction_distance.is_none() && spec.required_syllable_count.is_none()
+            })
+    }
+
+    fn materialized_quality(
+        &self,
+        entry_code: &str,
+        lookup_code: &str,
+        candidate: &Candidate,
+        correction_distance: Option<usize>,
+    ) -> f32 {
+        let mut raw_quality = candidate.quality;
+        if let Some(distance) = correction_distance {
+            raw_quality += TYPEDUCK_CORRECTION_CREDIBILITY * distance as f32;
+        }
+        let mut quality = raw_quality.exp() + self.initial_quality;
+        if entry_code != lookup_code {
+            quality -= 1.0;
+        }
+        quality
+    }
+
+    fn bounded_candidate_order(
+        &self,
+        left: &PendingLookupCandidateRef<'_>,
+        right: &PendingLookupCandidateRef<'_>,
+    ) -> Ordering {
+        self.materialized_quality(
+            right.entry_code,
+            right.lookup_code,
+            right.candidate,
+            right.correction_distance,
+        )
+        .partial_cmp(&self.materialized_quality(
+            left.entry_code,
+            left.lookup_code,
+            left.candidate,
+            left.correction_distance,
+        ))
+        .unwrap_or(Ordering::Equal)
+        .then_with(|| left.emission_order.cmp(&right.emission_order))
+    }
+
+    fn push_bounded_pending<'a>(
+        &self,
+        selected: &mut Vec<PendingLookupCandidateRef<'a>>,
+        candidate: PendingLookupCandidateRef<'a>,
+        limit: usize,
+    ) {
+        if selected.len() < limit {
+            selected.push(candidate);
+            return;
+        }
+        let Some((worst_index, worst)) = selected
+            .iter()
+            .enumerate()
+            .max_by(|(_, left), (_, right)| self.bounded_candidate_order(left, right))
+        else {
+            return;
+        };
+        if self.bounded_candidate_order(&candidate, worst) == Ordering::Less {
+            selected[worst_index] = candidate;
+        }
+    }
+
+    fn bounded_candidates_for_lookup_codes(
+        &self,
+        lookup_specs: &[LookupCodeSpec],
+        filter_by_charset: bool,
+        limit: usize,
+        include_full_count: bool,
+    ) -> TranslationResult {
+        let mut selected = Vec::new();
+        let mut emission_order = 0;
+        let mut full_count = 0;
+        for lookup_spec in lookup_specs {
+            let lookup_code = lookup_spec.code.as_str();
+            let lookup_has_exact_candidates = self.entries_by_code.has_code(lookup_code);
+            if let Some(exact_candidates) = self.entries_by_code.exact_candidates(lookup_code) {
+                for candidate in exact_candidates.iter().filter(|candidate| {
+                    self.is_dictionary_word_allowed(candidate)
+                        && lookup_spec.required_syllable_count.map_or(true, |count| {
+                            candidate_syllable_count(candidate) == Some(count)
+                        })
+                        && (!filter_by_charset || !contains_extended_cjk(&candidate.text))
+                }) {
+                    full_count += 1;
+                    self.push_bounded_pending(
+                        &mut selected,
+                        PendingLookupCandidateRef {
+                            entry_code: lookup_code,
+                            lookup_code,
+                            candidate,
+                            correction_distance: lookup_spec.correction_distance,
+                            emission_order,
+                        },
+                        limit,
+                    );
+                    emission_order += 1;
+                }
+            }
+            if lookup_spec.correction_distance.is_none()
+                && self.enable_completion
+                && !lookup_code.is_empty()
+            {
+                for (entry_code, entry_candidates) in
+                    self.entries_by_code.prefix_candidates(lookup_code)
+                {
+                    if entry_code == lookup_code {
+                        continue;
+                    }
+                    for candidate in entry_candidates.iter().filter(|candidate| {
+                        let limited_prediction =
+                            self.is_limited_prediction_candidate(lookup_code, candidate);
+                        self.is_dictionary_word_allowed(candidate)
+                            && self.is_completion_candidate_allowed(
+                                lookup_has_exact_candidates,
+                                limited_prediction,
+                                candidate,
+                            )
+                            && (!filter_by_charset || !contains_extended_cjk(&candidate.text))
+                    }) {
+                        full_count += 1;
+                        self.push_bounded_pending(
+                            &mut selected,
+                            PendingLookupCandidateRef {
+                                entry_code,
+                                lookup_code,
+                                candidate,
+                                correction_distance: lookup_spec.correction_distance,
+                                emission_order,
+                            },
+                            limit,
+                        );
+                        emission_order += 1;
+                    }
+                }
+            }
+        }
+        selected.sort_by(|left, right| self.bounded_candidate_order(left, right));
+        let candidates = selected
+            .into_iter()
+            .map(|candidate| {
+                self.candidate_for_lookup(
+                    candidate.entry_code,
+                    candidate.candidate,
+                    candidate.lookup_code,
+                    candidate.correction_distance,
+                )
+            })
+            .collect::<Vec<_>>();
+        TranslationResult::bounded(candidates, full_count, include_full_count)
+    }
+
     fn candidates_for_lookup_codes(
         &self,
         lookup_specs: &[LookupCodeSpec],
@@ -776,7 +951,7 @@ impl StaticTableTranslator {
                             return None;
                         }
                         Some(PendingLookupCandidate {
-                            entry_code: entry_code.clone(),
+                            entry_code: entry_code.to_owned(),
                             lookup_code: lookup_code.to_owned(),
                             candidate: candidate.clone(),
                             correction_distance: lookup_spec.correction_distance,
@@ -976,6 +1151,46 @@ impl StaticTableTranslator {
         }
 
         candidates
+    }
+
+    fn translated_candidates_for_segment_with_request(
+        &self,
+        input: &str,
+        filter_by_charset: bool,
+        segment_tags: Option<&[String]>,
+        request: CandidateRequest,
+    ) -> TranslationResult {
+        let Some(limit) = request.limit.filter(|limit| *limit > 0) else {
+            return TranslationResult::complete(self.translated_candidates_for_segment(
+                input,
+                filter_by_charset,
+                segment_tags,
+            ));
+        };
+        let accepts_segment = segment_tags
+            .map(|tags| self.accepts_segment_tags(tags))
+            .unwrap_or_else(|| self.accepts_default_segment());
+        if !accepts_segment {
+            return TranslationResult::complete(Vec::new());
+        }
+
+        let Some(lookup_code) = self.lookup_code(input) else {
+            return TranslationResult::complete(Vec::new());
+        };
+        let expanded_lookup_codes = self.expanded_lookup_specs(lookup_code);
+        if !self.bounded_request_supported(&expanded_lookup_codes) {
+            return TranslationResult::complete(self.translated_candidates_for_segment(
+                input,
+                filter_by_charset,
+                segment_tags,
+            ));
+        }
+        self.bounded_candidates_for_lookup_codes(
+            &expanded_lookup_codes,
+            filter_by_charset,
+            limit,
+            request.include_debug_full_count,
+        )
     }
 
     fn sentence_candidate(
@@ -1474,6 +1689,25 @@ impl Translator for StaticTableTranslator {
             input,
             filter_by_charset,
             Some(&context.segment_tags),
+        )
+    }
+
+    fn translate_with_context_and_request(
+        &self,
+        input: &str,
+        _status: &Status,
+        options: &HashMap<String, bool>,
+        context: &Context,
+        request: CandidateRequest,
+    ) -> TranslationResult {
+        let filter_by_charset = (self.enable_charset_filter
+            && !options.get("extended_charset").copied().unwrap_or(false))
+            || request.filter_extended_cjk;
+        self.translated_candidates_for_segment_with_request(
+            input,
+            filter_by_charset,
+            Some(&context.segment_tags),
+            request,
         )
     }
 

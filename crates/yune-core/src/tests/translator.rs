@@ -1,6 +1,8 @@
+use std::collections::HashMap;
+
 use crate::{
-    CandidateSource, Engine, HistoryTranslator, PunctuationTranslator, ReverseLookupTranslator,
-    StaticTableTranslator, TableDictionary, Translator,
+    CandidateRequest, CandidateSource, Context, Engine, HistoryTranslator, PunctuationTranslator,
+    ReverseLookupTranslator, StaticTableTranslator, Status, TableDictionary, Translator,
 };
 
 #[test]
@@ -49,6 +51,58 @@ sort: original
     assert_eq!(candidates[0].source, CandidateSource::ReverseLookup);
     assert_eq!(candidates[0].text, "火");
     assert_eq!(candidates[0].comment, "ho; huo");
+}
+
+#[test]
+fn bounded_static_table_request_matches_eager_top_candidates() {
+    let translator = StaticTableTranslator::parse_rime_dict_yaml(
+        r#"
+---
+name: sample
+version: "0.1"
+sort: by_weight
+...
+
+first	na	9
+second	nb	8
+third	nc	7
+fourth	nd	6
+fifth	ne	5
+"#,
+    )
+    .expect("dictionary should parse")
+    .with_completion(true)
+    .with_sentence(false);
+    let mut eager = translator.translate("n");
+    eager.sort_by(|left, right| {
+        right
+            .quality
+            .partial_cmp(&left.quality)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+
+    let bounded = translator.translate_with_context_and_request(
+        "n",
+        &Status::default(),
+        &HashMap::new(),
+        &Context::default(),
+        CandidateRequest::bounded(3).with_debug_full_count(true),
+    );
+
+    assert_eq!(
+        bounded
+            .candidates
+            .iter()
+            .map(|candidate| candidate.text.as_str())
+            .collect::<Vec<_>>(),
+        eager
+            .iter()
+            .take(3)
+            .map(|candidate| candidate.text.as_str())
+            .collect::<Vec<_>>()
+    );
+    assert_eq!(bounded.full_count, Some(5));
+    assert!(!bounded.is_complete);
 }
 
 #[test]

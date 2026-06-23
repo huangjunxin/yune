@@ -4,39 +4,37 @@ Date: 2026-06-23
 
 Evidence:
 
-- M33 before: [`evidence/m33-2026-06-23/before-yune-vs-librime/`](./evidence/m33-2026-06-23/before-yune-vs-librime/)
-- M33 after low-risk slice: [`evidence/m33-2026-06-23/after-low-risk-yune-vs-librime/`](./evidence/m33-2026-06-23/after-low-risk-yune-vs-librime/)
-- Native Criterion logs: [`evidence/m33-2026-06-23/frontend-baselines-before.txt`](./evidence/m33-2026-06-23/frontend-baselines-before.txt) and [`evidence/m33-2026-06-23/frontend-baselines-after-low-risk.txt`](./evidence/m33-2026-06-23/frontend-baselines-after-low-risk.txt)
+- M33 fairness/cache evidence: [`evidence/m33-2026-06-23/`](./evidence/m33-2026-06-23/)
+- M34 before cross-engine rerun: [`evidence/m34-queryable-table-prism/baseline-yune-vs-librime/`](./evidence/m34-queryable-table-prism/baseline-yune-vs-librime/)
+- M34 after cross-engine rerun: [`evidence/m34-queryable-table-prism/after-yune-vs-librime/`](./evidence/m34-queryable-table-prism/after-yune-vs-librime/)
+- M34 native logs: [`evidence/m34-queryable-table-prism/frontend-baselines-before.txt`](./evidence/m34-queryable-table-prism/frontend-baselines-before.txt) and [`evidence/m34-queryable-table-prism/frontend-baselines-after-final.txt`](./evidence/m34-queryable-table-prism/frontend-baselines-after-final.txt)
 
 ## Public summary
 
-M33 corrects the earlier unfair `luna_pinyin` comparison. Yune now lazy-loads the
-`stroke` reverse-lookup dictionary, matching upstream librime's behavior for the
-timed no-reverse-lookup rows. The final public comparison can safely show a real
-startup/session improvement, but it must separate cold launch from warm cache
-hits and must show that per-key lookup and memory footprint still trail librime
-by a wide margin.
+M33 corrected the unfair `luna_pinyin` comparison by lazy-loading the `stroke`
+reverse lookup and sharing built dictionary translators across compatible schema
+selects. M34 then landed a narrower first-page candidate-pipeline optimization:
+short `luna_pinyin` inputs can keep complete cheap prefix enumeration while
+materializing only a bounded candidate window for the ABI/context path.
 
-Final M33 result on the shared upstream `luna_pinyin` C-ABI workload:
+The safe public claim is still conservative:
 
-- Cold startup/runtime-ready sample: Yune `909,375.4 us`; librime `80,260.8 us`; Yune is `11.3x` slower.
-- Warm startup/runtime-ready median after the first cache-building sample: Yune `47,556.3 us`; librime `26,964.8 us`; Yune is `1.8x` slower.
-- Session create/select/destroy median: Yune `47,813.7 us`; librime `25,765.9 us`; Yune is `1.9x` slower.
-- Startup peak working set: Yune `182,775,808 bytes`; librime `22,519,808 bytes`; Yune peaks at about `8.1x` librime.
-- Key processing still trails: `ni` `212.8x`, `hao` `361.3x`, and `zhongguo` `25.4x` slower than librime.
+- Yune is no longer measuring luna-plus-stroke startup against luna-only librime.
+- M34 improves a bounded native first-page `luna_pinyin` path, most clearly in
+  `per_key_real_luna_pinyin_ni_full_abi`: `1,760.250 us` -> `1,132.950 us`
+  (`-35.6%`).
+- Yune still trails librime widely on per-key rows and memory footprint.
+- No browser startup, browser typing, WASM, React, Cloudflare, or TypeDuck-Web
+  delivery win is claimed from M34.
 
-Against the M33 before run, Yune's cold startup sample dropped from
-`3,141,449.8 us` to `909,375.4 us` (`-71.1%`), and warm re-selects now run
-around `47.6 ms` because the process-global built-translator cache is hot.
-Session create/select/destroy dropped from `2,985,364.0 us` to `47,813.7 us`
-(`-98.4%`). Per-key Yune rows regressed in this run: `ni` `+8.7%`, `hao`
-`+12.9%`, and `zhongguo` `+10.4%`. Those regressions are small relative to the
-startup/session work but are not a win claim.
+Final fair M34 cross-engine after-run:
 
-No browser startup, browser typing, WASM, React, or TypeDuck-Web UI result is
-claimed from this benchmark. No chart SVG was regenerated for M33; a chart is
-safe to publish only if it shows both the startup/session win and the unresolved
-per-key gap.
+- `hao`: Yune `12,216.900 us`, librime `35.100 us`; Yune is `348.1x` slower.
+- `ni`: Yune `5,693.900 us`, librime `28.700 us`; Yune is `198.4x` slower.
+- `zhongguo`: Yune `35,909.100 us`, librime `1,379.400 us`; Yune is `26.0x` slower.
+- Session create/select/destroy: Yune `46,743.400 us`, librime `28,121.800 us`; Yune is `1.7x` slower.
+- Warm startup/runtime-ready: Yune `47,126.800 us`, librime `30,315.200 us`; Yune is `1.6x` slower.
+- Peak working set: Yune `182,333,440 bytes`, librime `22,585,344 bytes`; Yune peaks at about `8.1x` librime.
 
 ## Methodology
 
@@ -44,7 +42,7 @@ Both engines were measured through the same librime-shaped C API harness:
 [`../../scripts/yune-vs-librime-benchmark.cs`](../../scripts/yune-vs-librime-benchmark.cs),
 driven by [`../../scripts/benchmark-yune-vs-librime.ps1`](../../scripts/benchmark-yune-vs-librime.ps1).
 
-Command used for both M33 cross-engine runs:
+Cross-engine command:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\benchmark-yune-vs-librime.ps1 -OutputRoot <evidence-dir> -Iterations 9 -SessionIterations 9 -KeyIterations 25
@@ -53,122 +51,105 @@ powershell -ExecutionPolicy Bypass -File scripts\benchmark-yune-vs-librime.ps1 -
 Native benchmark command:
 
 ```powershell
-cmd /c "cargo bench -p yune-rime-api --bench frontend_baselines > target\m33-frontend-baselines-*.txt 2>&1"
+cmd /c "cargo bench -p yune-rime-api --bench frontend_baselines > target\m34-frontend-baselines-*.txt 2>&1"
 ```
 
 The cross-engine rows use the same upstream `luna_pinyin` schema id, the same
-shared/user data roots, and the same `default` module list. The timed key rows
-are `ni`, `hao`, and `zhongguo`; none triggers reverse lookup. After M33, Yune
-does not load `stroke` during schema select for those rows, so the former
-luna-plus-stroke Yune vs luna-only librime startup/session mismatch is gone.
-
-This is a no-deploy comparison. It does not measure dictionary deployment, web
-asset loading, browser paint, or TypeDuck `jyut6ping3` profile behavior. The
-startup workload runs multiple samples in one process, so sample `0` is the cold
-schema build and samples `1..8` are warm cache hits. Memory counters are Windows
-process working-set counters from the benchmark host; peak working set is the
-footprint comparison, while ready deltas describe marginal growth for a sample.
+shared/user data roots, and the same default module list. This is a no-deploy
+comparison. It does not measure TypeDuck-Web delivery, browser paint, Cloudflare
+cache behavior, or public-demo startup.
 
 ## Results
 
 ### Cross-engine summary
 
-| Workload | Engine | Cold sample | Warm/steady median | Peak working set |
-| --- | --- | ---: | ---: | ---: |
-| Startup/runtime-ready | Yune before | `3,141,449.8 us` | `2,881,852.7 us` | `261,500,928 bytes` |
-| Startup/runtime-ready | Yune after | `909,375.4 us` | `47,556.3 us` | `182,775,808 bytes` |
-| Startup/runtime-ready | librime after | `80,260.8 us` | `26,964.8 us` | `22,519,808 bytes` |
-| Session create/select/destroy | Yune before | n/a | `2,985,364.0 us` | `261,500,928 bytes` |
-| Session create/select/destroy | Yune after | n/a | `47,813.7 us` | `182,775,808 bytes` |
-| Session create/select/destroy | librime after | n/a | `25,765.9 us` | `22,519,808 bytes` |
+| Workload | Engine | Baseline median | M34 after median | After p95 | Peak working set |
+| --- | --- | ---: | ---: | ---: | ---: |
+| `hao` key sequence | Yune | `13,336.800 us` | `12,216.900 us` | `13,688.700 us` | `182,333,440 bytes` |
+| `hao` key sequence | librime | `35.200 us` | `35.100 us` | `35.900 us` | `22,507,520 bytes` |
+| `ni` key sequence | Yune | `5,858.800 us` | `5,693.900 us` | `5,822.400 us` | `182,333,440 bytes` |
+| `ni` key sequence | librime | `28.300 us` | `28.700 us` | `58.500 us` | `22,495,232 bytes` |
+| `zhongguo` key sequence | Yune | `36,451.100 us` | `35,909.100 us` | `39,995.800 us` | `182,333,440 bytes` |
+| `zhongguo` key sequence | librime | `1,503.400 us` | `1,379.400 us` | `1,446.800 us` | `22,585,344 bytes` |
+| session create/select/destroy | Yune | `48,329.000 us` | `46,743.400 us` | `51,333.100 us` | `182,333,440 bytes` |
+| session create/select/destroy | librime | `30,778.900 us` | `28,121.800 us` | `30,889.900 us` | `22,470,656 bytes` |
+| startup/runtime-ready | Yune | `50,065.200 us` | `47,126.800 us` | `885,728.100 us` | `182,333,440 bytes` |
+| startup/runtime-ready | librime | `31,804.000 us` | `30,315.200 us` | `75,034.500 us` | `22,392,832 bytes` |
 
-The `909.4 ms` after-run sample is not a random tail; it is the first cold
-schema build in a fresh benchmark process. The `47.6 ms` row is the warm
-re-select capability after that process-global cache has been populated. The
-session row is the cleanest accepted win from the build-once cache.
+Yune baseline-to-M34-after movement in the fair cross-engine harness:
 
-### Memory footprint
+| Workload | Change |
+| --- | ---: |
+| `hao` key sequence | `-8.4%` |
+| `ni` key sequence | `-2.8%` |
+| `zhongguo` key sequence | `-1.5%` |
+| session create/select/destroy | `-3.3%` |
+| startup/runtime-ready | `-5.9%` |
 
-| Metric | Yune before | Yune after | librime after |
-| --- | ---: | ---: | ---: |
-| Cold startup ready delta | `219,164,672 bytes` | `155,615,232 bytes` | `4,775,936 bytes` |
-| Startup peak working set | `261,500,928 bytes` | `182,775,808 bytes` | `22,519,808 bytes` |
-| Warm marginal ready delta | n/a | `24,576 bytes` | `847,872 bytes` |
-
-The warm marginal ready delta is useful for cache-hit accounting, but it is not
-the memory footprint. Public copy should lead with peak working set: after M33,
-Yune still peaks around `8.1x` librime on this workload.
-
-### Key processing
-
-| Input | Yune before | Yune after | librime after | After ratio |
-| --- | ---: | ---: | ---: | ---: |
-| `ni` | `5,579.8 us` | `6,064.5 us` | `28.5 us` | `212.8x` |
-| `hao` | `11,043.8 us` | `12,463.4 us` | `34.5 us` | `361.3x` |
-| `zhongguo` | `34,024.0 us` | `37,572.3 us` | `1,479.8 us` | `25.4x` |
-
-These rows remain the main unresolved native typing gap. M33 did not rewrite the
-candidate production pipeline or the table/prism lookup model, so it should not
-be described as a per-key latency win.
+These rows are mixed. They are safe to publish only with the unresolved per-key
+gap visible.
 
 ### Native watched rows
 
-The in-repo `frontend_baselines` benchmark confirms the same shape:
-
-| Row | Before median | After median | Change |
+| Row | Before median | M34 after median | Change |
 | --- | ---: | ---: | ---: |
-| `startup_trace_luna_pinyin_select_schema_total` | `261,245 us` | `223,858 us` | `-14.3%` |
-| `startup_trace_luna_pinyin_translator_install` | `194,531 us` | `171,438 us` | `-11.9%` |
-| `startup_trace_luna_pinyin_spelling_algebra_expand` | `104,343 us` | `107,597 us` | `+3.1%` |
-| `startup_trace_luna_pinyin_translator_index_build` | `8,132 us` | `11,283 us` | `+38.8%` |
-| `per_key_real_jyut6ping3_mobile_hai_full_abi` | `20,557.833 us` | `20,979.133 us` | `+2.0%` |
-| `per_key_real_jyut6ping3_mobile_jigaajiusihaa_full_abi` | `29,935.692 us` | `31,033.692 us` | `+3.7%` |
-| `per_key_real_luna_pinyin_ni_full_abi` | `1,429.950 us` | `1,913.350 us` | `+33.8%` |
-| `per_key_real_luna_pinyin_zhongguo_full_abi` | `12,064.550 us` | `12,705.675 us` | `+5.3%` |
+| `per_key_real_luna_pinyin_ni_full_abi` | `1,760.250 us` | `1,132.950 us` | `-35.6%` |
+| `per_key_real_luna_pinyin_ni_engine_only` | `569.700 us` | `575.250 us` | `+1.0%` |
+| `per_key_real_luna_pinyin_zhongguo_full_abi` | `12,697.600 us` | `12,119.013 us` | `-4.6%` |
+| `per_key_real_luna_pinyin_zhongguo_engine_only` | `532.575 us` | `515.713 us` | `-3.2%` |
+| `per_key_real_jyut6ping3_mobile_hai_full_abi` | `18,389.567 us` | `19,446.467 us` | `+5.7%` |
+| `per_key_real_jyut6ping3_mobile_jigaajiusihaa_full_abi` | `29,937.777 us` | `28,155.585 us` | `-6.0%` |
+| `per_key_real_jyut6ping3_mobile_jigaajiusihaa_correction_full_abi` | `29,649.146 us` | `28,032.915 us` | `-5.5%` |
+| `startup_trace_luna_pinyin_select_schema_total` | `240,094.000 us` | `227,901.000 us` | `-5.1%` |
+| `startup_trace_luna_pinyin_translator_install` | `188,404.000 us` | `176,787.000 us` | `-6.2%` |
+| `startup_trace_luna_pinyin_spelling_algebra_expand` | `121,609.000 us` | `112,475.000 us` | `-7.5%` |
+| `startup_trace_luna_pinyin_translator_index_build` | `11,657.000 us` | `11,289.000 us` | `-3.2%` |
 
-The native startup trace is useful for owner attribution, but the cross-engine
-harness is the public comparison because it isolates the shared C-ABI surface.
+`per_key_real_luna_pinyin_hao_*` is a new native row added in M34; it has no
+same-harness before value. Final after medians are `1,378.800 us` full ABI and
+`761.667 us` engine-only.
+
+Engine-only before/after rows are attribution-only because M34 fixed the native
+engine-only benchmark to set the real schema id. Full-ABI rows and the
+cross-engine harness are the public compare surfaces.
 
 ## Interpretation
 
-M33 landed two low-risk changes:
+M34 landed Lever A only:
 
-- Process-wide sharing of immutable built dictionary translators keyed by schema
-  and resolved asset signatures, with deploy/source invalidation coverage.
-- Lazy reverse-lookup dictionary loading, so `stroke` is loaded on first reverse
-  lookup rather than during `luna_pinyin` schema select.
+- internal `CandidateRequest` / `TranslationResult`
+- bounded `StaticTableTranslator` request path for the safe subset
+- lazy engine candidate-window completion on out-of-window access
+- full-list reader preservation for candidate-list iterator APIs
+- internal `TableLookup` abstraction implemented for the current heap map
 
-The lazy spelling-algebra/prism rewrite was not accepted in M33. The checked-in
-upstream prism fixture proves the current prism can map spellings such as `ni`
-to syllable descriptors, but, as in librime, the candidate text/comment/order
-payload belongs to the table side. The storage missing piece is a lazy queryable
-table+prism path, not a prism-only lookup. The typing-latency missing piece is
-separate: Yune still has an eager translator/engine pipeline that can materialize
-and sort/filter far more candidates than the current page displays. Both pieces
-need a broader M34 plan and should not block M31.
+M34 deliberately did not land:
 
-Memory-mapping was also deferred. The low-risk slice made warm re-select/session
-cheap, but cold launch and footprint remain behind librime. Mmap alone is still
-not the right next step unless the hot path can walk borrowed table/prism
-structures instead of rebuilding heap `BTreeMap<String, Vec<Candidate>>`
-indexes, and it should not be described as the per-key fix unless attribution
-shows storage lookup is the dominant per-key owner.
+- compiled table query storage
+- prism-backed candidate lookup
+- mmap/borrowed storage
+- browser/runtime delivery work
+- TypeDuck profile behavior changes
+
+The remaining performance gap is now better split:
+
+- Native first-page short-prefix context work can be bounded and improved.
+- Engine-only lookup is still not close to librime.
+- Cold startup and peak memory still need a queryable table/prism representation
+  before mmap can pay off.
 
 ## Safe public claim
 
 It is safe to say:
 
-> After M33, Yune's fair upstream `luna_pinyin` comparison is no longer distorted
-> by eager `stroke` reverse-lookup loading. The low-risk native cache/lazy-reverse
-> slice reduced cold startup from about `3.14 s` to `0.91 s`, and warm re-select
-> plus session select now run around `48 ms`.
+> Yune's fair upstream `luna_pinyin` comparison now separates native engine
+> work from browser delivery. After M34, the native first-page `ni` full-ABI row
+> improved from about `1.76 ms` to `1.13 ms`, but Yune still trails librime by
+> roughly `26x` to `348x` on the fair per-key rows and about `8x` on peak
+> working set.
 
 It is not safe to say:
 
-> Yune is faster than librime, Yune uses less memory than librime, Yune typing is
-> faster, or browser typing/startup improved.
-
-The remaining before-M31 recommendation is to use this fair report for public
-copy, avoid a one-sided chart, and keep native typing optimization as a future
-M34-style milestone: first profile and bound/lazify candidate production, then
-rewrite table+prism storage if the evidence still points there.
+> Yune is faster than librime, Yune uses less memory than librime, Yune browser
+> startup or browser typing improved, or the queryable table/prism storage work
+> is done.

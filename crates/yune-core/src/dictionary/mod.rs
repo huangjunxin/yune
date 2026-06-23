@@ -5,6 +5,7 @@ mod compiled_table;
 mod double_array;
 mod encoder;
 mod prism_writer;
+mod query_table;
 mod rebuild_executor;
 mod reverse_writer;
 mod source;
@@ -28,6 +29,7 @@ pub use compiled_table::{
 pub use double_array::{DartsDoubleArray, DartsDoubleArrayError, DartsMatch};
 pub use encoder::{CodeCoords, TableEncoder, TableEncoderFormulaError, TableEncodingRule};
 pub use prism_writer::build_prism_bin;
+pub(crate) use query_table::TableLookup;
 pub use rebuild_executor::{
     execute_rebuild_plan, RimeDictRebuildExecuteError, RimeDictRebuildSources,
 };

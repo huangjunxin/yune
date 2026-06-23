@@ -93,12 +93,93 @@ pub trait Translator: Send + Sync {
         self.translate_with_state(input, status, options)
     }
 
+    fn translate_with_context_and_request(
+        &self,
+        input: &str,
+        status: &Status,
+        options: &HashMap<String, bool>,
+        context: &Context,
+        _request: CandidateRequest,
+    ) -> TranslationResult {
+        TranslationResult::complete(self.translate_with_context(input, status, options, context))
+    }
+
     fn spelling_algebra_debug(&self, _input: &str) -> Option<SpellingAlgebraDebug> {
         None
     }
 
     fn prediction_weight_threshold(&self) -> Option<f32> {
         None
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct CandidateRequest {
+    pub limit: Option<usize>,
+    pub filter_extended_cjk: bool,
+    pub include_debug_full_count: bool,
+}
+
+impl CandidateRequest {
+    #[must_use]
+    pub const fn unbounded() -> Self {
+        Self {
+            limit: None,
+            filter_extended_cjk: false,
+            include_debug_full_count: false,
+        }
+    }
+
+    #[must_use]
+    pub const fn bounded(limit: usize) -> Self {
+        Self {
+            limit: Some(limit),
+            filter_extended_cjk: false,
+            include_debug_full_count: false,
+        }
+    }
+
+    #[must_use]
+    pub const fn with_filter_extended_cjk(mut self, filter_extended_cjk: bool) -> Self {
+        self.filter_extended_cjk = filter_extended_cjk;
+        self
+    }
+
+    #[must_use]
+    pub const fn with_debug_full_count(mut self, include_debug_full_count: bool) -> Self {
+        self.include_debug_full_count = include_debug_full_count;
+        self
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct TranslationResult {
+    pub candidates: Vec<Candidate>,
+    pub is_complete: bool,
+    pub full_count: Option<usize>,
+}
+
+impl TranslationResult {
+    #[must_use]
+    pub fn complete(candidates: Vec<Candidate>) -> Self {
+        Self {
+            candidates,
+            is_complete: true,
+            full_count: None,
+        }
+    }
+
+    #[must_use]
+    pub fn bounded(
+        candidates: Vec<Candidate>,
+        full_count: usize,
+        include_full_count: bool,
+    ) -> Self {
+        Self {
+            is_complete: candidates.len() >= full_count,
+            candidates,
+            full_count: include_full_count.then_some(full_count),
+        }
     }
 }
 
