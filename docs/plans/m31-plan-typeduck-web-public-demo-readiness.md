@@ -4,9 +4,11 @@
 >
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Make the internal TypeDuck-Web dogfood harness ready to publish as a public Yune engine demo, with owner-approved TypeDuck assets, payload pruning, browser-honest output-standard support only where needed, and a reproducible Cloudflare deployment path.
+**Goal:** Make the internal TypeDuck-Web dogfood harness ready to publish as a public Yune engine demo, with owner-approved TypeDuck assets, payload pruning, browser-honest output-standard support only where needed, a `my_rime`-style lazy delivery model for public assets, and a reproducible Cloudflare deployment path.
 
-**Architecture:** M31 is a deterministic web-demo readiness milestone, not a new AI product milestone and not the primary Windows product track. TypeDuck-Web shell/dictionary redistribution is owner-approved by the project owner, who is also the TypeDuck author, so this plan does not carry a separate licensing blocker. Keep a short public provenance note so visitors understand the page is exercising the Yune engine through a TypeDuck-Web-derived harness. Then add only the OpenCC output standards Yune can prove and that the public demo actually needs. Finally make the patched TypeDuck-Web source reproducible from checked-in Yune state, pin and prune the WASM/schema assets, and publish through a Cloudflare static-assets deployment with smoke evidence.
+**Architecture:** M31 is a deterministic web-demo readiness milestone, not a new AI product milestone and not the primary Windows product track. TypeDuck-Web shell/dictionary redistribution is owner-approved by the project owner, who is also the TypeDuck author, so this plan does not carry a separate licensing blocker. Keep a short public provenance note so visitors understand the page is exercising the Yune engine through a TypeDuck-Web-derived harness. Then add only the OpenCC output standards Yune can prove and that the public demo actually needs.
+
+The `LibreService/my_rime` comparison changes M31's delivery bar. `my_rime` feels fast in the browser because it separates the app shell from schema payloads: the worker fetches only the selected schema's prebuilt `.table.bin`/`.prism.bin`/`.reverse.bin` dependencies, caches them by content hash, keeps engine work off the main thread, and relies on PWA/CDN caching for warm visits. Yune already has a worker, Emscripten FS/IDBFS, and prebuilt schema assets; the M31 public demo must therefore stop treating the internal dogfood harness's eager all-schema asset load as acceptable public-demo behavior. Finally make the patched TypeDuck-Web source reproducible from checked-in Yune state, pin and prune the WASM/schema assets, add active-schema-only loading plus warm-cache evidence, and publish through a Cloudflare static-assets deployment with smoke evidence.
 
 **Tech Stack:** Rust (`yune-core`, `yune-rime-api`), OpenCC source dictionaries/config chains, `packages/yune-typeduck-runtime`, TypeDuck-Web Vite + React + Tailwind source under `third_party/typeduck-web/source/`, Playwright, Wrangler, and Cloudflare Workers Static Assets or Pages deployment.
 
@@ -24,6 +26,10 @@ In scope:
 - Runtime and TypeDuck-Web UI for supported output standards.
 - Public provenance note stating that TypeDuck-Web shell/dictionary use is owner-approved by the TypeDuck author and that the page is a Yune engine demo.
 - Public payload pruning so the deployed demo ships only the assets needed for the public surface.
+- Active-schema-only runtime asset loading for the public demo. The first paint/ready path must not fetch every schema, source dictionary, and compiled artifact in `third_party/typeduck-web/source/public/schema`.
+- Lazy reverse-lookup dependency loading. Assets needed only for reverse lookup, such as `luna_pinyin`/`cangjie5`/`stroke`-style dependencies or `luna_pinyin_yune_reverse.dict.yaml`, belong in a distinct dependency tier and should load on first reverse lookup rather than at boot.
+- Content-addressed schema/runtime asset metadata and warm-cache behavior, using IndexedDB, Cache Storage, or an equivalent browser cache. Relying only on a hand-bumped `?v=` query string is not enough for the public-readiness gate.
+- PWA/service-worker or Cloudflare immutable-cache behavior for repeat visits, with cold/warm evidence and explicit offline/near-offline limits.
 - Reproducible reconstruction of the patched `third_party/typeduck-web/source/` checkout from checked-in lock/patch/bridge state.
 - Release WASM and schema asset packaging for a public demo.
 - Cloudflare deployment config, local preview, deployed smoke evidence, and docs.
@@ -35,6 +41,7 @@ Out of scope:
 - Windows TSF/frontend work. That belongs to P2-WIN-01 after P2-WIN-02.
 - Candidate ranking, Jyutping composition, TypeDuck comment-byte compatibility, `RimeApi`, or `RimeCandidate` changes unless a focused OpenCC fixture proves the need.
 - Treating `typeduck.hk/web` as an oracle. It can be a comparison target only.
+- Treating `my_rime` as a behavior oracle or copying its source wholesale. It is a delivery and librime-WASM architecture reference; Yune behavior remains fixture/oracle driven by upstream librime and TypeDuck profile captures.
 - Splitting `third_party/typeduck-web/` into a separate repository or submodule.
 - Blocking P2-WIN-01 on Cloudflare/demo polish.
 
@@ -43,6 +50,7 @@ Out of scope:
 - M30 is complete and the current branch is synced with `origin/main`.
 - P2-WIN-02 is complete before public deployment. Engine/UI work may be prepared earlier only if the plan record says deployment is blocked pending P2-WIN-02.
 - P2-WIN-01 keeps product priority after P2-WIN-02. If M31 conflicts with Windows product work, pause M31 unless the user explicitly chooses public web visibility first.
+- If M34 queryable table+prism lookup performance is active, M31 may proceed only with Cloudflare/devops/provenance/payload/UI-only work in a separate worktree. Do not run M31 Task 2 engine OpenCC breadth in parallel with M34; either choose `opencc_scope = current_simplification_only` for the first public demo or queue broader engine OpenCC work after M34 lands.
 - TypeDuck-Web shell and dictionary use is owner-approved by the project owner, who is also the TypeDuck author. No separate M31 licensing clearance gate is required.
 - Cloudflare deployment docs are checked at execution time. As of the M31 plan date, Cloudflare recommends Workers Static Assets for new static/full-stack Worker apps, React + Vite examples use `wrangler.jsonc`, and Wrangler JSON config is recommended for new projects.
 
@@ -56,7 +64,11 @@ Out of scope:
 - `M31-PUBLIC-05`: Cloudflare local preview and deployed smoke cover app boot, WASM load, schema asset load, `jyut6ping3_mobile` typing, OpenCC standard toggle, and route/base-path behavior.
 - `M31-PUBLIC-06`: AI stays default-off/local-only; no remote calls, telemetry, secrets, or third-party model keys are present in the public build. AI-off output is byte-identical to the classic path.
 - `M31-PUBLIC-07`: Public payload is measured, pruned, and documented. The deployed bundle ships only the schemas, compiled assets, dictionaries, fonts, and static files needed by the public surface; source dictionaries and unused schemas are excluded unless the runtime requires them.
-- `M31-PUBLIC-08`: Rust, runtime, TypeDuck-Web build, Playwright, patch reverse/forward, and `git diff --check` gates pass.
+- `M31-PUBLIC-08`: Public runtime asset loading is active-schema-only. The default public boot fetches only the app/runtime assets plus the selected schema's boot dependencies, not all schemas, all source dictionaries, reverse-lookup-only dependencies, or every compiled side artifact.
+- `M31-PUBLIC-09`: Schema/runtime assets have content-addressed metadata and warm-cache evidence. Repeat visits skip unchanged schema payload downloads through IndexedDB, Cache Storage, Cloudflare/browser immutable caching, or an equivalent measured cache. Reverse-lookup dependency assets have separate cold-first-use and warm-reuse evidence.
+- `M31-PUBLIC-10`: Public delivery has PWA/service-worker or Cloudflare cache evidence for the runtime shell and WASM/schema assets. Cold and warm startup are measured separately, and no browser-startup claim is made without real browser evidence.
+- `M31-PUBLIC-11`: WASM/download-size optimization is measured as a delivery win only. Rust engine latency claims stay in M34 or later engine milestones.
+- `M31-PUBLIC-12`: Rust, runtime, TypeDuck-Web build, Playwright, patch reverse/forward, and `git diff --check` gates pass.
 
 ## File Responsibilities
 
@@ -71,6 +83,9 @@ Out of scope:
 - `third_party/typeduck-web/cloudflare/` or an equivalent committed deployment folder: owns Cloudflare config, worker entry, and deployment notes.
 - `third_party/typeduck-web/public-demo/PROVENANCE.md`: records owner-approved TypeDuck-Web shell/dictionary use and the Yune engine demo positioning.
 - `third_party/typeduck-web/public-demo/asset-manifest.md`: owns public payload inventory and pruning decisions.
+- `third_party/typeduck-web/public-demo/schema-asset-manifest.json` or equivalent: owns content-addressed schema/runtime asset metadata for active-schema-only loading.
+- `third_party/typeduck-web/source/src/worker.ts`: owns worker-side schema asset fetching and must not eagerly load unrelated public-demo schemas.
+- `third_party/typeduck-web/source/src/yune-integration/adapter.ts`: owns the runtime bridge and deploy-cache interaction with preloaded assets.
 - `docs/roadmap.md` and `docs/requirements.md`: own milestone status and requirement traceability.
 
 ---
@@ -112,7 +127,7 @@ rg -n "P2-WIN-01|P2-WIN-02|TypeDuck Windows boundary compatibility|M31|M32|prima
 Expected:
 
 - If P2-WIN-02 is complete, M31 can proceed through deployment.
-- If P2-WIN-02 is active, M31 may complete local engine/UI/build work, but Task 5 deployed smoke must remain blocked and the closeout must say why.
+- If P2-WIN-02 is active, M31 may complete local engine/UI/build work, but Task 6 deployed smoke must remain blocked and the closeout must say why.
 - If P2-WIN-01 is ready and actively staffed, pause M31 unless the user explicitly chooses public web visibility first.
 
 - [ ] **Step 0.3: Record owner-approved TypeDuck provenance**
@@ -142,7 +157,9 @@ Get-ChildItem -Recurse third_party\typeduck-web\source\public -File | Sort-Objec
 Expected:
 
 - `asset-manifest.md` records total public asset bytes, largest files, and which schema/dictionary/font/assets are intended for deployment.
-- The public bundle plan prefers the minimum viable surface: `jyut6ping3_mobile` plus required compiled assets, public WASM/JS/CSS, and only dictionaries/assets needed at runtime.
+- The public bundle plan prefers the minimum viable surface: `jyut6ping3_mobile` plus required boot compiled assets, public WASM/JS/CSS, and only dictionaries/assets needed at runtime.
+- The manifest records the current internal eager-load behavior as a baseline and states which assets must move to active-schema-only loading before public deployment.
+- The manifest distinguishes boot assets from reverse-lookup dependencies. Reverse-lookup-only assets are preserved and lazy-loaded on first reverse lookup instead of being dropped or fetched at boot.
 - Source dictionaries, unused schemas, and dev/test-only assets are excluded unless the runtime requires them.
 
 ## Task 1 - Scope OpenCC Output Standards From Real Demo Need
@@ -371,7 +388,7 @@ After writing the initial script, run `rg --files third_party\typeduck-web\sourc
 
 - Ship only the public schemas exposed by the UI, starting with `jyut6ping3_mobile` unless Task 1 deliberately exposes more.
 - Prefer compiled runtime assets required by the browser. Do not ship source `*.dict.yaml` files unless the runtime requires them.
-- Do not ship `cangjie`, `luna_pinyin`, `loengfan`, test fixtures, or dev-only source dictionaries unless the public UI exposes them.
+- Do not eagerly fetch `cangjie`, `luna_pinyin`, `loengfan`, test fixtures, or dev-only source dictionaries at boot unless the public UI exposes them as selected schemas. If any of those assets are reverse-lookup dependencies of the active public schema, keep them in the reverse-lookup dependency tier and lazy-load them on first use.
 - Keep `PROVENANCE.md` and `asset-manifest.md` in the public-demo source folder; include them in the deployed static assets if the public page links to them.
 
 Do not copy build output into git unless the project already tracks that exact artifact type.
@@ -389,7 +406,7 @@ Expected:
 
 - `asset-manifest.md` records total deployed bytes, largest files, and why each schema/dictionary asset is present.
 - The manifest explicitly states which potentially large source dictionaries were excluded.
-- The evidence notes the current Cloudflare file-size and asset limits checked in Task 5.1 before claiming deployment feasibility.
+- The evidence notes the current Cloudflare file-size and asset limits checked in Task 6.1 before claiming deployment feasibility.
 
 - [ ] **Step 4.4: Verify patch discipline**
 
@@ -407,7 +424,85 @@ Expected:
 - Reverse and forward checks pass.
 - `reproducible-build.md` records the exact commands and source revision.
 
-## Task 5 - Add Cloudflare Deployment
+## Task 5 - Add Active-Schema Delivery And Warm Cache
+
+**Files:**
+
+- Modify: `third_party/typeduck-web/source/src/worker.ts`
+- Modify: `third_party/typeduck-web/source/src/yune-integration/adapter.ts`
+- Modify or create: `third_party/typeduck-web/public-demo/schema-asset-manifest.json`
+- Modify or create: `third_party/typeduck-web/public-demo/cache-policy.md`
+- Modify: `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`
+- Create evidence: `third_party/typeduck-web/e2e/results/m31-public-demo/delivery-cache-evidence.md`
+
+This task is the `my_rime` delivery lesson adapted to Yune. It is not an engine rewrite and must not change candidate behavior. The worker may still use Yune's own runtime bridge and deploy-cache model; the required behavior is that public boot fetches only the selected schema's boot assets, reverse-lookup dependencies are loaded on first reverse lookup, and unchanged payloads are reused on warm visits.
+
+- [ ] **Step 5.1: Build a selected-schema asset manifest**
+
+Create or generate a manifest that maps each public schema id to exactly the files it needs at runtime:
+
+```json
+{
+  "schemas": {
+    "jyut6ping3_mobile": {
+      "schema": ["jyut6ping3.schema.yaml"],
+      "sourceDictionaries": [],
+      "compiled": ["jyut6ping3.table.bin", "jyut6ping3.reverse.bin", "jyut6ping3_mobile.prism.bin"],
+      "opencc": ["opencc/hk2s.json", "opencc/HKVariantsRev.ocd2", "opencc/HKVariantsRevPhrases.ocd2", "opencc/TSCharacters.ocd2", "opencc/TSPhrases.ocd2"],
+      "reverseLookupDependencies": {
+        "luna_pinyin": {
+          "load": "onFirstReverseLookup",
+          "schema": ["luna_pinyin.schema.yaml"],
+          "sourceDictionaries": ["luna_pinyin_yune_reverse.dict.yaml"],
+          "compiled": ["luna_pinyin.table.bin", "luna_pinyin.reverse.bin", "luna_pinyin.prism.bin"]
+        }
+      }
+    }
+  }
+}
+```
+
+Adjust the exact paths after auditing what Yune actually requires. The audit must classify candidate reverse-lookup dependencies such as `luna_pinyin`, `cangjie5`, `stroke`, and `luna_pinyin_yune_reverse.dict.yaml` as one of: boot-required, lazy reverse-lookup dependency, exposed selectable schema, or unused. If a source `*.dict.yaml` is still required despite compiled assets being present, record the reason in `asset-manifest.md` and treat it as a follow-up optimization candidate.
+
+- [ ] **Step 5.2: Replace eager all-schema public loading**
+
+Refactor the public path so startup does not fetch unrelated schemas such as `loengfan`, `jyut6ping3_scolar`, or their source dictionaries unless the public UI exposes and selects them. For `cangjie5`, `luna_pinyin`, `stroke`, and related reverse-lookup assets, first determine whether they are reverse-lookup dependencies of the active schema; if so, lazy-fetch them on first reverse lookup instead of boot-fetching or dropping them.
+
+Expected:
+
+- Default public boot fetches only app shell, runtime/WASM, shared defaults, selected schema dependencies, and required OpenCC files.
+- Schema switch, if exposed, fetches the target schema's dependency set on demand.
+- Reverse lookup fetches its dependency tier on first use, then reuses it through the same content-addressed warm cache.
+- Internal dogfood-only diagnostics may keep broader fixtures behind an explicit non-public mode, but public deployment must use the pruned path.
+
+- [ ] **Step 5.3: Add content-addressed warm cache**
+
+Add per-asset hash/version metadata and cache lookup before network fetch. Acceptable storage mechanisms include IndexedDB, Cache Storage, or a narrow existing Emscripten IDBFS marker if it can prove unchanged payload reuse.
+
+Expected:
+
+- Warm reload reuses unchanged schema payloads without network refetch.
+- Cache invalidation is keyed by content hash or generated version, not only by a hand-edited `?v=` string.
+- Deploy/config markers remain compatible with Yune's existing runtime deploy-cache checks.
+
+- [ ] **Step 5.4: Add delivery evidence**
+
+Run real-browser evidence that records network requests and startup markers for:
+
+- cold first load
+- warm reload
+- first reverse lookup that requires deferred dependencies, for example the public Jyutping reverse-lookup trigger
+- warm reverse lookup after dependency caching
+- schema switch, if the public UI exposes more than one schema
+
+Expected:
+
+- `delivery-cache-evidence.md` lists fetched URLs, transferred bytes, startup markers, cache hit/miss counts, and largest remaining payloads.
+- The evidence proves reverse-lookup dependencies are absent from the default boot network set, fetched on first reverse lookup, and reused on warm reverse lookup.
+- The evidence explicitly separates browser delivery wins from engine typing-latency wins.
+- If a service worker/PWA is added here instead of Task 6, the evidence records its cache version and update behavior.
+
+## Task 6 - Add Cloudflare Deployment
 
 **Files:**
 
@@ -416,7 +511,7 @@ Expected:
 - Create evidence: `third_party/typeduck-web/e2e/results/m31-public-demo/cloudflare-smoke.md`
 - Modify: `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`
 
-- [ ] **Step 5.1: Verify Cloudflare docs before writing config**
+- [ ] **Step 6.1: Verify Cloudflare docs before writing config**
 
 Open current Cloudflare docs and confirm:
 
@@ -427,7 +522,7 @@ Open current Cloudflare docs and confirm:
 Record the documentation URLs and access date in `cloudflare-smoke.md`.
 Also record the current maximum static-asset/file-size limits and compare them with `asset-manifest.md`.
 
-- [ ] **Step 5.2: Add local preview config**
+- [ ] **Step 6.2: Add local preview config**
 
 Create `wrangler.jsonc` with:
 
@@ -445,7 +540,7 @@ Create `wrangler.jsonc` with:
 
 Adjust paths only after verifying the actual public-demo folder layout. Keep the config committed; do not store account ids, tokens, or secrets.
 
-- [ ] **Step 5.3: Run local Cloudflare preview**
+- [ ] **Step 6.3: Run local Cloudflare preview**
 
 Run:
 
@@ -461,9 +556,9 @@ Expected:
 - Schema assets load.
 - `/web/` and root routing follow the decision recorded in `public-demo/README.md`.
 
-- [ ] **Step 5.4: Deploy only after P2-WIN-02, provenance, and payload gates are satisfied**
+- [ ] **Step 6.4: Deploy only after P2-WIN-02, provenance, payload, and active-schema delivery gates are satisfied**
 
-If P2-WIN-02 is complete or explicitly waived, TypeDuck owner-approved provenance is recorded, and the asset manifest is below the verified Cloudflare limits, run:
+If P2-WIN-02 is complete or explicitly waived, TypeDuck owner-approved provenance is recorded, the asset manifest is below the verified Cloudflare limits, and Task 5 proves active-schema delivery plus warm-cache behavior, run:
 
 ```powershell
 npx.cmd wrangler deploy --config third_party\typeduck-web\public-demo\wrangler.jsonc
@@ -476,7 +571,7 @@ Expected:
 - No Cloudflare token, account id, or secret is committed.
 - If any gate is not satisfied, do not deploy. Record the blocker in `cloudflare-smoke.md` and keep M31 open or partial.
 
-- [ ] **Step 5.5: Run deployed smoke**
+- [ ] **Step 6.5: Run deployed smoke**
 
 Run the focused Playwright smoke against the deployed URL:
 
@@ -495,18 +590,18 @@ Expected:
 - Network capture shows no remote AI/model/telemetry calls.
 - The public page or footer links to the provenance note, or the evidence records why the in-repo provenance file is sufficient.
 
-## Task 6 - AI Posture And Privacy Gate
+## Task 7 - AI Posture And Privacy Gate
 
 **Files:**
 
 - Modify: `third_party/typeduck-web/e2e/yune-typeduck.spec.ts`
 - Create evidence: `third_party/typeduck-web/e2e/results/m31-public-demo/ai-posture.md`
 
-- [ ] **Step 6.1: Add AI-off identity smoke**
+- [ ] **Step 7.1: Add AI-off identity smoke**
 
 Add a browser test that captures candidate state with AI disabled and compares it to the same input after toggling unrelated display controls. The AI option must remain disabled by default on fresh load. For the first public demo, the AI control should be hidden or developer-only unless a separate M32 decision explicitly exposes it.
 
-- [ ] **Step 6.2: Add network posture check**
+- [ ] **Step 7.2: Add network posture check**
 
 In Playwright, collect requests during startup and a short typing session. Assert no requests go to:
 
@@ -516,7 +611,7 @@ In Playwright, collect requests during startup and a short typing session. Asser
 
 The app may fetch its own WASM, JS, CSS, schema, and font/static assets.
 
-- [ ] **Step 6.3: Record posture result**
+- [ ] **Step 7.3: Record posture result**
 
 `ai-posture.md` must state:
 
@@ -526,7 +621,7 @@ The app may fetch its own WASM, JS, CSS, schema, and font/static assets.
 - whether any secrets or telemetry are configured
 - whether AI-off output stayed byte-identical through the tested path
 
-## Task 7 - Closeout
+## Task 8 - Closeout
 
 **Files:**
 
@@ -534,7 +629,7 @@ The app may fetch its own WASM, JS, CSS, schema, and font/static assets.
 - Modify: `docs/requirements.md`
 - Move when complete: `docs/plans/m31-plan-typeduck-web-public-demo-readiness.md` to `docs/plans/archive/`
 
-- [ ] **Step 7.1: Run full gates**
+- [ ] **Step 8.1: Run full gates**
 
 Run:
 
@@ -556,16 +651,16 @@ Expected:
 - All gates pass.
 - If P2-WIN-02 blocked public deployment, local preview evidence may close only the engine/UI/build portion; the roadmap must keep deployment active.
 
-- [ ] **Step 7.2: Update docs and archive**
+- [ ] **Step 8.2: Update docs and archive**
 
 Update:
 
-- `docs/requirements.md` with `M31-PUBLIC-REQ-*` rows matching the acceptance gates.
+- `docs/requirements.md` with `M31-PUBLIC-REQ-*` rows matching the acceptance gates, including active-schema delivery and warm-cache gates.
 - `docs/roadmap.md` with either complete status and deployed URL, or partial/blocker status if public deployment is blocked.
 - `third_party/typeduck-web/public-demo/PROVENANCE.md` and `asset-manifest.md` with the final public-readiness state.
 - Archive this plan only when all acceptance gates close or the remaining deployment blocker is recorded as a new active plan.
 
-- [ ] **Step 7.3: Commit scoped changes**
+- [ ] **Step 8.3: Commit scoped changes**
 
 Stage only M31 files:
 
@@ -587,3 +682,5 @@ Only include `third_party\typeduck-web`, `packages`, and `crates` paths that act
 - Can public deployment proceed before P2-WIN-02, or should the raw TypeDuck comment-boundary risk block sharing even though the web UI sanitizes display output?
 - What exact public copy should explain that the demo exercises Yune through a TypeDuck-Web-derived harness?
 - Which schema/dictionary assets are actually needed by the first public bundle, and which should be excluded for payload size?
+- Can the public worker avoid loading source dictionaries entirely when compiled `.table.bin`/`.reverse.bin`/`.prism.bin` assets are present, or does Yune still require source YAML for a specific public feature?
+- Which cache mechanism should own per-asset schema payload reuse: IndexedDB, Cache Storage/service worker, or the existing Emscripten IDBFS/deploy-cache marker?

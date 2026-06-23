@@ -80,10 +80,11 @@ The Phase 2 Windows plan is the next platform/product planning artifact.
 Yune treats librime as a *behavioral* oracle, not a performance oracle. The
 current upstream-`luna_pinyin` comparison is fair after M33: Yune now lazy-loads
 the `stroke` reverse dictionary and shares built dictionary translators across
-session selects. Startup and session medians improved by about 98% versus the
-fresh M33 baseline, bringing those native C-ABI rows into the same order of
-magnitude as upstream librime. Per-key lookup still trails librime by a wide
-margin, so no typing-speed or browser-speed win is claimed.
+session selects. M33 produced a real startup/session improvement, but the
+numbers must be read as cold versus warm: a fresh Yune process still pays a
+`~909 ms` first schema build and peaks around `183 MB`, while warm re-selects
+are around `48 ms`. Per-key lookup still trails librime by a wide margin, so no
+typing-speed, memory-footprint, or browser-speed win is claimed.
 
 Current analysis and evidence:
 

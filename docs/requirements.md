@@ -497,10 +497,36 @@ Which phases cover which requirements. Updated during roadmap creation.
 | M33-PERF-REQ-02 | M33 | Complete - comparison fairness enforced by lazy reverse lookup, so no headline compares luna-plus-stroke Yune startup against luna-only librime |
 | M33-PERF-REQ-03 | M33 | Complete - lazy reverse-lookup loading preserves first-use reverse lookup behavior and removes eager `stroke` startup/session/resident asymmetry |
 | M33-PERF-REQ-04 | M33 | Complete - build-once dictionary translator sharing reduces repeated schema/session cost with byte-identical candidates and source invalidation coverage |
-| M33-PERF-REQ-05 | M33 | Complete - lazy spelling-algebra prism lookup was spike-gated and deferred because the prism fixture lacks candidate text/comment/order payloads |
-| M33-PERF-REQ-06 | M33 | Complete - mmap compiled artifacts deferred by stop gate; low-risk slice fixed startup/session while remaining gap is per-key lookup representation |
-| M33-PERF-REQ-07 | M33 | Complete - public performance report, root-cause report, README, roadmap, requirements, and archived plan now use the fair M33 rerun; no chart SVG generated |
+| M33-PERF-REQ-05 | M33 | Complete - lazy spelling-algebra lookup was spike-gated and deferred because prism-only lookup is insufficient; byte-identical lookup needs a queryable table+prism path |
+| M33-PERF-REQ-06 | M33 | Complete - mmap compiled artifacts deferred by stop gate; low-risk slice fixed warm re-select/session while remaining gaps are cold startup, footprint, and per-key candidate-pipeline/storage representation |
+| M33-PERF-REQ-07 | M33 | Complete - public performance report, root-cause report, README, roadmap, requirements, and archived plan now use the fair M33 rerun with cold/warm and peak-memory caveats; no chart SVG generated |
 | M33-PERF-REQ-08 | M33 | Complete - full Rust compatibility, ABI, benchmark, and diff gates run for M33; no frontend/browser claim made because no frontend/WASM path changed |
+| M31-PUBLIC-REQ-00 | M31 | Draft - public provenance is recorded before deployment; TypeDuck-Web shell/dictionary use is owner-approved by the TypeDuck author and the page identifies itself as a Yune engine demo |
+| M31-PUBLIC-REQ-01 | M31 | Draft - P2-WIN-02 status and P2-WIN-01 priority are checked before deployment; M31 pauses if it would displace the Windows product track without an explicit decision |
+| M31-PUBLIC-REQ-02 | M31 | Draft - every exposed OpenCC output standard has engine/runtime/browser evidence and unsupported standards are absent or unavailable with a reason |
+| M31-PUBLIC-REQ-03 | M31 | Draft - output-standard controls change candidate/commit output through Yune, not browser-only postprocessing |
+| M31-PUBLIC-REQ-04 | M31 | Draft - public demo rebuild is reproducible from checked-in Yune state: lock file, patch, Yune bridge, WASM, schema assets, and commands |
+| M31-PUBLIC-REQ-05 | M31 | Draft - Cloudflare local preview and deployed smoke cover app boot, WASM load, schema asset load, `jyut6ping3_mobile` typing, output-standard toggle, and routing |
+| M31-PUBLIC-REQ-06 | M31 | Draft - AI remains default-off/local-only with no remote calls, telemetry, secrets, or third-party model keys; AI-off output is byte-identical to classic output |
+| M31-PUBLIC-REQ-07 | M31 | Draft - public payload is measured, pruned, and documented; unused schemas, source dictionaries, fonts, and static files are excluded unless the public runtime needs them |
+| M31-PUBLIC-REQ-08 | M31 | Draft - public runtime asset loading is active-schema-only; default public boot fetches only app/runtime assets plus the selected schema boot dependencies, while reverse-lookup-only dependencies are preserved but not boot-fetched |
+| M31-PUBLIC-REQ-09 | M31 | Draft - schema/runtime assets have content-addressed metadata and warm-cache evidence through IndexedDB, Cache Storage, Cloudflare/browser immutable caching, or equivalent measured reuse, including cold-first-use and warm-reuse evidence for reverse-lookup dependencies |
+| M31-PUBLIC-REQ-10 | M31 | Draft - public delivery has PWA/service-worker or Cloudflare cache evidence, with cold and warm startup measured separately and no browser-startup claim without real browser evidence |
+| M31-PUBLIC-REQ-11 | M31 | Draft - WASM/download-size optimization is measured as a delivery win only; Rust engine latency claims stay in M34 or later engine milestones |
+| M31-PUBLIC-REQ-12 | M31 | Draft - Rust, runtime, TypeDuck-Web build, Playwright, patch reverse/forward, and `git diff --check` gates pass |
+| M34-PERF-REQ-01 | M34 | Draft - fresh native comparison baselines reproduce the M33 surface before implementation |
+| M34-PERF-REQ-02 | M34 | Draft - hot-path attribution splits `ni`/`hao` time across lookup, range scan, abbreviation-probe allocation, candidate clone/comment formatting, engine global sort versus bounded top-K selection, filter/ranker work, and context/menu update before any rewrite |
+| M34-PERF-REQ-03 | M34 | Draft - every steady-state `entries_by_code`, `Translator::translate`, and `Engine::refresh_candidates` reader/caller is audited and mapped to bounded, lazy, or full-list-required behavior |
+| M34-PERF-REQ-04 | M34 | Draft - a bounded/lazy candidate contract is added internally without changing the public C ABI, separating complete cheap enumeration from bounded expensive materialization under the current code-ordered heap map, with eager translation retained as a compatibility wrapper during migration |
+| M34-PERF-REQ-05 | M34 | Draft - ordinary first-page engine refresh avoids unbounded full-result materialization, global sorting, and filtering when active filters/rankers can operate on a bounded stream, using stable-tie-preserving top-K partial selection or a documented fallback where order semantics require it |
+| M34-PERF-REQ-06 | M34 | Draft - a table lookup abstraction reproduces current heap-map behavior byte-for-byte on source-backed and compiled-backed fixtures |
+| M34-PERF-REQ-07 | M34 | Draft - compiled `.table.bin` query path preserves candidate text, comment bytes, quality/order, code, and TypeDuck advanced payloads, with structured no-go errors for unsupported sections |
+| M34-PERF-REQ-08 | M34 | Draft - prism+table integration uses prism spelling data plus table candidate payloads to preserve upstream `luna_pinyin` exact, completion, and sentence rows |
+| M34-PERF-REQ-09 | M34 | Draft - TypeDuck `jyut6ping3` rich comments, long composition, partial/default-confirm behavior, and userdb learning invariants remain byte-identical |
+| M34-PERF-REQ-10 | M34 | Draft - native per-key lookup improves materially on `luna_pinyin`, targeting low-hundreds-of-microseconds for `ni`/`hao` or a documented stop-gate, with no unaccepted TypeDuck regression over 10% |
+| M34-PERF-REQ-11 | M34 | Draft - memory/cold-start claims are measured separately; mmap or borrowed storage lands only after the query path proves it can use compact storage safely on Windows |
+| M34-PERF-REQ-12 | M34 | Draft - full Rust, focused parity, benchmark, report, and diff gates pass; runtime/browser gates run only if those surfaces change |
+| M34-PERF-REQ-13 | M34 | Draft - `my_rime` reference findings are recorded without overclaiming; engine data-path lessons remain in M34 and browser delivery/cache lessons are routed to M31 |
 
 **Coverage:**
 
@@ -525,9 +551,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 - M30 engine representation performance requirements: 7 total, 7 complete, 0 draft
 - P2-WIN-02 TypeDuck Windows boundary compatibility requirements: 6 total, 6 complete, 0 open
 - M33 engine native lookup performance requirements: 8 total, 8 complete, 0 draft
-- Mapped to phases: 169
+- M31 TypeDuck-Web public demo readiness requirements: 13 total, 0 complete, 13 draft
+- M34 lazy candidate pipeline and queryable table+prism performance requirements: 13 total, 0 complete, 13 draft
+- Mapped to phases: 195
 - Unmapped: 0
 
 ---
 
-_Requirements defined: 2026-04-28_ _Last updated: 2026-06-23 - M33 engine native lookup performance is complete with eight requirements closed: fresh fair upstream `luna_pinyin` baselines and after-runs, lazy reverse-lookup loading, build-once dictionary translator sharing with invalidation coverage, spike-gated lazy prism deferral, mmap deferral by stop gate, public performance/root-cause/README/roadmap updates, and full M33 gates. P2-WIN-02 remains complete as the Yune boundary fix for TypeDuck Windows rich comment bytes; the remaining Notepad raw-ASCII behavior belongs to non-Yune TSF input-delivery/frontend-shell work. M30, M29, M28 follow-up, M28, M27, M26, M25, M24, M19, M23, M18, M22, M21, M20, and M10 remain complete as previously recorded._
+_Requirements defined: 2026-04-28_ _Last updated: 2026-06-23 - M31 now has thirteen draft public-demo gates, including owner-approved provenance, browser-honest OpenCC, reproducible patch/build state, Cloudflare smoke, active-schema-only public asset loading, a separate lazy reverse-lookup dependency tier, content-addressed warm-cache behavior, PWA/Cloudflare delivery evidence, AI-off posture, and full browser/runtime/patch gates. M34 is drafted as the lazy candidate pipeline plus queryable table+prism performance follow-up to M33, with thirteen draft gates covering fresh baselines, hot-path attribution, full-list reader/caller audit, bounded translation, bounded engine refresh, table query abstraction, compiled table payload preservation, prism+table integration, TypeDuck profile invariants, measured per-key improvement, conditional mmap/borrowed storage, final gates, and `my_rime` reference-attribution evidence. M33 engine native lookup performance remains complete with eight requirements closed: fresh fair upstream `luna_pinyin` baselines and after-runs, lazy reverse-lookup loading, build-once dictionary translator sharing with invalidation coverage, spike-gated lazy table+prism deferral, mmap deferral by stop gate, public performance/root-cause/README/roadmap updates with cold/warm and peak-memory caveats, and full M33 gates. P2-WIN-02 remains complete as the Yune boundary fix for TypeDuck Windows rich comment bytes; the remaining Notepad raw-ASCII behavior belongs to non-Yune TSF input-delivery/frontend-shell work. M30, M29, M28 follow-up, M28, M27, M26, M25, M24, M19, M23, M18, M22, M21, M20, and M10 remain complete as previously recorded._
