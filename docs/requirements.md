@@ -501,7 +501,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | M33-PERF-REQ-06 | M33 | Complete - mmap compiled artifacts deferred by stop gate; low-risk slice fixed warm re-select/session while remaining gaps are cold startup, footprint, and per-key candidate-pipeline/storage representation |
 | M33-PERF-REQ-07 | M33 | Complete - public performance report, root-cause report, README, roadmap, requirements, and archived plan now use the fair M33 rerun with cold/warm and peak-memory caveats; no chart SVG generated |
 | M33-PERF-REQ-08 | M33 | Complete - full Rust compatibility, ABI, benchmark, and diff gates run for M33; no frontend/browser claim made because no frontend/WASM path changed |
-| M31-PUBLIC-REQ-00 | M31 | Draft - public provenance is recorded before deployment; TypeDuck-Web shell/dictionary use is owner-approved by the TypeDuck author and the page identifies itself as a Yune engine demo |
+| M31-PUBLIC-REQ-00 | M31 | Draft - public identity and provenance are recorded before deployment; the app is named `yune-web`, TypeDuck-Web shell/dictionary use is owner-approved by the TypeDuck author, and the page identifies itself as a Yune engine demo through a TypeDuck-Web-derived harness |
 | M31-PUBLIC-REQ-01 | M31 | Draft - P2-WIN-02 status and P2-WIN-01 priority are checked before deployment; M31 pauses if it would displace the Windows product track without an explicit decision |
 | M31-PUBLIC-REQ-02 | M31 | Draft - every exposed OpenCC output standard has engine/runtime/browser evidence and unsupported standards are absent or unavailable with a reason |
 | M31-PUBLIC-REQ-03 | M31 | Draft - output-standard controls change candidate/commit output through Yune, not browser-only postprocessing |
@@ -514,6 +514,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | M31-PUBLIC-REQ-10 | M31 | Draft - public delivery has PWA/service-worker or Cloudflare cache evidence, with cold and warm startup measured separately and no browser-startup claim without real browser evidence |
 | M31-PUBLIC-REQ-11 | M31 | Draft - WASM/download-size optimization is measured as a delivery win only; Rust engine latency claims stay in M34 or later engine milestones |
 | M31-PUBLIC-REQ-12 | M31 | Draft - Rust, runtime, TypeDuck-Web build, Playwright, patch reverse/forward, and `git diff --check` gates pass |
+| M31-PUBLIC-REQ-13 | M31 | Draft - harness rename is complete before deployment; public-facing strings, deployment config, docs, evidence labels, and route copy use the `yune-web` identity, with the old TypeDuck-Web name limited to provenance/history or a documented internal legacy path |
 | M34-PERF-REQ-01 | M34 | Complete - fresh native and fair cross-engine M33-surface baselines captured under `docs/reports/evidence/m34-queryable-table-prism/` |
 | M34-PERF-REQ-02 | M34 | Complete - attribution identified full-result materialization/context work as the accepted Lever A owner; a temporary `ni`/`hao` diagnostic artifact records lookup, prefix scan, eligibility probe, eager materialization, sort, and bounded materialization spans, with no diagnostic instrumentation retained |
 | M34-PERF-REQ-03 | M34 | Complete - full-list readers were audited, including correction, sentence, prefix fallback, prediction-never-first, filters/rankers, ABI context, and candidate-list iterators |

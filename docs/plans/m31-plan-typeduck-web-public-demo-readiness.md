@@ -1,12 +1,12 @@
-# M31 TypeDuck-Web Public Demo Readiness Implementation Plan
+# M31 yune-web Public Demo Readiness Implementation Plan
 
-> **Status:** Planned - **Milestone:** M31 (TypeDuck-Web public demo readiness) - **Created:** 2026-06-22 - **Type:** execution plan
+> **Status:** Planned - **Milestone:** M31 (`yune-web` public demo readiness) - **Created:** 2026-06-22 - **Type:** execution plan
 >
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Make the internal TypeDuck-Web dogfood harness ready to publish as a public Yune engine demo, with owner-approved TypeDuck assets, payload pruning, browser-honest output-standard support only where needed, a `my_rime`-style lazy delivery model for public assets, and a reproducible Cloudflare deployment path.
+**Goal:** Rename the internal TypeDuck-Web-derived dogfood harness into `yune-web`, then make it ready to publish as a public Yune engine demo with owner-approved TypeDuck assets, payload pruning, browser-honest output-standard support only where needed, a `my_rime`-style lazy delivery model for public assets, and a reproducible Cloudflare deployment path.
 
-**Architecture:** M31 is a deterministic web-demo readiness milestone, not a new AI product milestone and not the primary Windows product track. TypeDuck-Web shell/dictionary redistribution is owner-approved by the project owner, who is also the TypeDuck author, so this plan does not carry a separate licensing blocker. Keep a short public provenance note so visitors understand the page is exercising the Yune engine through a TypeDuck-Web-derived harness. Then add only the OpenCC output standards Yune can prove and that the public demo actually needs.
+**Architecture:** M31 is a deterministic `yune-web` readiness milestone, not a new AI product milestone and not the primary Windows product track. The current `third_party/typeduck-web/` name is legacy: this repo's harness is a Yune engine playground/stress surface derived from TypeDuck-Web, while the real TypeDuck-Web product belongs in a separate product repo. TypeDuck-Web shell/dictionary redistribution is owner-approved by the project owner, who is also the TypeDuck author, so this plan does not carry a separate licensing blocker. Rename public UI, deployment, docs, and preferably the repo-owned harness path before deployment; keep a short public provenance note so visitors understand the page is exercising the Yune engine through a TypeDuck-Web-derived harness. Then add only the OpenCC output standards Yune can prove and that the public demo actually needs.
 
 The `LibreService/my_rime` comparison changes M31's delivery bar. `my_rime` feels fast in the browser because it separates the app shell from schema payloads: the worker fetches only the selected schema's prebuilt `.table.bin`/`.prism.bin`/`.reverse.bin` dependencies, caches them by content hash, keeps engine work off the main thread, and relies on PWA/CDN caching for warm visits. Yune already has a worker, Emscripten FS/IDBFS, and prebuilt schema assets; the M31 public demo must therefore stop treating the internal dogfood harness's eager all-schema asset load as acceptable public-demo behavior. Finally make the patched TypeDuck-Web source reproducible from checked-in Yune state, pin and prune the WASM/schema assets, add active-schema-only loading plus warm-cache evidence, and publish through a Cloudflare static-assets deployment with smoke evidence.
 
@@ -16,7 +16,7 @@ The `LibreService/my_rime` comparison changes M31's delivery bar. `my_rime` feel
 
 ## Status
 
-Planned. P2-WIN-02 remains the next Yune-side unblocker and P2-WIN-01 remains the primary product track after that. M31 may proceed as optional/parallel public-demo readiness only when it does not compete with the Windows product work. Do not start public deployment until P2-WIN-02 is complete, payload size is measured and pruned, and the milestone record states that TypeDuck-Web shell/dictionary use is owner-approved.
+Planned. P2-WIN-02 remains the next Yune-side unblocker and P2-WIN-01 remains the primary product track after that. M31 may proceed as optional/parallel public-demo readiness only when it does not compete with the Windows product work. Do not start public deployment until P2-WIN-02 is complete, payload size is measured and pruned, the public identity is renamed to `yune-web`, and the milestone record states that TypeDuck-Web shell/dictionary use is owner-approved.
 
 ## Scope
 
@@ -24,6 +24,7 @@ In scope:
 
 - OpenCC output-standard support that is real in Yune, not only a browser label.
 - Runtime and TypeDuck-Web UI for supported output standards.
+- Rename/rebrand the public harness from TypeDuck-Web dogfood to **`yune-web`** before deployment. The public app title, deployment name, docs, provenance, smoke evidence, and public copy must use the `yune-web` name. A mechanical path migration from `third_party/typeduck-web/` to `apps/yune-web/` is in scope if it can be done cleanly with patch/test updates.
 - Public provenance note stating that TypeDuck-Web shell/dictionary use is owner-approved by the TypeDuck author and that the page is a Yune engine demo.
 - Public payload pruning so the deployed demo ships only the assets needed for the public surface.
 - Active-schema-only runtime asset loading for the public demo. The first paint/ready path must not fetch every schema, source dictionary, and compiled artifact in `third_party/typeduck-web/source/public/schema`.
@@ -43,6 +44,7 @@ Out of scope:
 - Treating `typeduck.hk/web` as an oracle. It can be a comparison target only.
 - Treating `my_rime` as a behavior oracle or copying its source wholesale. It is a delivery and librime-WASM architecture reference; Yune behavior remains fixture/oracle driven by upstream librime and TypeDuck profile captures.
 - Splitting `third_party/typeduck-web/` into a separate repository or submodule.
+- Renaming or restructuring the separate real TypeDuck-Web product repo. M31 only renames this repo's Yune-owned harness and public deployment identity.
 - Blocking P2-WIN-01 on Cloudflare/demo polish.
 
 ## Preconditions
@@ -52,11 +54,12 @@ Out of scope:
 - P2-WIN-01 keeps product priority after P2-WIN-02. If M31 conflicts with Windows product work, pause M31 unless the user explicitly chooses public web visibility first.
 - If M34 queryable table+prism lookup performance is active, M31 may proceed only with Cloudflare/devops/provenance/payload/UI-only work in a separate worktree. Do not run M31 Task 2 engine OpenCC breadth in parallel with M34; either choose `opencc_scope = current_simplification_only` for the first public demo or queue broader engine OpenCC work after M34 lands.
 - TypeDuck-Web shell and dictionary use is owner-approved by the project owner, who is also the TypeDuck author. No separate M31 licensing clearance gate is required.
+- Public deployment must use the **`yune-web`** identity. If the physical directory cannot be moved from `third_party/typeduck-web/` during M31 because of patch provenance or an active conflicting worktree, record the blocker and keep the old path strictly as an internal legacy path; do not deploy a public app named TypeDuck-Web from this repo.
 - Cloudflare deployment docs are checked at execution time. As of the M31 plan date, Cloudflare recommends Workers Static Assets for new static/full-stack Worker apps, React + Vite examples use `wrangler.jsonc`, and Wrangler JSON config is recommended for new projects.
 
 ## Acceptance Gates
 
-- `M31-PUBLIC-00`: Public provenance is recorded before deployment. The milestone notes that TypeDuck-Web shell/dictionary use is owner-approved by the TypeDuck author, and the public page identifies that it is exercising the Yune engine through a TypeDuck-Web-derived harness.
+- `M31-PUBLIC-00`: Public identity and provenance are recorded before deployment. The public app is named **`yune-web`**, not TypeDuck-Web; the milestone notes that TypeDuck-Web shell/dictionary use is owner-approved by the TypeDuck author; and the public page identifies that it is exercising the Yune engine through a TypeDuck-Web-derived harness.
 - `M31-PUBLIC-01`: P2-WIN-02 status and P2-WIN-01 priority are checked before deployment; public deploy is blocked or explicitly risk-noted if P2-WIN-02 is still active, and M31 pauses if it would pull effort away from the Windows product track.
 - `M31-PUBLIC-02`: Every exposed OpenCC output standard has engine/runtime/browser evidence. Unsupported standards are absent from the UI or shown as unavailable with a reason.
 - `M31-PUBLIC-03`: The output-standard control changes candidate/commit output through Yune, not a browser-only postprocessor.
@@ -69,6 +72,7 @@ Out of scope:
 - `M31-PUBLIC-10`: Public delivery has PWA/service-worker or Cloudflare cache evidence for the runtime shell and WASM/schema assets. Cold and warm startup are measured separately, and no browser-startup claim is made without real browser evidence.
 - `M31-PUBLIC-11`: WASM/download-size optimization is measured as a delivery win only. Rust engine latency claims stay in M34 or later engine milestones.
 - `M31-PUBLIC-12`: Rust, runtime, TypeDuck-Web build, Playwright, patch reverse/forward, and `git diff --check` gates pass.
+- `M31-PUBLIC-13`: Harness rename is complete before deployment. Public-facing strings, deployment config, docs, evidence folder labels, and route copy use the `yune-web` identity; the old TypeDuck-Web name remains only in provenance/history or in an explicitly documented internal legacy path if a physical directory move is deferred.
 
 ## File Responsibilities
 
@@ -76,16 +80,18 @@ Out of scope:
 - `crates/yune-rime-api/src/schema_install.rs`: owns schema option/config installation into browser/runtime deploy state.
 - `crates/yune-rime-api/tests/typeduck_web.rs`: owns native runtime contract tests for browser-facing options.
 - `packages/yune-typeduck-runtime/`: owns TypeScript wrapper and response/control contract.
-- `third_party/typeduck-web/yune-integration/`: owns the Yune bridge layered over TypeDuck-Web.
-- `third_party/typeduck-web/source/`: owns the patched demo app UI; changes here require patch regeneration.
-- `third_party/typeduck-web/patches/yune-typeduck-runtime.patch`: committed representation of source changes.
-- `third_party/typeduck-web/e2e/`: owns browser evidence and public-demo smoke tests.
-- `third_party/typeduck-web/cloudflare/` or an equivalent committed deployment folder: owns Cloudflare config, worker entry, and deployment notes.
-- `third_party/typeduck-web/public-demo/PROVENANCE.md`: records owner-approved TypeDuck-Web shell/dictionary use and the Yune engine demo positioning.
-- `third_party/typeduck-web/public-demo/asset-manifest.md`: owns public payload inventory and pruning decisions.
-- `third_party/typeduck-web/public-demo/schema-asset-manifest.json` or equivalent: owns content-addressed schema/runtime asset metadata for active-schema-only loading.
-- `third_party/typeduck-web/source/src/worker.ts`: owns worker-side schema asset fetching and must not eagerly load unrelated public-demo schemas.
-- `third_party/typeduck-web/source/src/yune-integration/adapter.ts`: owns the runtime bridge and deploy-cache interaction with preloaded assets.
+- `third_party/typeduck-web/`: pre-M31 legacy internal harness path. M31 owns either migrating this repo-owned harness to `apps/yune-web/` or documenting why the internal path stays temporarily while all public identity is renamed.
+- `apps/yune-web/`: preferred target path for the Yune-owned web playground if the mechanical migration is safe in M31.
+- `third_party/typeduck-web/yune-integration/` or `apps/yune-web/yune-integration/`: owns the Yune bridge layered over the TypeDuck-Web-derived shell.
+- `third_party/typeduck-web/source/` or `apps/yune-web/source/`: owns the patched demo app UI; changes here require patch regeneration.
+- `third_party/typeduck-web/patches/yune-typeduck-runtime.patch` or the migrated patch path: committed representation of source changes.
+- `third_party/typeduck-web/e2e/` or `apps/yune-web/e2e/`: owns browser evidence and public-demo smoke tests.
+- `third_party/typeduck-web/cloudflare/`, `third_party/typeduck-web/public-demo/`, or the migrated `apps/yune-web/public-demo/`: owns Cloudflare config, worker entry, and deployment notes.
+- `third_party/typeduck-web/public-demo/PROVENANCE.md` or migrated equivalent: records owner-approved TypeDuck-Web shell/dictionary use and the Yune engine demo positioning.
+- `third_party/typeduck-web/public-demo/asset-manifest.md` or migrated equivalent: owns public payload inventory and pruning decisions.
+- `third_party/typeduck-web/public-demo/schema-asset-manifest.json` or migrated equivalent: owns content-addressed schema/runtime asset metadata for active-schema-only loading.
+- `third_party/typeduck-web/source/src/worker.ts` or migrated equivalent: owns worker-side schema asset fetching and must not eagerly load unrelated public-demo schemas.
+- `third_party/typeduck-web/source/src/yune-integration/adapter.ts` or migrated equivalent: owns the runtime bridge and deploy-cache interaction with preloaded assets.
 - `docs/roadmap.md` and `docs/requirements.md`: own milestone status and requirement traceability.
 
 ---
@@ -100,6 +106,7 @@ Out of scope:
 - Create: `third_party/typeduck-web/public-demo/PROVENANCE.md`
 - Create: `third_party/typeduck-web/public-demo/asset-manifest.md`
 - Create evidence: `third_party/typeduck-web/e2e/results/m31-public-demo/public-readiness-gate.md`
+- Create evidence: `third_party/typeduck-web/e2e/results/m31-public-demo/yune-web-rename.md` or migrated equivalent
 
 - [ ] **Step 0.1: Confirm repository and dependency state**
 
@@ -145,7 +152,46 @@ Expected:
 - The public UI can use a TypeDuck/TypeDuck-Web-derived shell, but the milestone record still labels the technical purpose clearly: test and demonstrate the Yune engine.
 - No courtesy-contact or license-clearance task is required for TypeDuck-owned assets in this milestone.
 
-- [ ] **Step 0.4: Measure the asset payload before choosing the deployment surface**
+- [ ] **Step 0.4: Rename the harness identity before any deployment work**
+
+Use **`yune-web`** as the public name.
+
+Audit current naming:
+
+```powershell
+rg -n "TypeDuck-Web|typeduck-web|TypeDuck Web|dogfood|dogfooding" docs packages third_party\typeduck-web -g "!third_party/typeduck-web/source/node_modules/**"
+```
+
+Required result:
+
+- Public UI title, document title, footer/source links, public-demo README, Cloudflare worker/config names, evidence titles, and deployed smoke labels use `yune-web`.
+- The public page may say it is "derived from TypeDuck-Web" only in provenance/history text.
+- `TypeDuck-Web` remains valid only for the separate real product repo, the upstream-derived shell provenance, historical archived evidence, or a temporary internal path note.
+- Deployment names must not be `typeduck-web`, `typeduck_web`, or `TypeDuck-Web`.
+
+If mechanically safe, migrate this repo-owned harness from `third_party\typeduck-web\` to `apps\yune-web\`:
+
+```powershell
+New-Item -ItemType Directory -Force -Path apps | Out-Null
+git mv third_party\typeduck-web apps\yune-web
+rg -n "third_party[/\\]typeduck-web|third_party\\\\typeduck-web|typeduck-web" docs AGENTS.md README.md packages crates apps -g "!apps/yune-web/source/node_modules/**"
+```
+
+Then update path references in docs, scripts, Playwright config, patch commands, package commands, evidence paths, and build scripts to the new `apps\yune-web\` path.
+
+If the path migration is not safe in M31 because another active worktree or patch-provenance check depends on the old path, do **not** deploy under the old public name. Record a temporary internal-path exception in `yune-web-rename.md` with:
+
+- the exact blocker
+- the files/scripts still requiring `third_party\typeduck-web\`
+- the follow-up task to complete the physical path move
+- proof that public UI, Cloudflare config, docs, and smoke evidence still use the `yune-web` identity
+
+Expected:
+
+- `yune-web-rename.md` records either `path_migration = complete` with the new path, or `path_migration = deferred_internal_only` with the exception above.
+- Public deployment remains blocked until public identity rename is complete, even if the physical path remains temporarily legacy.
+
+- [ ] **Step 0.5: Measure the asset payload before choosing the deployment surface**
 
 Run:
 
