@@ -94,6 +94,167 @@ The strongest inference is that short ambiguous input still drives a large
 completion/homophone set through the eager candidate/context path. That remains
 an inference until per-stage Track B attribution proves the exact owner.
 
+### Bottleneck Map
+
+M36 does not yet provide a per-stage percentage breakdown for each key row. The
+diagram below is therefore a numbered triage map: row totals, ratios, and memory
+anchors are measured, while the owner labels are the current best-supported
+hypotheses to be proven by M37 owner spans.
+
+```mermaid
+flowchart LR
+    key["RimeProcessKey + RimeGetContext<br/>Track B hai: 15.241 ms<br/>peers: 3.465-5.065 ms"] --> lookup["translator lookup<br/>exact/prefix/completion<br/>Track A short keys still 206-348x librime"]
+    lookup --> materialize["candidate materialization<br/>LookupCandidate -> owned Candidate<br/>suspect hai owner: huge completion set"]
+    materialize --> merge["global sort/filter/userdb/ranker<br/>full-list shaped outside narrow gate<br/>hai improved only 29.2%"]
+    merge --> context["engine context<br/>Vec<Candidate> retained<br/>candidate payloads remain owned"]
+    context --> snapshot["RimeGetContext snapshot<br/>full context clone today<br/>frontends read one visible page"]
+    snapshot --> abi["ABI page export<br/>C strings for visible page<br/>page-sized output after full snapshot"]
+
+    storage["compiled storage<br/>fresh but owned compact<br/>rsmarisa still missing<br/>Track B peak: 1000.4 -> 885.3 MB"] -. feeds .-> lookup
+    full_list["whole-list TypeDuck features<br/>correction, prediction, prefix fallback, sentence<br/>block naive truncation"] -. force eager .-> merge
+    memory["memory gap<br/>Track A median rows: Yune 158-161 MB<br/>librime 10-13 MB"] -. retained by .-> context
+
+    classDef measured fill:#f8fafc,stroke:#64748b,color:#0f172a;
+    classDef hot fill:#fee2e2,stroke:#b91c1c,color:#7f1d1d;
+    classDef medium fill:#fef3c7,stroke:#b45309,color:#78350f;
+    classDef caveat fill:#e0f2fe,stroke:#0369a1,color:#0c4a6e;
+
+    class key,abi measured;
+    class materialize,merge,snapshot hot;
+    class lookup,context,storage,memory medium;
+    class full_list caveat;
+```
+
+Numeric anchors in the current map:
+
+| Anchor | Measured number | Bottleneck meaning |
+| --- | --- | --- |
+| Track B `hai` final row | `15.241 ms` median after M36 | Worst final product key row despite being only three keys; it is `3.0-4.4x` slower than the other measured product key rows. |
+| Track B peer final rows | `ngohaig` `3.465 ms`, `loengjathau` `3.755 ms`, `jigaajiusihaa` `5.065 ms` | M36 fixed the old product storage/source-fallback waste for most rows; `hai` did not follow the same curve. |
+| Track B `hai` improvement | `21.542 ms` -> `15.241 ms` (`-29.2%`) | The shortest row barely moved compared with the `76.8-81.7%` peer-row improvements, pointing away from raw compiled-path selection as the remaining owner. |
+| Track B product peak memory | `1000.4 MB` -> `885.3 MB` | Fresh compiled product assets helped, but storage/output state is still much larger than librime-style mapped/borrowed storage would be. |
+| Track A short-key latency gap | `ni` `206.04x`, `hao` `348.03x` slower than librime | The comparison path still spends far more than librime on per-key frontend-shaped work even after lookup fixes. |
+| Track A working-set gap | Yune `158-161 MB` median rows vs librime `10-13 MB` | Owned/non-byte-backed storage remains a structural memory owner. |
+
+Current evidence-backed bottleneck read:
+
+| Bottleneck area | Evidence status | Why it matters now | M37 proof needed |
+| --- | --- | --- | --- |
+| Candidate materialization and context export | Strongly suspected, not yet percentage-attributed | Track B `hai` is the shortest measured input but remains the slowest final key row; `RimeGetContext` currently asks for a full engine snapshot before exporting one page | Count candidates enumerated, owned candidates built, candidates cloned by snapshot, and C strings exported per key |
+| Full-list sort/filter/userdb/ranker work | Strongly suspected for product rows | Outside the narrow `luna_pinyin` bounded gate, `Engine::refresh_candidates` still collects and sorts a full `Vec<Candidate>`, then merges predictive userdb rows and filters/rankers | Split `hai` time across lookup, materialization, sort/top-K, filters, userdb merge, and rankers |
+| `rsmarisa` / byte-backed product storage | Confirmed missing capability | M36 made the product compiled-active by re-emitting no-marisa Yune-readable assets, but the real product marisa string-table path is still not active | Prove `rsmarisa` parses real `jyut6ping3` / `jyut6ping3_scolar` table data and is selected by runtime product loads |
+| Owned compact storage and whole-process memory | Measured remaining gap | Track A working set remains about `12-14x` librime even after compact storage; current stores still own strings and candidate payloads | Attribute working set by table bytes, parsed storage, candidates/context, userdb, reverse lookup, ABI buffers, and allocator high-water |
+| Browser delivery | Not measured by M36 | Native engine changes do not automatically reduce WASM startup, asset fetch, worker serialization, React paint, or Cloudflare cache behavior | M31/M37 browser-specific evidence only after rebuilt release WASM and real browser runs |
+
+Residual-row heat map:
+
+| Row / surface | Measured symptom | Bottleneck signal |
+| --- | --- | --- |
+| Track B `hai` | `21,541.967 us` -> `15,241.000 us` (`-29.2%`) | Worst final product key row despite shortest input; strongest signal for eager completion-set materialization, full-list merge, and context export. |
+| Track B `ngohaig` | `14,943.043 us` -> `3,465.057 us` (`-76.8%`) | M36 compiled-product path fixed the old source-fallback/storage waste for this row. |
+| Track B `loengjathau` | `16,309.045 us` -> `3,754.855 us` (`-77.0%`) | Long product row benefits from compiled-active storage; remaining cost is much lower than `hai`. |
+| Track B `jigaajiusihaa` | `27,633.869 us` -> `5,065.308 us` (`-81.7%`) | Long row no longer looks like the dominant blocker after M36. |
+| Track A short keys | `ni` `206.04x`, `hao` `348.03x` slower than librime | Short-key comparison remains dominated by frontend-shaped key/context work, not only table lookup. |
+| Track A working set | Yune `158-161 MB` median rows vs librime `10-13 MB` | Owned/non-byte-backed storage and runtime/output state remain structurally larger than librime's mapped table/prism path. |
+
+Target bottleneck shape after M37:
+
+This is an expected post-fix shape, not a post-fix measurement. It separates
+two M37 gates: the expected `hai` latency win comes from page-bounded
+candidate/context export, while `rsmarisa` is a hard storage/data-path gate
+needed to match librime's byte-backed shape. Do not treat `rsmarisa` as the
+measured `hai` owner unless Phase 0 attribution proves it.
+
+```mermaid
+flowchart LR
+    key2["RimeProcessKey + RimeGetContext<br/>Track B hai target:<br/>no longer a 15.241 ms outlier"] --> window2["page-bounded request plan<br/>visible page + bounded surplus<br/>candidate counts recorded"]
+    window2 --> lookup2["lookup over active compiled storage<br/>rsmarisa product table hard gate<br/>compiled_ready=true stays true"]
+    lookup2 --> topk2["bounded merge / stable top-K<br/>avoid whole-list sort for default product rows"]
+    topk2 --> context2["page-shaped context state<br/>retain enough for paging and selection<br/>not full eager Vec by default"]
+    context2 --> snapshot2["RimeGetContext page snapshot<br/>clone/export visible page first"]
+    snapshot2 --> abi2["ABI export<br/>C strings for visible page"]
+
+    residual_lookup["residual owner: true lookup/index cost<br/>measured, not assumed"] -. may dominate .-> lookup2
+    residual_features["residual owner: full-list-only features<br/>correction, prediction, sentence, learning"] -. opt in to eager .-> topk2
+    residual_browser["separate owner: browser delivery<br/>WASM load, worker serialization, paint"] -. separate evidence .-> key2
+    memory2["storage target<br/>rsmarisa/byte-backed views<br/>Track A 158-161 MB gap should shrink"] -. feeds .-> lookup2
+
+    classDef fixed fill:#dcfce7,stroke:#15803d,color:#14532d;
+    classDef residual fill:#fef3c7,stroke:#b45309,color:#78350f;
+    classDef separate fill:#e0f2fe,stroke:#0369a1,color:#0c4a6e;
+    classDef output fill:#f8fafc,stroke:#64748b,color:#0f172a;
+
+    class lookup2,window2,topk2,context2,snapshot2,memory2 fixed;
+    class residual_lookup,residual_features residual;
+    class residual_browser separate;
+    class key2,abi2 output;
+```
+
+Librime reference pipeline:
+
+This is the structural pipeline M37 is trying to match at the data-path level.
+It is not a claim that Yune should clone librime's C++ component model; the
+target is the same bounded/mapped behavior at the hot path.
+
+```mermaid
+flowchart LR
+    lkey["frontend key<br/>RimeProcessKey"] --> lproc["processors + segmentors<br/>update composition"]
+    lproc --> ltranslate["ConcreteEngine::TranslateSegments<br/>translator Query per segment"]
+    ltranslate --> ltable["TableTranslator<br/>returns Translation object"]
+    ltable --> llazy["LazyTableTranslation when completion is on<br/>initial lookup limit: 10<br/>expands by 10x only when needed"]
+    ltable --> lexact["TableTranslation for exact table/userdict rows<br/>iterator-backed"]
+    llazy --> lmenu["Menu + MergedTranslation<br/>filters wrap the stream"]
+    lexact --> lmenu
+    lmenu --> lprepare["Menu::Prepare(requested)<br/>Peek/Next until page/index is available"]
+    lprepare --> lpage["CreatePage / GetCandidateAt<br/>cache only requested candidates"]
+    lpage --> labi["RIME ABI context/candidate export<br/>visible page or requested iterator rows"]
+
+    lmapped["MappedFile table/prism<br/>read-only deployed image<br/>table string_table + compact indexes"] -. backs .-> ltable
+    luser["UserDictionary<br/>exact rows first, predictive rows by limit"] -. merged lazily .-> llazy
+    lfull["fuller work is demand/feature driven<br/>sentence, paging, filters, selection"] -. can ask for more .-> lprepare
+
+    classDef mapped fill:#dcfce7,stroke:#15803d,color:#14532d;
+    classDef stream fill:#e0f2fe,stroke:#0369a1,color:#0c4a6e;
+    classDef request fill:#f8fafc,stroke:#64748b,color:#0f172a;
+    classDef caveat fill:#fef3c7,stroke:#b45309,color:#78350f;
+
+    class lmapped mapped;
+    class ltable,llazy,lexact,lmenu stream;
+    class lkey,lproc,ltranslate,lprepare,lpage,labi request;
+    class luser,lfull caveat;
+```
+
+M37 target versus librime:
+
+| Pipeline property | Librime shape | M37 target shape | Match status after M37 |
+| --- | --- | --- | --- |
+| Deployed dictionary storage | `Table` and `Prism` point into read-only mapped deployed files with compact table indexes and a string table. | `rsmarisa`-backed product table plus byte-backed/native-mapped storage where the platform permits it. | Should match the important storage property if `rsmarisa` is active and Yune stops rebuilding owned heap maps. |
+| Lookup result form | Translators return lazy `Translation` streams; table/userdict rows are advanced by `Peek`/`Next`. | Translator returns a candidate view/window or equivalent stream, not an eagerly owned full `Vec<Candidate>` for page reads. | Should match if Task 3 lands page-bounded materialization. |
+| Completion handling | `LazyTableTranslation` starts with a small lookup limit and expands only when more candidates are requested. | Product completion should enumerate visible page plus bounded surplus, then grow on paging/full-list demand. | Should match for ordinary page reads; full-list-only TypeDuck features stay explicit eager paths. |
+| Merge/filter/menu | `Menu::Prepare(requested)` pulls enough candidates through merged translations and filters for the requested page or index. | Engine merge/sort/filter/userdb/ranker work should be stable top-K/page-window based for the default path. | Should match in shape, even if Yune keeps different Rust internals and TypeDuck-specific filters. |
+| Context / ABI export | Page creation and candidate-list iteration request candidates by page/index; they do not require materializing the whole completion set first. | `RimeGetContext` should snapshot/export the visible page before any full-list clone. | This is the hard output-path match M37 must prove with clone/allocation counters. |
+| Feature escapes | Sentence making, contextual suggestions, filters, userdict learning, and deeper paging can force more work. | Correction, prediction, sentence, partial selection, learning, and debug/full-list APIs may still force eager expansion. | A controlled mismatch is acceptable only when the evidence tags it as feature-required. |
+
+Reconciliation with the M36 finding: the big M36 product win came from
+schema-scoped deploy rebuilding stale unsupported product marisa blobs into
+fresh Yune-readable no-marisa compiled artifacts. It did not prove that missing
+`rsmarisa` is the current `hai` latency owner. The post-M36 `hai` anomaly points
+more directly at eager completion-set materialization, full-list merge/sort,
+context snapshot, and ABI export. M37 keeps `rsmarisa` as a hard closeout gate
+because matching librime's storage shape still requires real marisa/byte-backed
+product data, but Phase 0 decides whether storage or output owns the next
+latency win.
+
+Expected M37 before/after interpretation:
+
+| Area | Current measured anchor | Expected M37 state | Closeout proof |
+| --- | --- | --- | --- |
+| Product lookup storage | Phase-0 product blobs failed with unsupported marisa sections; M36 re-emitted fresh Yune-readable no-marisa assets | Real product `marisa string_table` data parses through `rsmarisa`, and runtime product loads select it | Product status rows show fresh checksums, `compiled_ready=true`, and successful marisa parse/selection for `jyut6ping3` and `jyut6ping3_scolar`. |
+| Candidate materialization | `hai` remains `15.241 ms` while peers are `3.465-5.065 ms` | Default product key rows materialize only a visible page plus bounded surplus unless a whole-list feature explicitly requires more | Owner spans report candidates enumerated, owned candidates built, clones, exported strings, and elapsed time per key. |
+| Context export | Current `RimeGetContext` path clones a full owned context before exporting one page | Page snapshot/export happens before full-list cloning for default frontend reads | Owner spans show `RimeGetContext` candidate clones and ABI allocations scale with page size, not total completion-set size. |
+| `hai` anomaly | Shortest product row, worst final row, only `-29.2%` after M36 | No longer the unexplained worst row; if still slow, the top owner is named with per-stage counters | M37 closeout includes a dedicated `hai` attribution table before and after fixes. |
+| Residual work | Track A still has `206-348x` short-key latency gaps and `12-14x` median working-set gaps | Remaining hot boxes are true lookup/index cost, full-list-only correctness features, lifecycle work, or browser delivery | Residual owners are measured separately; browser claims require rebuilt release WASM and real browser evidence. |
+
 ### What Is Already Solved
 
 - The old unfair comparison that loaded `stroke` reverse lookup for Yune but not
