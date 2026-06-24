@@ -87,19 +87,41 @@ bounded first-page path. It still lacks the compact queryable table/prism
 runtime representation and still falls back to eager full-list behavior for
 sentence, correction, TypeDuck profile, userdb/ranker, and most filter cases.
 
-## Deferred work
+## M35 follow-up
 
-The next engine-performance milestone should not start with mmap alone. The
-safe order is:
+M35 is the planned deep engine-performance follow-up for the remaining storage
+gap. It should not start with mmap alone. The safe order is:
 
-1. Extend bounded/lazy candidate production to more filters/rankers/userdb cases
-   only with byte-identical first-page and paging evidence.
-2. Build a queryable table payload reader that preserves candidate text,
+1. Measure the current compiled table/prism/reverse asset sizes, ready/peak
+   working-set deltas, post-spelling-algebra expansion counts, duplicated
+   text/comment bytes, and heap structure overhead before setting the final
+   memory target. This must include both the upstream `luna_pinyin` benchmark
+   surface and the product `jyut6ping3` schema surface.
+2. Evolve the M34 `TableLookup` seam away from heap `&[Candidate]` slices into
+   a candidate-view contract that can rank and materialize selected rows without
+   retaining every dictionary row as a `Candidate`.
+3. Build a queryable table payload reader that preserves candidate text,
    comments, code, order, quality, stems/encoder data, correction/tolerance
    payloads, and TypeDuck lookup records.
-3. Integrate prism spelling graph lookup with table payload queries.
-4. Only then consider mmap/borrowed storage, with Windows file lifetime and
+4. Integrate prism spelling graph lookup with table payload queries after table
+   payload parity passes; for spelling-algebra schemas, this is required for
+   the memory win because re-expanding aliases into heap storage recreates the
+   blow-up.
+5. Enable compact storage first for safe upstream `luna_pinyin` rows. A
+   compact-active schema must not build or retain heap `entries_by_code`;
+   unsupported schemas or TypeDuck-profile behavior stay on heap fallback.
+6. Only then consider mmap/borrowed storage, with Windows file lifetime and
    rebuild behavior covered.
+
+M35 should also attribute cross-engine harness overhead before using the
+`198x`/`348x` ratios as public typing-latency headlines. Native engine-only and
+full-ABI rows are the clearer engine movement signals unless the harness proves
+otherwise.
+
+When reporting M35 memory, distinguish dictionary-specific delta from whole
+process peak. The order-of-magnitude target applies to the dictionary heap
+delta. A correct owned compact-storage result may still land at roughly
+`2-3x` librime peak until native mmap/demand paging is proven.
 
 Browser startup and public delivery improvements remain M31 work, not M34
 engine-performance evidence.
