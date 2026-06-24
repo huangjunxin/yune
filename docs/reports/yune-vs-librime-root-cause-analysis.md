@@ -106,11 +106,18 @@ M35 movement:
 | fair `zhongguo` | `45608.600us` | `35848.500us` | improved, still `24.7x` librime |
 | fair peak working set | `182910976 bytes` | `182444032 bytes` | whole-process footprint not solved |
 
-TypeDuck full-ABI guard rows stayed within the accepted M34 range:
+TypeDuck full-ABI guard rows stayed heap-backed and within the M35 guard/no-go
+expectation:
 
-- `hai`: `18,389.567 us` -> `19,446.467 us` (`+5.7%`)
-- `jigaajiusihaa`: `29,937.777 us` -> `28,155.585 us` (`-6.0%`)
-- correction-on `jigaajiusihaa`: `29,649.146 us` -> `28,032.915 us` (`-5.5%`)
+- `hai`: `18,900.742 us` -> `18,450.767 us` (`-2.4%`)
+- `jigaajiusihaa`: `28,836.874 us` -> `26,953.441 us` (`-6.5%`)
+- correction-on `jigaajiusihaa`: `24,811.675 us` -> `26,707.480 us` (`+7.6%`)
+
+The companion performance report now embeds M35 visualizations for native
+watched-row movement, fair cross-engine gap, and dictionary-local memory versus
+whole-process peak. Those charts intentionally keep the remaining librime gap
+visible instead of turning the compact-storage win into a broad performance
+claim.
 
 ## Why Librime Remains Faster
 

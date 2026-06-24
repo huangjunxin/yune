@@ -8,9 +8,10 @@ Evidence:
 - M34 before cross-engine rerun: [`evidence/m34-queryable-table-prism/baseline-yune-vs-librime/`](./evidence/m34-queryable-table-prism/baseline-yune-vs-librime/)
 - M34 after cross-engine rerun: [`evidence/m34-queryable-table-prism/after-yune-vs-librime/`](./evidence/m34-queryable-table-prism/after-yune-vs-librime/)
 - M34 native logs: [`evidence/m34-queryable-table-prism/frontend-baselines-before.txt`](./evidence/m34-queryable-table-prism/frontend-baselines-before.txt) and [`evidence/m34-queryable-table-prism/frontend-baselines-after-final.txt`](./evidence/m34-queryable-table-prism/frontend-baselines-after-final.txt)
-- M34 visualizations: [`m34-cross-engine-gap.svg`](./evidence/m34-queryable-table-prism/m34-cross-engine-gap.svg), [`m34-native-improvement.svg`](./evidence/m34-queryable-table-prism/m34-native-improvement.svg), and [`m34-working-set-gap.svg`](./evidence/m34-queryable-table-prism/m34-working-set-gap.svg)
+- Historical M34 visualizations: [`m34-cross-engine-gap.svg`](./evidence/m34-queryable-table-prism/m34-cross-engine-gap.svg), [`m34-native-improvement.svg`](./evidence/m34-queryable-table-prism/m34-native-improvement.svg), and [`m34-working-set-gap.svg`](./evidence/m34-queryable-table-prism/m34-working-set-gap.svg)
 - M35 native before/after logs: [`evidence/m35-compact-table-prism-storage/frontend-baselines-before.txt`](./evidence/m35-compact-table-prism-storage/frontend-baselines-before.txt) and [`evidence/m35-compact-table-prism-storage/frontend-baselines-after.txt`](./evidence/m35-compact-table-prism-storage/frontend-baselines-after.txt)
 - M35 fair cross-engine before/after reruns: [`evidence/m35-compact-table-prism-storage/baseline-yune-vs-librime/`](./evidence/m35-compact-table-prism-storage/baseline-yune-vs-librime/) and [`evidence/m35-compact-table-prism-storage/after-yune-vs-librime/`](./evidence/m35-compact-table-prism-storage/after-yune-vs-librime/)
+- M35 visualizations: [`m35-native-improvement.svg`](./evidence/m35-compact-table-prism-storage/m35-native-improvement.svg), [`m35-cross-engine-gap.svg`](./evidence/m35-compact-table-prism-storage/m35-cross-engine-gap.svg), and [`m35-memory-story.svg`](./evidence/m35-compact-table-prism-storage/m35-memory-story.svg)
 - M35 task evidence: [`evidence/m35-compact-table-prism-storage/`](./evidence/m35-compact-table-prism-storage/)
 
 ## Public summary
@@ -89,28 +90,31 @@ movement evidence.
 
 ## Visual summary
 
-These charts are generated from the final M34 evidence bundle, not from a
-browser/runtime run. They support the native engine-performance claim only.
+These charts are generated from the final M35 evidence bundle, not from a
+browser/runtime run. They support native engine-performance and fair
+cross-engine claims only.
 
-![M34 final fair Yune versus librime median latency gap](./evidence/m34-queryable-table-prism/m34-cross-engine-gap.svg)
+![M35 native luna_pinyin watched rows](./evidence/m35-compact-table-prism-storage/m35-native-improvement.svg)
 
-The fair cross-engine chart is intentionally log-scale. It shows that M34 made
-the comparison honest and kept the public per-key gap visible: Yune remains
-`348.1x` slower on `hao`, `198.4x` slower on `ni`, and `26.0x` slower on
-`zhongguo`.
+The native watched-row chart is the achievement view. M35's clearest landed win
+is upstream `luna_pinyin` compact storage: `zhongguo_full_abi` drops from
+`14,759.755 us` to `1,527.055 us` (`-89.7%`), while the short engine-only rows
+also improve (`hao_engine_only` `-31.3%`, `ni_engine_only` `-21.8%`).
 
-![M34 native benchmark before and after movement](./evidence/m34-queryable-table-prism/m34-native-improvement.svg)
+![M35 final fair Yune versus librime median latency gap](./evidence/m35-compact-table-prism-storage/m35-cross-engine-gap.svg)
 
-The native watched-row chart is the achievement view. M34's clearest landed win
-is the bounded first-page `ni` full-ABI path, from `1,760.250 us` to
-`1,132.950 us` (`-35.6%`). It also records the TypeDuck `hai` regression
-(`+5.7%`) rather than hiding it.
+The fair cross-engine chart is intentionally log-scale. It keeps the unresolved
+public gap visible after M35: Yune remains `354.4x` slower on `hao`, `197.9x`
+slower on `ni`, and `24.7x` slower on `zhongguo`, while startup/session rows
+are much closer at about `1.5x`.
 
-![M34 peak working set gap](./evidence/m34-queryable-table-prism/m34-working-set-gap.svg)
+![M35 memory story](./evidence/m35-compact-table-prism-storage/m35-memory-story.svg)
 
-The memory chart is the main unresolved gap: Yune peaks at about `8.1x` librime
-in the fair harness. M34 did not land compiled storage, prism lookup, or mmap,
-so this chart should remain visible in public material.
+The memory chart is the caveat view. M35 removes the expanded spelling-algebra
+owner and cuts `translator_install` dictionary delta from `37,556,224` to
+`9,822,208` bytes, but the fair whole-process peak remains about `8.1x`
+librime. That is why mmap/borrowed storage remains a future design, not an M35
+victory claim.
 
 ## Methodology
 
@@ -127,7 +131,7 @@ powershell -ExecutionPolicy Bypass -File scripts\benchmark-yune-vs-librime.ps1 -
 Native benchmark command:
 
 ```powershell
-cmd /c "cargo bench -p yune-rime-api --bench frontend_baselines > target\m34-frontend-baselines-*.txt 2>&1"
+cmd /c "cargo bench -p yune-rime-api --bench frontend_baselines > target\m35-frontend-baselines-*.txt 2>&1"
 ```
 
 The cross-engine rows use the same upstream `luna_pinyin` schema id, the same
@@ -137,7 +141,7 @@ cache behavior, or public-demo startup.
 
 ## Results
 
-### Cross-engine summary
+### Historical M34 Cross-engine Summary
 
 | Workload | Engine | Baseline median | M34 after median | After p95 | Peak working set |
 | --- | --- | ---: | ---: | ---: | ---: |
@@ -165,7 +169,7 @@ Yune baseline-to-M34-after movement in the fair cross-engine harness:
 These rows are mixed. They are safe to publish only with the unresolved per-key
 gap visible.
 
-### Native watched rows
+### Historical M34 Native Watched Rows
 
 | Row | Before median | M34 after median | Change |
 | --- | ---: | ---: | ---: |
