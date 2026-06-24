@@ -36,10 +36,13 @@ Still open:
 3. **Whole-process peak remains high.** Upstream dictionary-specific native
    deltas improved, but the fair harness peak remains about `182 MB` versus
    librime's about `22 MB`.
-4. **Mmap/borrowed storage is still conditional.** It now has a valid compact
-   query substrate, but M35 closes mmap as a no-go until a separate design covers
-   byte borrowing, rebuild invalidation, Windows file lifetime, and demand
-   paging.
+4. **Mmap/borrowed storage is still conditional but now has a product path.**
+   M36 evaluates `rsmarisa` first for TypeDuck's embedded marisa string table.
+   `rsmarisa` targets marisa-trie `0.3.1`, matching librime's vendored marisa,
+   but M36 must prove real product-blob parity, including any nested/multi-trie
+   shape. Native builds may measure `Trie::mmap()`, while browser/WASM builds
+   must use `Trie::map()`/byte-backed loading or an equivalent non-mmap path.
+   Mapping bytes and then rebuilding owned heap maps still does not count.
 
 ## What changed in M34
 
@@ -137,19 +140,30 @@ It still falls back to eager/full-list behavior for TypeDuck profile,
 userdb/ranker, correction-heavy paths, and many filter cases, and it still keeps
 whole-process memory far above librime.
 
-## Follow-Up After M35
+## Follow-Up After M35 / M36
 
-M35 closed the first compact owned-storage slice. The remaining safe order is:
+M35 closed the first compact owned-storage slice for the upstream comparison
+path. M36 is the active product-path follow-up, and the safe order is:
 
 1. Keep compact upstream storage active and broaden it only when byte-identical
    fixture coverage exists.
-2. Treat TypeDuck compact storage as a separate profile-specific project, not an
-   automatic follow-on, because lookup records and rich comments are required.
-3. Measure the remaining per-key owner after compact lookup; do not use fair
-   cross-engine ratios as the main typing headline while harness overhead is
-   still mixed in.
-4. Design borrowed/mmap storage separately, with Windows file lifetime and
-   rebuild behavior covered before any unsafe or lint exception is accepted.
+2. Treat TypeDuck compact/product storage as profile-specific work owned by M36:
+   the shipped `jyut6ping3` and `jyut6ping3_scolar` tables currently contain
+   marisa string-table sections that Yune rejects, so M36 first tries the
+   existing pure-Rust `rsmarisa` reader for byte-identical table consumption.
+   The spike must run against the actual product blobs, not synthetic fixtures,
+   and must record `str_id -> UTF-8` parity plus nested/multi-trie evidence.
+   Re-emitted Yune-readable no-marisa assets are the fallback only if
+   `rsmarisa` fails byte-parity, MSRV/WASM, or performance gates.
+3. Prove the product runtime uses compiled assets instead of `SourceFallback`
+   before claiming product startup or memory wins.
+4. Measure the remaining per-key owner after compact/product lookup; do not use
+   fair `luna_pinyin` cross-engine ratios as the main `jyut6ping3` typing
+   headline.
+5. Measure native mmap and WASM byte-backed loading separately. Native mmap is
+   useful only if the query path directly uses mapped data with clear Windows
+   file-lifetime and rebuild-invalidation behavior; browser claims need fresh
+   real-browser evidence because WASM has no OS demand paging.
 
 Native engine-only and full-ABI rows remain the clearer M35 engine movement
 signals. The fair cross-engine rows are compatibility-harness evidence and
@@ -158,7 +172,9 @@ should keep the unresolved ratio visible.
 When reporting M35 memory, distinguish dictionary-specific delta from whole
 process peak. The order-of-magnitude target applies to the dictionary heap
 delta. A correct owned compact-storage result may still land at roughly
-`2-3x` librime peak until native mmap/demand paging is proven.
+`2-3x` librime peak until `rsmarisa`/native mmap or another borrowed-storage
+path proves otherwise.
 
-Browser startup and public delivery improvements remain M31 work, not M35
-engine-performance evidence.
+Browser startup and public delivery improvements remain M31 work, not M35/M36
+engine-performance evidence unless M36 explicitly changes browser-visible
+runtime assets and records fresh browser proof.
