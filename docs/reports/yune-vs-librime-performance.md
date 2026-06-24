@@ -1,6 +1,6 @@
 # Yune vs upstream librime performance report
 
-Date: 2026-06-23
+Date: 2026-06-24
 
 Evidence:
 
@@ -9,33 +9,83 @@ Evidence:
 - M34 after cross-engine rerun: [`evidence/m34-queryable-table-prism/after-yune-vs-librime/`](./evidence/m34-queryable-table-prism/after-yune-vs-librime/)
 - M34 native logs: [`evidence/m34-queryable-table-prism/frontend-baselines-before.txt`](./evidence/m34-queryable-table-prism/frontend-baselines-before.txt) and [`evidence/m34-queryable-table-prism/frontend-baselines-after-final.txt`](./evidence/m34-queryable-table-prism/frontend-baselines-after-final.txt)
 - M34 visualizations: [`m34-cross-engine-gap.svg`](./evidence/m34-queryable-table-prism/m34-cross-engine-gap.svg), [`m34-native-improvement.svg`](./evidence/m34-queryable-table-prism/m34-native-improvement.svg), and [`m34-working-set-gap.svg`](./evidence/m34-queryable-table-prism/m34-working-set-gap.svg)
+- M35 native before/after logs: [`evidence/m35-compact-table-prism-storage/frontend-baselines-before.txt`](./evidence/m35-compact-table-prism-storage/frontend-baselines-before.txt) and [`evidence/m35-compact-table-prism-storage/frontend-baselines-after.txt`](./evidence/m35-compact-table-prism-storage/frontend-baselines-after.txt)
+- M35 fair cross-engine before/after reruns: [`evidence/m35-compact-table-prism-storage/baseline-yune-vs-librime/`](./evidence/m35-compact-table-prism-storage/baseline-yune-vs-librime/) and [`evidence/m35-compact-table-prism-storage/after-yune-vs-librime/`](./evidence/m35-compact-table-prism-storage/after-yune-vs-librime/)
+- M35 task evidence: [`evidence/m35-compact-table-prism-storage/`](./evidence/m35-compact-table-prism-storage/)
 
 ## Public summary
 
 M33 corrected the unfair `luna_pinyin` comparison by lazy-loading the `stroke`
 reverse lookup and sharing built dictionary translators across compatible schema
-selects. M34 then landed a narrower first-page candidate-pipeline optimization:
-short `luna_pinyin` inputs can keep complete cheap prefix enumeration while
-materializing only a bounded candidate window for the ABI/context path.
+selects. M34 then landed a narrower first-page candidate-pipeline optimization.
+M35 replaced the upstream `luna_pinyin` heap-expanded spelling-algebra storage
+hot path with compact table storage plus prism canonical-code lookup.
 
 The safe public claim is still conservative:
 
 - Yune is no longer measuring luna-plus-stroke startup against luna-only librime.
-- M34 improves a bounded native first-page `luna_pinyin` path, most clearly in
-  `per_key_real_luna_pinyin_ni_full_abi`: `1,760.250 us` -> `1,132.950 us`
-  (`-35.6%`).
-- Yune still trails librime widely on per-key rows and memory footprint.
+- M35 improves native upstream `luna_pinyin` watched rows materially:
+  `zhongguo_full_abi` `14,759.755 us` -> `1,527.055 us`, `ni_engine_only`
+  `891.791 us` -> `697.044 us`, and `hao_engine_only` `1,092.879 us` ->
+  `750.517 us`.
+- The upstream `luna_pinyin` `spelling_algebra_expand` startup owner drops from
+  `148,570.200 us` / `17,784,832 bytes` to `122.200 us` / `0 bytes`.
+- Yune still trails librime widely on fair cross-engine per-key rows and
+  whole-process peak memory.
 - No browser startup, browser typing, WASM, React, Cloudflare, or TypeDuck-Web
-  delivery win is claimed from M34.
+  delivery win is claimed from M35.
 
-Final fair M34 cross-engine after-run:
+Final fair M35 cross-engine after-run:
 
-- `hao`: Yune `12,216.900 us`, librime `35.100 us`; Yune is `348.1x` slower.
-- `ni`: Yune `5,693.900 us`, librime `28.700 us`; Yune is `198.4x` slower.
-- `zhongguo`: Yune `35,909.100 us`, librime `1,379.400 us`; Yune is `26.0x` slower.
-- Session create/select/destroy: Yune `46,743.400 us`, librime `28,121.800 us`; Yune is `1.7x` slower.
-- Warm startup/runtime-ready: Yune `47,126.800 us`, librime `30,315.200 us`; Yune is `1.6x` slower.
-- Peak working set: Yune `182,333,440 bytes`, librime `22,585,344 bytes`; Yune peaks at about `8.1x` librime.
+- `hao`: Yune `12,547.200 us`, librime `35.400 us`; Yune is `354.4x` slower.
+- `ni`: Yune `5,678.500 us`, librime `28.700 us`; Yune is `197.9x` slower.
+- `zhongguo`: Yune `35,848.500 us`, librime `1,452.800 us`; Yune is `24.7x` slower.
+- Session create/select/destroy: Yune `47,806.600 us`, librime `30,977.000 us`; Yune is `1.5x` slower.
+- Warm startup/runtime-ready: Yune `46,516.200 us`, librime `31,052.200 us`; Yune is `1.5x` slower.
+- Peak working set: Yune `182,444,032 bytes`, librime `22,437,888 bytes`; Yune peaks at about `8.1x` librime.
+
+M35's memory win is dictionary-specific, not whole-process peak. Native startup
+trace deltas show `translator_install` memory for compact-active upstream
+`luna_pinyin` dropping from `37,556,224` to `9,822,208` bytes, while the fair
+harness process high-water remains about `182 MB`.
+
+## M35 Compact-Storage Results
+
+Native watched rows:
+
+| Row | M35 baseline median | M35 after median | Change |
+| --- | ---: | ---: | ---: |
+| `per_key_real_luna_pinyin_hao_full_abi` | `2,034.769 us` | `1,411.302 us` | `-30.6%` |
+| `per_key_real_luna_pinyin_hao_engine_only` | `1,092.879 us` | `750.517 us` | `-31.3%` |
+| `per_key_real_luna_pinyin_ni_full_abi` | `1,535.097 us` | `1,252.294 us` | `-18.4%` |
+| `per_key_real_luna_pinyin_ni_engine_only` | `891.791 us` | `697.044 us` | `-21.8%` |
+| `per_key_real_luna_pinyin_zhongguo_full_abi` | `14,759.755 us` | `1,527.055 us` | `-89.7%` |
+| `per_key_real_luna_pinyin_zhongguo_engine_only` | `740.966 us` | `485.482 us` | `-34.5%` |
+| `per_key_real_jyut6ping3_mobile_hai_full_abi` | `18,900.742 us` | `18,450.767 us` | `-2.4%` |
+| `per_key_real_jyut6ping3_mobile_jigaajiusihaa_full_abi` | `28,836.874 us` | `26,953.441 us` | `-6.5%` |
+| `per_key_real_jyut6ping3_mobile_jigaajiusihaa_correction_full_abi` | `24,811.675 us` | `26,707.480 us` | `+7.6%` |
+
+Startup/storage rows:
+
+| Row | M35 baseline median | M35 after median | Baseline memory delta | After memory delta |
+| --- | ---: | ---: | ---: | ---: |
+| `startup_trace_luna_pinyin_spelling_algebra_expand` | `148,570.200 us` | `122.200 us` | `17,784,832` | `0` |
+| `startup_trace_luna_pinyin_translator_install` | `233,169.800 us` | `55,155.800 us` | `37,556,224` | `9,822,208` |
+| `startup_trace_luna_pinyin_select_schema_total` | `295,027.400 us` | `104,363.600 us` | `25,026,560` | `-2,613,248` |
+
+Fair cross-engine M35 movement:
+
+| Workload | Yune baseline | Yune after | Change | librime after |
+| --- | ---: | ---: | ---: | ---: |
+| `hao` key sequence | `15,906.800 us` | `12,547.200 us` | `-21.1%` | `35.400 us` |
+| `ni` key sequence | `9,225.100 us` | `5,678.500 us` | `-38.4%` | `28.700 us` |
+| `zhongguo` key sequence | `45,608.600 us` | `35,848.500 us` | `-21.4%` | `1,452.800 us` |
+| session create/select/destroy | `67,119.100 us` | `47,806.600 us` | `-28.8%` | `30,977.000 us` |
+| startup/runtime-ready | `66,709.400 us` | `46,516.200 us` | `-30.3%` | `31,052.200 us` |
+
+M35 does not use the `354x` / `198x` fair-harness per-key ratios as the main
+typing headline. Native engine-only/full-ABI rows are the primary M35 engine
+movement evidence.
 
 ## Visual summary
 
@@ -169,13 +219,15 @@ The remaining performance gap is now better split:
 It is safe to say:
 
 > Yune's fair upstream `luna_pinyin` comparison now separates native engine
-> work from browser delivery. After M34, the native first-page `ni` full-ABI row
-> improved from about `1.76 ms` to `1.13 ms`, but Yune still trails librime by
-> roughly `26x` to `348x` on the fair per-key rows and about `8x` on peak
-> working set.
+> work from browser delivery. After M35, compact table+prism storage removes the
+> upstream `luna_pinyin` heap-expanded spelling-algebra startup owner and
+> improves native watched rows, most clearly `zhongguo_full_abi` from about
+> `14.76 ms` to `1.53 ms`. Yune still trails librime by roughly `25x` to
+> `354x` on the fair per-key rows and about `8x` on whole-process peak working
+> set.
 
 It is not safe to say:
 
 > Yune is faster than librime, Yune uses less memory than librime, Yune browser
-> startup or browser typing improved, or the queryable table/prism storage work
-> is done.
+> startup or browser typing improved, or the whole-process memory-footprint gap
+> is solved.

@@ -5,7 +5,10 @@ use super::{
 use crate::dictionary::compiled::{
     parse_rime_format_version_for_payload, read_f32_le, read_i32_le, read_u32_le,
 };
+use crate::dictionary::query_table::{LookupCandidate, LookupCandidateEntry, TableLookup};
+use crate::CandidateSource;
 use std::collections::HashMap;
+use std::ops::Range;
 
 const MAX_CORRECTION_COUNT: usize = 4096;
 const MAX_TOLERANCE_RULE_COUNT: usize = 4096;
@@ -25,6 +28,238 @@ pub enum RimeTableBinParseError {
     InvalidCount,
     InvalidUtf8,
     UnsupportedSection { role: String },
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct CompactTableStore {
+    syllabary_codes: Vec<String>,
+    code_groups: Vec<CompactCodeGroup>,
+    entries: Vec<CompactTableEntry>,
+    advanced: TableDictionaryAdvancedData,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+struct CompactCodeGroup {
+    code: String,
+    entries: Range<usize>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+struct CompactTableEntry {
+    text: String,
+    weight: f32,
+}
+
+impl CompactTableStore {
+    #[must_use]
+    pub(crate) fn from_dictionary(dictionary: TableDictionary) -> Self {
+        let advanced = dictionary.advanced_data();
+        Self::from_entries_and_advanced(dictionary.entries, advanced)
+    }
+
+    fn from_entries_and_advanced(
+        entries: Vec<TableEntry>,
+        advanced: TableDictionaryAdvancedData,
+    ) -> Self {
+        let mut syllabary_codes = Vec::<String>::new();
+        for entry in &entries {
+            if !syllabary_codes.iter().any(|code| code == &entry.code) {
+                syllabary_codes.push(entry.code.clone());
+            }
+        }
+
+        let mut grouped = entries.into_iter().fold(
+            Vec::<(String, Vec<CompactTableEntry>)>::new(),
+            |mut groups, entry| {
+                if let Some((_, group_entries)) =
+                    groups.iter_mut().find(|(code, _)| code == &entry.code)
+                {
+                    group_entries.push(CompactTableEntry {
+                        text: entry.text,
+                        weight: entry.weight,
+                    });
+                } else {
+                    groups.push((
+                        entry.code,
+                        vec![CompactTableEntry {
+                            text: entry.text,
+                            weight: entry.weight,
+                        }],
+                    ));
+                }
+                groups
+            },
+        );
+        grouped.sort_by(|left, right| left.0.cmp(&right.0));
+
+        let mut code_groups = Vec::with_capacity(grouped.len());
+        let mut compact_entries = Vec::new();
+        for (code, entries) in grouped {
+            let start = compact_entries.len();
+            compact_entries.extend(entries);
+            let end = compact_entries.len();
+            code_groups.push(CompactCodeGroup {
+                code,
+                entries: start..end,
+            });
+        }
+
+        Self {
+            syllabary_codes,
+            code_groups,
+            entries: compact_entries,
+            advanced,
+        }
+    }
+
+    #[must_use]
+    pub(crate) fn syllabary_codes(&self) -> &[String] {
+        &self.syllabary_codes
+    }
+
+    #[must_use]
+    #[cfg(test)]
+    pub(crate) fn corrections(&self) -> &[RimeCorrectionEntry] {
+        &self.advanced.corrections
+    }
+
+    #[must_use]
+    #[cfg(test)]
+    pub(crate) fn tolerance_rules(&self) -> &[RimeToleranceRule] {
+        &self.advanced.tolerance_rules
+    }
+
+    fn group_index(&self, code: &str) -> Result<usize, usize> {
+        self.code_groups
+            .binary_search_by(|group| group.code.as_str().cmp(code))
+    }
+
+    fn exact_entries(&self, code: &str) -> Option<(&str, &[CompactTableEntry])> {
+        let index = self.group_index(code).ok()?;
+        let group = &self.code_groups[index];
+        Some((&group.code, &self.entries[group.entries.clone()]))
+    }
+}
+
+#[cfg(test)]
+pub(crate) fn parse_compact_table_bin_lookup(
+    bytes: impl AsRef<[u8]>,
+) -> Result<CompactTableStore, RimeTableBinParseError> {
+    let dictionary = parse_rime_table_bin_dictionary(bytes)?;
+    Ok(CompactTableStore::from_dictionary(dictionary))
+}
+
+pub(crate) struct CompactExactCandidates<'a> {
+    code: Option<&'a str>,
+    inner: Option<std::slice::Iter<'a, CompactTableEntry>>,
+}
+
+impl<'a> Iterator for CompactExactCandidates<'a> {
+    type Item = LookupCandidate<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let code = self.code?;
+        self.inner.as_mut().and_then(Iterator::next).map(|entry| {
+            LookupCandidate::new(&entry.text, code, entry.weight, CandidateSource::Table)
+        })
+    }
+}
+
+pub(crate) struct CompactPrefixCandidates<'a> {
+    prefix: &'a str,
+    store: &'a CompactTableStore,
+    group_index: usize,
+    current_code: Option<&'a str>,
+    current_entries: Option<std::slice::Iter<'a, CompactTableEntry>>,
+    done: bool,
+}
+
+impl<'a> Iterator for CompactPrefixCandidates<'a> {
+    type Item = LookupCandidateEntry<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            if let (Some(code), Some(entries)) = (self.current_code, self.current_entries.as_mut())
+            {
+                if let Some(entry) = entries.next() {
+                    return Some(LookupCandidateEntry::new(
+                        code,
+                        LookupCandidate::new(
+                            &entry.text,
+                            code,
+                            entry.weight,
+                            CandidateSource::Table,
+                        ),
+                    ));
+                }
+                self.current_code = None;
+                self.current_entries = None;
+            }
+
+            if self.done || self.group_index >= self.store.code_groups.len() {
+                return None;
+            }
+            let group = &self.store.code_groups[self.group_index];
+            self.group_index += 1;
+            if !group.code.starts_with(self.prefix) {
+                self.done = true;
+                return None;
+            }
+            self.current_code = Some(&group.code);
+            self.current_entries = Some(self.store.entries[group.entries.clone()].iter());
+        }
+    }
+}
+
+pub(crate) struct CompactAllCodes<'a> {
+    inner: std::slice::Iter<'a, CompactCodeGroup>,
+}
+
+impl<'a> Iterator for CompactAllCodes<'a> {
+    type Item = &'a str;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next().map(|group| group.code.as_str())
+    }
+}
+
+impl TableLookup for CompactTableStore {
+    type ExactCandidates<'a> = CompactExactCandidates<'a>;
+    type PrefixCandidates<'a> = CompactPrefixCandidates<'a>;
+    type AllCodes<'a> = CompactAllCodes<'a>;
+
+    fn has_code(&self, code: &str) -> bool {
+        self.group_index(code).is_ok()
+    }
+
+    fn exact_candidates<'a>(&'a self, code: &'a str) -> Self::ExactCandidates<'a> {
+        let (code, entries) = self
+            .exact_entries(code)
+            .map_or((None, None), |(code, entries)| {
+                (Some(code), Some(entries.iter()))
+            });
+        CompactExactCandidates {
+            code,
+            inner: entries,
+        }
+    }
+
+    fn prefix_candidates<'a>(&'a self, prefix: &'a str) -> Self::PrefixCandidates<'a> {
+        CompactPrefixCandidates {
+            prefix,
+            store: self,
+            group_index: self.group_index(prefix).unwrap_or_else(|index| index),
+            current_code: None,
+            current_entries: None,
+            done: false,
+        }
+    }
+
+    fn all_codes(&self) -> Self::AllCodes<'_> {
+        CompactAllCodes {
+            inner: self.code_groups.iter(),
+        }
+    }
 }
 
 #[must_use]

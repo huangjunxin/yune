@@ -14,9 +14,9 @@ use yune_core::{
     parse_rime_prism_bin_payload, parse_rime_reverse_bin_dictionary,
     parse_rime_table_bin_dictionary, rime_dict_source_checksum, rime_table_bin_dict_file_checksum,
     CharsetFilter, DictionaryLookupFilter, EchoTranslator, HistoryTranslator, ReverseLookupFilter,
-    ReverseLookupTranslator, SchemaListTranslator, SimplifierFilter, SingleCharFilter,
-    StaticTableTranslator, SwitchTranslator, TableDictionary, TaggedFilter, Translator,
-    UniquifierFilter, TYPEDUCK_SENTENCE_WORD_PENALTY,
+    ReverseLookupTranslator, RimePrismBinPayload, SchemaListTranslator, SimplifierFilter,
+    SingleCharFilter, StaticTableTranslator, SwitchTranslator, TableDictionary, TaggedFilter,
+    Translator, UniquifierFilter, TYPEDUCK_SENTENCE_WORD_PENALTY,
 };
 
 use crate::{
@@ -306,11 +306,12 @@ fn install_schema_dictionary_translator_from_config(
         return;
     }
 
-    let dictionary = match load_schema_table_dictionary(schema_config, name_space) {
-        DictionaryLoadOutcome::Compiled(dictionary) => dictionary,
+    let (dictionary, prism_payload) = match load_schema_table_dictionary(schema_config, name_space)
+    {
+        DictionaryLoadOutcome::Compiled(compiled) => (compiled.dictionary, compiled.prism_payload),
         DictionaryLoadOutcome::SourceFallback { dictionary, reason } => {
             record_dictionary_source_fallback(session, reason);
-            dictionary
+            (dictionary, None)
         }
         DictionaryLoadOutcome::NoUsablePath {
             dictionary_id,
@@ -320,9 +321,16 @@ fn install_schema_dictionary_translator_from_config(
             return;
         }
     };
+    let use_compact_storage = is_upstream_luna_pinyin_profile
+        && !is_typeduck_jyut6ping3_profile
+        && prism_payload.is_some();
     let mut translator = {
         let _trace = startup_trace::span("translator_index_build");
-        StaticTableTranslator::from_dictionary(dictionary)
+        if use_compact_storage {
+            StaticTableTranslator::from_compact_dictionary(dictionary, prism_payload)
+        } else {
+            StaticTableTranslator::from_dictionary(dictionary)
+        }
     }
     .with_completion(enable_completion)
     .with_correction(enable_correction)
@@ -713,8 +721,8 @@ fn install_schema_reverse_lookup_translator_from_config(
 
 fn dictionary_from_lazy_outcome(outcome: DictionaryLoadOutcome) -> Option<TableDictionary> {
     match outcome {
-        DictionaryLoadOutcome::Compiled(dictionary)
-        | DictionaryLoadOutcome::SourceFallback { dictionary, .. } => Some(dictionary),
+        DictionaryLoadOutcome::Compiled(compiled) => Some(compiled.dictionary),
+        DictionaryLoadOutcome::SourceFallback { dictionary, .. } => Some(dictionary),
         DictionaryLoadOutcome::NoUsablePath { .. } => None,
     }
 }
@@ -924,7 +932,7 @@ fn install_schema_reverse_lookup_filter_from_config(
     let reverse_dictionary = match load_schema_reverse_dictionary(schema_config, name_space)
         .or_else(|| Some(load_schema_table_dictionary(schema_config, name_space)))
     {
-        Some(DictionaryLoadOutcome::Compiled(dictionary)) => dictionary,
+        Some(DictionaryLoadOutcome::Compiled(compiled)) => compiled.dictionary,
         Some(DictionaryLoadOutcome::SourceFallback { dictionary, reason }) => {
             record_dictionary_source_fallback(session, reason);
             dictionary
@@ -995,7 +1003,7 @@ fn install_schema_dictionary_lookup_filter_from_config(
             dictionary_name.clone(),
             false,
         ) {
-            DictionaryLoadOutcome::Compiled(dictionary) => dictionary,
+            DictionaryLoadOutcome::Compiled(compiled) => compiled.dictionary,
             DictionaryLoadOutcome::SourceFallback { dictionary, reason } => {
                 record_dictionary_source_fallback(session, reason);
                 dictionary
@@ -1055,8 +1063,14 @@ fn install_schema_simplifier_filter_from_config(
 }
 
 #[derive(Clone, Debug)]
+struct CompiledDictionary {
+    dictionary: TableDictionary,
+    prism_payload: Option<RimePrismBinPayload>,
+}
+
+#[derive(Clone, Debug)]
 enum DictionaryLoadOutcome {
-    Compiled(TableDictionary),
+    Compiled(CompiledDictionary),
     SourceFallback {
         dictionary: TableDictionary,
         reason: CompiledRejectReason,
@@ -1131,7 +1145,7 @@ fn load_schema_dictionary_by_name(
         require_prism,
     );
     match compiled {
-        Ok(dictionary) => DictionaryLoadOutcome::Compiled(dictionary),
+        Ok(compiled) => DictionaryLoadOutcome::Compiled(compiled),
         Err(reason) => match source_yaml {
             Some(dictionary_yaml) => {
                 let parsed = {
@@ -1166,7 +1180,7 @@ fn load_schema_compiled_dictionary(
     prism_name: &str,
     source_yaml: Option<&String>,
     require_prism: bool,
-) -> Result<TableDictionary, CompiledRejectReason> {
+) -> Result<CompiledDictionary, CompiledRejectReason> {
     let table_name = validate_data_resource_id(&format!("{dictionary_name}.table.bin"))
         .ok_or_else(|| CompiledRejectReason::Invalid("invalid table resource id".to_owned()))?;
     let prism_name = validate_data_resource_id(&format!("{prism_name}.prism.bin"))
@@ -1237,18 +1251,21 @@ fn load_schema_compiled_dictionary(
     }
     .map(|dictionary| {
         let mut dictionary = dictionary.with_merged_advanced_data_from(&reverse_dictionary);
-        if let Some(prism_payload) = prism_payload {
+        if let Some(prism_payload) = prism_payload.as_ref() {
             dictionary =
                 dictionary.with_merged_advanced_data_from(&TableDictionary::with_advanced_data(
                     Vec::new(),
                     yune_core::TableDictionaryAdvancedData {
-                        corrections: prism_payload.corrections,
-                        tolerance_rules: prism_payload.tolerance_rules,
+                        corrections: prism_payload.corrections.clone(),
+                        tolerance_rules: prism_payload.tolerance_rules.clone(),
                         ..yune_core::TableDictionaryAdvancedData::default()
                     },
                 ));
         }
-        dictionary
+        CompiledDictionary {
+            dictionary,
+            prism_payload,
+        }
     })
     .map_err(|error| match error {
         yune_core::RimeTableBinParseError::UnsupportedSection { role } => {

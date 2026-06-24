@@ -300,6 +300,19 @@ impl TableDictionary {
     }
 
     #[must_use]
+    pub(crate) fn advanced_data(&self) -> TableDictionaryAdvancedData {
+        TableDictionaryAdvancedData {
+            stems: self.stems.clone(),
+            dict_settings: self.dict_settings.clone(),
+            encoder: self.encoder.clone(),
+            corrections: self.corrections.clone(),
+            tolerance_rules: self.tolerance_rules.clone(),
+            lookup_records: self.lookup_records.clone(),
+            preset_vocabulary: self.preset_vocabulary.clone(),
+        }
+    }
+
+    #[must_use]
     pub fn stems(&self) -> &HashMap<String, Vec<String>> {
         &self.stems
     }

@@ -12,8 +12,8 @@ use std::{
 use serde_yaml::Value;
 use yune_core::{
     parse_rime_prism_bin_payload, parse_rime_reverse_bin_dictionary,
-    parse_rime_table_bin_dictionary, Engine, KeyEvent, StaticTableTranslator, TableDictionary,
-    TableDictionaryAdvancedData, TYPEDUCK_SENTENCE_WORD_PENALTY,
+    parse_rime_table_bin_dictionary, Engine, KeyEvent, RimePrismBinPayload, StaticTableTranslator,
+    TableDictionary, TableDictionaryAdvancedData, TYPEDUCK_SENTENCE_WORD_PENALTY,
 };
 use yune_rime_api::{
     begin_startup_trace, finish_startup_trace, rime_get_api, Bool, RimeCommit, RimeComposition,
@@ -900,17 +900,22 @@ fn build_real_engine(schema: RealSchema, enable_correction: bool) -> Engine {
     let prefix_fallback = yaml_bool(&schema_config, "translator/prefix_fallback")
         .unwrap_or(matches!(schema, RealSchema::Jyut6ping3Mobile));
 
-    let mut translator = StaticTableTranslator::from_dictionary(load_real_dictionary(schema))
-        .with_spelling_algebra(&formulas)
-        .with_completion(enable_completion)
-        .with_correction(enable_correction)
-        .with_dynamic_correction_lookup(matches!(schema, RealSchema::Jyut6ping3Mobile))
-        .with_sentence(enable_sentence)
-        .with_delimiters(delimiters)
-        .with_combine_candidates(combine_candidates)
-        .with_show_full_code(show_full_code)
-        .with_prediction_never_first(prediction_never_first)
-        .with_prefix_fallback(prefix_fallback);
+    let (dictionary, prism_payload) = load_real_dictionary_with_prism(schema);
+    let mut translator = if matches!(schema, RealSchema::LunaPinyin) && prism_payload.is_some() {
+        StaticTableTranslator::from_compact_dictionary(dictionary, prism_payload)
+    } else {
+        StaticTableTranslator::from_dictionary(dictionary)
+    }
+    .with_spelling_algebra(&formulas)
+    .with_completion(enable_completion)
+    .with_correction(enable_correction)
+    .with_dynamic_correction_lookup(matches!(schema, RealSchema::Jyut6ping3Mobile))
+    .with_sentence(enable_sentence)
+    .with_delimiters(delimiters)
+    .with_combine_candidates(combine_candidates)
+    .with_show_full_code(show_full_code)
+    .with_prediction_never_first(prediction_never_first)
+    .with_prefix_fallback(prefix_fallback);
     if let Some(limit) = prediction_candidate_limit {
         translator = translator.with_prediction_candidate_limit(limit);
     }
@@ -927,7 +932,9 @@ fn build_real_engine(schema: RealSchema, enable_correction: bool) -> Engine {
     engine
 }
 
-fn load_real_dictionary(schema: RealSchema) -> TableDictionary {
+fn load_real_dictionary_with_prism(
+    schema: RealSchema,
+) -> (TableDictionary, Option<RimePrismBinPayload>) {
     let schema_root = browser_app_schema_root();
     let dictionary_id = schema.dictionary_id();
     let table_bytes = fs::read(schema_root.join(format!("{dictionary_id}.table.bin")))
@@ -943,8 +950,12 @@ fn load_real_dictionary(schema: RealSchema) -> TableDictionary {
         }
         _ => load_source_dictionary(schema),
     };
-    dictionary = dictionary.with_merged_advanced_data_from(&prism_advanced_dictionary(schema));
-    dictionary
+    let prism_payload = real_prism_payload(schema);
+    if let Some(prism_payload) = prism_payload.as_ref() {
+        dictionary =
+            dictionary.with_merged_advanced_data_from(&prism_advanced_dictionary(prism_payload));
+    }
+    (dictionary, prism_payload)
 }
 
 fn load_source_dictionary(schema: RealSchema) -> TableDictionary {
@@ -967,23 +978,25 @@ fn load_source_dictionary(schema: RealSchema) -> TableDictionary {
     .expect("real source dictionary should parse")
 }
 
-fn prism_advanced_dictionary(schema: RealSchema) -> TableDictionary {
+fn real_prism_payload(schema: RealSchema) -> Option<RimePrismBinPayload> {
     let schema_root = browser_app_schema_root();
     let prism_path = schema_root.join(format!("{}.prism.bin", schema.prism_id()));
     if prism_path.is_file() {
         let prism_bytes = fs::read(prism_path).expect("real prism bin should be readable");
-        if let Ok(prism_payload) = parse_rime_prism_bin_payload(&prism_bytes) {
-            return TableDictionary::with_advanced_data(
-                Vec::<yune_core::TableEntry>::new(),
-                TableDictionaryAdvancedData {
-                    corrections: prism_payload.corrections,
-                    tolerance_rules: prism_payload.tolerance_rules,
-                    ..TableDictionaryAdvancedData::default()
-                },
-            );
-        }
+        return parse_rime_prism_bin_payload(&prism_bytes).ok();
     }
-    TableDictionary::new(Vec::<yune_core::TableEntry>::new())
+    None
+}
+
+fn prism_advanced_dictionary(prism_payload: &RimePrismBinPayload) -> TableDictionary {
+    TableDictionary::with_advanced_data(
+        Vec::<yune_core::TableEntry>::new(),
+        TableDictionaryAdvancedData {
+            corrections: prism_payload.corrections.clone(),
+            tolerance_rules: prism_payload.tolerance_rules.clone(),
+            ..TableDictionaryAdvancedData::default()
+        },
+    )
 }
 
 fn run_real_startup_runtime_ready(api: &yune_rime_api::RimeApi, schema: RealSchema) -> BenchResult {

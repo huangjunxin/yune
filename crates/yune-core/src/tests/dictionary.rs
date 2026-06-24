@@ -6,7 +6,7 @@ use std::{
 
 use serde_json::Value;
 
-use crate::dictionary::TableLookup;
+use crate::dictionary::{parse_compact_table_bin_lookup, TableLookup};
 use crate::{
     build_prism_bin, build_reverse_bin, build_table_bin, execute_rebuild_plan,
     parse_rime_prism_bin_payload, parse_rime_reverse_bin_dictionary,
@@ -60,13 +60,19 @@ fn heap_table_lookup_exposes_exact_prefix_and_all_code_queries() {
     assert!(lookup.has_code("ni"));
     assert!(!lookup.has_code("n"));
     assert_eq!(
-        lookup.exact_candidates("ni").expect("exact row")[0].text,
-        "exact"
+        lookup
+            .exact_candidates("ni")
+            .map(|candidate| candidate.text().to_owned())
+            .collect::<Vec<_>>(),
+        ["exact"]
     );
     assert_eq!(
         lookup
             .prefix_candidates("ni")
-            .map(|(code, candidates)| (code.to_owned(), candidates[0].text.clone()))
+            .map(|entry| {
+                let (code, candidate) = entry.into_parts();
+                (code.to_owned(), candidate.text().to_owned())
+            })
             .collect::<Vec<_>>(),
         [
             ("ni".to_owned(), "exact".to_owned()),
@@ -78,6 +84,110 @@ fn heap_table_lookup_exposes_exact_prefix_and_all_code_queries() {
         lookup.all_codes().collect::<Vec<_>>(),
         ["hao", "ni", "nia", "nib"]
     );
+}
+
+#[test]
+fn compact_table_lookup_matches_heap_exact_prefix_and_all_code_queries() {
+    let dictionary = TableDictionary::with_advanced_data(
+        [
+            TableEntry::new("ni", "exact", 2.0),
+            TableEntry::new("nia", "completion-a", 4.0),
+            TableEntry::new("nib", "completion-b", 3.0),
+            TableEntry::new("hao", "other", 1.0),
+        ],
+        TableDictionaryAdvancedData {
+            corrections: vec![RimeCorrectionEntry::new("uen", "un")],
+            tolerance_rules: vec![RimeToleranceRule::new("en", ["eng"])],
+            ..TableDictionaryAdvancedData::default()
+        },
+    );
+    let heap = table_dictionary_heap_lookup(&dictionary);
+    let bytes = build_table_bin(&dictionary, 0x1234_5678);
+    let compact = parse_compact_table_bin_lookup(&bytes).expect("compact table should parse");
+
+    assert!(compact.has_code("ni"));
+    assert!(!compact.has_code("n"));
+    assert_eq!(
+        compact
+            .exact_candidates("ni")
+            .map(|candidate| (
+                candidate.text().to_owned(),
+                candidate.raw_comment().to_owned(),
+                candidate.raw_quality()
+            ))
+            .collect::<Vec<_>>(),
+        heap.exact_candidates("ni")
+            .map(|candidate| (
+                candidate.text().to_owned(),
+                candidate.raw_comment().to_owned(),
+                candidate.raw_quality()
+            ))
+            .collect::<Vec<_>>()
+    );
+    assert_eq!(
+        compact
+            .prefix_candidates("ni")
+            .map(|entry| {
+                let (code, candidate) = entry.into_parts();
+                (code.to_owned(), candidate.text().to_owned())
+            })
+            .collect::<Vec<_>>(),
+        heap.prefix_candidates("ni")
+            .map(|entry| {
+                let (code, candidate) = entry.into_parts();
+                (code.to_owned(), candidate.text().to_owned())
+            })
+            .collect::<Vec<_>>()
+    );
+    assert_eq!(
+        compact.all_codes().collect::<Vec<_>>(),
+        heap.all_codes().collect::<Vec<_>>()
+    );
+    assert_eq!(
+        compact.corrections(),
+        [RimeCorrectionEntry::new("uen", "un")]
+    );
+    assert_eq!(
+        compact.tolerance_rules(),
+        [RimeToleranceRule::new("en", ["eng"])]
+    );
+}
+
+#[test]
+fn prism_lookup_resolves_spelling_to_table_payload_codes() {
+    let dictionary = TableDictionary::new([
+        TableEntry::new("ai", "payload-ai", 2.0),
+        TableEntry::new("an", "payload-an", 3.0),
+    ]);
+    let compact = parse_compact_table_bin_lookup(build_table_bin(&dictionary, 0x1234_5678))
+        .expect("compact table should parse");
+    let prism = parse_rime_prism_bin_payload(build_prism_bin(
+        compact.syllabary_codes(),
+        &[
+            "derive/^ai$/a/".to_owned(),
+            "derive/^an$/a/abbrev".to_owned(),
+        ],
+        0x1234_5678,
+        0x8765_4321,
+    ))
+    .expect("prism should parse");
+
+    let resolved = prism
+        .lookup_canonical_codes("a", compact.syllabary_codes())
+        .into_iter()
+        .map(|code| (code.code.to_owned(), code.abbreviation))
+        .collect::<Vec<_>>();
+    assert_eq!(
+        resolved,
+        [("ai".to_owned(), false), ("an".to_owned(), true)]
+    );
+
+    let texts = resolved
+        .iter()
+        .flat_map(|(code, _)| compact.exact_candidates(code))
+        .map(|candidate| candidate.text().to_owned())
+        .collect::<Vec<_>>();
+    assert_eq!(texts, ["payload-ai", "payload-an"]);
 }
 
 #[test]
@@ -360,6 +470,23 @@ fn code_text_pairs(entries: &[TableEntry]) -> Vec<(&str, &str)> {
         .iter()
         .map(|entry| (entry.code.as_str(), entry.text.as_str()))
         .collect()
+}
+
+fn table_dictionary_heap_lookup(dictionary: &TableDictionary) -> BTreeMap<String, Vec<Candidate>> {
+    let mut lookup = BTreeMap::<String, Vec<Candidate>>::new();
+    for entry in dictionary.entries() {
+        lookup
+            .entry(entry.code.clone())
+            .or_default()
+            .push(Candidate {
+                text: entry.text.clone(),
+                comment: entry.code.clone(),
+                preedit: None,
+                source: CandidateSource::Table,
+                quality: entry.weight,
+            });
+    }
+    lookup
 }
 
 fn sample_dictionary() -> TableDictionary {

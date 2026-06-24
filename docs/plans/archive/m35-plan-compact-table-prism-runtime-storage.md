@@ -1,10 +1,12 @@
 # M35 Compact Table+Prism Runtime Storage Performance Plan
 
-> **Status:** Draft / planned. **Milestone:** M35 (compact table+prism runtime storage). **Opened:** 2026-06-24. **Type:** engine-performance plan.
+> **Status:** Complete. **Milestone:** M35 (compact table+prism runtime storage). **Opened:** 2026-06-24. **Closed:** 2026-06-24. **Type:** engine-performance plan.
 >
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Replace Yune's heap-expanded dictionary hot path with a byte-identical compact queryable table+prism runtime path, then stop-gate or enable mmap/borrowed storage, so native `luna_pinyin` lookup, startup memory, and cold-start cost move materially closer to upstream librime without changing public ABI or TypeDuck profile behavior.
+
+**Closeout:** M35 landed compact owned storage for safe upstream `luna_pinyin`, preserved TypeDuck heap fallback, and deferred mmap/borrowed storage by measurement no-go. Evidence lives under [`docs/reports/evidence/m35-compact-table-prism-storage/`](../../reports/evidence/m35-compact-table-prism-storage/). Native `luna_pinyin_zhongguo_full_abi` improved `14,759.755us` -> `1,527.055us`; `spelling_algebra_expand` dropped `148,570.200us` / `17,784,832` bytes to `122.200us` / `0` bytes. Fair whole-process peak remains about `182 MB`, so no memory-footprint or "faster than librime" public claim is made.
 
 **Architecture:** M34 proved that bounded first-page materialization helps the full-ABI/context path, but it did not change raw engine lookup or peak memory. M35 attacks the remaining gap by changing the storage shape: evolve the M34 `TableLookup` seam from `&[Candidate]` heap slices into lightweight candidate views, add a compact table payload reader that can answer exact/prefix/all-code queries without prebuilding `Candidate` values, and make prism spelling/canonical-code lookup part of the critical path for spelling-algebra schemas after table payload parity is proven. Heap fallback remains available for unsupported schemas, but a compact-active schema must not build or retain the heap `BTreeMap` as a safety net. Mmap is conditional: mapping bytes while still rebuilding heap maps is not a win.
 

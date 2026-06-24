@@ -23,13 +23,16 @@ pub use compiled_prism::{
     RimePrismSpellingDescriptor,
 };
 pub use compiled_reverse::{parse_rime_reverse_bin_dictionary, RimeReverseBinParseError};
+#[cfg(test)]
+pub(crate) use compiled_table::parse_compact_table_bin_lookup;
+pub(crate) use compiled_table::CompactTableStore;
 pub use compiled_table::{
     parse_rime_table_bin_dictionary, rime_table_bin_dict_file_checksum, RimeTableBinParseError,
 };
 pub use double_array::{DartsDoubleArray, DartsDoubleArrayError, DartsMatch};
 pub use encoder::{CodeCoords, TableEncoder, TableEncoderFormulaError, TableEncodingRule};
 pub use prism_writer::build_prism_bin;
-pub(crate) use query_table::TableLookup;
+pub(crate) use query_table::{LookupCandidate, LookupCandidateEntry, TableLookup};
 pub use rebuild_executor::{
     execute_rebuild_plan, RimeDictRebuildExecuteError, RimeDictRebuildSources,
 };

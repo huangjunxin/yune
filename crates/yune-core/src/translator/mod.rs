@@ -3,7 +3,10 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::Mutex;
 
 use crate::comment_format::CommentFormat;
-use crate::dictionary::{normalize_table_code, TableLookup};
+use crate::dictionary::{
+    normalize_table_code, CompactTableStore, LookupCandidate, LookupCandidateEntry,
+    RimePrismBinPayload, TableLookup,
+};
 use crate::filter::contains_extended_cjk;
 use crate::poet::UpstreamSentenceModel;
 use crate::spelling_algebra::{ExpandedSpellingEntry, SpellingAlgebra};
@@ -24,22 +27,36 @@ pub const TYPEDUCK_SENTENCE_WORD_PENALTY: f32 = 24.0;
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct LookupCodeSpec {
     code: String,
+    lookup_code: String,
     correction_distance: Option<usize>,
     required_syllable_count: Option<usize>,
 }
 
 impl LookupCodeSpec {
     fn exact(code: impl Into<String>) -> Self {
+        let code = code.into();
+        Self {
+            lookup_code: code.clone(),
+            code,
+            correction_distance: None,
+            required_syllable_count: None,
+        }
+    }
+
+    fn alias(code: impl Into<String>, lookup_code: impl Into<String>) -> Self {
         Self {
             code: code.into(),
+            lookup_code: lookup_code.into(),
             correction_distance: None,
             required_syllable_count: None,
         }
     }
 
     fn correction(code: impl Into<String>, distance: usize) -> Self {
+        let code = code.into();
         Self {
-            code: code.into(),
+            lookup_code: code.clone(),
+            code,
             correction_distance: Some(distance),
             required_syllable_count: None,
         }
@@ -50,8 +67,10 @@ impl LookupCodeSpec {
         distance: usize,
         syllable_count: usize,
     ) -> Self {
+        let code = code.into();
         Self {
-            code: code.into(),
+            lookup_code: code.clone(),
+            code,
             correction_distance: Some(distance),
             required_syllable_count: Some(syllable_count),
         }
@@ -81,7 +100,7 @@ impl PendingLookupCandidate {
 struct PendingLookupCandidateRef<'a> {
     entry_code: &'a str,
     lookup_code: &'a str,
-    candidate: &'a Candidate,
+    candidate: LookupCandidate<'a>,
     correction_distance: Option<usize>,
     emission_order: usize,
 }
@@ -112,9 +131,109 @@ impl Translator for EchoTranslator {
     }
 }
 
+enum TableStorage {
+    Heap(BTreeMap<String, Vec<Candidate>>),
+    Compact(Box<CompactTableStore>),
+}
+
+impl TableStorage {
+    fn has_code(&self, code: &str) -> bool {
+        match self {
+            Self::Heap(entries) => entries.has_code(code),
+            Self::Compact(store) => store.has_code(code),
+        }
+    }
+
+    fn exact_candidates<'a>(
+        &'a self,
+        code: &'a str,
+    ) -> Box<dyn Iterator<Item = LookupCandidate<'a>> + 'a> {
+        match self {
+            Self::Heap(entries) => Box::new(entries.exact_candidates(code)),
+            Self::Compact(store) => Box::new(store.exact_candidates(code)),
+        }
+    }
+
+    fn prefix_candidates<'a>(
+        &'a self,
+        prefix: &'a str,
+    ) -> Box<dyn Iterator<Item = LookupCandidateEntry<'a>> + 'a> {
+        match self {
+            Self::Heap(entries) => Box::new(entries.prefix_candidates(prefix)),
+            Self::Compact(store) => Box::new(store.prefix_candidates(prefix)),
+        }
+    }
+
+    fn all_codes(&self) -> Box<dyn Iterator<Item = &str> + '_> {
+        match self {
+            Self::Heap(entries) => Box::new(entries.all_codes()),
+            Self::Compact(store) => Box::new(store.all_codes()),
+        }
+    }
+
+    fn syllabary_codes(&self) -> Option<&[String]> {
+        match self {
+            Self::Heap(_) => None,
+            Self::Compact(store) => Some(store.syllabary_codes()),
+        }
+    }
+
+    fn table_entries(&self) -> Vec<TableEntry> {
+        match self {
+            Self::Heap(entries) => entries
+                .iter()
+                .flat_map(|(code, candidates)| {
+                    candidates.iter().map(move |candidate| {
+                        TableEntry::new(code, &candidate.text, candidate.quality)
+                    })
+                })
+                .collect(),
+            Self::Compact(store) => store
+                .all_codes()
+                .flat_map(|code| {
+                    store.exact_candidates(code).map(move |candidate| {
+                        TableEntry::new(code, candidate.text(), candidate.raw_quality())
+                    })
+                })
+                .collect(),
+        }
+    }
+
+    fn owned_entries(&self) -> Vec<(String, Candidate)> {
+        match self {
+            Self::Heap(entries) => entries
+                .iter()
+                .flat_map(|(code, candidates)| {
+                    candidates
+                        .iter()
+                        .map(move |candidate| (code.clone(), candidate.clone()))
+                })
+                .collect(),
+            Self::Compact(store) => store
+                .all_codes()
+                .flat_map(|code| {
+                    store.exact_candidates(code).map(move |candidate| {
+                        (
+                            code.to_owned(),
+                            Candidate {
+                                text: candidate.text().to_owned(),
+                                comment: candidate.raw_comment().to_owned(),
+                                preedit: None,
+                                source: candidate.source_hint(),
+                                quality: candidate.raw_quality(),
+                            },
+                        )
+                    })
+                })
+                .collect(),
+        }
+    }
+}
+
 pub struct StaticTableTranslator {
     source_entries: Option<Vec<(String, Candidate)>>,
-    entries_by_code: BTreeMap<String, Vec<Candidate>>,
+    storage: TableStorage,
+    prism_payload: Option<RimePrismBinPayload>,
     spelling_abbreviation_entries: HashSet<(String, String, String)>,
     normal_codes: HashSet<String>,
     enable_completion: bool,
@@ -170,7 +289,8 @@ impl StaticTableTranslator {
         let normal_codes = normal_codes(&entries);
         Self {
             source_entries: Some(entries),
-            entries_by_code,
+            storage: TableStorage::Heap(entries_by_code),
+            prism_payload: None,
             spelling_abbreviation_entries: HashSet::new(),
             normal_codes,
             enable_completion: false,
@@ -226,7 +346,59 @@ impl StaticTableTranslator {
         let normal_codes = normal_codes(&entries);
         Self {
             source_entries: Some(entries),
-            entries_by_code,
+            storage: TableStorage::Heap(entries_by_code),
+            prism_payload: None,
+            spelling_abbreviation_entries: HashSet::new(),
+            normal_codes,
+            enable_completion: false,
+            enable_correction: false,
+            dynamic_correction_lookup: false,
+            enable_charset_filter: false,
+            enable_sentence: false,
+            sentence_over_completion: false,
+            tags: vec!["abc".to_owned()],
+            delimiters: " ".to_owned(),
+            initial_quality: 0.0,
+            comment_format: CommentFormat::default(),
+            preedit_format: CommentFormat::default(),
+            dictionary_exclude: HashSet::new(),
+            corrections,
+            tolerance_rules,
+            combine_candidates: false,
+            prefix: String::new(),
+            suffix: String::new(),
+            show_full_code: true,
+            single_letter_sentence_guard_enabled: false,
+            prediction_weight_threshold: None,
+            prediction_never_first: false,
+            prediction_candidate_limit: None,
+            prefix_fallback: false,
+            sentence_word_penalty: DEFAULT_SENTENCE_WORD_PENALTY,
+            spelling_algebra_formulas: Vec::new(),
+            preset_vocabulary,
+            upstream_sentence_model: None,
+        }
+    }
+
+    #[must_use]
+    pub fn from_compact_dictionary(
+        dictionary: TableDictionary,
+        prism_payload: Option<RimePrismBinPayload>,
+    ) -> Self {
+        let preset_vocabulary = dictionary.preset_vocabulary_entries().to_vec();
+        let corrections = dictionary.corrections().to_vec();
+        let tolerance_rules = dictionary.tolerance_rules().to_vec();
+        let normal_codes = dictionary
+            .entries()
+            .iter()
+            .map(|entry| entry.code.clone())
+            .collect::<HashSet<_>>();
+        Self {
+            source_entries: None,
+            storage: TableStorage::Compact(Box::new(CompactTableStore::from_dictionary(
+                dictionary,
+            ))),
+            prism_payload,
             spelling_abbreviation_entries: HashSet::new(),
             normal_codes,
             enable_completion: false,
@@ -397,14 +569,7 @@ impl StaticTableTranslator {
                 .map(|(code, candidate)| TableEntry::new(code, &candidate.text, candidate.quality))
                 .collect::<Vec<_>>()
         } else {
-            self.entries_by_code
-                .iter()
-                .flat_map(|(code, candidates)| {
-                    candidates.iter().map(move |candidate| {
-                        TableEntry::new(code, &candidate.text, candidate.quality)
-                    })
-                })
-                .collect::<Vec<_>>()
+            self.storage.table_entries()
         };
         self.upstream_sentence_model = Some(UpstreamSentenceModel::from_entries(
             &entries,
@@ -436,10 +601,16 @@ impl StaticTableTranslator {
     pub fn with_spelling_algebra(mut self, formulas: &[String]) -> Self {
         self.spelling_algebra_formulas = formulas.to_vec();
         let algebra = SpellingAlgebra::parse(formulas);
-        let source_entries = self.source_entries.take().unwrap_or_else(|| {
-            entries_from_entries_by_code(std::mem::take(&mut self.entries_by_code))
-        });
         if !algebra.is_empty() {
+            if matches!(self.storage, TableStorage::Compact(_)) && self.prism_payload.is_some() {
+                self.single_letter_sentence_guard_enabled =
+                    formulas.iter().any(|formula| formula.contains("/abbrev"));
+                return self;
+            }
+            let source_entries = self
+                .source_entries
+                .take()
+                .unwrap_or_else(|| self.storage.owned_entries());
             let (entries, normal_codes, has_single_letter_abbreviations) =
                 algebra.expand_entries_with_normal_codes(source_entries);
             self.spelling_abbreviation_entries = spelling_abbreviation_entries(&entries);
@@ -447,11 +618,14 @@ impl StaticTableTranslator {
                 .into_iter()
                 .map(|entry| (entry.code, entry.candidate))
                 .collect::<Vec<_>>();
-            self.entries_by_code = entries_by_code_from_entries(entries);
+            self.storage = TableStorage::Heap(entries_by_code_from_entries(entries));
             self.normal_codes = normal_codes;
             self.single_letter_sentence_guard_enabled = has_single_letter_abbreviations;
-        } else if self.entries_by_code.is_empty() {
-            self.entries_by_code = entries_by_code_from_entries(source_entries);
+        } else if self.source_entries.is_some() && !self.storage.has_code("") {
+            let source_entries = self.source_entries.take().unwrap_or_default();
+            if !source_entries.is_empty() {
+                self.storage = TableStorage::Heap(entries_by_code_from_entries(source_entries));
+            }
         }
         self
     }
@@ -480,7 +654,22 @@ impl StaticTableTranslator {
 
     fn expanded_lookup_specs(&self, lookup_code: &str) -> Vec<LookupCodeSpec> {
         let mut specs = vec![LookupCodeSpec::exact(lookup_code)];
-        let has_exact_lookup = self.entries_by_code.contains_key(lookup_code);
+        let has_exact_lookup = self.storage.has_code(lookup_code);
+        if let (Some(prism), Some(syllabary_codes)) =
+            (self.prism_payload.as_ref(), self.storage.syllabary_codes())
+        {
+            for lookup in prism.lookup_canonical_codes(lookup_code, syllabary_codes) {
+                if !lookup.correction
+                    && !specs.iter().any(|spec| spec.code == lookup.code)
+                    && self.storage.has_code(lookup.code)
+                {
+                    specs.push(LookupCodeSpec::alias(
+                        lookup.code.to_owned(),
+                        lookup_code.to_owned(),
+                    ));
+                }
+            }
+        }
         let allow_dynamic_near_lookup = self.dynamic_correction_lookup
             && (self.enable_correction || (has_exact_lookup && lookup_code.starts_with('m')));
         let dynamic_syllable_count = (!self.enable_correction && has_exact_lookup)
@@ -507,7 +696,7 @@ impl StaticTableTranslator {
                 }
             }
             if allow_dynamic_near_lookup {
-                for canonical_code in self.entries_by_code.keys() {
+                for canonical_code in self.storage.all_codes() {
                     if canonical_code == lookup_code {
                         continue;
                     }
@@ -538,7 +727,7 @@ impl StaticTableTranslator {
                     if distance == 0 || distance > TYPEDUCK_CORRECTION_MAX_DISTANCE {
                         continue;
                     }
-                    corrections.push((canonical_code.clone(), distance));
+                    corrections.push((canonical_code.to_owned(), distance));
                 }
             }
             if let Some(min_distance) = corrections.iter().map(|(_, distance)| *distance).min() {
@@ -570,47 +759,45 @@ impl StaticTableTranslator {
     }
 
     fn exact_lookup_min_syllable_count(&self, lookup_code: &str) -> Option<usize> {
-        self.entries_by_code
-            .get(lookup_code)?
-            .iter()
-            .filter_map(candidate_syllable_count)
+        self.storage
+            .exact_candidates(lookup_code)
+            .filter_map(|candidate| {
+                raw_candidate_syllable_count(candidate.raw_comment(), candidate.text())
+            })
             .min()
     }
 
     fn lookup_code_has_syllable_count(&self, lookup_code: &str, syllable_count: usize) -> bool {
-        self.entries_by_code
-            .get(lookup_code)
-            .is_some_and(|candidates| {
-                candidates
-                    .iter()
-                    .any(|candidate| candidate_syllable_count(candidate) == Some(syllable_count))
-            })
+        self.storage.exact_candidates(lookup_code).any(|candidate| {
+            raw_candidate_syllable_count(candidate.raw_comment(), candidate.text())
+                == Some(syllable_count)
+        })
     }
 
     fn lookup_code_has_non_abbreviation_candidate(&self, lookup_code: &str) -> bool {
-        self.entries_by_code
-            .get(lookup_code)
-            .is_some_and(|candidates| {
-                candidates
-                    .iter()
-                    .any(|candidate| !self.is_spelling_abbreviation_entry(lookup_code, candidate))
-            })
+        self.storage
+            .exact_candidates(lookup_code)
+            .any(|candidate| !self.is_spelling_abbreviation_view(lookup_code, &candidate))
     }
 
-    fn is_dictionary_word_allowed(&self, candidate: &Candidate) -> bool {
-        !self.dictionary_exclude.contains(&candidate.text)
+    fn is_dictionary_text_allowed(&self, text: &str) -> bool {
+        !self.dictionary_exclude.contains(text)
     }
 
-    fn is_limited_prediction_candidate(&self, lookup_code: &str, candidate: &Candidate) -> bool {
+    fn is_limited_prediction_view(
+        &self,
+        lookup_code: &str,
+        candidate: &LookupCandidate<'_>,
+    ) -> bool {
         self.prediction_candidate_limit.is_some()
-            && complete_syllable_prefix_count(&candidate.comment, lookup_code).is_some()
+            && complete_syllable_prefix_count(candidate.raw_comment(), lookup_code).is_some()
     }
 
-    fn is_completion_candidate_allowed(
+    fn is_completion_candidate_view_allowed(
         &self,
         lookup_has_exact_candidates: bool,
         limited_prediction: bool,
-        candidate: &Candidate,
+        candidate: &LookupCandidate<'_>,
     ) -> bool {
         if self.prediction_candidate_limit.is_some()
             && lookup_has_exact_candidates
@@ -622,14 +809,14 @@ impl StaticTableTranslator {
         !threshold_applies
             || self
                 .prediction_weight_threshold
-                .map_or(true, |threshold| candidate.quality >= threshold)
+                .map_or(true, |threshold| candidate.raw_quality() >= threshold)
     }
 
-    fn is_spelling_abbreviation_entry(&self, code: &str, candidate: &Candidate) -> bool {
+    fn is_spelling_abbreviation_view(&self, code: &str, candidate: &LookupCandidate<'_>) -> bool {
         self.spelling_abbreviation_entries.contains(&(
             code.to_owned(),
-            candidate.text.clone(),
-            candidate.comment.clone(),
+            candidate.text().to_owned(),
+            candidate.raw_comment().to_owned(),
         ))
     }
 
@@ -690,7 +877,36 @@ impl StaticTableTranslator {
         lookup_code: &str,
         correction_distance: Option<usize>,
     ) -> Candidate {
-        let mut candidate = candidate.clone();
+        self.format_candidate_for_lookup(
+            entry_code,
+            candidate.clone(),
+            lookup_code,
+            correction_distance,
+        )
+    }
+
+    fn candidate_for_lookup_view(
+        &self,
+        entry_code: &str,
+        candidate: &LookupCandidate<'_>,
+        lookup_code: &str,
+        correction_distance: Option<usize>,
+    ) -> Candidate {
+        self.format_candidate_for_lookup(
+            entry_code,
+            candidate.to_candidate(),
+            lookup_code,
+            correction_distance,
+        )
+    }
+
+    fn format_candidate_for_lookup(
+        &self,
+        entry_code: &str,
+        mut candidate: Candidate,
+        lookup_code: &str,
+        correction_distance: Option<usize>,
+    ) -> Candidate {
         let comment_code = if self.show_full_code {
             candidate.comment.clone()
         } else if entry_code == lookup_code {
@@ -745,10 +961,10 @@ impl StaticTableTranslator {
         &self,
         entry_code: &str,
         lookup_code: &str,
-        candidate: &Candidate,
+        candidate: &LookupCandidate<'_>,
         correction_distance: Option<usize>,
     ) -> f32 {
-        let mut raw_quality = candidate.quality;
+        let mut raw_quality = candidate.raw_quality();
         if let Some(distance) = correction_distance {
             raw_quality += TYPEDUCK_CORRECTION_CREDIBILITY * distance as f32;
         }
@@ -767,13 +983,13 @@ impl StaticTableTranslator {
         self.materialized_quality(
             right.entry_code,
             right.lookup_code,
-            right.candidate,
+            &right.candidate,
             right.correction_distance,
         )
         .partial_cmp(&self.materialized_quality(
             left.entry_code,
             left.lookup_code,
-            left.candidate,
+            &left.candidate,
             left.correction_distance,
         ))
         .unwrap_or(Ordering::Equal)
@@ -813,52 +1029,55 @@ impl StaticTableTranslator {
         let mut emission_order = 0;
         let mut full_count = 0;
         for lookup_spec in lookup_specs {
-            let lookup_code = lookup_spec.code.as_str();
-            let lookup_has_exact_candidates = self.entries_by_code.has_code(lookup_code);
-            if let Some(exact_candidates) = self.entries_by_code.exact_candidates(lookup_code) {
-                for candidate in exact_candidates.iter().filter(|candidate| {
-                    self.is_dictionary_word_allowed(candidate)
+            let fetch_code = lookup_spec.code.as_str();
+            let lookup_code = lookup_spec.lookup_code.as_str();
+            let lookup_has_exact_candidates = self.storage.has_code(fetch_code);
+            for candidate in self
+                .storage
+                .exact_candidates(fetch_code)
+                .filter(|candidate| {
+                    self.is_dictionary_text_allowed(candidate.text())
                         && lookup_spec.required_syllable_count.map_or(true, |count| {
-                            candidate_syllable_count(candidate) == Some(count)
+                            raw_candidate_syllable_count(candidate.raw_comment(), candidate.text())
+                                == Some(count)
                         })
-                        && (!filter_by_charset || !contains_extended_cjk(&candidate.text))
-                }) {
-                    full_count += 1;
-                    self.push_bounded_pending(
-                        &mut selected,
-                        PendingLookupCandidateRef {
-                            entry_code: lookup_code,
-                            lookup_code,
-                            candidate,
-                            correction_distance: lookup_spec.correction_distance,
-                            emission_order,
-                        },
-                        limit,
-                    );
-                    emission_order += 1;
-                }
+                        && (!filter_by_charset || !contains_extended_cjk(candidate.text()))
+                })
+            {
+                full_count += 1;
+                self.push_bounded_pending(
+                    &mut selected,
+                    PendingLookupCandidateRef {
+                        entry_code: lookup_code,
+                        lookup_code,
+                        candidate,
+                        correction_distance: lookup_spec.correction_distance,
+                        emission_order,
+                    },
+                    limit,
+                );
+                emission_order += 1;
             }
             if lookup_spec.correction_distance.is_none()
                 && self.enable_completion
                 && !lookup_code.is_empty()
+                && fetch_code == lookup_code
             {
-                for (entry_code, entry_candidates) in
-                    self.entries_by_code.prefix_candidates(lookup_code)
-                {
+                for entry in self.storage.prefix_candidates(lookup_code) {
+                    let (entry_code, candidate) = entry.into_parts();
                     if entry_code == lookup_code {
                         continue;
                     }
-                    for candidate in entry_candidates.iter().filter(|candidate| {
-                        let limited_prediction =
-                            self.is_limited_prediction_candidate(lookup_code, candidate);
-                        self.is_dictionary_word_allowed(candidate)
-                            && self.is_completion_candidate_allowed(
-                                lookup_has_exact_candidates,
-                                limited_prediction,
-                                candidate,
-                            )
-                            && (!filter_by_charset || !contains_extended_cjk(&candidate.text))
-                    }) {
+                    let limited_prediction =
+                        self.is_limited_prediction_view(lookup_code, &candidate);
+                    if self.is_dictionary_text_allowed(candidate.text())
+                        && self.is_completion_candidate_view_allowed(
+                            lookup_has_exact_candidates,
+                            limited_prediction,
+                            &candidate,
+                        )
+                        && (!filter_by_charset || !contains_extended_cjk(candidate.text()))
+                    {
                         full_count += 1;
                         self.push_bounded_pending(
                             &mut selected,
@@ -880,9 +1099,9 @@ impl StaticTableTranslator {
         let candidates = selected
             .into_iter()
             .map(|candidate| {
-                self.candidate_for_lookup(
+                self.candidate_for_lookup_view(
                     candidate.entry_code,
-                    candidate.candidate,
+                    &candidate.candidate,
                     candidate.lookup_code,
                     candidate.correction_distance,
                 )
@@ -898,68 +1117,71 @@ impl StaticTableTranslator {
     ) -> Vec<Candidate> {
         let mut candidates = Vec::new();
         for lookup_spec in lookup_specs {
-            let lookup_code = lookup_spec.code.as_str();
+            let fetch_code = lookup_spec.code.as_str();
+            let lookup_code = lookup_spec.lookup_code.as_str();
             let mut pending = Vec::new();
-            let lookup_has_exact_candidates = self.entries_by_code.contains_key(lookup_code);
-            if let Some(exact_candidates) = self.entries_by_code.get(lookup_code) {
-                pending.extend(
-                    exact_candidates
-                        .iter()
-                        .filter(|candidate| {
-                            self.is_dictionary_word_allowed(candidate)
-                                && lookup_spec.required_syllable_count.map_or(true, |count| {
-                                    candidate_syllable_count(candidate) == Some(count)
-                                })
-                                && (!filter_by_charset || !contains_extended_cjk(&candidate.text))
-                        })
-                        .map(|candidate| PendingLookupCandidate {
+            let lookup_has_exact_candidates = self.storage.has_code(fetch_code);
+            pending.extend(
+                self.storage
+                    .exact_candidates(fetch_code)
+                    .filter_map(|candidate| {
+                        if !self.is_dictionary_text_allowed(candidate.text())
+                            || !lookup_spec.required_syllable_count.map_or(true, |count| {
+                                raw_candidate_syllable_count(
+                                    candidate.raw_comment(),
+                                    candidate.text(),
+                                ) == Some(count)
+                            })
+                            || (filter_by_charset && contains_extended_cjk(candidate.text()))
+                        {
+                            return None;
+                        }
+                        Some(PendingLookupCandidate {
                             entry_code: lookup_code.to_owned(),
                             lookup_code: lookup_code.to_owned(),
-                            candidate: candidate.clone(),
+                            candidate: candidate.to_candidate(),
                             correction_distance: lookup_spec.correction_distance,
                             spelling_abbreviation: self
-                                .is_spelling_abbreviation_entry(lookup_code, candidate),
+                                .is_spelling_abbreviation_view(lookup_code, &candidate),
                             limited_prediction: false,
-                        }),
-                );
-            }
+                        })
+                    }),
+            );
             if lookup_spec.correction_distance.is_none()
                 && self.enable_completion
                 && !lookup_code.is_empty()
+                && fetch_code == lookup_code
             {
                 let mut completion_candidates = Vec::new();
-                for (entry_code, entry_candidates) in
-                    self.entries_by_code.range(lookup_code.to_owned()..)
-                {
+                for entry in self.storage.prefix_candidates(lookup_code) {
+                    let (entry_code, candidate) = entry.into_parts();
                     if !entry_code.starts_with(lookup_code) {
                         break;
                     }
                     if entry_code == lookup_code {
                         continue;
                     }
-                    completion_candidates.extend(entry_candidates.iter().filter_map(|candidate| {
-                        let limited_prediction =
-                            self.is_limited_prediction_candidate(lookup_code, candidate);
-                        if !self.is_dictionary_word_allowed(candidate)
-                            || !self.is_completion_candidate_allowed(
-                                lookup_has_exact_candidates,
-                                limited_prediction,
-                                candidate,
-                            )
-                            || (filter_by_charset && contains_extended_cjk(&candidate.text))
-                        {
-                            return None;
-                        }
-                        Some(PendingLookupCandidate {
-                            entry_code: entry_code.to_owned(),
-                            lookup_code: lookup_code.to_owned(),
-                            candidate: candidate.clone(),
-                            correction_distance: lookup_spec.correction_distance,
-                            spelling_abbreviation: self
-                                .is_spelling_abbreviation_entry(entry_code, candidate),
+                    let limited_prediction =
+                        self.is_limited_prediction_view(lookup_code, &candidate);
+                    if !self.is_dictionary_text_allowed(candidate.text())
+                        || !self.is_completion_candidate_view_allowed(
+                            lookup_has_exact_candidates,
                             limited_prediction,
-                        })
-                    }));
+                            &candidate,
+                        )
+                        || (filter_by_charset && contains_extended_cjk(candidate.text()))
+                    {
+                        continue;
+                    }
+                    completion_candidates.push(PendingLookupCandidate {
+                        entry_code: entry_code.to_owned(),
+                        lookup_code: lookup_code.to_owned(),
+                        candidate: candidate.to_candidate(),
+                        correction_distance: lookup_spec.correction_distance,
+                        spelling_abbreviation: self
+                            .is_spelling_abbreviation_view(entry_code, &candidate),
+                        limited_prediction,
+                    });
                 }
                 if let Some(limit) = self.prediction_candidate_limit {
                     let mut limited_predictions = Vec::new();
@@ -1011,21 +1233,19 @@ impl StaticTableTranslator {
             .collect::<HashSet<_>>();
         let mut candidates = Vec::new();
         for (prefix, consumed_lookup_len) in prefixes {
-            let Some(prefix_candidates) = self.entries_by_code.get(prefix) else {
-                continue;
-            };
             let consumed_input_len = input
                 .len()
                 .saturating_sub(lookup_code.len())
                 .saturating_add(consumed_lookup_len);
-            for candidate in prefix_candidates.iter().filter(|candidate| {
-                self.is_dictionary_word_allowed(candidate)
-                    && original_code_allows_prefix_fallback(&candidate.comment, prefix)
-                    && (!filter_by_charset || !contains_extended_cjk(&candidate.text))
+            for candidate in self.storage.exact_candidates(prefix).filter(|candidate| {
+                self.is_dictionary_text_allowed(candidate.text())
+                    && original_code_allows_prefix_fallback(candidate.raw_comment(), prefix)
+                    && (!filter_by_charset || !contains_extended_cjk(candidate.text()))
             }) {
                 let recompose_on_default = consumed_input_len > 1
-                    && !self.is_spelling_abbreviation_entry(prefix, candidate);
-                let mut candidate = self.candidate_for_lookup(prefix, candidate, prefix, None);
+                    && !self.is_spelling_abbreviation_view(prefix, &candidate);
+                let mut candidate =
+                    self.candidate_for_lookup_view(prefix, &candidate, prefix, None);
                 if !seen_texts.insert(candidate.text.clone()) {
                     continue;
                 }
@@ -1049,7 +1269,7 @@ impl StaticTableTranslator {
         let mut prefixes = Vec::new();
         for end in boundaries {
             let prefix = &lookup_code[..end];
-            if self.entries_by_code.contains_key(prefix) {
+            if self.storage.has_code(prefix) {
                 prefixes.push((prefix, end));
             }
         }
@@ -1242,21 +1462,20 @@ impl StaticTableTranslator {
                 {
                     continue;
                 }
-                let mut entry_matches = Vec::new();
-                if let Some(candidates) = self.entries_by_code.get(entry_code) {
-                    entry_matches.push(candidates.as_slice());
-                }
+                let mut entry_matches = self
+                    .storage
+                    .exact_candidates(entry_code)
+                    .collect::<Vec<_>>();
                 if is_final_segment && self.enable_completion && !entry_code.is_empty() {
-                    for (completion_code, completion_candidates) in
-                        self.entries_by_code.range(entry_code.to_owned()..)
-                    {
+                    for entry in self.storage.prefix_candidates(entry_code) {
+                        let (completion_code, candidate) = entry.into_parts();
                         if !completion_code.starts_with(entry_code) {
                             break;
                         }
                         if completion_code == entry_code {
                             continue;
                         }
-                        entry_matches.push(completion_candidates.as_slice());
+                        entry_matches.push(candidate);
                     }
                 }
                 if entry_matches.is_empty() {
@@ -1272,29 +1491,30 @@ impl StaticTableTranslator {
                     }
                     end_pos += ch.len_utf8();
                 }
-                for candidates in entry_matches {
-                    for candidate in candidates {
-                        if !self.is_dictionary_word_allowed(candidate)
-                            || (filter_by_charset && contains_extended_cjk(&candidate.text))
-                        {
-                            continue;
-                        }
-                        let mut next_path = path.clone();
-                        if !sentence_piece_matches_input_code(candidate, entry_code) {
-                            next_path.fuzzy_pieces += 1;
-                        }
-                        next_path.quality +=
-                            sentence_piece_quality(candidate.quality, self.sentence_word_penalty);
-                        next_path.raw_quality += candidate.quality;
-                        next_path.pieces.push(candidate.text.clone());
-                        if is_final_segment && next_path.pieces.len() <= 1 {
-                            continue;
-                        }
-                        let replace = match paths[end_pos].as_ref() {
-                            Some(existing) => match next_path
-                                .fuzzy_pieces
-                                .cmp(&existing.fuzzy_pieces)
-                            {
+                for candidate in entry_matches {
+                    if !self.is_dictionary_text_allowed(candidate.text())
+                        || (filter_by_charset && contains_extended_cjk(candidate.text()))
+                    {
+                        continue;
+                    }
+                    let mut next_path = path.clone();
+                    if !raw_sentence_piece_matches_input_code(
+                        candidate.raw_comment(),
+                        candidate.text(),
+                        entry_code,
+                    ) {
+                        next_path.fuzzy_pieces += 1;
+                    }
+                    next_path.quality +=
+                        sentence_piece_quality(candidate.raw_quality(), self.sentence_word_penalty);
+                    next_path.raw_quality += candidate.raw_quality();
+                    next_path.pieces.push(candidate.text().to_owned());
+                    if is_final_segment && next_path.pieces.len() <= 1 {
+                        continue;
+                    }
+                    let replace = match paths[end_pos].as_ref() {
+                        Some(existing) => {
+                            match next_path.fuzzy_pieces.cmp(&existing.fuzzy_pieces) {
                                 Ordering::Less => true,
                                 Ordering::Greater => false,
                                 Ordering::Equal => match next_path
@@ -1306,12 +1526,12 @@ impl StaticTableTranslator {
                                     Ordering::Equal => next_path.raw_quality > existing.raw_quality,
                                     Ordering::Less => false,
                                 },
-                            },
-                            None => true,
-                        };
-                        if replace {
-                            paths[end_pos] = Some(next_path);
+                            }
                         }
+                        None => true,
+                    };
+                    if replace {
+                        paths[end_pos] = Some(next_path);
                     }
                 }
             }
@@ -1391,19 +1611,6 @@ fn entries_by_code_from_entries(
     indexed
 }
 
-fn entries_from_entries_by_code(
-    entries_by_code: BTreeMap<String, Vec<Candidate>>,
-) -> Vec<(String, Candidate)> {
-    entries_by_code
-        .into_iter()
-        .flat_map(|(code, candidates)| {
-            candidates
-                .into_iter()
-                .map(move |candidate| (code.clone(), candidate))
-        })
-        .collect()
-}
-
 fn spelling_abbreviation_entries(
     entries: &[ExpandedSpellingEntry],
 ) -> HashSet<(String, String, String)> {
@@ -1452,11 +1659,11 @@ fn original_code_allows_prefix_fallback(raw_code: &str, lookup_code: &str) -> bo
     normalized == lookup || (lookup.len() == 1 && normalized.starts_with(&lookup))
 }
 
-fn sentence_piece_matches_input_code(candidate: &Candidate, entry_code: &str) -> bool {
-    if candidate.comment.is_empty() {
+fn raw_sentence_piece_matches_input_code(raw_comment: &str, _text: &str, entry_code: &str) -> bool {
+    if raw_comment.is_empty() {
         return true;
     }
-    let normalized = normalized_original_code(&candidate.comment);
+    let normalized = normalized_original_code(raw_comment);
     normalized == entry_code
 }
 
@@ -1466,9 +1673,9 @@ fn source_code_syllable_count(raw_code: &str) -> Option<usize> {
     (count > 0).then_some(count)
 }
 
-fn candidate_syllable_count(candidate: &Candidate) -> Option<usize> {
-    source_code_syllable_count(&candidate.comment).or_else(|| {
-        let count = candidate.text.chars().count();
+fn raw_candidate_syllable_count(raw_comment: &str, text: &str) -> Option<usize> {
+    source_code_syllable_count(raw_comment).or_else(|| {
+        let count = text.chars().count();
         (count > 0).then_some(count)
     })
 }

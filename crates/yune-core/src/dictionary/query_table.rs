@@ -1,9 +1,96 @@
 use std::collections::{btree_map, BTreeMap};
+use std::slice;
 
-use crate::Candidate;
+use crate::{Candidate, CandidateSource};
+
+#[derive(Clone)]
+pub(crate) struct LookupCandidate<'a> {
+    text: &'a str,
+    raw_comment: &'a str,
+    raw_quality: f32,
+    source_hint: CandidateSource,
+}
+
+impl<'a> LookupCandidate<'a> {
+    #[must_use]
+    pub(crate) fn new(
+        text: &'a str,
+        raw_comment: &'a str,
+        raw_quality: f32,
+        source_hint: CandidateSource,
+    ) -> Self {
+        Self {
+            text,
+            raw_comment,
+            raw_quality,
+            source_hint,
+        }
+    }
+
+    #[must_use]
+    pub(crate) fn from_candidate(candidate: &'a Candidate) -> Self {
+        Self::new(
+            &candidate.text,
+            &candidate.comment,
+            candidate.quality,
+            candidate.source.clone(),
+        )
+    }
+
+    #[must_use]
+    pub(crate) fn text(&self) -> &'a str {
+        self.text
+    }
+
+    #[must_use]
+    pub(crate) fn raw_comment(&self) -> &'a str {
+        self.raw_comment
+    }
+
+    #[must_use]
+    pub(crate) fn raw_quality(&self) -> f32 {
+        self.raw_quality
+    }
+
+    #[must_use]
+    pub(crate) fn source_hint(&self) -> CandidateSource {
+        self.source_hint.clone()
+    }
+
+    #[must_use]
+    pub(crate) fn to_candidate(&self) -> Candidate {
+        Candidate {
+            text: self.text.to_owned(),
+            comment: self.raw_comment.to_owned(),
+            preedit: None,
+            source: self.source_hint(),
+            quality: self.raw_quality,
+        }
+    }
+}
+
+pub(crate) struct LookupCandidateEntry<'a> {
+    code: &'a str,
+    candidate: LookupCandidate<'a>,
+}
+
+impl<'a> LookupCandidateEntry<'a> {
+    #[must_use]
+    pub(crate) fn new(code: &'a str, candidate: LookupCandidate<'a>) -> Self {
+        Self { code, candidate }
+    }
+
+    #[must_use]
+    pub(crate) fn into_parts(self) -> (&'a str, LookupCandidate<'a>) {
+        (self.code, self.candidate)
+    }
+}
 
 pub(crate) trait TableLookup {
-    type PrefixCandidates<'a>: Iterator<Item = (&'a str, &'a [Candidate])>
+    type ExactCandidates<'a>: Iterator<Item = LookupCandidate<'a>>
+    where
+        Self: 'a;
+    type PrefixCandidates<'a>: Iterator<Item = LookupCandidateEntry<'a>>
     where
         Self: 'a;
     type AllCodes<'a>: Iterator<Item = &'a str>
@@ -12,7 +99,7 @@ pub(crate) trait TableLookup {
 
     fn has_code(&self, code: &str) -> bool;
 
-    fn exact_candidates(&self, code: &str) -> Option<&[Candidate]>;
+    fn exact_candidates<'a>(&'a self, code: &'a str) -> Self::ExactCandidates<'a>;
 
     fn prefix_candidates<'a>(&'a self, prefix: &'a str) -> Self::PrefixCandidates<'a>;
 
@@ -20,18 +107,61 @@ pub(crate) trait TableLookup {
     fn all_codes(&self) -> Self::AllCodes<'_>;
 }
 
+pub(crate) struct HeapExactCandidates<'a> {
+    inner: Option<slice::Iter<'a, Candidate>>,
+}
+
+impl<'a> Iterator for HeapExactCandidates<'a> {
+    type Item = LookupCandidate<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner
+            .as_mut()
+            .and_then(Iterator::next)
+            .map(LookupCandidate::from_candidate)
+    }
+}
+
 pub(crate) struct HeapPrefixCandidates<'a> {
     prefix: &'a str,
     inner: btree_map::Range<'a, String, Vec<Candidate>>,
+    current_code: Option<&'a str>,
+    current_candidates: Option<slice::Iter<'a, Candidate>>,
+    done: bool,
 }
 
 impl<'a> Iterator for HeapPrefixCandidates<'a> {
-    type Item = (&'a str, &'a [Candidate]);
+    type Item = LookupCandidateEntry<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let (code, candidates) = self.inner.next()?;
-        code.starts_with(self.prefix)
-            .then_some((code.as_str(), candidates.as_slice()))
+        loop {
+            if let (Some(code), Some(candidates)) =
+                (self.current_code, self.current_candidates.as_mut())
+            {
+                if let Some(candidate) = candidates.next() {
+                    return Some(LookupCandidateEntry::new(
+                        code,
+                        LookupCandidate::from_candidate(candidate),
+                    ));
+                }
+                self.current_code = None;
+                self.current_candidates = None;
+            }
+
+            if self.done {
+                return None;
+            }
+            let Some((code, candidates)) = self.inner.next() else {
+                self.done = true;
+                return None;
+            };
+            if !code.starts_with(self.prefix) {
+                self.done = true;
+                return None;
+            }
+            self.current_code = Some(code.as_str());
+            self.current_candidates = Some(candidates.iter());
+        }
     }
 }
 
@@ -48,6 +178,7 @@ impl<'a> Iterator for HeapAllCodes<'a> {
 }
 
 impl TableLookup for BTreeMap<String, Vec<Candidate>> {
+    type ExactCandidates<'a> = HeapExactCandidates<'a>;
     type PrefixCandidates<'a> = HeapPrefixCandidates<'a>;
     type AllCodes<'a> = HeapAllCodes<'a>;
 
@@ -55,14 +186,19 @@ impl TableLookup for BTreeMap<String, Vec<Candidate>> {
         self.contains_key(code)
     }
 
-    fn exact_candidates(&self, code: &str) -> Option<&[Candidate]> {
-        self.get(code).map(Vec::as_slice)
+    fn exact_candidates<'a>(&'a self, code: &'a str) -> Self::ExactCandidates<'a> {
+        HeapExactCandidates {
+            inner: self.get(code).map(|candidates| candidates.iter()),
+        }
     }
 
     fn prefix_candidates<'a>(&'a self, prefix: &'a str) -> Self::PrefixCandidates<'a> {
         HeapPrefixCandidates {
             prefix,
             inner: self.range(prefix.to_owned()..),
+            current_code: None,
+            current_candidates: None,
+            done: false,
         }
     }
 

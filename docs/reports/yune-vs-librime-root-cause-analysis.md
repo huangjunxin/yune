@@ -1,13 +1,14 @@
 # Why Yune is slower than librime - root-cause analysis
 
-Date: 2026-06-23
+Date: 2026-06-24
 
 Companion report: [`yune-vs-librime-performance.md`](./yune-vs-librime-performance.md).
 
-## Current verdict after M34
+## Current Verdict After M35
 
-The remaining gap is not a generic Rust problem. It is a concrete split between
-candidate pipeline work and storage representation work.
+The remaining gap is not a generic Rust problem. It is now split between a
+landed upstream compact-storage win and remaining TypeDuck/product, harness, and
+whole-process-memory owners.
 
 Resolved or improved:
 
@@ -18,18 +19,27 @@ Resolved or improved:
 3. **M34 bounded first-page work:** short `luna_pinyin` typing can keep complete
    prefix enumeration but materialize only a bounded candidate window for the
    safe no-ranker/no-userdb/no-full-list-filter subset.
+4. **M35 compact upstream storage:** upstream `luna_pinyin` can use compact
+   table storage plus prism canonical-code lookup without retaining heap
+   `entries_by_code` or expanded spelling-algebra aliases.
 
 Still open:
 
-1. **Engine-only lookup remains far behind librime.** M34 improves the
-   full-ABI/context surface more than raw engine-only lookup.
-2. **The storage model is still heap-expanded.** `entries_by_code` remains a
-   `BTreeMap<String, Vec<Candidate>>` for eager, correction, sentence, and
-   TypeDuck fallback behavior.
-3. **Compiled table/prism query is not yet the runtime hot path.** The prism can
-   find spellings, but candidate payloads live in table data.
-4. **Mmap is still conditional.** It only helps once the hot path can borrow or
-   index compact queryable table/prism storage instead of rebuilding heap maps.
+1. **Engine-only lookup is improved but still far behind librime.** M35 moves
+   `hao_engine_only` `1092.879us` -> `750.517us`, `ni_engine_only`
+   `891.791us` -> `697.044us`, and `zhongguo_engine_only` `740.966us` ->
+   `485.482us`, but not into the low-hundreds target range.
+2. **TypeDuck remains heap-backed.** `jyut6ping3` keeps heap fallback because
+   rich comments, lookup records, partial selection, default-confirm
+   recomposition, long composition, dynamic correction, and userdb learning are
+   product invariants.
+3. **Whole-process peak remains high.** Upstream dictionary-specific native
+   deltas improved, but the fair harness peak remains about `182 MB` versus
+   librime's about `22 MB`.
+4. **Mmap/borrowed storage is still conditional.** It now has a valid compact
+   query substrate, but M35 closes mmap as a no-go until a separate design covers
+   byte borrowing, rebuild invalidation, Windows file lifetime, and demand
+   paging.
 
 ## What changed in M34
 
@@ -53,7 +63,25 @@ M34 added an internal bounded candidate request and lazy engine window:
 The public C ABI did not change. `RimeApi`, `RimeCandidate`, and the TypeDuck
 profile ABI remain isolated.
 
-## Measured shape
+## What Changed In M35
+
+M35 added the compact runtime storage substrate that M34 deliberately deferred:
+
+- `TableLookup` now returns lightweight candidate views instead of heap
+  `&[Candidate]` slices.
+- `CompactTableStore` answers exact, prefix, and all-code queries without
+  retaining per-row `Candidate` values.
+- `RimePrismBinPayload::lookup_canonical_codes(...)` maps typed spellings to
+  canonical table codes; table storage still supplies candidate payloads.
+- `StaticTableTranslator` uses a private heap-or-compact storage enum.
+- `schema_install` preserves parsed prism payloads and enables compact storage
+  only for safe upstream `luna_pinyin`.
+- TypeDuck `jyut6ping3` remains heap-backed by design.
+
+The public C ABI still did not change. Default `RimeApi`, `RimeCandidate`, and
+TypeDuck profile ABI slots are untouched.
+
+## Measured Shape
 
 | Surface | Before | M34 after | Interpretation |
 | --- | ---: | ---: | --- |
@@ -64,13 +92,27 @@ profile ABI remain isolated.
 | cross-engine `zhongguo` | `36,451.100 us` | `35,909.100 us` | modest improvement, still `26.0x` librime |
 | peak working set | `182,874,112 bytes` | `182,333,440 bytes` | no footprint win |
 
+M35 movement:
+
+| Surface | M35 baseline | M35 after | Interpretation |
+| --- | ---: | ---: | --- |
+| native `hao` engine-only | `1092.879us` | `750.517us` | compact upstream path improves, target not met |
+| native `ni` engine-only | `891.791us` | `697.044us` | compact upstream path improves, target not met |
+| native `zhongguo` full ABI | `14759.755us` | `1527.055us` | spelling-algebra expansion removed from hot path |
+| `spelling_algebra_expand` startup | `148570.200us` / `17784832 bytes` | `122.200us` / `0 bytes` | expanded alias heap removed |
+| `translator_install` startup | `233169.800us` / `37556224 bytes` | `55155.800us` / `9822208 bytes` | retained upstream dictionary delta cut |
+| fair `hao` | `15906.800us` | `12547.200us` | improved, still `354.4x` librime |
+| fair `ni` | `9225.100us` | `5678.500us` | improved, still `197.9x` librime |
+| fair `zhongguo` | `45608.600us` | `35848.500us` | improved, still `24.7x` librime |
+| fair peak working set | `182910976 bytes` | `182444032 bytes` | whole-process footprint not solved |
+
 TypeDuck full-ABI guard rows stayed within the accepted M34 range:
 
 - `hai`: `18,389.567 us` -> `19,446.467 us` (`+5.7%`)
 - `jigaajiusihaa`: `29,937.777 us` -> `28,155.585 us` (`-6.0%`)
 - correction-on `jigaajiusihaa`: `29,649.146 us` -> `28,032.915 us` (`-5.5%`)
 
-## Why librime remains faster
+## Why Librime Remains Faster
 
 librime's classic table path has a compact deployed data model and a lazy
 candidate iterator:
@@ -82,46 +124,34 @@ candidate iterator:
 - reverse lookup is lazy;
 - schema/dictionary state is shared.
 
-Yune now has lazy reverse lookup, build-once translator sharing, and a narrow
-bounded first-page path. It still lacks the compact queryable table/prism
-runtime representation and still falls back to eager full-list behavior for
-sentence, correction, TypeDuck profile, userdb/ranker, and most filter cases.
+Yune now has lazy reverse lookup, build-once translator sharing, a narrow
+bounded first-page path, and compact upstream `luna_pinyin` table+prism storage.
+It still falls back to eager/full-list behavior for TypeDuck profile,
+userdb/ranker, correction-heavy paths, and many filter cases, and it still keeps
+whole-process memory far above librime.
 
-## M35 follow-up
+## Follow-Up After M35
 
-M35 is the planned deep engine-performance follow-up for the remaining storage
-gap. It should not start with mmap alone. The safe order is:
+M35 closed the first compact owned-storage slice. The remaining safe order is:
 
-1. Measure the current compiled table/prism/reverse asset sizes, ready/peak
-   working-set deltas, post-spelling-algebra expansion counts, duplicated
-   text/comment bytes, and heap structure overhead before setting the final
-   memory target. This must include both the upstream `luna_pinyin` benchmark
-   surface and the product `jyut6ping3` schema surface.
-2. Evolve the M34 `TableLookup` seam away from heap `&[Candidate]` slices into
-   a candidate-view contract that can rank and materialize selected rows without
-   retaining every dictionary row as a `Candidate`.
-3. Build a queryable table payload reader that preserves candidate text,
-   comments, code, order, quality, stems/encoder data, correction/tolerance
-   payloads, and TypeDuck lookup records.
-4. Integrate prism spelling graph lookup with table payload queries after table
-   payload parity passes; for spelling-algebra schemas, this is required for
-   the memory win because re-expanding aliases into heap storage recreates the
-   blow-up.
-5. Enable compact storage first for safe upstream `luna_pinyin` rows. A
-   compact-active schema must not build or retain heap `entries_by_code`;
-   unsupported schemas or TypeDuck-profile behavior stay on heap fallback.
-6. Only then consider mmap/borrowed storage, with Windows file lifetime and
-   rebuild behavior covered.
+1. Keep compact upstream storage active and broaden it only when byte-identical
+   fixture coverage exists.
+2. Treat TypeDuck compact storage as a separate profile-specific project, not an
+   automatic follow-on, because lookup records and rich comments are required.
+3. Measure the remaining per-key owner after compact lookup; do not use fair
+   cross-engine ratios as the main typing headline while harness overhead is
+   still mixed in.
+4. Design borrowed/mmap storage separately, with Windows file lifetime and
+   rebuild behavior covered before any unsafe or lint exception is accepted.
 
-M35 should also attribute cross-engine harness overhead before using the
-`198x`/`348x` ratios as public typing-latency headlines. Native engine-only and
-full-ABI rows are the clearer engine movement signals unless the harness proves
-otherwise.
+Native engine-only and full-ABI rows remain the clearer M35 engine movement
+signals. The fair cross-engine rows are compatibility-harness evidence and
+should keep the unresolved ratio visible.
 
 When reporting M35 memory, distinguish dictionary-specific delta from whole
 process peak. The order-of-magnitude target applies to the dictionary heap
 delta. A correct owned compact-storage result may still land at roughly
 `2-3x` librime peak until native mmap/demand paging is proven.
 
-Browser startup and public delivery improvements remain M31 work, not M34
+Browser startup and public delivery improvements remain M31 work, not M35
 engine-performance evidence.

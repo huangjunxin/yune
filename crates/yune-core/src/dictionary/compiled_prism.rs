@@ -30,6 +30,46 @@ pub struct RimePrismSpellingDescriptor {
     pub tips: String,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct PrismLookupCode<'a> {
+    pub code: &'a str,
+    pub abbreviation: bool,
+    pub correction: bool,
+    pub credibility: f32,
+}
+
+impl RimePrismBinPayload {
+    #[must_use]
+    pub fn lookup_canonical_codes<'a>(
+        &self,
+        spelling: &str,
+        syllabary_codes: &'a [String],
+    ) -> Vec<PrismLookupCode<'a>> {
+        let Some(spelling_index) = self
+            .double_array
+            .as_ref()
+            .and_then(|double_array| double_array.exact_match(spelling))
+        else {
+            return Vec::new();
+        };
+        self.spelling_map
+            .get(spelling_index as usize)
+            .into_iter()
+            .flatten()
+            .filter_map(|descriptor| {
+                let syllable_index = usize::try_from(descriptor.syllable_id).ok()?;
+                let code = syllabary_codes.get(syllable_index)?;
+                Some(PrismLookupCode {
+                    code,
+                    abbreviation: descriptor.spelling_type == 2,
+                    correction: descriptor.is_correction,
+                    credibility: descriptor.credibility,
+                })
+            })
+            .collect()
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum RimePrismBinParseError {
     TooShort,
