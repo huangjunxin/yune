@@ -4,17 +4,17 @@ Date: 2026-06-24
 
 Evidence:
 
-- M33 fairness/cache evidence: [`evidence/m33-2026-06-23/`](./evidence/m33-2026-06-23/)
-- M34 before cross-engine rerun: [`evidence/m34-queryable-table-prism/baseline-yune-vs-librime/`](./evidence/m34-queryable-table-prism/baseline-yune-vs-librime/)
-- M34 after cross-engine rerun: [`evidence/m34-queryable-table-prism/after-yune-vs-librime/`](./evidence/m34-queryable-table-prism/after-yune-vs-librime/)
+- M33 fairness/cache evidence: [`evidence/m33-2026-06-23/`](./evidence/m33-2026-06-23)
+- M34 before cross-engine rerun: [`evidence/m34-queryable-table-prism/baseline-yune-vs-librime/`](./evidence/m34-queryable-table-prism/baseline-yune-vs-librime)
+- M34 after cross-engine rerun: [`evidence/m34-queryable-table-prism/after-yune-vs-librime/`](./evidence/m34-queryable-table-prism/after-yune-vs-librime)
 - M34 native logs: [`evidence/m34-queryable-table-prism/frontend-baselines-before.txt`](./evidence/m34-queryable-table-prism/frontend-baselines-before.txt) and [`evidence/m34-queryable-table-prism/frontend-baselines-after-final.txt`](./evidence/m34-queryable-table-prism/frontend-baselines-after-final.txt)
 - Historical M34 visualizations: [`m34-cross-engine-gap.svg`](./evidence/m34-queryable-table-prism/m34-cross-engine-gap.svg), [`m34-native-improvement.svg`](./evidence/m34-queryable-table-prism/m34-native-improvement.svg), and [`m34-working-set-gap.svg`](./evidence/m34-queryable-table-prism/m34-working-set-gap.svg)
 - M35 native before/after logs: [`evidence/m35-compact-table-prism-storage/frontend-baselines-before.txt`](./evidence/m35-compact-table-prism-storage/frontend-baselines-before.txt) and [`evidence/m35-compact-table-prism-storage/frontend-baselines-after.txt`](./evidence/m35-compact-table-prism-storage/frontend-baselines-after.txt)
-- M35 fair cross-engine before/after reruns: [`evidence/m35-compact-table-prism-storage/baseline-yune-vs-librime/`](./evidence/m35-compact-table-prism-storage/baseline-yune-vs-librime/) and [`evidence/m35-compact-table-prism-storage/after-yune-vs-librime/`](./evidence/m35-compact-table-prism-storage/after-yune-vs-librime/)
+- M35 fair cross-engine before/after reruns: [`evidence/m35-compact-table-prism-storage/baseline-yune-vs-librime/`](./evidence/m35-compact-table-prism-storage/baseline-yune-vs-librime) and [`evidence/m35-compact-table-prism-storage/after-yune-vs-librime/`](./evidence/m35-compact-table-prism-storage/after-yune-vs-librime)
 - M35 visualizations: [`m35-native-improvement.svg`](./evidence/m35-compact-table-prism-storage/m35-native-improvement.svg), [`m35-cross-engine-gap.svg`](./evidence/m35-compact-table-prism-storage/m35-cross-engine-gap.svg), and [`m35-memory-story.svg`](./evidence/m35-compact-table-prism-storage/m35-memory-story.svg)
-- M35 task evidence: [`evidence/m35-compact-table-prism-storage/`](./evidence/m35-compact-table-prism-storage/)
-- M36 product-path evidence: [`evidence/m36-product-path/`](./evidence/m36-product-path/)
-- M36 final native in-process rerun: [`evidence/m36-product-path/phase-4-final/`](./evidence/m36-product-path/phase-4-final/)
+- M35 task evidence: [`evidence/m35-compact-table-prism-storage/`](./evidence/m35-compact-table-prism-storage)
+- M36 product-path evidence: [`evidence/m36-product-path/`](./evidence/m36-product-path)
+- M36 final native in-process rerun: [`evidence/m36-product-path/phase-4-final/`](./evidence/m36-product-path/phase-4-final)
 - M36 visualizations: [`m36-product-latency-before-after.svg`](./evidence/m36-product-path/m36-product-latency-before-after.svg), [`m36-product-memory-before-after.svg`](./evidence/m36-product-path/m36-product-memory-before-after.svg), [`m36-track-a-latency-gap.svg`](./evidence/m36-product-path/m36-track-a-latency-gap.svg), and [`m36-track-a-working-set-gap.svg`](./evidence/m36-product-path/m36-track-a-working-set-gap.svg)
 - Upstream librime `1.17.0` source references: [`MappedFile`](https://github.com/rime/librime/blob/33e78140250125871856cdc5b42ddc6a5fcd3cd4/src/rime/dict/mapped_file.cc), [`Table`](https://github.com/rime/librime/blob/33e78140250125871856cdc5b42ddc6a5fcd3cd4/src/rime/dict/table.cc), [`Prism`](https://github.com/rime/librime/blob/33e78140250125871856cdc5b42ddc6a5fcd3cd4/src/rime/dict/prism.cc), [`Dictionary`](https://github.com/rime/librime/blob/33e78140250125871856cdc5b42ddc6a5fcd3cd4/src/rime/dict/dictionary.cc), [`TableTranslator`](https://github.com/rime/librime/blob/33e78140250125871856cdc5b42ddc6a5fcd3cd4/src/rime/gear/table_translator.cc), and [`ReverseLookupTranslator`](https://github.com/rime/librime/blob/33e78140250125871856cdc5b42ddc6a5fcd3cd4/src/rime/gear/reverse_lookup_translator.cc)
 

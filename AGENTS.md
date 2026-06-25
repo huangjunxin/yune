@@ -27,7 +27,7 @@ See `decisions.md` D-24 (oracle precedence) and D-25 (target-driven scope).
   TypeDuck-Web-derived dogfooding/demo-hardening batch. Future `yune-web`
   dogfood reports should start a new scoped plan rather than reopening Phase 1.
 - **Phase 2 is product/platform work.** The first Phase 2 planning artifact is
-  `docs/plans/p2-win01-plan-typeduck-windows-next.md`, for a Yune-first
+  `docs/plans/active/p2-win01-plan-typeduck-windows-next.md`, for a Yune-first
   TypeDuck-Windows product/frontend. Phase 2 work must not widen Yune's default
   upstream ABI.
 - **AI foundation exists.** M11 completed the core/CLI AI layer. M13 exposed it
@@ -38,19 +38,21 @@ See `decisions.md` D-24 (oracle precedence) and D-25 (target-driven scope).
 
 ## Canonical Docs - Read These
 
-- **[docs/CONVENTIONS.md](docs/CONVENTIONS.md) - start here.** The single
+- **[docs/conventions.md](./docs/conventions.md) - start here.** The single
   reference for architecture, stack, repo structure, coding/testing
   conventions, C ABI rules, integrations, and current risks.
-- [docs/roadmap.md](docs/roadmap.md) - Phase 1 closeout, active/recent work,
-  Phase 2 direction, and what to do next.
-- [docs/decisions.md](docs/decisions.md) - the decision log (standing
+- [docs/roadmap.md](./docs/roadmap.md) - current dashboard, active sequence,
+  scope boundaries, and M37 readiness gates.
+- [docs/ledgers/milestone-history.md](./docs/ledgers/milestone-history.md) - completed milestone
+  ledger and historical plan/evidence pointers.
+- [docs/decisions.md](./docs/decisions.md) - the decision log (standing
   principles plus `D-*` entries).
-- [docs/requirements.md](docs/requirements.md) - requirement IDs and status.
-- [docs/fork-parity-ledger.md](docs/fork-parity-ledger.md) - source of truth
+- [docs/requirements.md](./docs/requirements.md) - requirement IDs and status.
+- [docs/ledgers/fork-parity-ledger.md](./docs/ledgers/fork-parity-ledger.md) - source of truth
   for Cantoboard/TypeDuck fork improvements versus upstream `1.17.0`. Consult
   this before touching TypeDuck/Cantonese parity.
-- [docs/plans/](docs/plans/) - active plans and archived execution records.
-  Finished plans live under `docs/plans/archive/`.
+- [docs/plans/](./docs/plans) - active, reference, and completed execution records.
+  Finished plans live under `docs/plans/completed/`.
 
 ## Key Constraints
 
@@ -106,10 +108,19 @@ See `decisions.md` D-24 (oracle precedence) and D-25 (target-driven scope).
 - For substantial implementation, run two review passes before completion:
   first spec/requirement compliance, then code quality, ABI safety, and test
   coverage.
+- Do not run tests, typecheck, lint, browser smoke, or full quality gates by
+  default. Run verification only when the task or touched code path requires it,
+  when the user asks for it, when you need evidence for a claim, or when risk is
+  high enough that skipping it would make the handoff unreliable. For docs-only
+  or narrow mechanical edits, prefer targeted inspection/link checks over broad
+  test suites.
 - Do not claim Spark quota was consumed unless the active model or subagent
   configuration is visible or confirmed in the current session.
 
 ## Quality Gate
+
+These are release/milestone gates and should be run when the work actually needs
+that level of verification; they are not automatic for every task.
 
 Rust:
 

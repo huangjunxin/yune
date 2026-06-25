@@ -10,10 +10,10 @@ Primary reports:
 
 Raw native in-process benchmark runs:
 
-- [`phase-0-baseline/`](./phase-0-baseline/) - Track A fair `luna_pinyin`
+- [`phase-0-baseline/`](./phase-0-baseline) - Track A fair `luna_pinyin`
   comparison plus Track B `jyut6ping3_mobile` baseline with current shipped
   stale/unsupported product `.bin` files.
-- [`phase-4-final/`](./phase-4-final/) - same Track A comparison plus Track B
+- [`phase-4-final/`](./phase-4-final) - same Track A comparison plus Track B
   after schema-scoped deploy rebuilds Yune-native product artifacts before
   measurement.
 

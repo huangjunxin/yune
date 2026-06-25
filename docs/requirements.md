@@ -2,7 +2,7 @@
 
 **Defined:** 2026-04-28 **Core Value:** Yune should preserve predictable classic RIME input while making AI/LLM assistance a first-class, local-first, non-blocking source of candidates, ranking, context, and memory.
 
-> **Note (2026-06-17):** The GSD `.planning/` system has been retired. This requirement list and its statuses are preserved here; the **Phase** references (e.g. in the Traceability table) are historical GSD labels — now only in git history — kept for context. The live roadmap is [`roadmap.md`](./roadmap.md); decisions are in [`decisions.md`](./decisions.md); conventions in [`CONVENTIONS.md`](./CONVENTIONS.md).
+> **Note (2026-06-17):** The GSD `.planning/` system has been retired. This requirement list and its statuses are preserved here; the **Phase** references (e.g. in the Traceability table) are historical GSD labels — now only in git history — kept for context. The live roadmap is [`roadmap.md`](./roadmap.md); historical milestone context is in [`ledgers/milestone-history.md`](./ledgers/milestone-history.md); decisions are in [`decisions.md`](./decisions.md); conventions in [`conventions.md`](./conventions.md).
 
 ## v1 Requirements
 
@@ -126,11 +126,11 @@ Requirements for the next integration milestone. These requirements turn the Pha
 - [x] **WIN-COMMENT-01**: Candidate comment semantics match the v1.1.2 oracle for dictionary lookup payloads, reverse lookup joins, and prompt/schema identity. Dictionary lookup payload bytes, schema-prompt bytes, and reverse-lookup joiner coverage are oracle-backed.
 - [x] **WIN-BUILD-01**: Yune produces a current TypeDuck-profile native Windows package (`rime.dll`, import `.lib`, upstream-shaped default headers, and `rime_typeduck_profile_api.h`) and the package script loads the packaged DLL through `rime_get_typeduck_profile_api()`.
 - [x] **WIN-PARITY-01**: Cantonese/Jyutping parity regression coverage locks the captured v1.1.2 engine behavior in active `cantonese_parity` tests; schema-menu/userdb observations remain frontend/T3 evidence limits.
-- [x] **WIN-FRONTEND-01**: TypeDuck-Windows builds/links against the Yune package and passes a stock real-server IPC smoke. Stock `TypeDuckServer.exe` starts from `output\`, loads packaged Yune `output\rime.dll`, and stock `TestTypeDuckIPC.exe /console` returns a nonzero session, sends `ngohaig` key events, and receives `status.schema_id=jyut6ping3` plus candidate/context data. Tracked evidence: `docs/plans/archive/m10-evidence/t3-stock-real-server/`. Caveat: interactive TSF typing, visible candidate-window rendering, and candidate-panel UI behavior are deferred to the Phase 2 Windows product/frontend track.
+- [x] **WIN-FRONTEND-01**: TypeDuck-Windows builds/links against the Yune package and passes a stock real-server IPC smoke. Stock `TypeDuckServer.exe` starts from `output\`, loads packaged Yune `output\rime.dll`, and stock `TestTypeDuckIPC.exe /console` returns a nonzero session, sends `ngohaig` key events, and receives `status.schema_id=jyut6ping3` plus candidate/context data. Tracked evidence: `docs/plans/completed/m10-evidence/t3-stock-real-server/`. Caveat: interactive TSF typing, visible candidate-window rendering, and candidate-panel UI behavior are deferred to the Phase 2 Windows product/frontend track.
 
 ## P2-WIN-02 TypeDuck Windows Boundary Compatibility Requirements
 
-**Status: complete; Yune boundary fixed and non-Yune TSF input-delivery blocker classified.** P2-WIN-02 closes the Yune-side raw TypeDuck `jyut6ping3` `ngohaig` boundary bug found by TypeDuck-Windows Phase 0C without widening the default upstream ABI. Evidence: `docs/reports/evidence/p2-win02-boundary-compat-2026-06-22/`; plan: [`docs/plans/archive/p2-win02-plan-typeduck-boundary-compat.md`](./plans/archive/p2-win02-plan-typeduck-boundary-compat.md).
+**Status: complete; Yune boundary fixed and non-Yune TSF input-delivery blocker classified.** P2-WIN-02 closes the Yune-side raw TypeDuck `jyut6ping3` `ngohaig` boundary bug found by TypeDuck-Windows Phase 0C without widening the default upstream ABI. Evidence: `docs/reports/evidence/p2-win02-boundary-compat-2026-06-22/`; plan: [`docs/plans/completed/p2-win02-plan-typeduck-boundary-compat.md`](./plans/completed/p2-win02-plan-typeduck-boundary-compat.md).
 
 - [x] **P2-WIN02-BOUNDARY-01**: Phase 0C `ngohaig` raw comment evidence is promoted into a Yune-owned TypeDuck `v1.1.2` fixture with locked provenance and native parity tests.
 - [x] **P2-WIN02-BOUNDARY-02**: Yune emits TypeDuck `v1.1.2` rich `\f\r1,` comment bytes for the Windows-facing `jyut6ping3` `ngohaig` path through both core and Rime ABI tests.
@@ -195,7 +195,7 @@ Deferred beyond the TypeDuck-Web browser integration milestone. Tracked but not 
 
 ## Fork Parity Backlog — Cantonese engine-parity (complete)
 
-**Status: complete.** Derived from the full Cantoboard + TypeDuck fork-vs-`1.17.0` audit in [`fork-parity-ledger.md`](./fork-parity-ledger.md). These were genuine fork deltas Yune needed to preserve or explicitly decline (distinct from the upstream-depth Track 2 M17–M19 work). M14–M16 closed the _captured_ browser surface; these were the _uncaptured / partial_ deltas the goldens did not exercise. Each completed implementation was measured against the v1.1.2 oracle or closed by an explicit product decision.
+**Status: complete.** Derived from the full Cantoboard + TypeDuck fork-vs-`1.17.0` audit in [`ledgers/fork-parity-ledger.md`](./ledgers/fork-parity-ledger.md). These were genuine fork deltas Yune needed to preserve or explicitly decline (distinct from the upstream-depth Track 2 M17–M19 work). M14–M16 closed the _captured_ browser surface; these were the _uncaptured / partial_ deltas the goldens did not exercise. Each completed implementation was measured against the v1.1.2 oracle or closed by an explicit product decision.
 
 - [x] **FORK-PARITY-01**: The Cantonese 容錯 (fuzzy) spelling-algebra ruleset (`lv1_laanjam`, `lv2_upper`, `shortcuts`, `lv2_lower`, abbreviation — including the `ng→m` rule behind the F1 `m` case) runs on the real ~127k-entry `jyut6ping3` dictionary, with a real-dictionary golden.
 - [x] **FORK-PARITY-02**: `PreferUserPhrase` weighted gate — a user-dictionary phrase outranks a competing system phrase only with a longer code, or equal-length code and weight ≥ the system phrase.
@@ -228,7 +228,7 @@ Deferred beyond the TypeDuck-Web browser integration milestone. Tracked but not 
 
 ## M24 TypeDuck-Web Dogfooding Requirements
 
-**Status: complete.** M24 closed the first manual dogfooding/demo-hardening batch for the internal TypeDuck-Web playground. The closed issue ledger and evidence index live in [`plans/archive/m24-plan-typeduck-web-dogfooding.md`](./plans/archive/m24-plan-typeduck-web-dogfooding.md), with browser evidence under `apps/yune-web/e2e/results/m24-dogfooding/`.
+**Status: complete.** M24 closed the first manual dogfooding/demo-hardening batch for the internal TypeDuck-Web playground. The closed issue ledger and evidence index live in [`plans/completed/m24-plan-typeduck-web-dogfooding.md`](./plans/completed/m24-plan-typeduck-web-dogfooding.md), with browser evidence under `apps/yune-web/e2e/results/m24-dogfooding/`.
 
 - [x] **M24-DOGFOOD-REQ-01**: The dogfood browser harness records issue-scoped evidence under `m24-dogfooding/<issue-id>/`, and startup evidence includes the worker phase markers, `yune-typeduck.js`/`.wasm` asset identity, and loaded shared schema assets.
 - [x] **M24-DOGFOOD-REQ-02**: Candidate rendering strips literal `\f`, `\r`, and `\v` controls from visible rows while preserving dictionary parsing, and compound candidates keep row text compact with details in the dictionary panel.
@@ -238,7 +238,7 @@ Deferred beyond the TypeDuck-Web browser integration milestone. Tracked but not 
 
 ## M25 TypeDuck-Web Dogfooding Round 2 Requirements
 
-**Status: complete.** M25 closed the second manual dogfooding round for the internal TypeDuck-Web playground. The archived ledger and closeout evidence index live in [`plans/archive/m25-plan-typeduck-web-dogfooding-round-2.md`](./plans/archive/m25-plan-typeduck-web-dogfooding-round-2.md), with browser evidence under `apps/yune-web/e2e/results/m25-dogfooding/`.
+**Status: complete.** M25 closed the second manual dogfooding round for the internal TypeDuck-Web playground. The completed ledger and closeout evidence index live in [`plans/completed/m25-plan-typeduck-web-dogfooding-round-2.md`](./plans/completed/m25-plan-typeduck-web-dogfooding-round-2.md), with browser evidence under `apps/yune-web/e2e/results/m25-dogfooding/`.
 
 - [x] **M25-DOGFOOD-REQ-01**: Every closed M25 row has issue-scoped browser JSON/screenshot evidence, an owning Playwright or native test listed in the ledger closeout table, and TypeDuck-Web source changes regenerated into `apps/yune-web/patches/yune-web-runtime.patch` with reverse/forward patch checks.
 - [x] **M25-DOGFOOD-REQ-02**: Browser startup uses the release-mode WASM build, records phase timing evidence, reuses fresh deploy state instead of forcing schema invalidation, and normal typing no longer shows the global loading state.
@@ -254,7 +254,7 @@ Deferred beyond the TypeDuck-Web browser integration milestone. Tracked but not 
 - [x] **M26-PERF-REQ-01**: Native large-real-asset benchmarks cover `jyut6ping3_mobile`, `luna_pinyin`, representative `cangjie5`, and the TypeDuck dynamic-correction path, reporting median, p95, p99, max, cold-first-key versus warm steady-state, operation count, full-ABI versus engine-only cost, and allocation/RSS notes. Evidence: `apps/yune-web/e2e/results/m26-performance/native-before.md` and `apps/yune-web/e2e/results/m26-performance/native-after.md`.
 - [x] **M26-PERF-REQ-02**: Browser diagnostics record keydown-to-paint or the closest browser-supported proxy for normal typing, long phrases, page changes, reverse lookup, and cold/warm startup, without treating browser-only numbers as native engine latency. Evidence: `apps/yune-web/e2e/results/m26-performance/typing-keydown-to-paint-before.json` and `apps/yune-web/e2e/results/m26-performance/typing-keydown-to-paint-after.json`.
 - [x] **M26-PERF-REQ-03**: Startup diagnostics attribute the current coarse TypeDuck-Web `runtime:initialized` interval into worker/package load, WASM module creation, filesystem mount/sync, schema asset deploy/reuse, `TypeDuckRuntime.init`, schema selection, and startup complete buckets. Evidence: `apps/yune-web/e2e/results/m26-performance/startup-attribution-before.json` and `apps/yune-web/e2e/results/m26-performance/startup-attribution-after.json`.
-- [x] **M26-PERF-REQ-04**: One measured optimization landed with before/after native and browser evidence. The largest measured owner was startup/schema-selection/runtime initialization, now closed by the named M27 follow-up [`docs/plans/archive/m27-plan-typeduck-web-startup-runtime-init.md`](./plans/archive/m27-plan-typeduck-web-startup-runtime-init.md). The landed lower-risk M26 slice targets the measured TypeDuck dynamic-correction stress owner: `per_key_real_jyut6ping3_mobile_jigaajiusihaa_correction_engine_only` improved from median `451490.692us` / p95 `467909.308us` to median `121712.662us` / p95 `124420.115us` by pruning impossible-length candidates before the restricted-distance matrix. Evidence: `apps/yune-web/e2e/results/m26-performance/optimization-choice.md`.
+- [x] **M26-PERF-REQ-04**: One measured optimization landed with before/after native and browser evidence. The largest measured owner was startup/schema-selection/runtime initialization, now closed by the named M27 follow-up [`docs/plans/completed/m27-plan-typeduck-web-startup-runtime-init.md`](./plans/completed/m27-plan-typeduck-web-startup-runtime-init.md). The landed lower-risk M26 slice targets the measured TypeDuck dynamic-correction stress owner: `per_key_real_jyut6ping3_mobile_jigaajiusihaa_correction_engine_only` improved from median `451490.692us` / p95 `467909.308us` to median `121712.662us` / p95 `124420.115us` by pruning impossible-length candidates before the restricted-distance matrix. Evidence: `apps/yune-web/e2e/results/m26-performance/optimization-choice.md`.
 - [x] **M26-PERF-REQ-05**: Compatibility gates remain green: upstream `luna_pinyin`, Cantonese parity, native `typeduck_web`, TypeScript runtime tests/build, TypeDuck-Web build, focused M26 browser evidence, and TypeDuck-Web patch reverse/forward checks. Evidence: `apps/yune-web/e2e/results/m26-performance/task-5-gates.md` and `apps/yune-web/e2e/results/m26-performance/patch-checks.md`.
 
 ## M27 TypeDuck-Web Startup Runtime Init Requirements
@@ -280,7 +280,7 @@ Deferred beyond the TypeDuck-Web browser integration milestone. Tracked but not 
 
 ## M28 Follow-up Upstream Jyutping Composition Requirements
 
-**Status: complete.** This follow-up closes the post-M28 dogfood gaps for Space/default-confirm partial recomposition and upstream-style Jyutping long composition. Evidence: `apps/yune-web/e2e/results/m28-follow-up-upstream-jyutping/`; plan: [`docs/plans/archive/m28-follow-up-plan-upstream-jyutping-composition.md`](./plans/archive/m28-follow-up-plan-upstream-jyutping-composition.md).
+**Status: complete.** This follow-up closes the post-M28 dogfood gaps for Space/default-confirm partial recomposition and upstream-style Jyutping long composition. Evidence: `apps/yune-web/e2e/results/m28-follow-up-upstream-jyutping/`; plan: [`docs/plans/completed/m28-follow-up-plan-upstream-jyutping-composition.md`](./plans/completed/m28-follow-up-plan-upstream-jyutping-composition.md).
 
 - [x] **M28F-UPSTREAM-REQ-01**: Space/default-confirm for `caksijathaacoenggeoizi` commits only the consumed prefix candidate and keeps the remaining input composing; it never commits `測sijathaacoenggeoizi`.
 - [x] **M28F-UPSTREAM-REQ-02**: A checked-in hybrid upstream-librime-engine Jyutping fixture captures `caksijathaacoenggeoizi` composition/ranking with provenance: upstream engine repository/tag/commit, pinned Jyutping schema/dictionary source repository/commit, upstream deploy command, capture command, options, and candidate rows. The fixture contains no local absolute paths and lives outside the pure `upstream-1.17.0` fixture family.
@@ -291,7 +291,7 @@ Deferred beyond the TypeDuck-Web browser integration milestone. Tracked but not 
 
 ## M29 Startup Memory And Typing Performance Requirements
 
-**Status: complete.** M29 refreshed post-M28-follow-up startup, memory, and typing evidence; classified the M27-style `1.79GB` peak as repeated-benchmark high-water with real single-startup ready pressure around `1.10GB`; reduced the measured `spelling_algebra_expand` startup owner by avoiding no-op regex replacement allocation; and kept typing as attribution evidence because the fresh owner profile was mixed and already much smaller than startup. Evidence: `apps/yune-web/e2e/results/m29-performance/`; plan: [`docs/plans/archive/m29-plan-startup-memory-typing-performance.md`](./plans/archive/m29-plan-startup-memory-typing-performance.md).
+**Status: complete.** M29 refreshed post-M28-follow-up startup, memory, and typing evidence; classified the M27-style `1.79GB` peak as repeated-benchmark high-water with real single-startup ready pressure around `1.10GB`; reduced the measured `spelling_algebra_expand` startup owner by avoiding no-op regex replacement allocation; and kept typing as attribution evidence because the fresh owner profile was mixed and already much smaller than startup. Evidence: `apps/yune-web/e2e/results/m29-performance/`; plan: [`docs/plans/completed/m29-plan-startup-memory-typing-performance.md`](./plans/completed/m29-plan-startup-memory-typing-performance.md).
 
 - [x] **M29-PERF-REQ-01**: Fresh M29 baselines re-run native startup benchmarks, browser startup evidence, and browser keydown-to-paint typing evidence on the current post-M28-follow-up code.
 - [x] **M29-PERF-REQ-02**: Memory evidence classifies the M27 `1.79GB` peak as per-startup pressure, benchmark cumulative high-water, or unresolved with a precise blocker and next measurement.
@@ -302,7 +302,7 @@ Deferred beyond the TypeDuck-Web browser integration milestone. Tracked but not 
 
 ## M30 Engine Representation Performance Requirements
 
-**Status: complete.** M30 closed as an engine-only follow-up after M29. It accepted Lever A: the duplicate steady-state expanded-entry vector is removed for spelling-algebra-backed translators, the final `entries_by_code` map is built by moving `Candidate` values, and TypeDuck row order is preserved through a builder-only source stream. Single-startup ready pressure improved from `1,103,331,328` bytes to `838,209,536` bytes in the Lever A run and `839,217,152` bytes in the final gate. Native runtime-ready startup median was noisy but improved versus baseline in both after-runs (`6,242,614.900us` -> `5,952,128.400us` in the Lever A run; `6,120,732.800us` in the final gate). Browser startup and typing stayed flat/noisy after fresh WASM rebuild, so M30 records no browser latency win. Evidence: `apps/yune-web/e2e/results/m30-engine-performance/`; plan: [`docs/plans/archive/m30-plan-engine-representation-performance.md`](./plans/archive/m30-plan-engine-representation-performance.md).
+**Status: complete.** M30 closed as an engine-only follow-up after M29. It accepted Lever A: the duplicate steady-state expanded-entry vector is removed for spelling-algebra-backed translators, the final `entries_by_code` map is built by moving `Candidate` values, and TypeDuck row order is preserved through a builder-only source stream. Single-startup ready pressure improved from `1,103,331,328` bytes to `838,209,536` bytes in the Lever A run and `839,217,152` bytes in the final gate. Native runtime-ready startup median was noisy but improved versus baseline in both after-runs (`6,242,614.900us` -> `5,952,128.400us` in the Lever A run; `6,120,732.800us` in the final gate). Browser startup and typing stayed flat/noisy after fresh WASM rebuild, so M30 records no browser latency win. Evidence: `apps/yune-web/e2e/results/m30-engine-performance/`; plan: [`docs/plans/completed/m30-plan-engine-representation-performance.md`](./plans/completed/m30-plan-engine-representation-performance.md).
 
 - [x] **M30-PERF-REQ-01**: Fresh M30 native and browser baselines were captured before implementation, including single-startup memory, startup owner spans, watched `hai`/`jigaajiusihaa` key rows, and browser attribution. Evidence: `apps/yune-web/e2e/results/m30-engine-performance/native-before.md` and `apps/yune-web/e2e/results/m30-engine-performance/m30-baseline.md`.
 - [x] **M30-PERF-REQ-02**: M29 evidence markdown tables were reconciled against the committed startup/typing JSON before M30 optimization claims. Evidence: `apps/yune-web/e2e/results/m30-engine-performance/m29-evidence-check.md`.
@@ -312,7 +312,22 @@ Deferred beyond the TypeDuck-Web browser integration milestone. Tracked but not 
 - [x] **M30-PERF-REQ-06**: Correction-stress indexing was deferred because M26 had already reduced the correction stress path and M30's correction-on row stayed flat after Lever A.
 - [x] **M30-PERF-REQ-07**: Full gates remained green: Rust fmt/clippy/tests, frontend benchmark, TypeScript runtime tests/build, TypeDuck-Web build, focused browser performance evidence, no tracked TypeDuck-Web source patch change, and `git diff --check`. Evidence: `apps/yune-web/e2e/results/m30-engine-performance/task-6-gates.md`.
 
-**Follow-on (no requirement IDs):** [`M21`](./plans/archive/m21-plan-typeduck-web-product-comparison.md) is complete as a post-M20 _comparison protocol_ and hard-oracle closeout. It compared the Yune harness against the deployed `typeduck.hk/web` product as a behavior/feel target, but the `v1.1.2` fixtures remained the hard oracle. The final gap ledger has no remaining hard-oracle action rows: M21-GAP-01 is closed by `jyut6ping3-m21-sentence-composition.json`, M21-GAP-02 is closed by `jyut6ping3-m21-prediction-ranking.json` plus real `nri` browser before/after evidence, and `jyut6ping3-m21-closeout.json` locks the remaining baseline/fuzzy/sentence/`hk2s`/tone-letter/paging rows including the final `m` and `mgoi` fixes.
+**Follow-on (no requirement IDs):** [`M21`](./plans/completed/m21-plan-typeduck-web-product-comparison.md) is complete as a post-M20 _comparison protocol_ and hard-oracle closeout. It compared the Yune harness against the deployed `typeduck.hk/web` product as a behavior/feel target, but the `v1.1.2` fixtures remained the hard oracle. The final gap ledger has no remaining hard-oracle action rows: M21-GAP-01 is closed by `jyut6ping3-m21-sentence-composition.json`, M21-GAP-02 is closed by `jyut6ping3-m21-prediction-ranking.json` plus real `nri` browser before/after evidence, and `jyut6ping3-m21-closeout.json` locks the remaining baseline/fuzzy/sentence/`hk2s`/tone-letter/paging rows including the final `m` and `mgoi` fixes.
+
+## M37 Engine Hyper-Optimization Requirements
+
+**Status: planned / next.** M37 is the next engine milestone and must close three hard gates from [`plans/active/m37-plan-engine-hyper-optimization.md`](./plans/active/m37-plan-engine-hyper-optimization.md): active `rsmarisa` product table storage, native mmap-mode marisa loading, and page-bounded candidate materialization/context export. These requirements are intentionally unchecked before implementation; M37 cannot close by attribution-only work, another `rsmarisa` no-go, or an mmap no-go.
+
+- [ ] **M37-ENGINE-01**: Phase 0 evidence splits Track B `hai` across process-key, translator lookup, completion enumeration, candidate materialization, global sort/top-K, filters, userdb merge, context snapshot, ABI allocation/free, and working-set owners. If `hai` is not explained, implementation continues.
+- [ ] **M37-ENGINE-02**: `rsmarisa` is a real dependency or reviewed in-repo patched/forked equivalent, selected by the TypeDuck product table path, and proven against actual `jyut6ping3` and `jyut6ping3_scolar` table data. A second measured `rsmarisa` no-go does not close M37.
+- [ ] **M37-ENGINE-03**: Final product status proves fresh table/prism/reverse artifacts, no `SourceFallback`, and an active `rsmarisa` parse/status path rather than silent fallback to the M36 no-marisa artifacts.
+- [ ] **M37-ENGINE-10**: The final native product path reports mmap-mode `rsmarisa` loading for the marisa string-table payload. If direct `Trie::mmap()` cannot safely own the required file slice or lifetime, M37 lands a reviewed local patch, fork, or owner-backed mmap adapter before closeout; owned-buffer/no-marisa/mmap-no-go results keep M37 open.
+- [ ] **M37-ENGINE-04**: For default Track B product rows, instrumentation proves ordinary `RimeProcessKey` + `RimeGetContext` reads materialize only the current page plus bounded surplus where semantics allow it. Full-list materialization is allowed only for explicit full-list APIs, paging beyond the retained window, debug inspection, or a proven full-list-only feature.
+- [ ] **M37-ENGINE-05**: `RimeGetContext` no longer requires `Engine::snapshot()` to clone the full candidate list for page-only reads; it reads a page snapshot or page view and allocates C strings only for the exported page.
+- [ ] **M37-ENGINE-06**: Behavior remains byte-identical for upstream `luna_pinyin`, TypeDuck `jyut6ping3`, `typeduck_web`, M28 long-composition/default-confirm coverage, paging, deletion, numbered selection, click selection, userdb learning, correction, prediction, and rich dictionary comments.
+- [ ] **M37-ENGINE-07**: Track B `hai` moves materially from the M36 final `15,241.000us` median and no longer remains the unexplained worst row by about `3x`. If the first materialization fix does not move it, implementation continues with the next measured owner.
+- [ ] **M37-ENGINE-08**: Public claims remain separated: native wins are not browser wins without rebuilt release WASM and real browser evidence, and Track A ratios remain comparison caveats unless they independently improve.
+- [ ] **M37-ENGINE-09**: Final quality gates pass: `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings`, focused upstream and TypeDuck parity tests, `cargo test --workspace`, final native benchmarks, report/docs checks, `git diff --check`, and runtime/browser/patch gates when runtime-visible files change.
 
 ## Out of Scope
 
@@ -324,7 +339,7 @@ Explicitly excluded from the current milestone.
 | Cloud inference as a required dependency | Classic input behavior must remain local-first and predictable |
 | New GUI frontend | Native frontend integration should validate the ABI first; `yune-cli` is only a frontend surrogate |
 | Behavior changes during mechanical refactors | Compatibility work needs measurable, reviewable behavior slices |
-| 100% feature parity with librime internals | The oracle is a behavioral floor, not a feature target; a librime feature is implemented only when a named target schema/frontend needs it (see roadmap "Compatibility goal" and `decisions.md` D-25) |
+| 100% feature parity with librime internals | The oracle is a behavioral floor, not a feature target; a librime feature is implemented only when a named target schema/frontend needs it (see roadmap "Scope Ledger" and `decisions.md` D-25) |
 
 ## Traceability
 
@@ -394,7 +409,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | P2-WIN02-BOUNDARY-06 | P2-WIN-02 | Complete - approved Notepad TSF reruns classify the remaining raw-ASCII behavior as non-Yune TSF input-delivery/frontend-shell work |
 | UPSTREAM-ORACLE-01 | M12 | Complete - upstream `1.17.0` provenance pinned as default core oracle |
 | UPSTREAM-ORACLE-02 | M12 | Complete - fixture naming separates `upstream-1.17.0` and `typeduck-v1.1.2` goldens |
-| UPSTREAM-AUDIT-01 | M12 | Complete - coverage audit captured in `docs/plans/archive/m12-audit-coverage.md` |
+| UPSTREAM-AUDIT-01 | M12 | Complete - coverage audit captured in `docs/plans/completed/m12-audit-coverage.md` |
 | TYPEDUCK-PROFILE-01 | M12/M10 | Complete - TypeDuck-specific coverage remains profile-only; M10 verifies the native Windows frontend path without widening the default ABI |
 | UPSTREAM-BEHAVIOR-01 | M12 | Complete - six official-binary `luna_pinyin` fixture files are checked in under `upstream-1.17.0` |
 | UPSTREAM-BEHAVIOR-02 | M12 | Complete - full `ni` selection fixture includes all exact dictionary rows and candidate essay rows |
@@ -551,7 +566,17 @@ Which phases cover which requirements. Updated during roadmap creation.
 | M36-PERF-REQ-07 | M36 | Complete - product translator installation preserves prism payloads on compiled product loads, writes configured prism stems such as `jyut6ping3_mobile`, and keeps TypeDuck rich comments, lookup records, correction/tolerance, partial selection, long composition, and userdb gates green |
 | M36-PERF-REQ-08 | M36 | Closed by no-go - bounded/lazy candidate windows were not generalized to TypeDuck product rows because whole-list, paging, filters/rankers, correction/tolerance, context, and userdb invariants remain broader than the safe upstream subset |
 | M36-PERF-REQ-09 | M36 | Complete - performance/root-cause reports, checked-in charts, and evidence docs separate native vs browser, product vs comparison, memory vs latency, and landed wins vs no-go strategies; no "matched librime", "faster than librime", or browser claim is made |
-| M36-PERF-REQ-10 | M36 | Complete - final fmt/clippy/focused parity/workspace tests, `typeduck_web`, `frontend_baselines`, native M36 benchmark evidence, report SVG/XML checks, `git diff --check`, and docs/archive updates are recorded; runtime/browser/patch gates are N/A because no runtime-visible files changed |
+| M36-PERF-REQ-10 | M36 | Complete - final fmt/clippy/focused parity/workspace tests, `typeduck_web`, `frontend_baselines`, native M36 benchmark evidence, report SVG/XML checks, `git diff --check`, and completed-plan updates are recorded; runtime/browser/patch gates are N/A because no runtime-visible files changed |
+| M37-ENGINE-01 | M37 | Planned - Phase 0 attribution must explain Track B `hai` across key-path, lookup, materialization, sort/filter/userdb, context, ABI, and working-set owners |
+| M37-ENGINE-02 | M37 | Planned - `rsmarisa` must be active or reviewed as patched/forked equivalent on real TypeDuck product table data; another no-go does not close M37 |
+| M37-ENGINE-03 | M37 | Planned - final product status must prove fresh table/prism/reverse artifacts, no `SourceFallback`, and active `rsmarisa` parse/status |
+| M37-ENGINE-10 | M37 | Planned - native product rows must prove mmap-mode marisa loading, or M37 stays open for a patch, fork, or owner-backed mmap adapter |
+| M37-ENGINE-04 | M37 | Planned - default Track B product rows must prove page-bounded ordinary `RimeProcessKey` + `RimeGetContext` materialization |
+| M37-ENGINE-05 | M37 | Planned - `RimeGetContext` must export page reads without full `Engine::snapshot()` candidate-list cloning |
+| M37-ENGINE-06 | M37 | Planned - upstream and TypeDuck behavior gates must remain byte-identical across parity, web, selection, learning, correction, prediction, and rich-comment coverage |
+| M37-ENGINE-07 | M37 | Planned - Track B `hai` must materially move from the M36 final `15,241.000us` median and no longer remain unexplained worst row |
+| M37-ENGINE-08 | M37 | Planned - public claims must separate native, browser, Track A, and Track B evidence |
+| M37-ENGINE-09 | M37 | Planned - final fmt/clippy/tests/benchmarks/report/docs/diff gates must pass, with runtime/browser gates when runtime-visible files change |
 
 **Coverage:**
 
@@ -562,7 +587,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 - M12/M17/M18 upstream oracle and behavioral parity requirements: 10 total, 10 complete
 - M13 AI-native frontend exposure requirements: 6 total, 6 complete
 - M14–M16 TypeDuck-Web fork parity requirements: 7 total, 7 complete (M16 complete with explicit browser/userdb inspection limits)
-- Fork parity backlog (Cantonese engine-parity, vs upstream 1.17.0): 9 total, 9 complete; see [`fork-parity-ledger.md`](./fork-parity-ledger.md)
+- Fork parity backlog (Cantonese engine-parity, vs upstream 1.17.0): 9 total, 9 complete; see [`ledgers/fork-parity-ledger.md`](./ledgers/fork-parity-ledger.md)
 - M20 web demo showcase controls requirements: 7 total, 7 complete
 - M19 schema breadth and TypeDuck-profile ABI requirements: 5 total, 5 complete
 - M22 web playground requirements: 4 total, 4 complete
@@ -580,9 +605,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 - M34 lazy candidate pipeline and queryable table+prism performance requirements: 13 total, 10 implemented/complete, 3 closed by stop-gate, 0 draft
 - M35 compact table+prism runtime storage performance requirements: 14 total, 13 complete, 1 closed by no-go, 0 draft
 - M36 product-path engine optimization requirements: 10 total, 7 complete, 3 closed by no-go, 0 draft
-- Mapped to phases: 220
+- M37 engine hyper-optimization requirements: 10 total, 0 complete, 10 planned
+- Mapped to phases: 230
 - Unmapped: 0
 
 ---
 
-_Requirements defined: 2026-04-28_ _Last updated: 2026-06-24 - M31 is complete as the `yune-web` public demo readiness milestone. It renames the public surface and repo-owned harness path, records owner-approved TypeDuck provenance, keeps only browser-honest `hk2s` output-standard controls, builds from checked-in Yune state, deploys through Cloudflare Pages Direct Upload at `https://yune-web.pages.dev`, and preserves AI as default-off/local-only with no telemetry or secrets. Public delivery claims stay scoped to packaging, pruning, and cache evidence; browser startup/typing wins are not claimed. The only M31 caveat is delivery-specific: the public `jyut6ping3_mobile` boot path excludes non-public schema families but still boots Luna and scholar dependencies required by current TypeDuck schema behavior. M36 remains complete as the product-path engine optimization milestone after M35, with Track A/Track B and browser-delivery caveats preserved. M35 remains complete as the compact table+prism runtime storage milestone. M33, M34, P2-WIN-02, M30, M29, M28 follow-up, M28, M27, M26, M25, M24, M19, M23, M18, M22, M21, M20, and M10 remain complete as previously recorded._
+_Requirements defined: 2026-04-28_ _Last updated: 2026-06-24 - `roadmap.md` is now a current-state dashboard and the historical milestone ledger lives in `ledgers/milestone-history.md`. M37 engine hyper-optimization requirements are added as planned/open gates before implementation: active `rsmarisa` product storage, native mmap-mode marisa loading, fresh compiled artifacts, page-bounded materialization/context export, `hai` movement, behavior parity, honest claims, and final quality gates. M31 remains complete as the `yune-web` public demo readiness milestone with browser delivery claims scoped to packaging/pruning/cache evidence, not startup/typing wins. M36 remains complete as the product-path engine optimization milestone after M35, with Track A/Track B and browser-delivery caveats preserved. M35 remains complete as the compact table+prism runtime storage milestone. M33, M34, P2-WIN-02, M30, M29, M28 follow-up, M28, M27, M26, M25, M24, M19, M23, M18, M22, M21, M20, and M10 remain complete as previously recorded._

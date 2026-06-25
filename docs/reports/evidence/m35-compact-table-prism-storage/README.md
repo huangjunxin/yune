@@ -11,8 +11,8 @@ Benchmark inputs:
 
 - [`frontend-baselines-before.txt`](./frontend-baselines-before.txt)
 - [`frontend-baselines-after.txt`](./frontend-baselines-after.txt)
-- [`baseline-yune-vs-librime/`](./baseline-yune-vs-librime/)
-- [`after-yune-vs-librime/`](./after-yune-vs-librime/)
+- [`baseline-yune-vs-librime/`](./baseline-yune-vs-librime)
+- [`after-yune-vs-librime/`](./after-yune-vs-librime)
 
 Visualizations generated from the final M35 evidence:
 
