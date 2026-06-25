@@ -330,6 +330,24 @@ Deferred beyond the TypeDuck-Web browser integration milestone. Tracked but not 
 - [x] **M37-ENGINE-10**: Public claims remain separated: Track A remains comparison evidence, Track B remains product before/after evidence, and no browser startup/typing claim is made without rebuilt release WASM and real browser evidence.
 - [x] **M37-ENGINE-11**: Final quality gates are recorded in the completed M37 plan. Runtime/browser gates were N/A for performance claims because M37 did not change runtime-visible browser files or make browser speed claims.
 
+## M38 Engine Performance Parity Requirements
+
+**Status: active / planned.** M38 is the pure isolated-engine parity milestone from [`plans/active/m38-plan-engine-performance-parity.md`](./plans/active/m38-plan-engine-performance-parity.md). It cannot close from product, frontend, browser, packaging, or delivery evidence. Closeout requires fresh same-run upstream librime `1.17.0` comparison evidence plus the hard storage, lookup, iteration, memory, behavior, and quality gates below.
+
+- [ ] **M38-ENGINE-01**: Every M38 performance claim is grounded in isolated native engine evidence. Product, frontend, browser, packaging, and delivery rows may appear only as regression guards and cannot close the milestone.
+- [ ] **M38-ENGINE-02**: Phase 0 reruns a fresh same-machine Yune and upstream librime `1.17.0` baseline for startup/runtime-ready, session create/select/destroy, `hao`, `ni`, `zhongguo`, working set, and peak working set before implementation.
+- [ ] **M38-ENGINE-03**: Phase 0 attributes startup/session and per-key owners before optimization, including runtime init, schema config, deployed artifact open/read/map, mapping mode, bytes copied, heap mirror bytes, selected table backend, `rsmarisa` calls, prism/table lookup, prefix/completion enumeration, iterator/window mode, materialization, sorting/top-K, context export, ABI allocation, memory, and allocation bytes.
+- [ ] **M38-ENGINE-04**: Final engine status proves a real marisa-backed deployed table is selected through `rsmarisa` for the benchmarked hot path. Positive `rsmarisa` lookup counters and zero ordinary no-marisa compact fallback are required; probe-only evidence does not close.
+- [ ] **M38-ENGINE-05**: Final selected table/prism bytes for the native benchmark path are mmap-backed or otherwise file-backed/borrowed from deployed bytes. Metrics report mapping mode, table bytes source, copied bytes, and heap mirror bytes. Owned selected hot-path table buffers or full heap mirrors do not close M38.
+- [ ] **M38-ENGINE-06**: Final startup/runtime-ready and session create/select/destroy medians are within `1.25x` of same-run upstream librime.
+- [ ] **M38-ENGINE-07**: Final `hao`, `ni`, and `zhongguo` key rows are each within `5x` of same-run upstream librime. Rows that only improve from M37 but remain outside this bound do not close M38.
+- [ ] **M38-ENGINE-08**: M38 adds or preserves Yune-only microbench rows for raw prism lookup, raw table lookup, raw `rsmarisa` lookup, translator candidate production, and page-sized context export so the remaining owner is diagnosable.
+- [ ] **M38-ENGINE-09**: Ordinary first-page reads use lazy/page-bounded translation iteration or an equivalent bounded view. Owned candidates, candidate clones, context export, and sort/top-K work scale with visible page plus bounded surplus; any full-list fallback is explicit, counted, and semantically justified.
+- [ ] **M38-ENGINE-10**: Final evidence reports working set, peak working set, and the best available allocation attribution. A latency win that adds a hidden heap mirror or leaves memory unexplained does not close M38.
+- [ ] **M38-ENGINE-11**: Upstream `luna_pinyin` behavior remains oracle-safe for paging, selection, deletion, context reads, and touched shared-code compatibility tests.
+- [ ] **M38-ENGINE-12**: Final reports make only native isolated-engine claims. They must not claim frontend, browser, product, packaging, deployment, or public-delivery wins without separate evidence.
+- [ ] **M38-ENGINE-13**: Closeout records final quality gates: `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings`, focused engine and touched compatibility tests, `cargo test --workspace`, final native benchmark, touched report/chart checks, and `git diff --check`.
+
 ## Out of Scope
 
 Explicitly excluded from the current milestone.
@@ -579,6 +597,19 @@ Which phases cover which requirements. Updated during roadmap creation.
 | M37-ENGINE-09 | M37 | Complete - final native product path reports `mapping_mode=mmap`; `rsmarisa` probes also report `mmap` |
 | M37-ENGINE-10 | M37 | Complete - reports separate native/browser and Track A/Track B claims; no browser speed claim is made |
 | M37-ENGINE-11 | M37 | Complete - final quality gates are recorded in the completed M37 plan; runtime/browser gates were N/A for performance claims |
+| M38-ENGINE-01 | M38 | Active - isolated native engine evidence is the only closeout evidence; product/frontend/browser rows are regression guards only |
+| M38-ENGINE-02 | M38 | Active - fresh same-run upstream librime baseline required before implementation |
+| M38-ENGINE-03 | M38 | Active - startup/session, lookup, materialization, context, memory, and allocation owner attribution required before optimization |
+| M38-ENGINE-04 | M38 | Active - final hot path must use a real marisa-backed deployed table through `rsmarisa`; probes do not close |
+| M38-ENGINE-05 | M38 | Active - final native hot path must be mmap/file-backed or borrowed from deployed bytes without a full heap mirror |
+| M38-ENGINE-06 | M38 | Active - final startup/runtime-ready and session medians must be within `1.25x` of same-run upstream librime |
+| M38-ENGINE-07 | M38 | Active - final `hao`, `ni`, and `zhongguo` rows must each be within `5x` of same-run upstream librime |
+| M38-ENGINE-08 | M38 | Active - raw prism, raw table, raw `rsmarisa`, translator, and context-export microbench rows required |
+| M38-ENGINE-09 | M38 | Active - first-page reads must use lazy/page-bounded iteration or an equivalent bounded view with full-list fallback counted |
+| M38-ENGINE-10 | M38 | Active - working set, peak working set, and allocation attribution required; hidden heap mirror does not close |
+| M38-ENGINE-11 | M38 | Active - touched upstream `luna_pinyin` behavior and shared compatibility tests remain oracle-safe |
+| M38-ENGINE-12 | M38 | Active - final reports make only native isolated-engine claims without separate frontend/browser/product evidence |
+| M38-ENGINE-13 | M38 | Active - fmt, clippy, focused tests, workspace tests, final native benchmark, report checks, and `git diff --check` required |
 
 **Coverage:**
 
@@ -608,9 +639,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 - M35 compact table+prism runtime storage performance requirements: 14 total, 13 complete, 1 closed by no-go, 0 draft
 - M36 product-path engine optimization requirements: 10 total, 7 complete, 3 closed by no-go, 0 draft
 - M37 engine hyper-optimization requirements: 11 total, 11 complete, 0 planned
-- Mapped to phases: 231
+- M38 engine performance parity requirements: 13 total, 13 active, 0 complete
+- Mapped to phases: 244
 - Unmapped: 0
 
 ---
 
-_Requirements defined: 2026-04-28_ _Last updated: 2026-06-24 - `roadmap.md` is now a current-state dashboard and the historical milestone ledger lives in `ledgers/milestone-history.md`. M37 engine hyper-optimization is complete with latency and memory attribution, byte-backed/native-mapped product storage, real `rsmarisa` product probes, fresh compiled artifacts, page-bounded materialization/context export, `hai` movement, product memory movement, behavior parity, honest claims, and final quality gates recorded in evidence. M31 remains complete as the `yune-web` public demo readiness milestone with browser delivery claims scoped to packaging/pruning/cache evidence, not startup/typing wins. M36 remains complete as the product-path engine optimization milestone after M35, with Track A/Track B and browser-delivery caveats preserved. M35 remains complete as the compact table+prism runtime storage milestone. M33, M34, P2-WIN-02, M30, M29, M28 follow-up, M28, M27, M26, M25, M24, M19, M23, M18, M22, M21, M20, and M10 remain complete as previously recorded._
+_Requirements defined: 2026-04-28_ _Last updated: 2026-06-24 - M38 is active as a pure isolated-engine performance parity milestone against same-run upstream librime. It cannot close without mmap/file-backed selected bytes, real `rsmarisa` hot-path lookup, lazy/page-bounded first-page iteration, memory/allocation attribution, startup/session within `1.25x` of librime, `hao`/`ni`/`zhongguo` within `5x` of librime, behavior gates, honest native-only claims, and final quality gates. `roadmap.md` is now a current-state dashboard and the historical milestone ledger lives in `ledgers/milestone-history.md`. M37 engine hyper-optimization is complete with latency and memory attribution, byte-backed/native-mapped product storage, real `rsmarisa` product probes, fresh compiled artifacts, page-bounded materialization/context export, `hai` movement, product memory movement, behavior parity, honest claims, and final quality gates recorded in evidence. M31 remains complete as the `yune-web` public demo readiness milestone with browser delivery claims scoped to packaging/pruning/cache evidence, not startup/typing wins. M36 remains complete as the product-path engine optimization milestone after M35, with Track A/Track B and browser-delivery caveats preserved. M35 remains complete as the compact table+prism runtime storage milestone. M33, M34, P2-WIN-02, M30, M29, M28 follow-up, M28, M27, M26, M25, M24, M19, M23, M18, M22, M21, M20, and M10 remain complete as previously recorded._
