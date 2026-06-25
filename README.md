@@ -1,172 +1,255 @@
 # Yune
 
-Yune is a Rust input-method engine with a librime-compatible C ABI surface.
-It uses librime as a behavioral oracle, not as an implementation template:
-existing RIME schemas and frontends should behave predictably through Yune, but
-the internals stay idiomatic Rust and the long-term product direction is an
-AI-native input engine that librime cannot provide.
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![MSRV](https://img.shields.io/badge/rust-1.76%2B-orange.svg)](https://www.rust-lang.org)
+
+**Languages:** English | [简体中文](README.zh-CN.md) | [粵語](README.yue.md)
+
+> The engine that turns your typing into Chinese characters.
+> Type `nihao`, get 你好. Type `nei5 hou2`, get 你好 in Cantonese.
+> Built in Rust — runs on desktop, in the browser, and anywhere else.
+
+## Contents
+
+- [What Yune Does](#what-yune-does)
+- [Why It Exists](#why-it-exists)
+- [How It Works](#how-it-works)
+- [Current Status](#current-status)
+- [Compatibility](#compatibility)
+- [Performance](#performance)
+- [Quick Start](#quick-start)
+- [Quality Checks](#quality-checks)
+- [Repository Layout](#repository-layout)
+- [Documentation](#documentation)
+- [Non-Goals](#non-goals)
+- [Contributing](#contributing)
+- [License](#license)
+
+## What Yune Does
+
+You type romanized Chinese (Pinyin for Mandarin, Jyutping for Cantonese) on a
+standard keyboard. Yune converts it to the right Chinese characters in real time.
+
+Under the hood, Yune reads the same dictionary and configuration files as
+[RIME](https://rime.im) — the most widely used open-source Chinese input-method
+engine. This means it works with the thousands of existing RIME schemas and
+dictionaries that the community has built over the years.
+
+**[yune-web.pages.dev](https://yune-web.pages.dev)** — try it in your browser.
+
+### Capabilities
+
+- RIME schema and config handling: `__include`, `__patch`, custom patches, deploy
+  freshness, schema installation, and schema switching.
+- Full input pipeline: speller, selector, navigator, key binder, editor, ASCII
+  composer, chord composer, punctuation, recognizer, translators, and filters.
+- Dictionary support: source `.dict.yaml`, imports, Yune-native compiled
+  table/prism/reverse artifacts, rebuild execution, and fixture-backed ranking
+  verified against the reference engine.
+- C ABI compatibility: upstream-shaped default `RimeApi` and `RimeLeversApi`,
+  config/context/candidate/session/deploy APIs, dynamic-loader tests, and
+  frontend lifecycle tests.
+- TypeDuck profile behavior: fork-only ABI slots exposed through
+  `rime_get_typeduck_profile_api()`, rich Cantonese dictionary comments, and
+  TypeDuck-Web/Windows compatibility evidence.
+- Browser runtime: `@yune-ime/yune-web-runtime`, the `yune-web` Vite app,
+  multi-schema browser harness, public demo, and Playwright evidence.
+- AI foundation: provider trait, local/mock providers, staged AI rows, privacy
+  policy, separate AI memory, and default-off browser exposure.
+
+## Why It Exists
+
+RIME has been the backbone of open-source Chinese input for over a decade. It
+works well. But it's a large C++ codebase that's difficult to change, test, or
+embed in modern environments like browsers and mobile apps.
+
+Yune rebuilds the engine from scratch in Rust with three goals:
+
+**Run everywhere.** The same core engine compiles to a native shared library
+(for desktop IMEs like Squirrel, Weasel, or ibus-rime), to WebAssembly (for
+browser-based input), or to a CLI tool (for testing and benchmarking).
+
+**Be testable.** Every behavior is verified byte-for-byte against the real RIME
+engine. Instead of porting C++ code (and inheriting its bugs and assumptions),
+Yune runs RIME as a "behavior oracle": capture what it outputs for a given
+input, then assert Yune produces the exact same result. This preserves
+compatibility without cargo-culting a 15-year-old C++ architecture.
+
+**Prepare for AI-native input.** The engine has a built-in, default-off AI layer.
+In the future, an on-device language model could suggest completions or
+corrections alongside traditional dictionary candidates — without slowing down
+the classic path and without sending your typing to a cloud service.
+
+## How It Works
+
+```
+keystrokes  ──►  spelling algebra  ──►  dictionary lookup  ──►  ranking & filtering  ──►  commit text
+                    (normalize)          (find candidates)        (sort, deduplicate)        (output)
+```
+
+The pipeline is built from swappable Rust traits — translators, filters, and
+rankers — rather than a monolithic class hierarchy. Want to plug in a custom
+ranking model? Implement a trait. Want a different dictionary format? Swap the
+translator.
+
+Everything runs in safe Rust. The workspace enforces `unsafe_code = "forbid"`.
 
 ## Current Status
 
-Phase 1, the engine build-out and basic oracle-parity effort, is complete for
-the named target set:
+Yune is an active engine project.
 
-- upstream `rime/librime 1.17.0` for default core behavior and common-schema
-  compatibility;
-- TypeDuck-HK/librime `v1.1.2` for the TypeDuck `jyut6ping3` compatibility
-  profile;
-- `yune-web` browser integration, including the default-off local AI second
-  pass;
-- TypeDuck-Windows backend compatibility smoke through the named TypeDuck
-  profile ABI.
+- **Compatibility baseline:** Phase 1 is complete. Yune produces identical output
+  to RIME 1.17.0 for Mandarin (`luna_pinyin`) and Cantonese (`jyut6ping3` via
+  TypeDuck profile). It has been validated as a drop-in replacement in real-world
+  frontends (TypeDuck-Web, TypeDuck-Windows).
+- **Current work:** milestone M38 targets engine performance parity — closing the
+  remaining speed gap against native RIME. Focus areas: native engine startup
+  cost, mmap-backed `rsmarisa` table lookup, lazy/page-bounded candidate
+  production, context export, memory, and allocation shape — all measured against
+  same-run RIME evidence.
+- **Public demo:** `yune-web` is deployed at <https://yune-web.pages.dev>. It's
+  a Yune engine demo, not a claim that browser-level performance is solved.
+- **AI posture:** the AI layer exists but is default-off, local-only in the web
+  harness, and outside the classic deterministic input path.
 
-This does not mean Yune is a bit-for-bit clone of librime. It means the current
-named targets are fixture-backed and documented. Future work is Phase 2:
-frontend/product development, ongoing dogfooding, AI productization, and
-additional compatibility targets when a real frontend or schema needs them.
+See [docs/roadmap.md](docs/roadmap.md) for the detailed milestone plan.
 
-Read [docs/roadmap.md](docs/roadmap.md) for the live milestone state. The first
-historical TypeDuck-Web-derived dogfooding batch, M24, is complete and
-archived; future `yune-web` dogfood reports should start a new scoped plan
-rather than reopening Phase 1.
-The Phase 2 Windows plan is the next platform/product planning artifact.
+## Compatibility
 
-## Compatibility Model
+Yune's compatibility is target-driven, not checklist-driven.
 
-- The default oracle is upstream `rime/librime 1.17.0`
+**Reference engines** (the "oracles" that define correct behavior):
+
+- Default core oracle: upstream `rime/librime 1.17.0`
   (`33e78140250125871856cdc5b42ddc6a5fcd3cd4`).
-- TypeDuck fork behavior is profile-only, pinned to TypeDuck-HK/librime
-  `v1.1.2` (`74cb52b78fb2411137a7643f6c8bc6517acfde69`).
-- The default `rime_get_api()` table remains upstream-shaped.
-- Fork-only TypeDuck ABI slots live behind the opt-in
-  `rime_get_typeduck_profile_api()` accessor.
-- Oracle fixtures are non-circular: expected bytes come from the upstream or
-  TypeDuck oracle, not from Yune output.
+- TypeDuck profile oracle: TypeDuck-HK/librime `v1.1.2`
+  (`74cb52b78fb2411137a7643f6c8bc6517acfde69`).
 
-## Workspace
+**Rules:**
 
-| Path | Purpose |
-|---|---|
-| `crates/yune-core` | Deterministic Rust engine: schema-driven processors, translators, filters, candidates, UserDB, OpenCC subset, dictionary parsing/writing, spelling algebra, AI staging, and ranking hooks. |
-| `crates/yune-rime-api` | Librime-shaped C ABI: session lifecycle, config/deploy/schema APIs, function tables, TypeDuck profile ABI, native frontend tests, and the `yune-web` WASM-facing API. |
-| `crates/yune-cli` | CLI surrogate for driving core or ABI paths and comparing checked-in fixtures. |
-| `packages/yune-web-runtime` | TypeScript wrapper around the `yune-web` WASM API. |
-| `apps/yune-web` | Canonical `yune-web` browser harness: upstream-derived shell, Yune patch, adapter, browser tests, public-demo package, and evidence. |
-| `docs` | Roadmap, decisions, requirements, conventions, fork-parity ledger, and execution plans. |
+- Preserve upstream-observable behavior for named targets.
+- Isolate TypeDuck fork behavior behind the TypeDuck profile surface.
+- Add librime features only when a named target needs them.
+- Keep expected bytes non-circular: always capture them from the relevant oracle,
+  never derive them from Yune itself.
 
-## What Works
-
-- RIME schema/config handling: `__include`, `__patch`, list merge/append,
-  custom patches, deploy freshness, schema installation, and schema switching.
-- Processor pipeline: speller, selector, navigator, key binder, editor, ASCII
-  composer, chord composer, punctuation, and recognizer.
-- Translators and filters: table/script paths, history, reverse lookup,
-  punctuation, schema list, simplifier/OpenCC subset, charset, uniqueness,
-  dictionary lookup, and TypeDuck-specific profile behavior.
-- Dictionary support: source `.dict.yaml`, imports, table encoder pieces,
-  compiled table/prism/reverse formats, public binary writers, rebuild
-  execution, and fixture-backed ranking behavior for named targets.
-- User data: local user dictionary storage, learning, snapshots, sync, recovery,
-  and profile-safe separation from AI memory.
-- C ABI compatibility: upstream-shaped default `RimeApi`, `RimeLeversApi`,
-  config/context/candidate/session/deploy APIs, dynamic-loader tests, and
-  frontend-shaped lifecycle tests.
-- yune-web: Vite/React/Tailwind upstream-derived app, Yune runtime adapter, browser
-  evidence, multi-schema playground behavior, and default-off local AI rows.
-- TypeDuck-Windows: packaged Yune DLL/header smoke, build/link evidence, and
-  stock TypeDuck server/client IPC smoke through the TypeDuck profile ABI.
+Default `rime_get_api()` remains upstream-shaped. TypeDuck fork-only ABI slots
+are exposed exclusively through `rime_get_typeduck_profile_api()`.
 
 ## Performance
 
-Yune treats librime as a *behavioral* oracle, not a performance oracle. The
-current upstream-`luna_pinyin` comparison is fair after M33: Yune now lazy-loads
-the `stroke` reverse dictionary and shares built dictionary translators across
-session selects. M33 produced a real startup/session improvement, but the
-numbers must be read as cold versus warm: a fresh Yune process still pays a
-`~909 ms` first schema build and peaks around `183 MB`, while warm re-selects
-are around `48 ms`. Per-key lookup still trails librime by a wide margin, so no
-typing-speed, memory-footprint, or browser-speed win is claimed.
+Yune treats RIME as a behavioral and performance comparison point, but does not
+claim current typing-speed, memory-footprint, or browser-speed wins. Milestones
+M33-M37 removed several real costs. M38 is now focused on closing the remaining
+native engine gap with measured, same-run evidence.
 
-Current analysis and evidence:
+Current reports:
 
 - [docs/reports/yune-vs-librime-performance.md](docs/reports/yune-vs-librime-performance.md)
-  records the current measurement and caveats.
 - [docs/reports/yune-vs-librime-root-cause-analysis.md](docs/reports/yune-vs-librime-root-cause-analysis.md)
-  explains the remaining root cause after M33.
-- [docs/plans/completed/m33-plan-engine-native-lookup-performance.md](docs/plans/completed/m33-plan-engine-native-lookup-performance.md)
-  records the completed fairness/cache pass.
-
-## AI-Native Layer
-
-The AI foundation is already present, but intentionally conservative:
-
-- M11 added the core/CLI AI layer: provider trait, local/mock providers,
-  staged input-keyed results, privacy classification, separate AI memory, and
-  no classic-path auto-commit.
-- M13 exposes that layer in the web harness now canonical as `yune-web`: default-off, local-only,
-  second-pass `stage_ai` flow. Classic candidates render first; AI rows are
-  source-labeled and never become the default commit.
-- Remote providers, richer contextual translation, native frontend AI exposure,
-  and product UX are Phase 2 work, not Phase 1 parity requirements.
 
 ## Quick Start
 
-```powershell
-# Build Rust workspace
+Prerequisites:
+
+- Rust 1.76 or newer
+- Node.js and npm (for the browser harness and TypeScript runtime)
+- Emscripten (only if building the WASM artifact locally)
+
+Build and test:
+
+```bash
 cargo build
-
-# Run all Rust tests
 cargo test --workspace
+```
 
-# Rust quality gate
-cargo fmt --check
-cargo clippy --workspace --all-targets -- -D warnings
+Feed keystrokes directly to the core engine:
 
-# TypeScript runtime tests/build
-npm --prefix packages/yune-web-runtime test
-npm --prefix packages/yune-web-runtime run build
-
-# Run a key sequence through the core engine
+```bash
 cargo run -p yune-cli -- run "nihao "
+```
 
-# Run through the ABI-shaped frontend surrogate
-cargo run -p yune-cli -- frontend `
-  --shared-data-dir C:\path\to\rime-data `
-  --user-data-dir C:\temp\yune-user `
-  --schema luna_pinyin `
+Run against real RIME data through the full ABI path:
+
+```bash
+cargo run -p yune-cli -- frontend \
+  --shared-data-dir ./path/to/rime-data \
+  --user-data-dir ./tmp/yune-user \
+  --schema luna_pinyin \
   --sequence "nihao "
 ```
 
-For `yune-web` browser work, read
-[apps/yune-web/e2e/yune-browser-smoke.md](apps/yune-web/e2e/yune-browser-smoke.md)
-and the current plan or archived M24 baseline under `docs/plans/`.
+Run the browser demo locally:
 
-## Key Documentation
+```bash
+npm --prefix apps/yune-web install
+npm --prefix apps/yune-web run build
+npm --prefix apps/yune-web run start
+```
 
-- [docs/conventions.md](docs/conventions.md) - architecture, coding rules,
+For browser validation work, start with
+[apps/yune-web/e2e/yune-browser-smoke.md](apps/yune-web/e2e/yune-browser-smoke.md).
+
+## Quality Checks
+
+Run these before merging significant changes:
+
+```bash
+cargo fmt --check
+cargo clippy --workspace --all-targets -- -D warnings
+cargo test --workspace
+npm --prefix packages/yune-web-runtime test
+npm --prefix packages/yune-web-runtime run build
+```
+
+Browser-visible claims need Playwright or equivalent real-browser evidence.
+
+## Repository Layout
+
+| Path | What's In It |
+| --- | --- |
+| `crates/yune-core` | The engine: dictionary lookup, spelling algebra, candidate ranking, filters, user dictionary, AI staging. |
+| `crates/yune-rime-api` | C ABI adapter: exposes the engine as a drop-in replacement for RIME's shared library. |
+| `crates/yune-cli` | Developer CLI: feed it keystrokes, get JSON output for testing and debugging. |
+| `packages/yune-web-runtime` | TypeScript wrapper for the WASM build. |
+| `apps/yune-web` | Browser demo app — the public face of the project. |
+| `docs` | Roadmap, architecture decisions, conventions, reports. |
+| `fixtures` | Deterministic test fixtures (expected engine output for given inputs). |
+| `scripts` | Build helpers, benchmarks, oracle-capture tooling. |
+
+## Documentation
+
+- [docs/conventions.md](docs/conventions.md) — architecture, stack, coding rules,
   testing conventions, ABI rules, integrations, and current risks.
-- [docs/roadmap.md](docs/roadmap.md) - phase status, completed milestones,
-  active work, and Phase 2 direction.
-- [docs/decisions.md](docs/decisions.md) - decision log and standing
-  principles.
-- [docs/requirements.md](docs/requirements.md) - requirement IDs and status.
-- [docs/ledgers/fork-parity-ledger.md](docs/ledgers/fork-parity-ledger.md) - Cantoboard and
-  TypeDuck fork deltas versus upstream.
-- [docs/plans/](docs/plans/) - active plans and archived execution records.
+- [docs/roadmap.md](docs/roadmap.md) — active roadmap and milestone gates.
+- [docs/decisions.md](docs/decisions.md) — decision log and standing principles.
+- [docs/requirements.md](docs/requirements.md) — requirement IDs and status.
+- [docs/ledgers/fork-parity-ledger.md](docs/ledgers/fork-parity-ledger.md) —
+  Cantoboard and TypeDuck fork deltas versus upstream.
+- [docs/plans/](docs/plans/) — active, reference, and completed execution
+  records.
 
-## Non-Goals And Deferred Work
+## Non-Goals
 
-- Bit-for-bit librime internals or full C++ plugin ABI compatibility.
+Equally important as the goals — these are things Yune intentionally does not do:
+
+- Bit-for-bit librime internals or full C++ plugin ABI parity.
+- A broad librime feature checklist without a named target.
 - Widening the default upstream `RimeApi` for TypeDuck-only behavior.
 - Cloud inference as a hard dependency.
-- Remote AI providers without explicit privacy/product gates.
-- Native frontend AI exposure before a named platform track proves the UX and
-  safety model.
-- Treating the TypeDuck-Web product repo, TypeDuck-Windows, iOS, or other frontend repos as
-  engine semantics. They are product/platform tracks that consume Yune.
+- Remote AI providers without explicit privacy and product gates.
+- Claiming application/browser performance wins from native engine evidence.
+
+## Contributing
+
+Bug reports, feature proposals, and pull requests are welcome. For anything that
+affects behavioral compatibility, include oracle-captured evidence (real RIME
+output against the same input — expected values must not be derived from Yune
+itself). Start with [docs/conventions.md](docs/conventions.md) for architecture
+and coding rules.
 
 ## License
 
-MIT for Yune's original code. Checked-in third-party schemas, dictionaries,
-fixtures, generated data, and provenance materials keep their upstream terms;
-see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+Original code is [MIT](LICENSE). Third-party schemas, dictionaries, fixtures,
+generated data, and provenance materials keep their upstream licenses — see
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
