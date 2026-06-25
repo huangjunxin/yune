@@ -30,13 +30,13 @@ npx.cmd wrangler pages deploy apps\yune-web\public-demo\dist --project-name yune
 Cloudflare Pages Git integration uses the repository build script:
 
 ```bash
-sh apps/yune-web/public-demo/cloudflare-pages-build.sh
+bash apps/yune-web/public-demo/cloudflare-pages-build.sh
 ```
 
 Cloudflare project settings:
 
 - Production branch: `main`
-- Build command: `sh apps/yune-web/public-demo/cloudflare-pages-build.sh`
+- Build command: `bash apps/yune-web/public-demo/cloudflare-pages-build.sh`
 - Build output directory: `apps/yune-web/public-demo/dist`
 - Root directory: repository root
 

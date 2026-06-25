@@ -20,6 +20,11 @@ if [ -z "$EXPORTS" ]; then
 fi
 
 run_native_fallback() {
+  if [ "${YUNE_WEB_WASM_REQUIRE_EMSCRIPTEN:-0}" = "1" ]; then
+    echo "Native fallback disabled because this build must produce browser WASM artifacts." >&2
+    exit 1
+  fi
+
   echo "Native fallback still available: $FALLBACK_TEST"
   (cd "$REPO_ROOT" && cargo test -p yune-rime-api --test yune_web)
 }

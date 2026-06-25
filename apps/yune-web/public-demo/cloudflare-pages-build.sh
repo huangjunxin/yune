@@ -1,5 +1,5 @@
-#!/bin/sh
-set -eu
+#!/usr/bin/env bash
+set -euo pipefail
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 APP_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
@@ -34,8 +34,15 @@ ensure_emscripten() {
 		(cd "$EMSDK_DIR" && ./emsdk install latest && ./emsdk activate latest)
 	fi
 
+	pushd "$EMSDK_DIR" >/dev/null
 	# shellcheck disable=SC1091
-	. "$EMSDK_DIR/emsdk_env.sh"
+	. ./emsdk_env.sh >/dev/null
+	popd >/dev/null
+
+	if ! command -v emcc >/dev/null 2>&1 || ! command -v emar >/dev/null 2>&1; then
+		echo "Emscripten SDK was installed but emcc/emar were not activated on PATH." >&2
+		exit 1
+	fi
 }
 
 ensure_artifact() {
@@ -55,6 +62,7 @@ ensure_emscripten
 npm --prefix packages/yune-web-runtime ci
 npm --prefix apps/yune-web ci
 
+export YUNE_WEB_WASM_REQUIRE_EMSCRIPTEN=1
 scripts/yune-web-wasm-build.sh
 ensure_artifact "$WASM_ARTIFACT_DIR/yune-web.js"
 ensure_artifact "$WASM_ARTIFACT_DIR/yune-web.wasm"

@@ -23,7 +23,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build public demo
-        run: sh apps/yune-web/public-demo/cloudflare-pages-build.sh
+        run: bash apps/yune-web/public-demo/cloudflare-pages-build.sh
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
