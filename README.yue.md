@@ -87,10 +87,10 @@ code——抄 code 即係抄埋 bug 同舊架構。Yune 嘅做法係將 RIME 當
 - **兼容性基線：** Phase 1 已完成。喺普通話（`luna_pinyin`）粵拼（`jyut6ping3`，
   經 TypeDuck profile）方案之下，Yune 輸出同 RIME 1.17.0 完全一致。已經喺真實
   frontend（TypeDuck-Web、TypeDuck-Windows）度驗證過可以無縫替換。
-- **而家做緊：** milestone M38（引擎性能追平）已完成——睇
-  [final gates](docs/reports/evidence/m38-engine-performance-parity/final-gates.md)。
-  M39（長輸入引擎加固）已經啟動，目標係將 37 字、59 字同粵拼 profile 嘅
-  長輸入延遲追平到同機 RIME 嘅水平。
+- **而家做緊：** milestone M38（引擎性能追平）同 M39（長輸入引擎加固）都已經完成——
+  睇 [M38 gates](docs/reports/evidence/m38-engine-performance-parity/final-gates.md)
+  同 [M39 gates](docs/reports/evidence/m39-long-input-engine-hardening/final-gates.md)。
+  下一個 milestone 規劃緊。
 - **公開 demo：** `yune-web` 部署喺 <https://yune-web.pages.dev>。佢係 Yune 引擎
   demo，唔代表 browser 層嘅性能已經解決。
 - **AI 姿態：** AI layer 已經存在，但喺 web harness 入面預設熄咗、只行本地，而且
@@ -121,8 +121,9 @@ Yune 嘅兼容性係 target-driven，而唔係 checklist-driven。
 
 ## 性能
 
-M38 已完成（全部關卡過晒）。M39 已經啟動，聚焦收窄長輸入延遲差距：喺 37 字、
-59 字同粵拼 profile 行度，以同機 RIME 做參照追平性能。
+M38 同 M39 都搞掂咗。而家 native engine 喺 59 字連續輸入上追到 librime 嘅 1.32x
+（之前係 1,712x），37 字追到 1.77x（之前係 1,401x），啟動保持 0.92x，短鍵保持
+3-4x。做法：將無界嘅 sentence model 掃描換成有界索引化嘅 word-graph 構建。
 
 目前報告：
 
