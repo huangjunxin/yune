@@ -1,6 +1,7 @@
 use crate::{
     make_sentence, make_sentences, null_grammar_score, CandidateSource, StaticTableTranslator,
-    TableDictionary, Translator, WordGraph, WordGraphEntry, UPSTREAM_NO_GRAMMAR_PENALTY,
+    TableDictionary, Translator, UpstreamSentenceModel, WordGraph, WordGraphEntry,
+    UPSTREAM_NO_GRAMMAR_PENALTY,
 };
 
 #[test]
@@ -100,4 +101,50 @@ A\t1000
     );
     assert_eq!(candidates[0].commit_text_for_input("abx"), "ABx");
     assert_eq!(candidates[1].text, "A");
+}
+
+#[test]
+fn upstream_sentence_model_uses_indexed_code_prefix_scan() {
+    let _guard = super::m37_metrics_test_guard();
+    let mut source = "\
+---
+name: indexed_sentence_model
+version: '1'
+sort: by_weight
+...
+
+A\tab\t1000
+B\tcd\t1000
+C\tef\t1000
+"
+    .to_owned();
+    for index in 0..1000 {
+        source.push_str(&format!("F{index}\tq{index}\t1\n"));
+    }
+    let dictionary =
+        TableDictionary::parse_rime_dict_yaml(&source).expect("dictionary should parse");
+    let model = UpstreamSentenceModel::from_dictionary(&dictionary, 10);
+
+    crate::m37_metrics_enable(true);
+    crate::m37_metrics_reset();
+    let candidates = model.candidates_for_input("abcdef");
+    let metrics = crate::m37_metrics_snapshot();
+    crate::m37_metrics_enable(false);
+
+    assert_eq!(candidates[0].text, "ABC");
+    assert!(metrics.upstream_sentence_model_code_prefix_checks <= 21);
+    assert!(metrics.upstream_sentence_model_table_entries_considered <= 3);
+}
+
+#[test]
+fn upstream_sentence_model_accepts_owned_table_entry_stream() {
+    let entries = [
+        crate::TableEntry::new("ab", "A", 10.0),
+        crate::TableEntry::new("cd", "B", 9.0),
+    ];
+    let model = UpstreamSentenceModel::from_table_entries(entries, &[], 10);
+
+    let candidates = model.candidates_for_input("abcd");
+
+    assert_eq!(candidates[0].text, "AB");
 }

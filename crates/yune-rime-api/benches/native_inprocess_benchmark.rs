@@ -33,7 +33,7 @@ const DEFAULT_ITERATIONS: usize = 9;
 const DEFAULT_SESSION_ITERATIONS: usize = 60;
 const DEFAULT_KEY_ITERATIONS: usize = 80;
 const KEY_WARMUPS: usize = 5;
-const M37_METRIC_FIELDS: [&str; 44] = [
+const M37_METRIC_FIELDS: &[&str] = &[
     "process_key_calls",
     "process_key_ns",
     "translator_calls",
@@ -78,6 +78,36 @@ const M37_METRIC_FIELDS: [&str; 44] = [
     "rsmarisa_prefix_lookup_calls",
     "abi_c_string_allocations",
     "abi_c_string_bytes",
+    "sentence_candidate_calls",
+    "sentence_candidate_ns",
+    "sentence_substrings_considered",
+    "sentence_exact_lookup_calls",
+    "sentence_exact_lookup_ns",
+    "sentence_exact_lookup_candidates",
+    "sentence_prefix_lookup_calls",
+    "sentence_prefix_lookup_ns",
+    "sentence_prefix_lookup_candidates",
+    "sentence_entry_matches_collected",
+    "sentence_path_clones",
+    "sentence_path_replacements",
+    "sentence_paths_pruned",
+    "sentence_max_live_paths",
+    "sentence_result_candidates",
+    "upstream_sentence_model_calls",
+    "upstream_sentence_model_ns",
+    "upstream_sentence_model_candidates",
+    "upstream_sentence_model_code_prefix_checks",
+    "upstream_sentence_model_table_entries_considered",
+    "upstream_sentence_model_vocabulary_entries_considered",
+    "upstream_sentence_model_graph_edges",
+    "prefix_fallback_calls",
+    "prefix_fallback_ns",
+    "prefix_fallback_views_visited",
+    "prefix_fallback_candidates",
+    "dynamic_correction_calls",
+    "dynamic_correction_ns",
+    "dynamic_correction_codes_considered",
+    "dynamic_correction_candidates",
 ];
 
 fn main() {
@@ -976,7 +1006,7 @@ fn write_m37_metrics(path: &PathBuf, samples: &[M37MetricSample]) {
             output.push_str(
                 &sample
                     .metrics
-                    .get(field)
+                    .get(*field)
                     .copied()
                     .unwrap_or_default()
                     .to_string(),

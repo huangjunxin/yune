@@ -50,6 +50,54 @@ pub struct M37MetricsSnapshot {
     pub rsmarisa_prefix_lookup_calls: u64,
     pub abi_c_string_allocations: u64,
     pub abi_c_string_bytes: u64,
+    pub sentence_candidate_calls: u64,
+    pub sentence_candidate_ns: u64,
+    pub sentence_substrings_considered: u64,
+    pub sentence_exact_lookup_calls: u64,
+    pub sentence_exact_lookup_ns: u64,
+    pub sentence_exact_lookup_candidates: u64,
+    pub sentence_prefix_lookup_calls: u64,
+    pub sentence_prefix_lookup_ns: u64,
+    pub sentence_prefix_lookup_candidates: u64,
+    pub sentence_entry_matches_collected: u64,
+    pub sentence_path_clones: u64,
+    pub sentence_path_replacements: u64,
+    pub sentence_paths_pruned: u64,
+    pub sentence_max_live_paths: u64,
+    pub sentence_result_candidates: u64,
+    pub upstream_sentence_model_calls: u64,
+    pub upstream_sentence_model_ns: u64,
+    pub upstream_sentence_model_candidates: u64,
+    pub upstream_sentence_model_code_prefix_checks: u64,
+    pub upstream_sentence_model_table_entries_considered: u64,
+    pub upstream_sentence_model_vocabulary_entries_considered: u64,
+    pub upstream_sentence_model_graph_edges: u64,
+    pub prefix_fallback_calls: u64,
+    pub prefix_fallback_ns: u64,
+    pub prefix_fallback_views_visited: u64,
+    pub prefix_fallback_candidates: u64,
+    pub dynamic_correction_calls: u64,
+    pub dynamic_correction_ns: u64,
+    pub dynamic_correction_codes_considered: u64,
+    pub dynamic_correction_candidates: u64,
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct M37SentenceCandidateMetrics {
+    pub duration: Duration,
+    pub result_candidates: usize,
+    pub substrings_considered: usize,
+    pub exact_lookup_calls: usize,
+    pub exact_lookup_ns: Duration,
+    pub exact_lookup_candidates: usize,
+    pub prefix_lookup_calls: usize,
+    pub prefix_lookup_ns: Duration,
+    pub prefix_lookup_candidates: usize,
+    pub entry_matches_collected: usize,
+    pub path_clones: usize,
+    pub path_replacements: usize,
+    pub paths_pruned: usize,
+    pub max_live_paths: usize,
 }
 
 #[derive(Default)]
@@ -99,6 +147,36 @@ struct M37Metrics {
     rsmarisa_prefix_lookup_calls: AtomicU64,
     abi_c_string_allocations: AtomicU64,
     abi_c_string_bytes: AtomicU64,
+    sentence_candidate_calls: AtomicU64,
+    sentence_candidate_ns: AtomicU64,
+    sentence_substrings_considered: AtomicU64,
+    sentence_exact_lookup_calls: AtomicU64,
+    sentence_exact_lookup_ns: AtomicU64,
+    sentence_exact_lookup_candidates: AtomicU64,
+    sentence_prefix_lookup_calls: AtomicU64,
+    sentence_prefix_lookup_ns: AtomicU64,
+    sentence_prefix_lookup_candidates: AtomicU64,
+    sentence_entry_matches_collected: AtomicU64,
+    sentence_path_clones: AtomicU64,
+    sentence_path_replacements: AtomicU64,
+    sentence_paths_pruned: AtomicU64,
+    sentence_max_live_paths: AtomicU64,
+    sentence_result_candidates: AtomicU64,
+    upstream_sentence_model_calls: AtomicU64,
+    upstream_sentence_model_ns: AtomicU64,
+    upstream_sentence_model_candidates: AtomicU64,
+    upstream_sentence_model_code_prefix_checks: AtomicU64,
+    upstream_sentence_model_table_entries_considered: AtomicU64,
+    upstream_sentence_model_vocabulary_entries_considered: AtomicU64,
+    upstream_sentence_model_graph_edges: AtomicU64,
+    prefix_fallback_calls: AtomicU64,
+    prefix_fallback_ns: AtomicU64,
+    prefix_fallback_views_visited: AtomicU64,
+    prefix_fallback_candidates: AtomicU64,
+    dynamic_correction_calls: AtomicU64,
+    dynamic_correction_ns: AtomicU64,
+    dynamic_correction_codes_considered: AtomicU64,
+    dynamic_correction_candidates: AtomicU64,
 }
 
 fn metrics() -> &'static M37Metrics {
@@ -191,6 +269,76 @@ pub fn m37_metrics_reset() {
         .store(0, Ordering::Relaxed);
     metrics.abi_c_string_allocations.store(0, Ordering::Relaxed);
     metrics.abi_c_string_bytes.store(0, Ordering::Relaxed);
+    metrics.sentence_candidate_calls.store(0, Ordering::Relaxed);
+    metrics.sentence_candidate_ns.store(0, Ordering::Relaxed);
+    metrics
+        .sentence_substrings_considered
+        .store(0, Ordering::Relaxed);
+    metrics
+        .sentence_exact_lookup_calls
+        .store(0, Ordering::Relaxed);
+    metrics.sentence_exact_lookup_ns.store(0, Ordering::Relaxed);
+    metrics
+        .sentence_exact_lookup_candidates
+        .store(0, Ordering::Relaxed);
+    metrics
+        .sentence_prefix_lookup_calls
+        .store(0, Ordering::Relaxed);
+    metrics
+        .sentence_prefix_lookup_ns
+        .store(0, Ordering::Relaxed);
+    metrics
+        .sentence_prefix_lookup_candidates
+        .store(0, Ordering::Relaxed);
+    metrics
+        .sentence_entry_matches_collected
+        .store(0, Ordering::Relaxed);
+    metrics.sentence_path_clones.store(0, Ordering::Relaxed);
+    metrics
+        .sentence_path_replacements
+        .store(0, Ordering::Relaxed);
+    metrics.sentence_paths_pruned.store(0, Ordering::Relaxed);
+    metrics.sentence_max_live_paths.store(0, Ordering::Relaxed);
+    metrics
+        .sentence_result_candidates
+        .store(0, Ordering::Relaxed);
+    metrics
+        .upstream_sentence_model_calls
+        .store(0, Ordering::Relaxed);
+    metrics
+        .upstream_sentence_model_ns
+        .store(0, Ordering::Relaxed);
+    metrics
+        .upstream_sentence_model_candidates
+        .store(0, Ordering::Relaxed);
+    metrics
+        .upstream_sentence_model_code_prefix_checks
+        .store(0, Ordering::Relaxed);
+    metrics
+        .upstream_sentence_model_table_entries_considered
+        .store(0, Ordering::Relaxed);
+    metrics
+        .upstream_sentence_model_vocabulary_entries_considered
+        .store(0, Ordering::Relaxed);
+    metrics
+        .upstream_sentence_model_graph_edges
+        .store(0, Ordering::Relaxed);
+    metrics.prefix_fallback_calls.store(0, Ordering::Relaxed);
+    metrics.prefix_fallback_ns.store(0, Ordering::Relaxed);
+    metrics
+        .prefix_fallback_views_visited
+        .store(0, Ordering::Relaxed);
+    metrics
+        .prefix_fallback_candidates
+        .store(0, Ordering::Relaxed);
+    metrics.dynamic_correction_calls.store(0, Ordering::Relaxed);
+    metrics.dynamic_correction_ns.store(0, Ordering::Relaxed);
+    metrics
+        .dynamic_correction_codes_considered
+        .store(0, Ordering::Relaxed);
+    metrics
+        .dynamic_correction_candidates
+        .store(0, Ordering::Relaxed);
 }
 
 #[must_use]
@@ -263,6 +411,62 @@ pub fn m37_metrics_snapshot() -> M37MetricsSnapshot {
         rsmarisa_prefix_lookup_calls: metrics.rsmarisa_prefix_lookup_calls.load(Ordering::Relaxed),
         abi_c_string_allocations: metrics.abi_c_string_allocations.load(Ordering::Relaxed),
         abi_c_string_bytes: metrics.abi_c_string_bytes.load(Ordering::Relaxed),
+        sentence_candidate_calls: metrics.sentence_candidate_calls.load(Ordering::Relaxed),
+        sentence_candidate_ns: metrics.sentence_candidate_ns.load(Ordering::Relaxed),
+        sentence_substrings_considered: metrics
+            .sentence_substrings_considered
+            .load(Ordering::Relaxed),
+        sentence_exact_lookup_calls: metrics.sentence_exact_lookup_calls.load(Ordering::Relaxed),
+        sentence_exact_lookup_ns: metrics.sentence_exact_lookup_ns.load(Ordering::Relaxed),
+        sentence_exact_lookup_candidates: metrics
+            .sentence_exact_lookup_candidates
+            .load(Ordering::Relaxed),
+        sentence_prefix_lookup_calls: metrics.sentence_prefix_lookup_calls.load(Ordering::Relaxed),
+        sentence_prefix_lookup_ns: metrics.sentence_prefix_lookup_ns.load(Ordering::Relaxed),
+        sentence_prefix_lookup_candidates: metrics
+            .sentence_prefix_lookup_candidates
+            .load(Ordering::Relaxed),
+        sentence_entry_matches_collected: metrics
+            .sentence_entry_matches_collected
+            .load(Ordering::Relaxed),
+        sentence_path_clones: metrics.sentence_path_clones.load(Ordering::Relaxed),
+        sentence_path_replacements: metrics.sentence_path_replacements.load(Ordering::Relaxed),
+        sentence_paths_pruned: metrics.sentence_paths_pruned.load(Ordering::Relaxed),
+        sentence_max_live_paths: metrics.sentence_max_live_paths.load(Ordering::Relaxed),
+        sentence_result_candidates: metrics.sentence_result_candidates.load(Ordering::Relaxed),
+        upstream_sentence_model_calls: metrics
+            .upstream_sentence_model_calls
+            .load(Ordering::Relaxed),
+        upstream_sentence_model_ns: metrics.upstream_sentence_model_ns.load(Ordering::Relaxed),
+        upstream_sentence_model_candidates: metrics
+            .upstream_sentence_model_candidates
+            .load(Ordering::Relaxed),
+        upstream_sentence_model_code_prefix_checks: metrics
+            .upstream_sentence_model_code_prefix_checks
+            .load(Ordering::Relaxed),
+        upstream_sentence_model_table_entries_considered: metrics
+            .upstream_sentence_model_table_entries_considered
+            .load(Ordering::Relaxed),
+        upstream_sentence_model_vocabulary_entries_considered: metrics
+            .upstream_sentence_model_vocabulary_entries_considered
+            .load(Ordering::Relaxed),
+        upstream_sentence_model_graph_edges: metrics
+            .upstream_sentence_model_graph_edges
+            .load(Ordering::Relaxed),
+        prefix_fallback_calls: metrics.prefix_fallback_calls.load(Ordering::Relaxed),
+        prefix_fallback_ns: metrics.prefix_fallback_ns.load(Ordering::Relaxed),
+        prefix_fallback_views_visited: metrics
+            .prefix_fallback_views_visited
+            .load(Ordering::Relaxed),
+        prefix_fallback_candidates: metrics.prefix_fallback_candidates.load(Ordering::Relaxed),
+        dynamic_correction_calls: metrics.dynamic_correction_calls.load(Ordering::Relaxed),
+        dynamic_correction_ns: metrics.dynamic_correction_ns.load(Ordering::Relaxed),
+        dynamic_correction_codes_considered: metrics
+            .dynamic_correction_codes_considered
+            .load(Ordering::Relaxed),
+        dynamic_correction_candidates: metrics
+            .dynamic_correction_candidates
+            .load(Ordering::Relaxed),
     }
 }
 
@@ -277,6 +481,12 @@ fn add_duration(counter: &AtomicU64, duration: Duration) {
         counter,
         duration.as_nanos().min(u128::from(u64::MAX)) as u64,
     );
+}
+
+fn max(counter: &AtomicU64, value: u64) {
+    if value != 0 && m37_metrics_enabled() {
+        counter.fetch_max(value, Ordering::Relaxed);
+    }
 }
 
 pub fn m37_record_process_key(duration: Duration) {
@@ -465,5 +675,190 @@ pub fn m37_record_abi_c_string_allocation(bytes: usize) {
             .abi_c_string_allocations
             .fetch_add(1, Ordering::Relaxed);
         add(&metrics.abi_c_string_bytes, bytes as u64);
+    }
+}
+
+pub fn m37_record_sentence_candidate(duration: Duration, result_candidates: usize) {
+    if m37_metrics_enabled() {
+        let metrics = metrics();
+        metrics
+            .sentence_candidate_calls
+            .fetch_add(1, Ordering::Relaxed);
+        add_duration(&metrics.sentence_candidate_ns, duration);
+        add(
+            &metrics.sentence_result_candidates,
+            result_candidates as u64,
+        );
+    }
+}
+
+pub fn m37_record_sentence_candidate_metrics(record: M37SentenceCandidateMetrics) {
+    if m37_metrics_enabled() {
+        let metrics = metrics();
+        metrics
+            .sentence_candidate_calls
+            .fetch_add(1, Ordering::Relaxed);
+        add_duration(&metrics.sentence_candidate_ns, record.duration);
+        add(
+            &metrics.sentence_result_candidates,
+            record.result_candidates as u64,
+        );
+        add(
+            &metrics.sentence_substrings_considered,
+            record.substrings_considered as u64,
+        );
+        add(
+            &metrics.sentence_exact_lookup_calls,
+            record.exact_lookup_calls as u64,
+        );
+        add_duration(&metrics.sentence_exact_lookup_ns, record.exact_lookup_ns);
+        add(
+            &metrics.sentence_exact_lookup_candidates,
+            record.exact_lookup_candidates as u64,
+        );
+        add(
+            &metrics.sentence_prefix_lookup_calls,
+            record.prefix_lookup_calls as u64,
+        );
+        add_duration(&metrics.sentence_prefix_lookup_ns, record.prefix_lookup_ns);
+        add(
+            &metrics.sentence_prefix_lookup_candidates,
+            record.prefix_lookup_candidates as u64,
+        );
+        add(
+            &metrics.sentence_entry_matches_collected,
+            record.entry_matches_collected as u64,
+        );
+        add(&metrics.sentence_path_clones, record.path_clones as u64);
+        add(
+            &metrics.sentence_path_replacements,
+            record.path_replacements as u64,
+        );
+        add(&metrics.sentence_paths_pruned, record.paths_pruned as u64);
+        max(
+            &metrics.sentence_max_live_paths,
+            record.max_live_paths as u64,
+        );
+    }
+}
+
+pub fn m37_record_sentence_substring_considered() {
+    add(&metrics().sentence_substrings_considered, 1);
+}
+
+pub fn m37_record_sentence_exact_lookup(duration: Duration, candidates: usize) {
+    if m37_metrics_enabled() {
+        let metrics = metrics();
+        metrics
+            .sentence_exact_lookup_calls
+            .fetch_add(1, Ordering::Relaxed);
+        add_duration(&metrics.sentence_exact_lookup_ns, duration);
+        add(&metrics.sentence_exact_lookup_candidates, candidates as u64);
+    }
+}
+
+pub fn m37_record_sentence_prefix_lookup(duration: Duration, candidates: usize) {
+    if m37_metrics_enabled() {
+        let metrics = metrics();
+        metrics
+            .sentence_prefix_lookup_calls
+            .fetch_add(1, Ordering::Relaxed);
+        add_duration(&metrics.sentence_prefix_lookup_ns, duration);
+        add(
+            &metrics.sentence_prefix_lookup_candidates,
+            candidates as u64,
+        );
+    }
+}
+
+pub fn m37_record_sentence_entry_matches_collected(count: usize) {
+    add(&metrics().sentence_entry_matches_collected, count as u64);
+}
+
+pub fn m37_record_sentence_path_clones(count: usize) {
+    add(&metrics().sentence_path_clones, count as u64);
+}
+
+pub fn m37_record_sentence_path_replacements(count: usize) {
+    add(&metrics().sentence_path_replacements, count as u64);
+}
+
+pub fn m37_record_sentence_paths_pruned(count: usize) {
+    add(&metrics().sentence_paths_pruned, count as u64);
+}
+
+pub fn m37_record_sentence_max_live_paths(count: usize) {
+    max(&metrics().sentence_max_live_paths, count as u64);
+}
+
+pub fn m37_record_upstream_sentence_model(duration: Duration, candidates: usize) {
+    if m37_metrics_enabled() {
+        let metrics = metrics();
+        metrics
+            .upstream_sentence_model_calls
+            .fetch_add(1, Ordering::Relaxed);
+        add_duration(&metrics.upstream_sentence_model_ns, duration);
+        add(
+            &metrics.upstream_sentence_model_candidates,
+            candidates as u64,
+        );
+    }
+}
+
+pub fn m37_record_upstream_sentence_model_scan(
+    code_prefix_checks: usize,
+    table_entries_considered: usize,
+    vocabulary_entries_considered: usize,
+    graph_edges: usize,
+) {
+    if m37_metrics_enabled() {
+        let metrics = metrics();
+        add(
+            &metrics.upstream_sentence_model_code_prefix_checks,
+            code_prefix_checks as u64,
+        );
+        add(
+            &metrics.upstream_sentence_model_table_entries_considered,
+            table_entries_considered as u64,
+        );
+        add(
+            &metrics.upstream_sentence_model_vocabulary_entries_considered,
+            vocabulary_entries_considered as u64,
+        );
+        add(
+            &metrics.upstream_sentence_model_graph_edges,
+            graph_edges as u64,
+        );
+    }
+}
+
+pub fn m37_record_prefix_fallback(duration: Duration, views_visited: usize, candidates: usize) {
+    if m37_metrics_enabled() {
+        let metrics = metrics();
+        metrics
+            .prefix_fallback_calls
+            .fetch_add(1, Ordering::Relaxed);
+        add_duration(&metrics.prefix_fallback_ns, duration);
+        add(&metrics.prefix_fallback_views_visited, views_visited as u64);
+        add(&metrics.prefix_fallback_candidates, candidates as u64);
+    }
+}
+
+pub fn m37_record_dynamic_correction(
+    duration: Duration,
+    codes_considered: usize,
+    candidates: usize,
+) {
+    if m37_metrics_enabled() {
+        let metrics = metrics();
+        metrics
+            .dynamic_correction_calls
+            .fetch_add(1, Ordering::Relaxed);
+        add_duration(&metrics.dynamic_correction_ns, duration);
+        add(
+            &metrics.dynamic_correction_codes_considered,
+            codes_considered as u64,
+        );
+        add(&metrics.dynamic_correction_candidates, candidates as u64);
     }
 }

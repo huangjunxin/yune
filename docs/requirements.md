@@ -348,62 +348,107 @@ Deferred beyond the TypeDuck-Web browser integration milestone. Tracked but not 
 - [x] **M38-ENGINE-12**: Final reports make only native isolated-engine claims and explicitly exclude frontend/browser/product/delivery speed claims.
 - [x] **M38-ENGINE-13**: Closeout records final quality gates: `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings`, focused engine and touched compatibility tests, `cargo test --workspace`, final native benchmark, report checks, and final `git diff --check`.
 
+## M39 Long-Input Engine Hardening Requirements
+
+**Status: complete.** M39 closed as a native-engine-only long-input hardening
+milestone in
+[`plans/completed/m39-plan-long-input-engine-hardening.md`](./plans/completed/m39-plan-long-input-engine-hardening.md).
+Closeout evidence lives under
+[`reports/evidence/m39-long-input-engine-hardening/`](./reports/evidence/m39-long-input-engine-hardening/),
+with the final same-run native benchmark in `phase-4-final-native/` and final
+gate summary in `final-gates.md`.
+
+- [x] **M39-ENGINE-01**: Final same-run native evidence includes startup,
+  session, `hao`, `ni`, `zhongguo`, both required Track A long rows, and the
+  required Track B `jyut6ping3_mobile` 50+ character row, with Task 1 owner
+  attribution recorded before optimization.
+- [x] **M39-ENGINE-02**: Final startup/runtime-ready and session medians do not
+  regress and remain within `1.25x` of same-run upstream librime: startup
+  `0.917x`, session `0.938x`.
+- [x] **M39-ENGINE-03**: Final `hao`, `ni`, and `zhongguo` rows remain within
+  their short/medium gates: `3.281x`, `3.863x`, and `0.329x`.
+- [x] **M39-ENGINE-04**: Both required Track A long rows finish within the
+  agreed `5x` gate, and the Track B profile row is measured and no-regressed:
+  `ceshiyixiachangjushuruxingnengzenyang` at `1.765x`,
+  `zhegeyinqingqishiyinggaizhichichaochangjuzishurucainengyong` at `1.320x`,
+  and `neigojangingkeisatjinggoiziwunciucoenggeoizisyujapsinhojijung` at final
+  median `188.857us/op`, p95 `194.910us/op`, below Phase 0. Task 1 proves
+  Track A is upstream sentence-model scanning while Track B is a
+  TypeDuck-profile no-marisa prefix/fallback path.
+- [x] **M39-ENGINE-05**: Final Track A selected storage remains
+  `rsmarisa_byte_backed`, table/prism bytes are mmap-backed, selected
+  table/prism heap mirror bytes are `0`, `source_fallback=false`, and runtime
+  `rsmarisa` exact/prefix counters are positive.
+- [x] **M39-ENGINE-06**: Final output/context paths are bounded for Track A
+  target rows, no full-list fallback fires on those rows, and the Track B
+  profile fallback/full-list merge is counted and explained as compatibility
+  behavior.
+- [x] **M39-ENGINE-07**: Final memory evidence includes owner attribution and
+  no regression: Track A max peak moves from `163,598,336 B` to
+  `123,985,920 B`, Track B peak moves from `504,557,568 B` to
+  `504,041,472 B`, and selected table/prism heap mirrors stay at `0`.
+- [x] **M39-ENGINE-08**: Upstream-observable behavior, paging, TypeDuck boundary
+  behavior, and touched compatibility paths are covered by focused tests plus
+  `cargo test --workspace`.
+- [x] **M39-ENGINE-09**: Final reports make native-engine-only claims and
+  explicitly exclude browser, frontend, application, product-delivery,
+  packaging, deployment, and public-demo speed claims.
+
 ## Post-M38 Engine Performance Follow-Up Requirements
 
-**Status: draft.** These requirements do not reopen M38. The post-M38 baseline
+**Status: complete through M39.** These requirements do not reopen M38. The post-M38 baseline
 in [`reports/evidence/post-m38-long-input-baseline/baseline-native/`](./reports/evidence/post-m38-long-input-baseline/baseline-native/)
 and the 59-character stress run in
 [`reports/evidence/post-m38-long-input-baseline/stress-59-native/`](./reports/evidence/post-m38-long-input-baseline/stress-59-native/)
-show that uninterrupted long input is not in parity. These requirements define
-evidence that the next engine-performance milestone must keep before claiming
-broader typing parity.
+showed that uninterrupted long input was not in parity. M39 supplied the
+required evidence and closeout gates.
 
-- [ ] **POST-M38-PERF-01**: The next same-run native Yune-versus-librime
+- [x] **POST-M38-PERF-01**: The next same-run native Yune-versus-librime
   benchmark keeps the M38 Track A rows (`hao`, `ni`, `zhongguo`) and includes
   the required long continuous pinyin rows
   `ceshiyixiachangjushuruxingnengzenyang` and
   `zhegeyinqingqishiyinggaizhichichaochangjuzishurucainengyong`, plus the
   required Track B `jyut6ping3_mobile` 50+ character row
   `neigojangingkeisatjinggoiziwunciucoenggeoizisyujapsinhojijung`.
-- [ ] **POST-M38-PERF-02**: The long-input rows record the same evidence shape
+- [x] **POST-M38-PERF-02**: The long-input rows record the same evidence shape
   as the M38 target rows: Yune/librime medians and ratios, selected backend,
   mapping mode, heap mirror bytes, rsmarisa/no-marisa fallback counters, raw
   prism/table lookup, translator production, context export, memory,
   allocation, and ABI export counters. The Track B row records the same Yune
   owner/status/memory evidence even where a same-run librime ratio is not yet
   available.
-- [ ] **POST-M38-PERF-03**: Any long-input optimization claim identifies whether
+- [x] **POST-M38-PERF-03**: Any long-input optimization claim identifies whether
   the owner is lookup enumeration, sentence/full-list behavior, paging/context
   growth, ABI export, userdb/filter/ranker work, or another measured bucket.
-- [ ] **POST-M38-PERF-04**: Long-composition translator attribution splits the
+- [x] **POST-M38-PERF-04**: Long-composition translator attribution splits the
   current top-level translator bucket into inner owners, including
   sentence/full-list fallback, `StaticTableTranslator::sentence_candidate`,
   upstream sentence-model lookup,
   substring exact/prefix lookup loops, path cloning, sorting, context/export,
   prefix fallback, and any userdb/filter/ranker work that fires for the long
   row.
-- [ ] **POST-M38-PERF-05**: Memory follow-up uses the post-M38 working-set/peak
+- [x] **POST-M38-PERF-05**: Memory follow-up uses the post-M38 working-set/peak
   baseline as the comparison anchor and adds heap-owner attribution before any
   memory reduction claim is accepted.
-- [ ] **POST-M38-PERF-06**: Long uninterrupted input is treated as a primary
+- [x] **POST-M38-PERF-06**: Long uninterrupted input is treated as a primary
   engine requirement, not an optional stress test. The next milestone records a
   length-curve benchmark around short, medium, 37-character, Track A 50+
   character, Track B `jyut6ping3_mobile` 50+ character, and 59-character
   inputs, and it does not claim broader typing parity unless the 50+ character
   rows are brought into the agreed gates or closed by explicit measured no-go.
-- [ ] **POST-M38-PERF-07**: The next engine-performance milestone blocks
+- [x] **POST-M38-PERF-07**: The next engine-performance milestone blocks
   cross-dimension regressions: startup/session, short-input latency, long-input
   latency, mmap/`rsmarisa` activation, bounded output, working set, peak memory,
   and upstream-observable behavior must all be reported and must not regress
   outside the milestone's explicit gates.
-- [ ] **POST-M38-PERF-08**: The next closeout report includes a single
+- [x] **POST-M38-PERF-08**: The next closeout report includes a single
   optimization-strategy gate table that shows every required method is still
   active or explicitly closed by measured no-go: same-run native benchmark,
   mmap/file-backed selected bytes, real `rsmarisa` runtime lookup,
   lazy/page-bounded candidate production, page-sized context export,
   startup/session lifecycle fast paths, owner counters, heap-owner attribution,
   memory baselines, and behavior tests.
-- [ ] **POST-M38-PERF-09**: M39 cannot begin a sentence/composition rewrite
+- [x] **POST-M38-PERF-09**: M39 cannot begin a sentence/composition rewrite
   until Task 0 records the `jyut6ping3_mobile`
   `neigojangingkeisatjinggoiziwunciucoenggeoizisyujapsinhojijung` baseline and
   Task 1 records whether that row shares the Track A long-input owner or is
@@ -672,15 +717,24 @@ Which phases cover which requirements. Updated during roadmap creation.
 | M38-ENGINE-11 | M38 | Complete - touched upstream `luna_pinyin` behavior and shared compatibility tests are green |
 | M38-ENGINE-12 | M38 | Complete - final reports make only native isolated-engine claims |
 | M38-ENGINE-13 | M38 | Complete - fmt, clippy, focused tests, workspace tests, final native benchmark, report checks, and `git diff --check` recorded |
-| POST-M38-PERF-01 | Post-M38 | Draft - next same-run native benchmark must include required long continuous pinyin rows `ceshiyixiachangjushuruxingnengzenyang` and `zhegeyinqingqishiyinggaizhichichaochangjuzishurucainengyong` |
-| POST-M38-PERF-02 | Post-M38 | Draft - long-input rows must carry the same owner/status/memory/allocation evidence as the M38 rows |
-| POST-M38-PERF-03 | Post-M38 | Draft - long-input optimization claims must name the measured owner |
-| POST-M38-PERF-04 | Post-M38 | Draft - long-composition translator attribution must split the current top-level translator bucket into inner owners |
-| POST-M38-PERF-05 | Post-M38 | Draft - memory follow-up must use the post-M38 working-set/peak baseline and add heap-owner attribution |
-| POST-M38-PERF-06 | Post-M38 | Draft - long uninterrupted 50+ character input is a primary engine requirement and must be covered by a length-curve benchmark plus an explicit parity/no-go gate |
-| POST-M38-PERF-07 | Post-M38 | Draft - next engine-performance milestone must report and block regressions across startup/session, short input, long input, mmap/rsmarisa, bounded output, memory, and behavior |
-| POST-M38-PERF-08 | Post-M38 | Draft - next closeout report must include a strategy gate table proving same-run benchmark, mmap/rsmarisa, bounded output/context export, lifecycle fast paths, owner counters, memory attribution, and behavior tests are active or explicitly no-goed |
-| POST-M38-PERF-09 | Post-M38 | Draft - M39 cannot begin a sentence/composition rewrite until the `jyut6ping3_mobile` 50+ character row is baselined and its owner/path-sharing verdict is recorded |
+| M39-ENGINE-01 | M39 | Complete - final native benchmark includes startup, session, short/medium rows, both Track A long rows, the Track B long profile row, and owner attribution |
+| M39-ENGINE-02 | M39 | Complete - startup and session remain within `1.25x` of same-run librime |
+| M39-ENGINE-03 | M39 | Complete - `hao`, `ni`, and `zhongguo` remain inside short/medium gates |
+| M39-ENGINE-04 | M39 | Complete - both Track A long rows are inside the `5x` gate and the Track B 50+ profile row is no-regressed |
+| M39-ENGINE-05 | M39 | Complete - Track A `rsmarisa`, mmap-backed bytes, zero heap mirrors, and source-fallback status are preserved |
+| M39-ENGINE-06 | M39 | Complete - bounded Track A output and counted/explained Track B profile fallback are recorded |
+| M39-ENGINE-07 | M39 | Complete - memory owner attribution and no-regression are recorded |
+| M39-ENGINE-08 | M39 | Complete - focused behavior gates and workspace tests are green |
+| M39-ENGINE-09 | M39 | Complete - final reports make only native-engine claims |
+| POST-M38-PERF-01 | Post-M38 | Complete through M39 - final same-run native benchmark includes required long continuous pinyin rows and Track B row |
+| POST-M38-PERF-02 | Post-M38 | Complete through M39 - long-input rows carry owner/status/memory evidence |
+| POST-M38-PERF-03 | Post-M38 | Complete through M39 - optimization claim names the measured owner |
+| POST-M38-PERF-04 | Post-M38 | Complete through M39 - long-composition/profile attribution splits inner owners |
+| POST-M38-PERF-05 | Post-M38 | Complete through M39 - memory follow-up uses baseline and owner attribution |
+| POST-M38-PERF-06 | Post-M38 | Complete through M39 - 50+ character rows are primary closeout gates |
+| POST-M38-PERF-07 | Post-M38 | Complete through M39 - cross-dimension no-regression gates are reported |
+| POST-M38-PERF-08 | Post-M38 | Complete through M39 - strategy gate table is recorded in final-gates evidence |
+| POST-M38-PERF-09 | Post-M38 | Complete through M39 - Cantonese path-sharing verdict is recorded before optimization |
 
 **Coverage:**
 
@@ -711,10 +765,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 - M36 product-path engine optimization requirements: 10 total, 7 complete, 3 closed by no-go, 0 draft
 - M37 engine hyper-optimization requirements: 11 total, 11 complete, 0 planned
 - M38 engine performance parity requirements: 13 total, 13 complete, 0 active
-- Post-M38 engine performance follow-up requirements: 9 total, 0 complete, 9 draft
-- Mapped to phases: 253
+- M39 long-input engine hardening requirements: 9 total, 9 complete, 0 active
+- Post-M38 engine performance follow-up requirements: 9 total, 9 complete, 0 draft
+- Mapped to phases: 262
 - Unmapped: 0
 
 ---
 
-_Requirements defined: 2026-04-28_ _Last updated: 2026-06-25 - M38 engine performance parity is complete with same-run upstream librime evidence, mmap-backed selected table/prism bytes, real `rsmarisa` Track A hot-path lookup, page-bounded first-page iteration, memory/allocation attribution, startup/session within `1.25x`, `hao`/`ni`/`zhongguo` within `5x`, behavior gates, honest native-only claims, and final quality gates recorded. The post-M38 long-input baseline adds `ceshiyixiachangjushuruxingnengzenyang` and shows broader typing parity is not closed (`412,192.727us` Yune versus `294.151us` librime); the 59-character stress run adds `zhegeyinqingqishiyinggaizhichichaochangjuzishurucainengyong` and records `1,202,404.588us` Yune versus `702.212us` librime. Draft follow-up requirements now require keeping both Track A long rows, adding the Track B `jyut6ping3_mobile` 50+ character row, treating 50+ uninterrupted input as a primary engine requirement, splitting the long-composition/profile translator owner, adding a length-curve benchmark, blocking cross-dimension regressions, adding heap-owner attribution before a memory reduction claim, publishing a closeout strategy gate table that proves every optimization method is still active or explicitly no-goed, and blocking rewrite work until the Cantonese profile path-sharing verdict is recorded. `roadmap.md` is now a current-state dashboard and the historical milestone ledger lives in `ledgers/milestone-history.md`. M37 engine hyper-optimization is complete with latency and memory attribution, byte-backed/native-mapped product storage, real `rsmarisa` product probes, fresh compiled artifacts, page-bounded materialization/context export, `hai` movement, product memory movement, behavior parity, honest claims, and final quality gates recorded in evidence. M31 remains complete as the `yune-web` public demo readiness milestone with browser delivery claims scoped to packaging/pruning/cache evidence, not startup/typing wins. M36 remains complete as the product-path engine optimization milestone after M35, with Track A/Track B and browser-delivery caveats preserved. M35 remains complete as the compact table+prism runtime storage milestone. M33, M34, P2-WIN-02, M30, M29, M28 follow-up, M28, M27, M26, M25, M24, M19, M23, M18, M22, M21, M20, and M10 remain complete as previously recorded._
+_Requirements defined: 2026-04-28_ _Last updated: 2026-06-25 - M39 long-input engine hardening is complete with same-run upstream librime evidence for startup, session, short/medium rows, and both Track A long rows; the Track B `jyut6ping3_mobile` 50+ row is separately measured, attributed, and no-regressed. M39 proves the Track A owner was upstream sentence-model scanning, proves Track B is a separate TypeDuck-profile no-marisa prefix/fallback path, preserves mmap-backed selected table/prism bytes, real Track A `rsmarisa`, bounded Track A first-page output, zero selected table/prism heap mirrors, behavior gates, memory no-regression, and native-only claims. M38 engine performance parity remains complete with same-run upstream librime evidence, mmap-backed selected table/prism bytes, real `rsmarisa` Track A hot-path lookup, page-bounded first-page iteration, memory/allocation attribution, startup/session within `1.25x`, `hao`/`ni`/`zhongguo` within `5x`, behavior gates, honest native-only claims, and final quality gates recorded. `roadmap.md` is now a current-state dashboard and the historical milestone ledger lives in `ledgers/milestone-history.md`. M37 engine hyper-optimization is complete with latency and memory attribution, byte-backed/native-mapped product storage, real `rsmarisa` product probes, fresh compiled artifacts, page-bounded materialization/context export, `hai` movement, product memory movement, behavior parity, honest claims, and final quality gates recorded in evidence. M31 remains complete as the `yune-web` public demo readiness milestone with browser delivery claims scoped to packaging/pruning/cache evidence, not startup/typing wins. M36 remains complete as the product-path engine optimization milestone after M35, with Track A/Track B and browser-delivery caveats preserved. M35 remains complete as the compact table+prism runtime storage milestone. M33, M34, P2-WIN-02, M30, M29, M28 follow-up, M28, M27, M26, M25, M24, M19, M23, M18, M22, M21, M20, and M10 remain complete as previously recorded._

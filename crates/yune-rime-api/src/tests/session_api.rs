@@ -366,6 +366,7 @@ fn m37_metrics_exports_snapshot_json_for_loaded_benchmarks() {
     crate::yune_m37_metrics_enable(TRUE);
     crate::yune_m37_metrics_reset();
     yune_core::m37_record_abi_candidates_exported(3);
+    yune_core::m37_record_sentence_candidate(std::time::Duration::from_nanos(17), 1);
 
     let json = crate::yune_m37_metrics_snapshot_json();
     assert!(!json.is_null());
@@ -374,6 +375,11 @@ fn m37_metrics_exports_snapshot_json_for_loaded_benchmarks() {
         .to_str()
         .expect("snapshot JSON should be UTF-8");
     assert!(json_text.contains("\"abi_candidates_exported\":3"));
+    assert!(json_text.contains("\"sentence_candidate_calls\":1"));
+    assert!(json_text.contains("\"sentence_candidate_ns\":17"));
+    assert!(json_text.contains("\"prefix_fallback_calls\":0"));
+    assert!(json_text.contains("\"upstream_sentence_model_calls\":0"));
+    assert!(json_text.contains("\"upstream_sentence_model_code_prefix_checks\":0"));
     // SAFETY: `json` is owned by the metrics export.
     unsafe { crate::yune_m37_metrics_free_string(json) };
     crate::yune_m37_metrics_enable(FALSE);

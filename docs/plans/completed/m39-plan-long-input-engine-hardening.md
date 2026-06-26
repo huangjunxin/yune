@@ -1,6 +1,6 @@
 # M39 Long-Input Engine Hardening Plan
 
-> **Status:** Draft - **Milestone:** M39 (long-input engine hardening) -
+> **Status:** Complete - **Milestone:** M39 (long-input engine hardening) -
 > **Created:** 2026-06-25 - **Type:** engine-performance plan
 >
 > **For agentic workers:** REQUIRED SUB-SKILL: Use
@@ -78,6 +78,22 @@ Mandarin stress sentence ("this engine should support very long sentence input
 before it is usable"). It is a native engine profile row, not a browser,
 frontend, packaging, or delivery claim.
 
+**Task 0 update (2026-06-25):** Phase 0 baseline evidence is recorded under
+[`docs/reports/evidence/m39-long-input-engine-hardening/phase-0-baseline/`](../../reports/evidence/m39-long-input-engine-hardening/phase-0-baseline)
+with the required `jyut6ping3_mobile` row. The Track B row
+`neigojangingkeisatjinggoiziwunciucoenggeoizisyujapsinhojijung` measured
+`189.207 us/op` median and `202.084 us/op` p95, versus Track A long rows at
+`452,200.116 us/op` and `1,240,080.937 us/op`. Current broad counters therefore
+do **not** support treating Track B as the same severe Track A
+long-composition latency owner. Track B uses the product compiled
+`byte_backed` no-marisa path with mmap-backed table/prism bytes and zero
+selected table/prism heap mirror bytes. Task 1 must still add inner counters to
+separate sentence composition, upstream sentence model, prefix fallback, and
+dynamic correction before code optimization. Until a same-run TypeDuck-HK
+librime `v1.1.2` oracle row is added, the Track B native profile target is a
+no-regression gate from the Phase 0 median/p95 plus required owner attribution,
+not a Yune-versus-librime ratio claim.
+
 ## Non-Negotiable Closeout Gates
 
 - `M39-ENGINE-01` (same-run benchmark): final evidence includes startup,
@@ -151,7 +167,7 @@ frontend, packaging, or delivery claim.
 - Modify: `crates/yune-rime-api/benches/native_inprocess_benchmark.rs`
 - Create: `docs/reports/evidence/m39-long-input-engine-hardening/phase-0-baseline/`
 
-- [ ] **Step 0.1: Confirm integration base**
+- [x] **Step 0.1: Confirm integration base**
 
 Run:
 
@@ -167,7 +183,7 @@ Expected:
   rebased/merged before implementation.
 - Any unrelated dirt is listed before editing.
 
-- [ ] **Step 0.2: Run the required same-run baseline**
+- [x] **Step 0.2: Run the required same-run baseline**
 
 Run:
 
@@ -185,7 +201,7 @@ Expected:
   `samples.csv`, and `m37_metrics.csv`; M39 cannot proceed to Task 2 if this
   profile row is absent.
 
-- [ ] **Step 0.3: Set the Cantonese profile closeout target**
+- [x] **Step 0.3: Set the Cantonese profile closeout target**
 
 After Step 0.2, record a short `phase-0-baseline/cantonese-profile-gate.md`
 summary with:
@@ -233,6 +249,11 @@ Expected:
 - Evidence records per-key medians and full-input sample cost for each length.
 - Reports do not infer a final complexity class until inner counters exist.
 
+Task 0 note: Step 0.4 remains optional. The required high-sample baseline was
+slow but completed, and the existing script parameterization is sufficient for
+the low-sample attribution command in Task 1. Add a dedicated length-curve mode
+only if Task 2 iteration needs it after inner counters exist.
+
 ## Task 1 - Split Long-Composition Translator Time
 
 **Files:**
@@ -244,7 +265,7 @@ Expected:
 - Modify: `crates/yune-rime-api/benches/native_inprocess_benchmark.rs`
 - Create: `docs/reports/evidence/m39-long-input-engine-hardening/phase-1-attribution/`
 
-- [ ] **Step 1.1: Add sentence/composition counters**
+- [x] **Step 1.1: Add sentence/composition counters**
 
 Add counters with these exact exported field names:
 
@@ -278,7 +299,7 @@ Expected:
 - `yune_m37_metrics_snapshot_json` exposes the new fields.
 - `native_inprocess_benchmark.rs` writes them to `m37_metrics.csv`.
 
-- [ ] **Step 1.2: Instrument `StaticTableTranslator::sentence_candidate`**
+- [x] **Step 1.2: Instrument `StaticTableTranslator::sentence_candidate`**
 
 In `crates/yune-core/src/translator/mod.rs`, record:
 
@@ -300,7 +321,7 @@ Expected:
   `sentence_candidate` owner, the upstream sentence model owner, prefix
   fallback, dynamic correction, or another profile-specific owner.
 
-- [ ] **Step 1.3: Confirm path sharing before fixing**
+- [x] **Step 1.3: Confirm path sharing before fixing**
 
 Use the phase-1 counters to compare:
 
@@ -325,7 +346,7 @@ Expected:
 - M39 does not optimize the `luna_pinyin` row first and assume transfer to the
   Cantonese profile.
 
-- [ ] **Step 1.4: Capture attribution evidence**
+- [x] **Step 1.4: Capture attribution evidence**
 
 Run:
 
@@ -338,21 +359,37 @@ Expected:
 - `m37_metrics.csv` names the dominant inner sentence/composition owner.
 - The plan is updated if evidence contradicts the sentence/path hypothesis.
 
+Task 1 update (2026-06-25): attribution evidence is recorded in
+[`phase-1-attribution/owner-attribution.md`](../../reports/evidence/m39-long-input-engine-hardening/phase-1-attribution/owner-attribution.md).
+The Track A long rows are dominated by `upstream_sentence_model_ns`, not
+`StaticTableTranslator::sentence_candidate`: `436,917.530 us/op` for
+`ceshiyixiachangjushuruxingnengzenyang` and `1,228,565.656 us/op` for
+`zhegeyinqingqishiyinggaizhichichaochangjuzishurucainengyong`. Track B
+`neigojangingkeisatjinggoiziwunciucoenggeoizisyujapsinhojijung` does not share
+that owner: `upstream_sentence_model_calls_per_op=0`, `sentence_candidate_ns`
+averages `7.414 us` per call, and total median latency is `225.259 us/op`.
+Task 2 is therefore retargeted to `UpstreamSentenceModel` word-graph
+construction for Track A, with Track B kept as a native no-regression guard.
+
 ## Task 2 - Bound Or Prune Sentence Composition
 
 **Files:**
 
+- Modify: `crates/yune-core/src/poet/mod.rs`
 - Modify: `crates/yune-core/src/translator/mod.rs`
+- Modify: `crates/yune-core/src/tests/poet.rs`
 - Modify: `crates/yune-core/src/tests/translator.rs`
 - Modify: `crates/yune-core/tests/upstream_luna_pinyin_parity.rs`
 
-- [ ] **Step 2.1: Add focused regression tests for bounded sentence behavior**
+- [x] **Step 2.1: Add focused regression tests for bounded sentence behavior**
 
-Add tests that construct a `StaticTableTranslator` with sentence enabled and
+Add tests that construct an `UpstreamSentenceModel` or `StaticTableTranslator`
+with the upstream sentence model enabled and
 verify:
 
 - a normal two-piece sentence still returns the same top candidate;
-- a long ambiguous input does not explore unbounded paths;
+- a long unmatched or sparsely matched input does not scan the full model entry
+  list per suffix;
 - a priority-floor sentence still beats completion only when it did before;
 - single-letter sentence guard behavior remains unchanged.
 
@@ -367,35 +404,36 @@ Expected result:
 - New tests fail before implementation or record current excessive path counts
   where the existing API cannot fail on result bytes alone.
 
-- [ ] **Step 2.2: Replace clone-heavy path state**
+- [x] **Step 2.2: Replace clone-heavy path state**
 
-Change the sentence path state so candidate text pieces are not cloned on every
-transition. Use backpointers or a compact path record:
+Change the upstream sentence model word-graph construction so it does not scan
+every model entry for every input suffix. Use a compact code index equivalent to:
 
 ```text
-end_pos -> best predecessor position, candidate text reference/id, fuzzy count,
-quality, raw quality
+code -> table entries, then enumerate input prefixes for each suffix
 ```
 
 Expected:
 
-- `sentence_path_clones` drops sharply on the long rows.
+- `upstream_sentence_model_ns` drops sharply on the long rows.
 - Candidate text output remains byte-identical for existing sentence fixtures.
 
-- [ ] **Step 2.3: Add a bounded beam per input position**
+- [x] **Step 2.3: Add a bounded beam per input position**
 
-Add a small configurable internal beam for sentence composition. The first
-implementation should keep the best path per position as today plus a bounded
-number of alternatives only when evidence shows they are needed for byte
-parity.
+Keep the existing bounded sentence beam, but avoid feeding it an unbounded graph
+build. If follow-up evidence still shows sentence graph construction or path
+state growth as the owner, add a small configurable internal bound at that
+measured point only.
 
 Expected:
 
 - `sentence_max_live_paths` is bounded.
 - `sentence_substrings_considered` and lookup counts no longer grow into a
-  multi-second translator stall on 37-character and 59-character rows.
+  multi-second translator stall on 37-character and 59-character rows if that
+  path becomes active; otherwise `upstream_sentence_model_ns` is the named owner
+  gate.
 
-- [ ] **Step 2.4: Avoid full-list fallback when a bounded sentence result is enough**
+- [x] **Step 2.4: Avoid full-list fallback when a bounded sentence result is enough**
 
 In `translated_candidates_for_segment_with_request`, stop treating sentence
 fallback as an unconditional eager full-list path for bounded first-page
@@ -413,7 +451,7 @@ Expected:
 - `candidate_request_bounded_calls` remains positive and
   `candidate_request_unbounded_calls` remains zero for target rows.
 
-- [ ] **Step 2.5: Capture latency checkpoint**
+- [x] **Step 2.5: Capture latency checkpoint**
 
 Run:
 
@@ -425,9 +463,27 @@ Expected:
 
 - Both Track A long rows are within `5x` of same-run librime or the remaining
   owner is still inside named sentence/composition counters.
-- The `jyut6ping3_mobile` long row moves according to the Task 0 native profile
-  target or remains blocked by a named measured owner.
+- The `jyut6ping3_mobile` long row remains inside the Task 0 no-regression
+  native profile target, or any regression is attributed to a named measured
+  owner. Phase 0 does not show this row sharing the same severe Track A
+  long-composition latency owner, so Task 2 must treat Track B as a protected
+  regression row unless Task 1 inner counters prove a shared fix is actually
+  needed.
 - Startup/session and short rows remain inside no-regression gates.
+
+Task 2 update (2026-06-25): the final Task 2 checkpoint is recorded under
+[`phase-2-bounded-sentence-streamed/`](../../reports/evidence/m39-long-input-engine-hardening/phase-2-bounded-sentence-streamed)
+because the streamed upstream sentence-model builder also fixed the transient
+memory peak found during Task 3. Track A long-row medians are `506.227 us/op`
+(`1.715x` same-run librime) and `916.183 us/op` (`1.329x` same-run librime),
+with `full_list_fallback_count=0`,
+`candidate_request_unbounded_calls=0`, bounded first-page requests, and
+positive `rsmarisa` counters. Track B
+`neigojangingkeisatjinggoiziwunciucoenggeoizisyujapsinhojijung` remains a
+separate product-profile owner: no upstream sentence-model calls, no-marisa
+exact/prefix lookup plus profile fallback, and `202.693 us/op` median /
+`204.539 us/op` p95 in the low-sample checkpoint. The final Task 4 benchmark
+must still rerun with the exact closeout command and input set.
 
 ## Task 3 - Memory Owner Attribution And No-Regression
 
@@ -436,7 +492,7 @@ Expected:
 - Modify: `crates/yune-rime-api/benches/native_inprocess_benchmark.rs`
 - Create: `docs/reports/evidence/m39-long-input-engine-hardening/phase-3-memory/`
 
-- [ ] **Step 3.1: Capture heap owners**
+- [x] **Step 3.1: Capture heap owners**
 
 Use the best available Windows-compatible heap attribution method for this
 workspace. Acceptable evidence includes a checked-in heap profiler summary, a
@@ -459,7 +515,7 @@ Expected:
 
 - Evidence names the top memory owner instead of inferring it from working set.
 
-- [ ] **Step 3.2: Reduce safe top owner if M39 owns it**
+- [x] **Step 3.2: Reduce safe top owner if M39 owns it**
 
 If the top owner is sentence/composition transient allocation or another
 M39-touched owner, reduce it in the same milestone. If the top owner belongs to
@@ -470,6 +526,17 @@ Expected:
 
 - Final median working set and peak are no worse than post-M38 thresholds.
 - Any memory improvement is tied to a named owner.
+
+Task 3 update (2026-06-25): memory evidence is recorded under
+[`phase-3-memory/`](../../reports/evidence/m39-long-input-engine-hardening/phase-3-memory).
+UMDH/GFlags/XPerf were unavailable in this workspace, so the checked-in
+attribution uses the deepest repeatable benchmark evidence: working-set/peak
+rows, product-path storage status, selected heap-mirror counters, and M39 owner
+counters. The M39-owned transient peak was upstream sentence-model construction
+holding a full temporary table-entry list alongside model entries; streaming
+entries into `UpstreamSentenceModel::from_table_entries` reduced Track A max
+peak from `163,598,336` bytes to `123,891,712` bytes in the Task 2 checkpoint.
+Track B peak remained below Phase 0 (`504,057,856` versus `504,557,568` bytes).
 
 ## Task 4 - Full Final Benchmark And Report Closeout
 
@@ -484,7 +551,7 @@ Expected:
   `docs/plans/completed/m39-plan-long-input-engine-hardening.md`
 - Create: `docs/reports/evidence/m39-long-input-engine-hardening/final-gates.md`
 
-- [ ] **Step 4.1: Run final native benchmark**
+- [x] **Step 4.1: Run final native benchmark**
 
 Run:
 
@@ -502,7 +569,7 @@ Expected:
   measured no-go.
 - Storage, memory, and no-regression gates are visible in CSVs and markdown.
 
-- [ ] **Step 4.2: Run behavior and quality gates**
+- [x] **Step 4.2: Run behavior and quality gates**
 
 Run:
 
@@ -526,7 +593,7 @@ Expected:
 - Any unavailable profiler or platform-specific gate is documented with the
   exact command and blocker.
 
-- [ ] **Step 4.3: Refresh docs and close requirements**
+- [x] **Step 4.3: Refresh docs and close requirements**
 
 Update final docs with:
 
@@ -546,6 +613,39 @@ Expected:
 
 - The reports cannot be read as browser/frontend/application claims.
 - The plan stays active if any non-negotiable gate remains open.
+
+Task 4 update (2026-06-25): final native evidence is recorded under
+[`phase-4-final-native/`](../../reports/evidence/m39-long-input-engine-hardening/phase-4-final-native)
+with final gate summary in
+[`final-gates.md`](../../reports/evidence/m39-long-input-engine-hardening/final-gates.md).
+The closeout run includes `-TrackBInputs`, startup/session, `hao`, `ni`,
+`zhongguo`, both Track A long rows, and the required Track B
+`jyut6ping3_mobile` row.
+
+Final Track A results are inside the agreed gates: startup `0.917x`, session
+`0.938x`, `hao` `3.281x`, `ni` `3.863x`, `zhongguo` `0.329x`,
+`ceshiyixiachangjushuruxingnengzenyang` `1.765x`, and
+`zhegeyinqingqishiyinggaizhichichaochangjuzishurucainengyong` `1.320x` versus
+same-run librime. The Track B 50+ row
+`neigojangingkeisatjinggoiziwunciucoenggeoizisyujapsinhojijung` closes at
+`188.857 us/op` median and `194.910 us/op` p95, below Phase 0. Track B remains
+a separate TypeDuck-profile owner, not the Track A upstream sentence-model
+owner.
+
+Final storage and memory gates pass: Track A remains
+`selected_storage=rsmarisa_byte_backed`, table/prism bytes are `mmap`, selected
+heap mirrors are `0`, `source_fallback=false`, runtime `rsmarisa` counters are
+positive, and target rows have bounded first-page output with no full-list
+fallback. Track A max peak moved from `163,598,336` to `123,985,920` bytes.
+Track B remains byte-backed/mmap-backed with selected heap mirrors `0`; its
+peak moved from `504,557,568` to `504,041,472` bytes.
+
+Final gates passed: `cargo fmt --check`,
+`cargo clippy --workspace --all-targets -- -D warnings`,
+`cargo test --workspace`, `cargo test -p yune-core translator:: -- --nocapture`,
+`cargo test -p yune-core upstream_luna_pinyin -- --nocapture`, the focused
+TypeDuck boundary test, final native benchmark, docs closeout, and
+`git diff --check`. Reports remain native-engine claims only.
 
 ## Implementation Notes
 

@@ -3,8 +3,8 @@
 Yune is a Rust input-method engine that uses **upstream librime as a
 compatibility and performance oracle** while building a cleaner Rust engine.
 The current priority is not application integration. It is preserving engine
-behavior while carrying completed M38 engine-performance parity lessons into
-future target-driven engine or product work.
+behavior while carrying completed M39 long-input hardening lessons into future
+target-driven engine or product work.
 
 > **Compatibility oracle.** Upstream librime latest stable is the default
 > behavior reference for user-visible schema semantics, standard ABI contracts,
@@ -26,16 +26,14 @@ future target-driven engine or product work.
 - [`decisions.md`](./decisions.md) - standing principles plus project-wide
   decision log.
 - [`requirements.md`](./requirements.md) - requirement IDs and status,
-  including the closed M37 and M38 engine gates.
+  including the closed M37-M39 engine gates.
 - [`reports/yune-vs-librime-performance.md`](./reports/yune-vs-librime-performance.md)
   and [`reports/yune-vs-librime-root-cause-analysis.md`](./reports/yune-vs-librime-root-cause-analysis.md)
   - current performance comparison and diagnosis.
+- [`plans/completed/m39-plan-long-input-engine-hardening.md`](./plans/completed/m39-plan-long-input-engine-hardening.md)
+  - completed long-input engine hardening plan.
 - [`plans/completed/m38-plan-engine-performance-parity.md`](./plans/completed/m38-plan-engine-performance-parity.md)
   - completed pure engine performance parity plan.
-- [`plans/active/m39-plan-long-input-engine-hardening.md`](./plans/active/m39-plan-long-input-engine-hardening.md)
-  - draft plan for Track A long-input latency, Cantonese `jyut6ping3_mobile`
-    profile long-input attribution, memory attribution, and whole-engine
-    no-regression gates.
 - [`plans/completed/m37-plan-engine-hyper-optimization.md`](./plans/completed/m37-plan-engine-hyper-optimization.md)
   - completed engine hyper-optimization milestone.
 - [`plans/`](./plans) - active, reference, and completed plans, findings,
@@ -50,56 +48,53 @@ future target-driven engine or product work.
 | Lane | Current state | Next decision or gate |
 | --- | --- | --- |
 | Core compatibility | Phase 1 named-target upstream behavior is complete for `luna_pinyin` and common-schema basics against upstream librime `1.17.0`. | Preserve upstream-observable behavior on every engine change. |
-| Engine performance | M38 closed the pure upstream `luna_pinyin` native parity gates for startup/session and the short/medium rows `hao`/`ni`/`zhongguo`. The post-M38 long-input baseline shows broader typing parity is not closed: `ceshiyixiachangjushuruxingnengzenyang` is Yune `412,192.727us` versus librime `294.151us` (`1,401.296x`), and the 59-character `zhegeyinqingqishiyinggaizhichichaochangjuzishurucainengyong` stress row is Yune `1,202,404.588us` versus librime `702.212us` (`1,712.310x`). Memory also remains above librime: Track A median working set is `107,839,488-114,728,960 B` versus librime `11,091,968-15,884,288 B` (`7.22-9.72x`). The Cantonese `jyut6ping3_mobile` 50+ character profile row is not yet baselined and is now a blocking M39 Task 0 gate. | Draft M39 plan: keep the M38 startup/session and short-row wins, keep both Track A long rows, add the Cantonese profile long row, add finer long-composition/profile spans and length-curve counters, fix the measured latency owner, preserve mmap/`rsmarisa`, run heap-owner profiling before memory optimization claims, and close only if the full startup/typing/memory/behavior dashboard has no unaccepted regression. |
+| Engine performance | M39 closed the post-M38 long-input hardening gates in native engine evidence. Startup/runtime-ready is Yune `25,048.200us` versus librime `27,314.000us` (`0.917x`), session is `25,255.500us` versus `26,938.500us` (`0.938x`), `hao`/`ni`/`zhongguo` remain inside gates, the 37-character Track A row is `514.903us` versus `291.786us` (`1.765x`), and the 59-character Track A row is `917.961us` versus `695.653us` (`1.320x`). The Track B Cantonese 50+ row is separately gated at `188.857us/op` median and `194.910us/op` p95, below its Phase 0 profile baseline. | Future engine work should build on the M39 owner split: Track A uses indexed bounded upstream sentence-model lookup, while Track B remains a profile-specific no-marisa prefix/fallback path. New claims still need fresh native evidence and must keep browser/product claims separate. |
 | AI-native engine layer | M11/M13 proved a default-off local AI layer can sit on top of the deterministic engine. | Keep AI outside the classic deterministic performance path unless a named engine experiment explicitly enables it. |
 | Future platform work | Platform-specific frontends and application shells are outside this roadmap. | Start a separate repository or separate plan before changing platform/application contracts. |
 
 ## Authoritative Sequence
 
-1. **M39 long-input engine hardening** - draft active plan. Treat
-   uninterrupted 50+ character input as a primary engine requirement for both
-   upstream `luna_pinyin` and the Cantonese `jyut6ping3_mobile` profile while
-   preserving startup/session, short-input latency, memory, mmap/`rsmarisa`,
-   page-bounded output, and behavior gates.
-2. **Future AI-native engine experiments** - later, and only after classic
+1. **Future AI-native engine experiments** - later, and only after classic
    engine performance is no longer dominated by avoidable pipeline costs.
+2. **Future engine memory or profile-storage slices** - only with a new scoped
+   plan, fresh owner evidence, and native-engine-only claims unless browser
+   evidence is explicitly collected.
 
 Trigger-gated, not scheduled: extracting the full processor pipeline from
 `yune-rime-api` into `yune-core` lands only when a real non-ABI consumer needs
 the full input path. Do not milestone that extraction speculatively.
 
-## M39 Guardrails
+## M39 Closeout
 
-M39 is not a single-row speedup milestone. It is the first post-M38
-whole-engine regression gate, so it must keep the complete optimization bundle
-visible in every final claim:
+M39 is complete. It was not a single-row speedup milestone; it closed a
+whole-engine regression gate across startup/session, short rows, Track A long
+rows, the Track B Cantonese profile long row, storage, memory, and behavior.
 
-- same-run native Yune-versus-librime benchmarking for startup, session,
-  short-input, medium-input, Track A long-input, memory, and owner counters,
-  plus a native Track B `jyut6ping3_mobile` 50+ character profile row;
-- mmap/file-backed selected table and prism bytes with zero selected
-  table/prism heap mirror bytes;
-- real runtime `rsmarisa` hot-path lookup for deployed marisa table data, with
-  positive exact/prefix counters and zero ordinary no-marisa fallback on the
-  upstream Track A rows;
-- lazy/page-bounded first-page candidate production and page-sized context
-  export, with any full-list fallback counted and explained;
-- long-composition/profile attribution that splits the current translator bucket
-  before optimizing it and proves whether the Cantonese profile shares the Track
-  A owner;
-- working-set and peak-memory comparison plus heap-owner attribution before any
-  memory-reduction claim;
-- focused behavior tests so performance work does not alter upstream-observable
-  schema behavior.
+Final M39 native comparison:
 
-M39 cannot close by improving `ceshiyixiachangjushuruxingnengzenyang` or
-`zhegeyinqingqishiyinggaizhichichaochangjuzishurucainengyong` alone. The
-`jyut6ping3_mobile`
-`neigojangingkeisatjinggoiziwunciucoenggeoizisyujapsinhojijung` row must be
-measured, attributed, and either fixed against the Task 0 gate or explicitly
-closed by measured no-go. Startup, session, `hao`, `ni`, `zhongguo`,
-mmap/`rsmarisa` activation, bounded output, memory, and behavior all remain
-closeout gates.
+- Warm startup/runtime-ready: Yune `25,048.200us`, librime `27,314.000us`
+  (`0.917x`).
+- Session create/select/destroy: Yune `25,255.500us`, librime `26,938.500us`
+  (`0.938x`).
+- `hao`: Yune `38.933us`, librime `11.867us` (`3.281x`).
+- `ni`: Yune `56.200us`, librime `14.550us` (`3.863x`).
+- `zhongguo`: Yune `60.588us`, librime `183.887us` (`0.329x`).
+- `ceshiyixiachangjushuruxingnengzenyang`: Yune `514.903us`, librime
+  `291.786us` (`1.765x`).
+- `zhegeyinqingqishiyinggaizhichichaochangjuzishurucainengyong`: Yune
+  `917.961us`, librime `695.653us` (`1.320x`).
+- `jyut6ping3_mobile`
+  `neigojangingkeisatjinggoiziwunciucoenggeoizisyujapsinhojijung`: final Yune
+  median `188.857us/op`, p95 `194.910us/op`, below Phase 0.
+
+M39 proved the owner split before implementation: Track A was dominated by
+upstream sentence-model scanning, while Track B was a profile-specific
+no-marisa prefix/fallback path. The final Track A path keeps
+`selected_storage=rsmarisa_byte_backed`, table/prism `mmap`, selected heap
+mirrors `0`, positive runtime `rsmarisa` exact/prefix counters, and bounded
+first-page output. Track B keeps byte-backed mmap storage and profile fallback
+semantics without regressing the 50+ row. Final reports remain native-engine
+claims only.
 
 ## M37 Closeout
 
@@ -176,7 +171,7 @@ Closed M38 gates:
 
 | Track | Scope | Current source of truth |
 | --- | --- | --- |
-| Engine performance | Native engine startup, schema/session lifecycle, mmap-backed `rsmarisa` marisa-table lookup, lazy/page-bounded translation, context export, memory, and allocation | Active draft: [`plans/active/m39-plan-long-input-engine-hardening.md`](./plans/active/m39-plan-long-input-engine-hardening.md). Completed baseline: [`plans/completed/m38-plan-engine-performance-parity.md`](./plans/completed/m38-plan-engine-performance-parity.md), performance reports, and `docs/reports/evidence/m38-engine-performance-parity/`. |
+| Engine performance | Native engine startup, schema/session lifecycle, mmap-backed `rsmarisa` marisa-table lookup, lazy/page-bounded translation, context export, memory, and allocation | Completed M39 plan: [`plans/completed/m39-plan-long-input-engine-hardening.md`](./plans/completed/m39-plan-long-input-engine-hardening.md). Earlier completed M38 baseline: [`plans/completed/m38-plan-engine-performance-parity.md`](./plans/completed/m38-plan-engine-performance-parity.md). |
 | Core compatibility | Upstream behavior fixtures and standard ABI-observable behavior | [`requirements.md`](./requirements.md), [`decisions.md`](./decisions.md), and per-milestone plans. |
 | AI-native engine research | Default-off AI behavior layered above the deterministic engine | Future explicit engine experiments only. |
 | Historical record | Completed milestone outcomes and reference/provenance pointers | [`ledgers/milestone-history.md`](./ledgers/milestone-history.md). |
@@ -188,8 +183,7 @@ Closed M38 gates:
 | M0-M24 | Complete | Phase 1 named-target engine/basic oracle parity is complete; history lives in [`ledgers/milestone-history.md`](./ledgers/milestone-history.md). |
 | M25-M30 | Complete | Early performance and runtime-hardening work is historical context only. |
 | M31 | Complete | Public demo delivery is historical context and not a current engine-performance target. |
-| M33-M38 | Complete | Recent engine-performance work closed fairness, shared caches, compact storage, compiled-active paths, page-bounded materialization, mapped storage, and pure upstream `luna_pinyin` native parity with `rsmarisa` hot-path lookup. |
-| M39 | Draft active | Long-input engine hardening: fix 37-character and 59-character Track A uninterrupted input, baseline and gate the 50+ character `jyut6ping3_mobile` Cantonese profile row, and preserve startup/session, short rows, mmap/`rsmarisa`, memory, and behavior. |
+| M33-M39 | Complete | Recent engine-performance work closed fairness, shared caches, compact storage, compiled-active paths, page-bounded materialization, mapped storage, pure upstream `luna_pinyin` native parity with `rsmarisa` hot-path lookup, and M39 long-input hardening for both Track A long rows plus the Track B Cantonese profile long row. |
 
 ## Scope Ledger
 

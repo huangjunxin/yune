@@ -465,6 +465,177 @@ Y	def	1
 }
 
 #[test]
+fn static_table_sentence_candidate_records_m39_owner_metrics() {
+    let _guard = super::m37_metrics_test_guard();
+    let dictionary = TableDictionary::parse_rime_dict_yaml(
+        r#"
+---
+name: sentence_metrics
+version: "0.1"
+sort: by_weight
+...
+
+A	ab	1000
+B	cd	1000
+C	ef	1000
+"#,
+    )
+    .expect("sentence metrics dictionary should parse");
+    let translator = StaticTableTranslator::from_dictionary(dictionary).with_sentence(true);
+
+    crate::m37_metrics_enable(true);
+    crate::m37_metrics_reset();
+    let candidates = translator.translate("abcdef");
+    let metrics = crate::m37_metrics_snapshot();
+    crate::m37_metrics_enable(false);
+
+    assert_eq!(candidates[0].source, CandidateSource::Sentence);
+    assert_eq!(candidates[0].text, "ABC");
+    assert!(metrics.sentence_candidate_calls >= 1);
+    assert!(metrics.sentence_candidate_ns > 0);
+    assert!(metrics.sentence_substrings_considered > 0);
+    assert!(metrics.sentence_exact_lookup_calls > 0);
+    assert!(metrics.sentence_exact_lookup_ns > 0);
+    assert!(metrics.sentence_exact_lookup_candidates >= 3);
+    assert!(metrics.sentence_entry_matches_collected >= 3);
+    assert!(metrics.sentence_path_clones >= 3);
+    assert!(metrics.sentence_path_replacements >= 3);
+    assert!(metrics.sentence_max_live_paths >= 1);
+    assert!(metrics.sentence_result_candidates >= 1);
+}
+
+#[test]
+fn static_table_records_m39_prefix_and_upstream_sentence_metrics() {
+    let _guard = super::m37_metrics_test_guard();
+    let prefix_translator = StaticTableTranslator::new([("nei", "你")]).with_prefix_fallback(true);
+
+    crate::m37_metrics_enable(true);
+    crate::m37_metrics_reset();
+    let prefix_candidates = prefix_translator.translate("neix");
+    let prefix_metrics = crate::m37_metrics_snapshot();
+
+    assert_eq!(prefix_candidates[0].text, "你");
+    assert!(prefix_metrics.prefix_fallback_calls > 0);
+    assert!(prefix_metrics.prefix_fallback_ns > 0);
+    assert!(prefix_metrics.prefix_fallback_views_visited > 0);
+    assert!(prefix_metrics.prefix_fallback_candidates > 0);
+
+    let dictionary = TableDictionary::parse_rime_dict_yaml(
+        r#"
+---
+name: upstream_sentence_metrics
+version: "0.1"
+sort: by_weight
+...
+
+A	ab	1000
+B	cd	1000
+"#,
+    )
+    .expect("upstream sentence metrics dictionary should parse");
+    let upstream_translator =
+        StaticTableTranslator::from_dictionary(dictionary).with_upstream_sentence_model(10);
+
+    crate::m37_metrics_reset();
+    let upstream_candidates = upstream_translator.translate("abcd");
+    let upstream_metrics = crate::m37_metrics_snapshot();
+    crate::m37_metrics_enable(false);
+
+    assert!(!upstream_candidates.is_empty());
+    assert!(upstream_metrics.upstream_sentence_model_calls > 0);
+    assert!(upstream_metrics.upstream_sentence_model_ns > 0);
+    assert!(upstream_metrics.upstream_sentence_model_candidates > 0);
+}
+
+#[test]
+fn bounded_request_uses_limited_upstream_sentence_model_without_full_fallback() {
+    let _guard = super::m37_metrics_test_guard();
+    let dictionary = TableDictionary::parse_rime_dict_yaml(
+        r#"
+---
+name: bounded_upstream_sentence
+version: "0.1"
+sort: by_weight
+...
+
+A	ab	1000
+B	cd	1000
+C	ef	1000
+"#,
+    )
+    .expect("bounded upstream sentence dictionary should parse");
+    let translator = StaticTableTranslator::from_dictionary(dictionary)
+        .with_sentence(true)
+        .with_upstream_sentence_model(10);
+    let context = Context::default();
+
+    crate::m37_metrics_enable(true);
+    crate::m37_metrics_reset();
+    let result = translator.translate_with_context_and_request(
+        "abcdef",
+        &Status::default(),
+        &HashMap::new(),
+        &context,
+        CandidateRequest::bounded(1),
+    );
+    let metrics = crate::m37_metrics_snapshot();
+    crate::m37_metrics_enable(false);
+
+    assert_eq!(result.candidates[0].text, "ABC");
+    assert!(!result.is_complete);
+    assert_eq!(metrics.full_list_fallback_count, 0);
+    assert_eq!(metrics.upstream_sentence_model_calls, 1);
+}
+
+#[test]
+fn bounded_request_uses_prefix_fallback_without_full_fallback() {
+    let _guard = super::m37_metrics_test_guard();
+    let translator = StaticTableTranslator::new([("nei", "你")]).with_prefix_fallback(true);
+    let context = Context::default();
+
+    crate::m37_metrics_enable(true);
+    crate::m37_metrics_reset();
+    let result = translator.translate_with_context_and_request(
+        "neix",
+        &Status::default(),
+        &HashMap::new(),
+        &context,
+        CandidateRequest::bounded(1),
+    );
+    let metrics = crate::m37_metrics_snapshot();
+    crate::m37_metrics_enable(false);
+
+    assert_eq!(result.candidates[0].text, "你");
+    assert_eq!(metrics.full_list_fallback_count, 0);
+    assert!(metrics.prefix_fallback_calls > 0);
+}
+
+#[test]
+fn bounded_request_uses_full_list_when_sentence_and_prefix_fallback_must_merge() {
+    let _guard = super::m37_metrics_test_guard();
+    let translator = StaticTableTranslator::new([("ab", "A"), ("cd", "B")])
+        .with_sentence(true)
+        .with_prefix_fallback(true);
+    let context = Context::default();
+
+    crate::m37_metrics_enable(true);
+    crate::m37_metrics_reset();
+    let result = translator.translate_with_context_and_request(
+        "abcd",
+        &Status::default(),
+        &HashMap::new(),
+        &context,
+        CandidateRequest::bounded(1),
+    );
+    let metrics = crate::m37_metrics_snapshot();
+    crate::m37_metrics_enable(false);
+
+    assert!(result.is_complete);
+    assert_eq!(result.candidates[0].text, "AB");
+    assert_eq!(metrics.full_list_fallback_count, 1);
+}
+
+#[test]
 fn punctuation_translator_keeps_digit_separator_literal_for_punct_number() {
     let mut engine = Engine::new();
     engine.add_translator(

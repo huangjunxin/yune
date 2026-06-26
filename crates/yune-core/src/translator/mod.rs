@@ -13,14 +13,15 @@ use crate::filter::contains_extended_cjk;
 use crate::poet::UpstreamSentenceModel;
 use crate::spelling_algebra::{ExpandedSpellingEntry, SpellingAlgebra};
 use crate::{
-    Candidate, CandidateRequest, CandidateSource, Context, PresetVocabularyEntry,
-    RimeCorrectionEntry, RimeToleranceRule, SpellingAlgebraDebug, Status, TableDictionary,
-    TableDictionaryParseError, TableEntry, TranslationResult, Translator,
+    Candidate, CandidateRequest, CandidateSource, Context, M37SentenceCandidateMetrics,
+    PresetVocabularyEntry, RimeCorrectionEntry, RimeToleranceRule, SpellingAlgebraDebug, Status,
+    TableDictionary, TableDictionaryParseError, TableEntry, TranslationResult, Translator,
 };
 
 const TYPEDUCK_CORRECTION_CREDIBILITY: f32 = -16.118_095; // log(1e-7)
 const TYPEDUCK_CORRECTION_MAX_DISTANCE: usize = 4;
 const DEFAULT_SENTENCE_WORD_PENALTY: f32 = 0.0;
+const BOUNDED_SENTENCE_MODEL_PAGE_LIMIT: usize = 5;
 /// Yune-internal heuristic calibrated to the M21 TypeDuck v1.1.2 sentence-composition fixture
 /// and the M28 follow-up upstream-Jyutping composition fixture; install only for the
 /// jyut6ping3 TypeDuck profile.
@@ -231,28 +232,22 @@ impl TableStorage {
         }
     }
 
-    fn table_entries(&self) -> Vec<TableEntry> {
+    fn table_entry_iter(&self) -> Box<dyn Iterator<Item = TableEntry> + '_> {
         match self {
-            Self::Heap(entries) => entries
-                .iter()
-                .flat_map(|(code, candidates)| {
-                    candidates.iter().map(move |candidate| {
-                        TableEntry::new(code, &candidate.text, candidate.quality)
+            Self::Heap(entries) => Box::new(entries.iter().flat_map(|(code, candidates)| {
+                candidates
+                    .iter()
+                    .map(move |candidate| TableEntry::new(code, &candidate.text, candidate.quality))
+            })),
+            Self::Compact(store) => Box::new(store.all_codes().flat_map(|code| {
+                let code = code.into_owned();
+                store
+                    .exact_candidates(&code)
+                    .map(|candidate| {
+                        TableEntry::new(&code, candidate.text(), candidate.raw_quality())
                     })
-                })
-                .collect(),
-            Self::Compact(store) => store
-                .all_codes()
-                .flat_map(|code| {
-                    let code = code.into_owned();
-                    store
-                        .exact_candidates(&code)
-                        .map(|candidate| {
-                            TableEntry::new(&code, candidate.text(), candidate.raw_quality())
-                        })
-                        .collect::<Vec<_>>()
-                })
-                .collect(),
+                    .collect::<Vec<_>>()
+            })),
         }
     }
 
@@ -673,19 +668,21 @@ impl StaticTableTranslator {
 
     #[must_use]
     pub fn with_upstream_sentence_model(mut self, max_candidates: usize) -> Self {
-        let entries = if let Some(entries) = self.source_entries.take() {
-            entries
-                .iter()
-                .map(|(code, candidate)| TableEntry::new(code, &candidate.text, candidate.quality))
-                .collect::<Vec<_>>()
+        self.upstream_sentence_model = Some(if let Some(entries) = self.source_entries.take() {
+            UpstreamSentenceModel::from_table_entries(
+                entries.into_iter().map(|(code, candidate)| {
+                    TableEntry::new(code, candidate.text, candidate.quality)
+                }),
+                &self.preset_vocabulary,
+                max_candidates,
+            )
         } else {
-            self.storage.table_entries()
-        };
-        self.upstream_sentence_model = Some(UpstreamSentenceModel::from_entries(
-            &entries,
-            &self.preset_vocabulary,
-            max_candidates,
-        ));
+            UpstreamSentenceModel::from_table_entries(
+                self.storage.table_entry_iter(),
+                &self.preset_vocabulary,
+                max_candidates,
+            )
+        });
         self
     }
 
@@ -786,6 +783,8 @@ impl StaticTableTranslator {
             .then(|| self.exact_lookup_min_syllable_count(lookup_code))
             .flatten();
         if self.enable_correction || allow_dynamic_near_lookup {
+            let correction_start = crate::m37_metrics_enabled().then(Instant::now);
+            let mut dynamic_codes_considered = 0;
             let mut corrections = Vec::new();
             if self.enable_correction {
                 for correction in &self.corrections {
@@ -807,6 +806,7 @@ impl StaticTableTranslator {
             }
             if allow_dynamic_near_lookup {
                 for canonical_code in self.storage.all_codes() {
+                    dynamic_codes_considered += 1;
                     let canonical_code = canonical_code.into_owned();
                     if canonical_code == lookup_code {
                         continue;
@@ -841,6 +841,7 @@ impl StaticTableTranslator {
                     corrections.push((canonical_code, distance));
                 }
             }
+            let correction_candidates = corrections.len();
             if let Some(min_distance) = corrections.iter().map(|(_, distance)| *distance).min() {
                 for (code, distance) in corrections {
                     if distance == min_distance && !specs.iter().any(|spec| spec.code == code) {
@@ -855,6 +856,13 @@ impl StaticTableTranslator {
                         }
                     }
                 }
+            }
+            if let Some(start) = correction_start {
+                crate::m37_record_dynamic_correction(
+                    start.elapsed(),
+                    dynamic_codes_considered,
+                    correction_candidates,
+                );
             }
         }
         for rule in &self.tolerance_rules {
@@ -1326,12 +1334,84 @@ impl StaticTableTranslator {
             self.push_bounded_pending_by_lookup_order(&mut selected, candidate, limit);
         }
         if selected.is_empty() && self.enable_sentence {
+            if let Some(model) = &self.upstream_sentence_model {
+                let model_start = crate::m37_metrics_enabled().then(Instant::now);
+                let mut candidates = model
+                    .candidates_for_input_with_limit(
+                        input,
+                        limit.min(BOUNDED_SENTENCE_MODEL_PAGE_LIMIT),
+                    )
+                    .into_iter()
+                    .filter(|candidate| {
+                        !filter_by_charset || !contains_extended_cjk(&candidate.text)
+                    })
+                    .collect::<Vec<_>>();
+                if let Some(start) = model_start {
+                    crate::m37_record_upstream_sentence_model(start.elapsed(), candidates.len());
+                }
+                if !candidates.is_empty() {
+                    if self.prefix_fallback && !has_correction_lookup {
+                        let mut prefix_candidates = self.prefix_fallback_candidates(
+                            input,
+                            lookup_code,
+                            filter_by_charset,
+                            &candidates,
+                        );
+                        prefix_candidates.truncate(limit.saturating_sub(candidates.len()));
+                        candidates.extend(prefix_candidates);
+                    }
+                    candidates.truncate(limit);
+                    let result_full_count = if candidates.len() >= limit {
+                        limit.saturating_add(1)
+                    } else {
+                        candidates.len()
+                    };
+                    crate::m37_record_bounded_iterator(limit, candidates.len(), result_full_count);
+                    return TranslationResult::bounded(
+                        candidates,
+                        result_full_count,
+                        include_full_count,
+                    );
+                }
+            }
+            if self.prefix_fallback && !has_correction_lookup {
+                crate::m37_record_full_list_fallback();
+                return TranslationResult::complete(self.translated_candidates_for_segment(
+                    input,
+                    filter_by_charset,
+                    segment_tags,
+                ));
+            }
+            if let Some(sentence) = self.sentence_candidate(input, filter_by_charset, None) {
+                let candidates = vec![sentence];
+                crate::m37_record_bounded_iterator(limit, candidates.len(), candidates.len());
+                return TranslationResult::bounded(candidates, 1, include_full_count);
+            }
             crate::m37_record_full_list_fallback();
             return TranslationResult::complete(self.translated_candidates_for_segment(
                 input,
                 filter_by_charset,
                 segment_tags,
             ));
+        }
+        if selected.is_empty() && self.prefix_fallback && !has_correction_lookup {
+            let mut candidates =
+                self.prefix_fallback_candidates(input, lookup_code, filter_by_charset, &[]);
+            let full_count = candidates.len();
+            if !candidates.is_empty() {
+                candidates.truncate(limit);
+                let result_full_count = if full_count > candidates.len() {
+                    full_count
+                } else {
+                    candidates.len()
+                };
+                crate::m37_record_bounded_iterator(limit, candidates.len(), result_full_count);
+                return TranslationResult::bounded(
+                    candidates,
+                    result_full_count,
+                    include_full_count,
+                );
+            }
         }
         if ordered_mode {
             selected.sort_by(|left, right| self.lookup_candidate_ref_order(left, right));
@@ -1508,8 +1588,12 @@ impl StaticTableTranslator {
         filter_by_charset: bool,
         existing_candidates: &[Candidate],
     ) -> Vec<Candidate> {
+        let fallback_start = crate::m37_metrics_enabled().then(Instant::now);
         let prefixes = self.valid_lookup_prefixes(lookup_code);
         if prefixes.is_empty() {
+            if let Some(start) = fallback_start {
+                crate::m37_record_prefix_fallback(start.elapsed(), 0, 0);
+            }
             return Vec::new();
         };
         let mut seen_texts = existing_candidates
@@ -1517,6 +1601,7 @@ impl StaticTableTranslator {
             .map(|candidate| candidate.text.clone())
             .collect::<HashSet<_>>();
         let mut candidates = Vec::new();
+        let mut views_visited = 0;
         for (prefix, consumed_lookup_len) in prefixes {
             let consumed_input_len = input
                 .len()
@@ -1529,6 +1614,7 @@ impl StaticTableTranslator {
                     && original_code_allows_prefix_fallback(candidate.raw_comment(), prefix)
                     && (!filter_by_charset || !contains_extended_cjk(candidate.text()))
             }) {
+                views_visited += 1;
                 exact_candidates += 1;
                 let recompose_on_default = consumed_input_len > 1
                     && !self.is_spelling_abbreviation_view(prefix, &candidate);
@@ -1545,6 +1631,9 @@ impl StaticTableTranslator {
             }
             self.storage
                 .record_exact_lookup(exact_start.elapsed(), exact_candidates);
+        }
+        if let Some(start) = fallback_start {
+            crate::m37_record_prefix_fallback(start.elapsed(), views_visited, candidates.len());
         }
         candidates
     }
@@ -1610,6 +1699,7 @@ impl StaticTableTranslator {
         let mut used_sentence = false;
         if candidates.is_empty() {
             if let Some(model) = &self.upstream_sentence_model {
+                let model_start = crate::m37_metrics_enabled().then(Instant::now);
                 candidates = model
                     .candidates_for_input(input)
                     .into_iter()
@@ -1617,6 +1707,9 @@ impl StaticTableTranslator {
                         !filter_by_charset || !contains_extended_cjk(&candidate.text)
                     })
                     .collect();
+                if let Some(start) = model_start {
+                    crate::m37_record_upstream_sentence_model(start.elapsed(), candidates.len());
+                }
                 used_sentence = !candidates.is_empty();
             }
         }
@@ -1714,7 +1807,10 @@ impl StaticTableTranslator {
         filter_by_charset: bool,
         priority_floor: Option<f32>,
     ) -> Option<Candidate> {
+        let sentence_start = crate::m37_metrics_enabled().then(Instant::now);
+        let mut sentence_metrics = M37SentenceCandidateMetrics::default();
         if input.is_empty() {
+            record_sentence_candidate_metrics(sentence_start, sentence_metrics, 0);
             return None;
         }
 
@@ -1733,6 +1829,8 @@ impl StaticTableTranslator {
             raw_quality: 0.0,
             pieces: Vec::new(),
         });
+        let mut live_paths = 1usize;
+        let mut max_live_paths = 1usize;
         for pos in input
             .char_indices()
             .map(|(index, _)| index)
@@ -1748,6 +1846,7 @@ impl StaticTableTranslator {
                 .chain(std::iter::once(input.len()))
             {
                 let entry_code = &input[pos..end];
+                sentence_metrics.substrings_considered += 1;
                 let is_final_segment = end == input.len();
                 // In abbreviation-bearing schemas, generated one-letter aliases are lookup
                 // shortcuts, not stable interior sentence boundaries.
@@ -1757,11 +1856,19 @@ impl StaticTableTranslator {
                 {
                     continue;
                 }
+                let exact_start = crate::m37_metrics_enabled().then(Instant::now);
                 let mut entry_matches = self
                     .storage
                     .exact_candidates(entry_code)
                     .collect::<Vec<_>>();
+                if let Some(start) = exact_start {
+                    sentence_metrics.exact_lookup_calls += 1;
+                    sentence_metrics.exact_lookup_ns += start.elapsed();
+                    sentence_metrics.exact_lookup_candidates += entry_matches.len();
+                }
                 if is_final_segment && self.enable_completion && !entry_code.is_empty() {
+                    let prefix_start = crate::m37_metrics_enabled().then(Instant::now);
+                    let mut prefix_candidates = 0usize;
                     for entry in self.storage.prefix_candidates(entry_code) {
                         let (completion_code, candidate) = entry.into_parts();
                         if !completion_code.starts_with(entry_code) {
@@ -1770,9 +1877,16 @@ impl StaticTableTranslator {
                         if completion_code == entry_code {
                             continue;
                         }
+                        prefix_candidates += 1;
                         entry_matches.push(candidate);
                     }
+                    if let Some(start) = prefix_start {
+                        sentence_metrics.prefix_lookup_calls += 1;
+                        sentence_metrics.prefix_lookup_ns += start.elapsed();
+                        sentence_metrics.prefix_lookup_candidates += prefix_candidates;
+                    }
                 }
+                sentence_metrics.entry_matches_collected += entry_matches.len();
                 if entry_matches.is_empty() {
                     continue;
                 }
@@ -1793,6 +1907,7 @@ impl StaticTableTranslator {
                         continue;
                     }
                     let mut next_path = path.clone();
+                    sentence_metrics.path_clones += 1;
                     if !raw_sentence_piece_matches_input_code(
                         candidate.raw_comment(),
                         candidate.text(),
@@ -1826,26 +1941,39 @@ impl StaticTableTranslator {
                         None => true,
                     };
                     if replace {
+                        let replacing_empty = paths[end_pos].is_none();
                         paths[end_pos] = Some(next_path);
+                        sentence_metrics.path_replacements += 1;
+                        if replacing_empty {
+                            live_paths += 1;
+                            max_live_paths = max_live_paths.max(live_paths);
+                        }
                     }
                 }
             }
         }
 
-        let path = paths[input.len()].take()?;
+        sentence_metrics.max_live_paths = max_live_paths;
+        let Some(path) = paths[input.len()].take() else {
+            record_sentence_candidate_metrics(sentence_start, sentence_metrics, 0);
+            return None;
+        };
         if path.pieces.len() <= 1 {
+            record_sentence_candidate_metrics(sentence_start, sentence_metrics, 0);
             return None;
         }
         let quality = priority_floor
             .map(|floor| floor + 1.0)
             .unwrap_or(path.quality.max(1.0) + self.initial_quality);
-        Some(Candidate {
+        let candidate = Candidate {
             text: path.pieces.join(""),
             comment: " ☯ ".to_owned(),
             preedit: None,
             source: CandidateSource::Sentence,
             quality,
-        })
+        };
+        record_sentence_candidate_metrics(sentence_start, sentence_metrics, 1);
+        Some(candidate)
     }
 
     pub fn parse_rime_dict_yaml(input: &str) -> Result<Self, TableDictionaryParseError> {
@@ -1882,6 +2010,18 @@ impl StaticTableTranslator {
             vocabulary_loader,
         )
         .map(Self::from_dictionary)
+    }
+}
+
+fn record_sentence_candidate_metrics(
+    start: Option<Instant>,
+    mut record: M37SentenceCandidateMetrics,
+    result_candidates: usize,
+) {
+    if let Some(start) = start {
+        record.duration = start.elapsed();
+        record.result_candidates = result_candidates;
+        crate::m37_record_sentence_candidate_metrics(record);
     }
 }
 

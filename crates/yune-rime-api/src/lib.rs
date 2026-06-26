@@ -462,6 +462,96 @@ pub extern "C" fn yune_m37_metrics_snapshot_json() -> *mut c_char {
     );
     metric!("abi_c_string_allocations", metrics.abi_c_string_allocations);
     metric!("abi_c_string_bytes", metrics.abi_c_string_bytes);
+    metric!("sentence_candidate_calls", metrics.sentence_candidate_calls);
+    metric!("sentence_candidate_ns", metrics.sentence_candidate_ns);
+    metric!(
+        "sentence_substrings_considered",
+        metrics.sentence_substrings_considered
+    );
+    metric!(
+        "sentence_exact_lookup_calls",
+        metrics.sentence_exact_lookup_calls
+    );
+    metric!("sentence_exact_lookup_ns", metrics.sentence_exact_lookup_ns);
+    metric!(
+        "sentence_exact_lookup_candidates",
+        metrics.sentence_exact_lookup_candidates
+    );
+    metric!(
+        "sentence_prefix_lookup_calls",
+        metrics.sentence_prefix_lookup_calls
+    );
+    metric!(
+        "sentence_prefix_lookup_ns",
+        metrics.sentence_prefix_lookup_ns
+    );
+    metric!(
+        "sentence_prefix_lookup_candidates",
+        metrics.sentence_prefix_lookup_candidates
+    );
+    metric!(
+        "sentence_entry_matches_collected",
+        metrics.sentence_entry_matches_collected
+    );
+    metric!("sentence_path_clones", metrics.sentence_path_clones);
+    metric!(
+        "sentence_path_replacements",
+        metrics.sentence_path_replacements
+    );
+    metric!("sentence_paths_pruned", metrics.sentence_paths_pruned);
+    metric!("sentence_max_live_paths", metrics.sentence_max_live_paths);
+    metric!(
+        "sentence_result_candidates",
+        metrics.sentence_result_candidates
+    );
+    metric!(
+        "upstream_sentence_model_calls",
+        metrics.upstream_sentence_model_calls
+    );
+    metric!(
+        "upstream_sentence_model_ns",
+        metrics.upstream_sentence_model_ns
+    );
+    metric!(
+        "upstream_sentence_model_candidates",
+        metrics.upstream_sentence_model_candidates
+    );
+    metric!(
+        "upstream_sentence_model_code_prefix_checks",
+        metrics.upstream_sentence_model_code_prefix_checks
+    );
+    metric!(
+        "upstream_sentence_model_table_entries_considered",
+        metrics.upstream_sentence_model_table_entries_considered
+    );
+    metric!(
+        "upstream_sentence_model_vocabulary_entries_considered",
+        metrics.upstream_sentence_model_vocabulary_entries_considered
+    );
+    metric!(
+        "upstream_sentence_model_graph_edges",
+        metrics.upstream_sentence_model_graph_edges
+    );
+    metric!("prefix_fallback_calls", metrics.prefix_fallback_calls);
+    metric!("prefix_fallback_ns", metrics.prefix_fallback_ns);
+    metric!(
+        "prefix_fallback_views_visited",
+        metrics.prefix_fallback_views_visited
+    );
+    metric!(
+        "prefix_fallback_candidates",
+        metrics.prefix_fallback_candidates
+    );
+    metric!("dynamic_correction_calls", metrics.dynamic_correction_calls);
+    metric!("dynamic_correction_ns", metrics.dynamic_correction_ns);
+    metric!(
+        "dynamic_correction_codes_considered",
+        metrics.dynamic_correction_codes_considered
+    );
+    metric!(
+        "dynamic_correction_candidates",
+        metrics.dynamic_correction_candidates
+    );
     let json = serde_json::Value::Object(json);
     CString::new(json.to_string()).map_or(ptr::null_mut(), CString::into_raw)
 }
