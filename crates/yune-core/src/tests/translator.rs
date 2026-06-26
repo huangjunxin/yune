@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::{
     build_prism_bin, parse_rime_prism_bin_payload, CandidateRequest, CandidateSource, Context,
-    Engine, HistoryTranslator, PunctuationTranslator, ReverseLookupTranslator,
+    Engine, HistoryTranslator, MemoryOwnerClass, PunctuationTranslator, ReverseLookupTranslator,
     StaticTableTranslator, Status, TableDictionary, Translator,
 };
 
@@ -104,6 +104,38 @@ fifth	ne	5
     );
     assert_eq!(bounded.full_count, Some(5));
     assert!(!bounded.is_complete);
+}
+
+#[test]
+fn static_table_memory_owner_rows_cover_m43_owner_set() {
+    let translator =
+        StaticTableTranslator::new([("ni", "你"), ("hao", "好"), ("zhong", "中"), ("guo", "國")])
+            .with_upstream_sentence_model(5);
+
+    let rows = translator.memory_owner_rows();
+    let owner_class = |owner: &str| {
+        rows.iter()
+            .find(|row| row.owner == owner)
+            .map(|row| row.class)
+            .expect("owner row should be present")
+    };
+
+    assert_eq!(
+        owner_class("translator.entries_by_code"),
+        MemoryOwnerClass::HeapOwnedGuarded
+    );
+    assert_eq!(
+        owner_class("poet.entries_by_code"),
+        MemoryOwnerClass::HeapOwnedReducible
+    );
+    assert_eq!(
+        owner_class("poet.lookup_index"),
+        MemoryOwnerClass::HeapOwnedGuarded
+    );
+    assert_eq!(
+        owner_class("poet.abbreviation_vocabulary"),
+        MemoryOwnerClass::HeapOwnedReducible
+    );
 }
 
 #[test]

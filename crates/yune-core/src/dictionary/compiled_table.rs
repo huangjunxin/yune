@@ -7,9 +7,11 @@ use crate::dictionary::compiled::{
 };
 use crate::dictionary::query_table::{LookupCandidate, LookupCandidateEntry, TableLookup};
 use crate::CandidateSource;
+use crate::{MemoryOwnerClass, MemoryOwnerRow};
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt;
+use std::mem;
 use std::ops::Range;
 use std::sync::Arc;
 
@@ -536,6 +538,150 @@ impl CompactTableStore {
     pub fn is_marisa_backed(&self) -> bool {
         matches!(self.storage, CompactTableStorage::MarisaBacked { .. })
     }
+
+    #[must_use]
+    pub fn memory_owner_rows(&self) -> Vec<MemoryOwnerRow> {
+        let mut rows = vec![MemoryOwnerRow::new(
+            "compact_table.syllabary_codes",
+            MemoryOwnerClass::HeapOwnedReducible,
+            estimate_string_vec_bytes(&self.syllabary_codes, self.syllabary_codes.capacity()),
+            self.syllabary_codes.len(),
+            "Vec<String>",
+            "canonical code list retained for prism lookup",
+        )];
+        rows.extend(self.storage.memory_owner_rows());
+        rows
+    }
+}
+
+impl CompactTableStorage {
+    fn memory_owner_rows(&self) -> Vec<MemoryOwnerRow> {
+        match self {
+            Self::Owned {
+                code_groups,
+                entries,
+            } => vec![
+                MemoryOwnerRow::new(
+                    "compact_table.syllable_ids_by_code",
+                    MemoryOwnerClass::Shared,
+                    0,
+                    0,
+                    "none",
+                    "owned compact storage does not retain the rsmarisa syllable map",
+                ),
+                MemoryOwnerRow::new(
+                    "compact_table.storage",
+                    MemoryOwnerClass::HeapOwnedGuarded,
+                    estimate_owned_storage_bytes(code_groups, entries),
+                    code_groups.len().saturating_add(entries.len()),
+                    "owned_heap",
+                    "owned compact table records; not a mapped file",
+                ),
+            ],
+            Self::ByteBacked {
+                source,
+                code_groups,
+                entries,
+            } => vec![
+                MemoryOwnerRow::new(
+                    "compact_table.syllable_ids_by_code",
+                    MemoryOwnerClass::Shared,
+                    0,
+                    0,
+                    "none",
+                    "byte-backed compact storage does not retain the rsmarisa syllable map",
+                ),
+                MemoryOwnerRow::new(
+                    "compact_table.storage",
+                    byte_source_class(source.as_ref()),
+                    source.bytes().len(),
+                    code_groups.len().saturating_add(entries.len()),
+                    format!("{}:{}", source.storage_label(), source.mapping_mode()),
+                    "table bytes are excluded from heap-owned branch triggers when mapped",
+                ),
+            ],
+            Self::MarisaBacked {
+                source,
+                entry_count,
+                syllable_ids_by_code,
+                ..
+            } => vec![
+                MemoryOwnerRow::new(
+                    "compact_table.syllable_ids_by_code",
+                    MemoryOwnerClass::HeapOwnedReducible,
+                    estimate_string_usize_map_bytes(syllable_ids_by_code),
+                    syllable_ids_by_code.len(),
+                    "HashMap<String, usize>",
+                    "rsmarisa lookup side map retained on heap",
+                ),
+                MemoryOwnerRow::new(
+                    "compact_table.storage",
+                    byte_source_class(source.as_ref()),
+                    source.bytes().len(),
+                    *entry_count,
+                    format!("{}:{}", source.storage_label(), source.mapping_mode()),
+                    "rsmarisa table bytes are excluded from heap-owned branch triggers when mapped",
+                ),
+            ],
+        }
+    }
+}
+
+fn byte_source_class(source: &dyn CompactTableByteSource) -> MemoryOwnerClass {
+    if source.mapping_mode() == "mmap" {
+        MemoryOwnerClass::MmapFileBacked
+    } else {
+        MemoryOwnerClass::HeapOwnedGuarded
+    }
+}
+
+fn estimate_owned_string_bytes(value: &str) -> usize {
+    mem::size_of::<String>().saturating_add(value.len())
+}
+
+fn estimate_string_vec_bytes(values: &[String], capacity: usize) -> usize {
+    mem::size_of::<Vec<String>>()
+        .saturating_add(capacity.saturating_mul(mem::size_of::<String>()))
+        .saturating_add(values.iter().map(|value| value.capacity()).sum::<usize>())
+}
+
+fn estimate_string_usize_map_bytes(values: &HashMap<String, usize>) -> usize {
+    mem::size_of::<HashMap<String, usize>>()
+        .saturating_add(
+            values
+                .capacity()
+                .saturating_mul(mem::size_of::<(String, usize)>()),
+        )
+        .saturating_add(values.keys().map(|value| value.capacity()).sum::<usize>())
+}
+
+fn estimate_owned_storage_bytes(
+    code_groups: &[CompactCodeGroup],
+    entries: &[CompactTableEntry],
+) -> usize {
+    mem::size_of::<CompactTableStorage>()
+        .saturating_add(
+            code_groups
+                .len()
+                .saturating_mul(mem::size_of::<CompactCodeGroup>()),
+        )
+        .saturating_add(
+            entries
+                .len()
+                .saturating_mul(mem::size_of::<CompactTableEntry>()),
+        )
+        .saturating_add(
+            code_groups
+                .iter()
+                .map(|group| group.code.capacity())
+                .sum::<usize>(),
+        )
+        .saturating_add(
+            entries
+                .iter()
+                .map(|entry| estimate_owned_string_bytes(&entry.text))
+                .sum(),
+        )
 }
 
 #[cfg(test)]

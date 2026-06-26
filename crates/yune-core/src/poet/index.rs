@@ -1,6 +1,7 @@
 use std::cmp::Ordering;
+use std::mem;
 
-use super::ModelEntry;
+use super::{ModelEntry, ModelStringPool};
 
 #[derive(Clone, Debug, Default)]
 pub(super) struct SentenceLookupIndex {
@@ -31,13 +32,13 @@ pub(super) struct SentencePhraseWalk {
 }
 
 impl SentenceLookupIndex {
-    pub(super) fn build(entries: &[ModelEntry]) -> Self {
+    pub(super) fn build(entries: &[ModelEntry], codes: &ModelStringPool) -> Self {
         let mut ranges = Vec::new();
         let mut start = 0usize;
         while start < entries.len() {
-            let code = entries[start].code.as_str();
+            let code = entries[start].code(codes);
             let mut end = start + 1;
-            while end < entries.len() && entries[end].code == code {
+            while end < entries.len() && entries[end].code(codes) == code {
                 end += 1;
             }
             ranges.push(SentenceCodeRange {
@@ -54,9 +55,10 @@ impl SentenceLookupIndex {
     pub(super) fn entries_for_code<'a>(
         &self,
         entries: &'a [ModelEntry],
+        codes: &ModelStringPool,
         code: &str,
     ) -> Option<&'a [ModelEntry]> {
-        let index = self.find_exact_range(entries, code, 0, self.ranges.len())?;
+        let index = self.find_exact_range(entries, codes, code, 0, self.ranges.len())?;
         let range = self.ranges[index];
         Some(&entries[range.start as usize..range.end as usize])
     }
@@ -64,6 +66,7 @@ impl SentenceLookupIndex {
     pub(super) fn walk_from(
         &self,
         entries: &[ModelEntry],
+        codes: &ModelStringPool,
         input: &str,
         boundaries: &[usize],
         start_index: usize,
@@ -73,7 +76,8 @@ impl SentenceLookupIndex {
         let mut range_end = self.ranges.len();
         for (end_index, end) in boundaries.iter().copied().enumerate().skip(start_index + 1) {
             let code = &input[boundaries[start_index]..end];
-            let (next_start, next_end) = self.prefix_range(entries, code, range_start, range_end);
+            let (next_start, next_end) =
+                self.prefix_range(entries, codes, code, range_start, range_end);
             if next_start == next_end {
                 walk.prefix_misses += 1;
                 walk.prefix_early_breaks += 1;
@@ -84,7 +88,7 @@ impl SentenceLookupIndex {
             walk.prefix_hits += 1;
             walk.nodes_visited += 1;
             if self
-                .find_exact_range(entries, code, range_start, range_end)
+                .find_exact_range(entries, codes, code, range_start, range_end)
                 .is_some()
             {
                 walk.entry_ranges_emitted += 1;
@@ -99,6 +103,7 @@ impl SentenceLookupIndex {
     fn find_exact_range(
         &self,
         entries: &[ModelEntry],
+        codes: &ModelStringPool,
         code: &str,
         start: usize,
         end: usize,
@@ -107,7 +112,7 @@ impl SentenceLookupIndex {
         let mut high = end;
         while low < high {
             let mid = low + (high - low) / 2;
-            match self.range_code(entries, mid).cmp(code) {
+            match self.range_code(entries, codes, mid).cmp(code) {
                 Ordering::Less => low = mid + 1,
                 Ordering::Equal => return Some(mid),
                 Ordering::Greater => high = mid,
@@ -119,27 +124,35 @@ impl SentenceLookupIndex {
     fn prefix_range(
         &self,
         entries: &[ModelEntry],
+        codes: &ModelStringPool,
         prefix: &str,
         start: usize,
         end: usize,
     ) -> (usize, usize) {
-        let lower = self.lower_bound(entries, prefix, start, end);
-        if lower == end || !self.range_code(entries, lower).starts_with(prefix) {
+        let lower = self.lower_bound(entries, codes, prefix, start, end);
+        if lower == end || !self.range_code(entries, codes, lower).starts_with(prefix) {
             return (lower, lower);
         }
         let upper = match next_prefix_bound(prefix) {
-            Some(bound) => self.lower_bound(entries, &bound, lower, end),
+            Some(bound) => self.lower_bound(entries, codes, &bound, lower, end),
             None => end,
         };
         (lower, upper)
     }
 
-    fn lower_bound(&self, entries: &[ModelEntry], value: &str, start: usize, end: usize) -> usize {
+    fn lower_bound(
+        &self,
+        entries: &[ModelEntry],
+        codes: &ModelStringPool,
+        value: &str,
+        start: usize,
+        end: usize,
+    ) -> usize {
         let mut low = start;
         let mut high = end;
         while low < high {
             let mid = low + (high - low) / 2;
-            if self.range_code(entries, mid) < value {
+            if self.range_code(entries, codes, mid) < value {
                 low = mid + 1;
             } else {
                 high = mid;
@@ -148,8 +161,25 @@ impl SentenceLookupIndex {
         low
     }
 
-    fn range_code<'a>(&self, entries: &'a [ModelEntry], index: usize) -> &'a str {
-        entries[self.ranges[index].start as usize].code.as_str()
+    fn range_code<'a>(
+        &self,
+        entries: &'a [ModelEntry],
+        codes: &'a ModelStringPool,
+        index: usize,
+    ) -> &'a str {
+        entries[self.ranges[index].start as usize].code(codes)
+    }
+
+    pub(super) fn estimated_retained_bytes(&self) -> usize {
+        mem::size_of::<Self>().saturating_add(
+            self.ranges
+                .len()
+                .saturating_mul(mem::size_of::<SentenceCodeRange>()),
+        )
+    }
+
+    pub(super) fn range_count(&self) -> usize {
+        self.ranges.len()
     }
 }
 

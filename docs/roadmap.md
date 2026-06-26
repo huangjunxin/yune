@@ -2,15 +2,12 @@
 
 Yune is a Rust input-method engine that uses **upstream librime as a
 compatibility and performance oracle** while building a cleaner Rust engine.
-M42 is complete as a native-engine behavior-parity correction with a measured
-performance blocker: upstream librime `1.17.0` exports meaningful
-`luna_pinyin` abbreviation sentence candidates for `cszysmsrsd` and
-`zybfshmsru`, and Yune now matches the captured first-page native candidate
-output. M43 is now active as the next native-engine optimization slice: it
-starts from whole-process memory-owner attribution and only attacks `hao`/`ni`
-short-key fixed overhead if Phase 0 proves that branch is safer and higher
-value. The completed M41 `yune-web` browser-harness startup optimization
-remains a separate browser milestone and does not widen native engine claims.
+M43 is complete as a native-engine partial structural memory reduction with a
+measured whole-process memory blocker: Phase 0 selected `poet.entries_by_code`
+as the largest bounded Track A retained owner, and final evidence reduced that
+owner by `19,513,879 B` while preserving native behavior and storage guards.
+The completed M41 `yune-web` browser-harness startup optimization remains a
+separate browser milestone and does not widen native engine claims.
 
 > **Compatibility oracle.** Upstream librime latest stable is the default
 > behavior reference for user-visible schema semantics, standard ABI contracts,
@@ -32,14 +29,14 @@ remains a separate browser milestone and does not widen native engine claims.
 - [`decisions.md`](./decisions.md) - standing principles plus project-wide
   decision log.
 - [`requirements.md`](./requirements.md) - requirement IDs and status,
-  including active M43 native-engine gates, completed M42 native-engine gates,
-  closed M37-M40 engine gates, and completed M41 web-harness gates.
+  including completed M43 native-engine gates, completed M42 native-engine
+  gates, closed M37-M40 engine gates, and completed M41 web-harness gates.
 - [`reports/yune-vs-librime-performance.md`](./reports/yune-vs-librime-performance.md)
   and [`reports/yune-vs-librime-root-cause-analysis.md`](./reports/yune-vs-librime-root-cause-analysis.md)
   - current performance comparison and diagnosis.
-- [`plans/active/m43-plan-native-memory-short-key-owner-reduction.md`](./plans/active/m43-plan-native-memory-short-key-owner-reduction.md)
-  - active native-engine plan for memory-owner attribution and `hao`/`ni`
-  short-key fixed-overhead reduction.
+- [`plans/completed/m43-plan-native-memory-short-key-owner-reduction.md`](./plans/completed/m43-plan-native-memory-short-key-owner-reduction.md)
+  - completed native-engine plan for memory-owner attribution and the selected
+  `poet.entries_by_code` owner reduction.
 - [`plans/completed/m42-plan-abbreviation-sentence-parity-short-key-guardrails.md`](./plans/completed/m42-plan-abbreviation-sentence-parity-short-key-guardrails.md)
   - completed native-engine plan for incomplete-pinyin abbreviation sentence
   parity and short-key guardrails.
@@ -65,69 +62,64 @@ remains a separate browser milestone and does not widen native engine claims.
 | Lane | Current state | Next decision or gate |
 | --- | --- | --- |
 | Core compatibility | Phase 1 named-target upstream behavior is complete for `luna_pinyin` and common-schema basics against upstream librime `1.17.0`. | Preserve upstream-observable behavior on every engine change. |
-| Engine performance | M42 closed the native `luna_pinyin` abbreviation candidate-output gap. Final native rows: startup/runtime-ready Yune `23,856.300us` versus librime `31,421.900us` (`0.759x`), session `23,776.500us` versus `27,766.600us` (`0.856x`), `hao` `3.424x`, `ni` `4.082x`, `zhongguo` `0.363x`, Track A 37-character row `278.438us` versus `290.873us` (`0.957x`), Track A 59-character row `474.683us` versus `658.592us` (`0.721x`), `cszysmsrsd` `4,127.580us` versus `1,189.890us` (`3.469x`), and `zybfshmsru` `4,257.100us` versus `839.860us` (`5.069x`). Track A peak working set is `119,775,232 B`; storage remains `rsmarisa_byte_backed`, table/prism remain mmap, selected heap mirrors remain `0`, and `source_fallback=false`. The Track B 50+ row is included as a guard at `186.513us/op` median and `204.680us/op` p95 with no TypeDuck speed claim. M43 is active and starts with owner evidence before implementation. | M43 Phase 0 must choose memory-owner reduction, `hao`/`ni` short-key fixed-overhead reduction, or a measured no-go. Abbreviation latency remains a guard, not the M43 implementation target. |
+| Engine performance | M43 closed the selected native memory-owner slice. Final native rows: startup/runtime-ready Yune `23,640.300us` versus librime `30,007.900us` (`0.788x`), session `24,163.200us` versus `27,837.100us` (`0.868x`), `hao` `3.390x`, `ni` `4.096x`, `zhongguo` `0.368x`, Track A 37-character row `286.549us` versus `291.022us` (`0.985x`), Track A 59-character row `489.329us` versus `667.159us` (`0.733x`), `cszysmsrsd` `4,193.150us` versus `1,205.380us` (`3.479x`), and `zybfshmsru` `4,467.740us` versus `843.120us` (`5.299x`). `poet.entries_by_code` drops from `38,208,541 B` to `18,694,662 B`, but Track A peak stays within the Phase 0 noise band rather than reaching the whole-process memory target. Storage remains `rsmarisa_byte_backed`, table/prism remain mmap, selected heap mirrors remain `0`, and `source_fallback=false`. The Track B 50+ row is included as a guard at `182.780us/op` median and `191.182us/op` p95 with no TypeDuck speed claim. | Future native work needs a new scoped plan: likely another memory-owner pass, a separate abbreviation-latency owner, or a separate `hao`/`ni` short-key branch. |
 | Web harness startup | M41 is complete for the tracked `apps/yune-web/` browser harness. Final production-browser medians are tracked `luna_pinyin` cold `846 ms`, tracked `jyut6ping3_mobile` cold `1,254 ms`, public-demo `luna_pinyin` cold `867 ms`, and public-demo `jyut6ping3_mobile` cold `1,291 ms`; warm/reload rows improved by `87.4-95.9%` from the bounded phase-0 owner baseline. | Browser startup is now a completed evidence-backed lane. Future web work needs a new scoped plan, likely browser/React shell residual, Jyutping asset payload, or remote delivery/cache behavior. |
 | AI-native engine layer | M11/M13 proved a default-off local AI layer can sit on top of the deterministic engine. | Keep AI outside the classic deterministic performance path unless a named engine experiment explicitly enables it. |
 | Future platform work | Platform-specific native frontends remain outside this repo roadmap. | Start a separate repository or separate plan before changing platform/application contracts. |
 
 ## Authoritative Sequence
 
-1. **M43 native memory and short-key owner reduction** - active under
-   [`plans/active/m43-plan-native-memory-short-key-owner-reduction.md`](./plans/active/m43-plan-native-memory-short-key-owner-reduction.md).
-   Phase 0 must produce a structural memory-owner profile and `hao`/`ni`
-   fixed-overhead profile before choosing the memory, short-key, or measured
-   no-go branch. The M42 abbreviation rows stay behavior guards; their latency
-   is not the M43 target.
+1. **Future native memory, abbreviation-latency, or short-key slices** -
+   require a new scoped native plan and fresh owner evidence. M43 records a
+   partial structural memory reduction but leaves whole-process memory,
+   abbreviation latency, and short-key fixed overhead as separate possible
+   targets.
 2. **Future web harness slices** - require a new scoped browser plan and fresh
    evidence. M41 leaves browser/React shell residual, Jyutping asset payload,
    and remote delivery/cache behavior as possible future tracks.
 3. **Future AI-native engine experiments** - later, and only after classic
    engine performance is no longer dominated by avoidable pipeline costs.
-4. **Future engine abbreviation-latency or profile-storage slices** - only with
-   a new scoped plan, fresh owner evidence, and native-engine-only claims unless
-   browser evidence is explicitly collected.
+4. **Future TypeDuck/profile-storage slices** - only with a new scoped plan,
+   fresh owner evidence, and no TypeDuck-profile speed claim unless the profile
+   row is explicitly selected as the target.
 
 Trigger-gated, not scheduled: extracting the full processor pipeline from
 `yune-rime-api` into `yune-core` lands only when a real non-ABI consumer needs
 the full input path. Do not milestone that extraction speculatively.
 
-## M43 Active Plan
+## M43 Closeout
 
-M43 is active under
-[`plans/active/m43-plan-native-memory-short-key-owner-reduction.md`](./plans/active/m43-plan-native-memory-short-key-owner-reduction.md).
+M43 is complete under
+[`plans/completed/m43-plan-native-memory-short-key-owner-reduction.md`](./plans/completed/m43-plan-native-memory-short-key-owner-reduction.md).
 It is a native-engine-only follow-up to M42.
 
-M43 starts from two facts:
+Phase 0 produced the required same-run native benchmark, Track A memory-owner
+profile, repeated-run noise band, short-key owner profile, and native
+candidate-output guard for `cszysmsrsd` and `zybfshmsru`. The decision gate
+selected Branch A, `memory-owner-reduction`, because `poet.entries_by_code`
+retained `38,208,541 B` of non-overlapping heap-owned reducible bytes.
 
-- behavior parity for `cszysmsrsd` and `zybfshmsru` is fixed, but their
-  abbreviation latency remains a separate blocker;
-- `hao`/`ni` remain slower than librime, and Track A whole-process memory is
-  still much larger than librime despite no M42 regression.
+Final M43 evidence:
 
-The plan therefore makes Phase 0 a hard gate. Before implementation, M43 must
-capture a fresh same-run native benchmark and a deterministic structural
-memory-owner profile for Track A. That profile must separate heap-owned
-reducible bytes from mmap-backed, shared, guarded, or overlapping estimates and
-reconcile the estimates against measured working-set/peak evidence. M43 must
-also split `hao`/`ni` fixed overhead into lookup, translation, candidate
-materialization, ranking/filtering, context/export, and ABI allocation/free
-buckets. Only then can it choose one branch:
+- `poet.entries_by_code`: `38,208,541 B` -> `18,694,662 B`, a
+  `19,513,879 B` structural owner reduction.
+- Final Track A peak band: `127,492,096-127,627,264 B`, inside the Phase 0
+  observed band of `127,574,016-127,647,744 B`.
+- Whole-process memory target `<=107,797,708 B` is not met; M43 is not a
+  whole-process memory win.
+- `hao` and `ni` were profiled but not optimized; final ratios are `3.390x`
+  and `4.096x` same-run librime.
+- M42 abbreviation rows still match upstream native candidate output, but
+  remain latency blockers at `3.479x` and `5.299x`.
+- Track A storage remains `rsmarisa_byte_backed`, table/prism remain `mmap`,
+  selected heap mirrors remain `0`, and `source_fallback=false`.
+- Track B remains guard-only at `182.780us/op` median and `191.182us/op` p95;
+  no TypeDuck-profile speed claim is made.
 
-- memory-owner reduction if a bounded non-overlapping heap-owned reducible
-  owner or duplicate owner family accounts for at least `10 MB`, or related
-  owners account for at least `15 MB`;
-- `hao`/`ni` short-key fixed-overhead reduction if memory has no safe bounded
-  owner and both rows remain dominated by a named translator/materialization or
-  export owner;
-- reporting/no-go if the profile disproves the suspected owners or every
-  plausible fix would violate storage, behavior, or bounded-output guards.
-
-M43 is not an abbreviation-latency plan. The M42 abbreviation rows must keep
-matching upstream candidate output, but a speed win there belongs in a separate
-future milestone. Any short-key improvement is self-relative to M42 unless the
-final same-run librime ratios prove parity; reports must publish residual
-librime ratios. Browser, frontend, product, packaging, delivery, public-demo,
-and TypeDuck-profile speed claims remain out of scope.
+M43 therefore closes as a partial structural memory reduction with a measured
+whole-process memory blocker. Future work must choose a new target: another
+memory-owner pass, abbreviation graph/search latency, or a separate
+`hao`/`ni` short-key branch.
 
 ## M42 Closeout
 
@@ -361,7 +353,7 @@ Closed M38 gates:
 
 | Track | Scope | Current source of truth |
 | --- | --- | --- |
-| Engine performance | Native engine startup, schema/session lifecycle, mmap-backed `rsmarisa` marisa-table lookup, lazy/page-bounded translation, context export, memory, allocation, completed M40 sentence lookup indexing, completed M42 abbreviation sentence parity/short-key guardrails, and active M43 memory/short-key owner reduction | Active M43 plan: [`plans/active/m43-plan-native-memory-short-key-owner-reduction.md`](./plans/active/m43-plan-native-memory-short-key-owner-reduction.md). Completed M42 plan: [`plans/completed/m42-plan-abbreviation-sentence-parity-short-key-guardrails.md`](./plans/completed/m42-plan-abbreviation-sentence-parity-short-key-guardrails.md). Completed M40 plan: [`plans/completed/m40-plan-compiled-sentence-lookup-index.md`](./plans/completed/m40-plan-compiled-sentence-lookup-index.md). |
+| Engine performance | Native engine startup, schema/session lifecycle, mmap-backed `rsmarisa` marisa-table lookup, lazy/page-bounded translation, context export, memory, allocation, completed M40 sentence lookup indexing, completed M42 abbreviation sentence parity/short-key guardrails, and completed M43 memory-owner reduction | Completed M43 plan: [`plans/completed/m43-plan-native-memory-short-key-owner-reduction.md`](./plans/completed/m43-plan-native-memory-short-key-owner-reduction.md). Completed M42 plan: [`plans/completed/m42-plan-abbreviation-sentence-parity-short-key-guardrails.md`](./plans/completed/m42-plan-abbreviation-sentence-parity-short-key-guardrails.md). Completed M40 plan: [`plans/completed/m40-plan-compiled-sentence-lookup-index.md`](./plans/completed/m40-plan-compiled-sentence-lookup-index.md). |
 | Web harness startup | Tracked `apps/yune-web/` production build, public-demo dist, browser shell, asset/cache delivery, worker/WASM startup, persistence, schema selection, first key-to-paint, and Chromium memory | Completed M41 plan: [`plans/completed/m41-plan-yune-web-startup-optimization.md`](./plans/completed/m41-plan-yune-web-startup-optimization.md); final evidence under [`apps/yune-web/e2e/results/m41-yune-web-startup-optimization/`](../apps/yune-web/e2e/results/m41-yune-web-startup-optimization/). |
 | Core compatibility | Upstream behavior fixtures and standard ABI-observable behavior | [`requirements.md`](./requirements.md), [`decisions.md`](./decisions.md), and per-milestone plans. |
 | AI-native engine research | Default-off AI behavior layered above the deterministic engine | Future explicit engine experiments only. |
@@ -377,7 +369,7 @@ Closed M38 gates:
 | M33-M40 | Complete | Recent engine-performance work closed fairness, shared caches, compact storage, compiled-active paths, page-bounded materialization, mapped storage, pure upstream `luna_pinyin` native parity with `rsmarisa` hot-path lookup, M39 long-input hardening, and M40 compiled sentence lookup indexing for both Track A long rows while preserving the Track B Cantonese profile guard row. |
 | M41 | Complete | Browser-harness startup optimization for tracked `apps/yune-web/`, with production-browser evidence, runtime packaging fixed, redundant startup deploy avoided, schema-scoped worker startup, and separate claims from native engine performance. |
 | M42 | Complete with measured blocker | Native-engine abbreviation sentence parity and short-key guardrails: Phase 0 proved the upstream target, Yune now matches candidate output for `cszysmsrsd`/`zybfshmsru`, `ni`/`hao` were profiled, and M40 wins were preserved. The abbreviation rows remain `3.469x`/`5.069x` same-run librime, so future latency work needs a new scoped plan. |
-| M43 | Active | Native-engine memory and short-key owner reduction: Phase 0 must profile Track A retained memory and `hao`/`ni` fixed overhead, then choose memory reduction, short-key reduction, or measured no-go without touching browser/product scope or reopening M42 abbreviation latency. |
+| M43 | Complete with measured blocker | Native-engine memory-owner reduction: Phase 0 selected `poet.entries_by_code`, final evidence reduced that owner by `19,513,879 B`, and whole-process memory remains a measured blocker because Track A peak stayed inside Phase 0 noise rather than reaching the memory-win target. |
 
 ## Scope Ledger
 
@@ -388,7 +380,7 @@ only when an engine target needs them; nothing here commits to a timeline.
 | --- | --- | --- |
 | `luna_pinyin` core versus upstream `1.17.0`, including completed M17 null-grammar sentence/lattice, M18 punctuation processor slices, and completed M42 abbreviation sentence parity for `cszysmsrsd`/`zybfshmsru` | Learned `.gram`/octagram grammar, contextual translation, and broader plugin-backed gears until a named engine target needs them | Bit-for-bit parity with librime internals |
 | Common RIME schemas added through explicit breadth milestones | Further schema breadth only with fresh oracle fixtures and owning tests | Unbounded schema checklist work |
-| Native engine performance parity for startup, session lifecycle, mmap-backed `rsmarisa` marisa-table lookup, raw lookup, lazy/page-bounded translation, context export, memory, allocation, and active M43 owner-backed memory/short-key reduction | Frontend/application delivery evidence and platform packaging | Claiming application-visible wins from native engine evidence |
+| Native engine performance parity for startup, session lifecycle, mmap-backed `rsmarisa` marisa-table lookup, raw lookup, lazy/page-bounded translation, context export, memory, allocation, and completed M43 owner-backed memory reduction | Frontend/application delivery evidence and platform packaging | Claiming application-visible wins from native engine evidence |
 | AI-native layer on the compatible deterministic base | Richer AI experiments after the classic engine path is competitive | Replacing or altering classic input paths by default |
 
 ## Deferred / Future

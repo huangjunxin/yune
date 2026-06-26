@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 use std::collections::{btree_map, BTreeMap};
 use std::slice;
+use std::time::Instant;
 
 use crate::{Candidate, CandidateSource};
 
@@ -61,14 +62,18 @@ impl<'a> LookupCandidate<'a> {
 
     #[must_use]
     pub(crate) fn to_candidate(&self) -> Candidate {
-        crate::m37_record_owned_candidate_materialized();
-        Candidate {
+        let start = crate::m37_metrics_enabled().then(Instant::now);
+        let candidate = Candidate {
             text: self.text.to_string(),
             comment: self.raw_comment.to_string(),
             preedit: None,
             source: self.source_hint(),
             quality: self.raw_quality,
+        };
+        if let Some(start) = start {
+            crate::m37_record_owned_candidate_materialization(start.elapsed());
         }
+        candidate
     }
 }
 

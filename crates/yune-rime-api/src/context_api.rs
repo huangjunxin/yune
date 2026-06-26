@@ -1,4 +1,9 @@
-use std::{ffi::CString, os::raw::c_int, ptr, time::Instant};
+use std::{
+    ffi::{CString, NulError},
+    os::raw::c_int,
+    ptr,
+    time::Instant,
+};
 
 use crate::{
     apply_visible_switch_radio_defaults, bool_from, clear_commit, clear_context, clear_status,
@@ -20,6 +25,20 @@ impl Drop for M37GetContextTimer {
             yune_core::m37_record_abi_get_context(start.elapsed());
         }
     }
+}
+
+fn abi_cstring(value: &str) -> Result<CString, NulError> {
+    let start = yune_core::m37_metrics_enabled().then(Instant::now);
+    let cstring = CString::new(value)?;
+    if let Some(start) = start {
+        yune_core::m37_record_abi_c_string_allocation_duration(
+            cstring.as_bytes_with_nul().len(),
+            start.elapsed(),
+        );
+    } else {
+        yune_core::m37_record_abi_c_string_allocation(cstring.as_bytes_with_nul().len());
+    }
+    Ok(cstring)
 }
 
 /// Copies the unread commit text for a session into a caller-provided commit.
@@ -107,13 +126,8 @@ pub unsafe extern "C" fn RimeGetContext(
     };
     let select_keys = match menu_settings.select_keys.as_deref() {
         Some(select_keys) if !select_keys.as_bytes().contains(&0) => {
-            match CString::new(select_keys) {
-                Ok(select_keys) => {
-                    yune_core::m37_record_abi_c_string_allocation(
-                        select_keys.as_bytes_with_nul().len(),
-                    );
-                    Some(select_keys)
-                }
+            match abi_cstring(select_keys) {
+                Ok(select_keys) => Some(select_keys),
                 Err(_) => return FALSE,
             }
         }
@@ -146,10 +160,9 @@ pub unsafe extern "C" fn RimeGetContext(
                     composition.input.len() as c_int,
                 )
             };
-        let Ok(preedit) = CString::new(preedit_text) else {
+        let Ok(preedit) = abi_cstring(&preedit_text) else {
             return FALSE;
         };
-        yune_core::m37_record_abi_c_string_allocation(preedit.as_bytes_with_nul().len());
         let commit_text_preview = if composition.input.is_empty() {
             None
         } else if unsafe { context_has_commit_text_preview(context) } {
@@ -161,13 +174,8 @@ pub unsafe extern "C" fn RimeGetContext(
                     || composition.input.clone(),
                     |candidate| candidate.commit_text_for_input(&composition.input),
                 );
-            match CString::new(preview) {
-                Ok(preview) => {
-                    yune_core::m37_record_abi_c_string_allocation(
-                        preview.as_bytes_with_nul().len(),
-                    );
-                    Some(preview)
-                }
+            match abi_cstring(&preview) {
+                Ok(preview) => Some(preview),
                 Err(_) => return FALSE,
             }
         } else {
@@ -217,19 +225,17 @@ pub unsafe extern "C" fn RimeGetContext(
 
         let mut rime_candidates = Vec::with_capacity(page_candidates.len());
         for candidate in page_candidates {
-            let Ok(text) = CString::new(candidate.text.as_str()) else {
+            let Ok(text) = abi_cstring(candidate.text.as_str()) else {
                 free_rime_candidates(&mut rime_candidates);
                 return FALSE;
             };
-            yune_core::m37_record_abi_c_string_allocation(text.as_bytes_with_nul().len());
             let comment = if candidate.comment.is_empty() {
                 ptr::null_mut()
             } else {
-                let Ok(comment) = CString::new(candidate.comment.as_str()) else {
+                let Ok(comment) = abi_cstring(candidate.comment.as_str()) else {
                     free_rime_candidates(&mut rime_candidates);
                     return FALSE;
                 };
-                yune_core::m37_record_abi_c_string_allocation(comment.as_bytes_with_nul().len());
                 comment.into_raw()
             };
             rime_candidates.push(RimeCandidate {
@@ -244,11 +250,10 @@ pub unsafe extern "C" fn RimeGetContext(
         {
             let mut labels = Vec::with_capacity(page_size);
             for label in menu_settings.select_labels.iter().take(page_size) {
-                let Ok(label) = CString::new(label.as_str()) else {
+                let Ok(label) = abi_cstring(label.as_str()) else {
                     free_rime_candidates(&mut rime_candidates);
                     return FALSE;
                 };
-                yune_core::m37_record_abi_c_string_allocation(label.as_bytes_with_nul().len());
                 labels.push(label);
             }
             let mut labels = labels

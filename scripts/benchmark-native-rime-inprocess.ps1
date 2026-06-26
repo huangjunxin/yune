@@ -211,6 +211,7 @@ $CombinedM37Metrics = @()
 $CombinedProductPathStatus = @()
 $CombinedStartupSessionTrace = @()
 $CombinedRawLookupMicrobench = @()
+$CombinedMemoryOwnerProfile = @()
 foreach ($Summary in Get-ChildItem -LiteralPath $OutputRoot -Recurse -Filter summary.csv) {
     $CombinedSummary += Import-Csv -LiteralPath $Summary.FullName
 }
@@ -229,12 +230,16 @@ foreach ($Trace in Get-ChildItem -LiteralPath $OutputRoot -Recurse -Filter start
 foreach ($RawLookup in Get-ChildItem -LiteralPath $OutputRoot -Recurse -Filter raw_lookup_microbench.csv) {
     $CombinedRawLookupMicrobench += Import-Csv -LiteralPath $RawLookup.FullName
 }
+foreach ($MemoryOwner in Get-ChildItem -LiteralPath $OutputRoot -Recurse -Filter memory-owner-profile.csv) {
+    $CombinedMemoryOwnerProfile += Import-Csv -LiteralPath $MemoryOwner.FullName
+}
 $CombinedSummary | Export-Csv -LiteralPath (Join-Path $OutputRoot "summary.csv") -NoTypeInformation -Encoding UTF8
 $CombinedSamples | Export-Csv -LiteralPath (Join-Path $OutputRoot "samples.csv") -NoTypeInformation -Encoding UTF8
 $CombinedM37Metrics | Export-Csv -LiteralPath (Join-Path $OutputRoot "m37_metrics.csv") -NoTypeInformation -Encoding UTF8
 $CombinedProductPathStatus | Export-Csv -LiteralPath (Join-Path $OutputRoot "product_path_status.csv") -NoTypeInformation -Encoding UTF8
 $CombinedStartupSessionTrace | Export-Csv -LiteralPath (Join-Path $OutputRoot "startup_session_trace.csv") -NoTypeInformation -Encoding UTF8
 $CombinedRawLookupMicrobench | Export-Csv -LiteralPath (Join-Path $OutputRoot "raw_lookup_microbench.csv") -NoTypeInformation -Encoding UTF8
+$CombinedMemoryOwnerProfile | Export-Csv -LiteralPath (Join-Path $OutputRoot "memory-owner-profile.csv") -NoTypeInformation -Encoding UTF8
 
 @"
 # Native In-Process Benchmark

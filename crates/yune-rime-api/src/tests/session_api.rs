@@ -366,6 +366,9 @@ fn m37_metrics_exports_snapshot_json_for_loaded_benchmarks() {
     crate::yune_m37_metrics_enable(TRUE);
     crate::yune_m37_metrics_reset();
     yune_core::m37_record_abi_candidates_exported(3);
+    yune_core::m37_record_owned_candidate_materialization(std::time::Duration::from_nanos(13));
+    yune_core::m37_record_prism_lookup(std::time::Duration::from_nanos(29), 2);
+    yune_core::m37_record_abi_c_string_allocation_duration(11, std::time::Duration::from_nanos(31));
     yune_core::m37_record_sentence_candidate(std::time::Duration::from_nanos(17), 1);
     yune_core::m37_record_upstream_sentence_model_index_build(std::time::Duration::from_nanos(19));
     yune_core::m37_record_upstream_sentence_model_lookup_index(
@@ -395,6 +398,14 @@ fn m37_metrics_exports_snapshot_json_for_loaded_benchmarks() {
         .to_str()
         .expect("snapshot JSON should be UTF-8");
     assert!(json_text.contains("\"abi_candidates_exported\":3"));
+    assert!(json_text.contains("\"owned_candidates_materialized\":1"));
+    assert!(json_text.contains("\"owned_candidate_materialization_ns\":13"));
+    assert!(json_text.contains("\"prism_lookup_calls\":1"));
+    assert!(json_text.contains("\"prism_lookup_ns\":29"));
+    assert!(json_text.contains("\"prism_lookup_codes\":2"));
+    assert!(json_text.contains("\"abi_c_string_allocations\":1"));
+    assert!(json_text.contains("\"abi_c_string_bytes\":11"));
+    assert!(json_text.contains("\"abi_c_string_allocation_ns\":31"));
     assert!(json_text.contains("\"sentence_candidate_calls\":1"));
     assert!(json_text.contains("\"sentence_candidate_ns\":17"));
     assert!(json_text.contains("\"prefix_fallback_calls\":0"));
@@ -421,6 +432,59 @@ fn m37_metrics_exports_snapshot_json_for_loaded_benchmarks() {
     // SAFETY: `json` is owned by the metrics export.
     unsafe { crate::yune_m37_metrics_free_string(json) };
     crate::yune_m37_metrics_enable(FALSE);
+}
+
+#[test]
+fn m43_memory_owner_profile_exports_required_session_rows() {
+    let _guard = test_guard();
+    RimeCleanupAllSessions();
+    let session_id = RimeCreateSession();
+    assert_ne!(session_id, 0);
+    {
+        let mut registry = crate::sessions()
+            .lock()
+            .expect("session registry should not be poisoned");
+        let session = registry
+            .sessions
+            .get_mut(&session_id)
+            .expect("session should exist");
+        session.engine.clear_translators();
+        session.engine.add_translator(
+            StaticTableTranslator::new([
+                ("ni", "你"),
+                ("hao", "好"),
+                ("zhong", "中"),
+                ("guo", "國"),
+            ])
+            .with_upstream_sentence_model(5),
+        );
+    }
+
+    let json = crate::yune_m43_memory_owner_profile_json();
+    assert!(!json.is_null());
+    // SAFETY: the owner-profile export returns a valid NUL-terminated string.
+    let json_text = unsafe { CStr::from_ptr(json) }
+        .to_str()
+        .expect("owner profile JSON should be UTF-8");
+    for owner in [
+        "translator.entries_by_code",
+        "poet.entries_by_code",
+        "poet.lookup_index",
+        "poet.abbreviation_vocabulary",
+        "schema.config",
+        "schema.processors",
+        "session.userdb",
+        "runtime.session_state",
+    ] {
+        assert!(json_text.contains(owner), "missing owner row {owner}");
+    }
+    assert!(json_text.contains("heap_owned_reducible"));
+    assert!(json_text.contains("heap_owned_guarded"));
+    assert!(json_text.contains("overlap_estimate"));
+    // SAFETY: `json` is owned by the metrics/string export surface.
+    unsafe { crate::yune_m37_metrics_free_string(json) };
+
+    assert_eq!(RimeDestroySession(session_id), TRUE);
 }
 
 #[test]

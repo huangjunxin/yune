@@ -1,12 +1,12 @@
-# M43 Native Memory And Short-Key Owner Reduction Plan
+﻿# M43 Native Memory And Short-Key Owner Reduction Plan
 
-> **Status:** Active - **Milestone:** M43 (native memory and short-key owner
+> **Status:** Complete with measured memory blocker - **Milestone:** M43 (native memory and short-key owner
 > reduction) - **Created:** 2026-06-26 - **Type:** native-engine plan
 >
 > **For agentic workers:** REQUIRED SUB-SKILL: Use
 > superpowers:subagent-driven-development (recommended) or
 > superpowers:executing-plans to implement this plan task-by-task. Steps use
-> checkbox (`- [ ]`) syntax for tracking.
+> checkbox (`- [x]`) syntax for tracking.
 
 ## Goal
 
@@ -129,15 +129,15 @@ Out of scope:
 
 ## Phase 0: Owner Capture And Branch Selection
 
-- [ ] Capture a fresh same-run native benchmark under
+- [x] Capture a fresh same-run native benchmark under
   `docs/reports/evidence/m43-native-memory-short-key-owner-reduction/phase-0-baseline/`
   with the M42 row set: startup, session, `hao`, `ni`, `zhongguo`, both Track A
   long rows, `cszysmsrsd`, `zybfshmsru`, and the Track B 50+ guard row.
-- [ ] Capture a run-to-run noise baseline before choosing a branch. At minimum,
+- [x] Capture a run-to-run noise baseline before choosing a branch. At minimum,
   record repeated Track A peak samples and repeated `hao`/`ni` medians from the
   same benchmark configuration, then publish the observed variance band used by
   M43 success and no-regression decisions.
-- [ ] Add a deterministic structural owner profile export, for example
+- [x] Add a deterministic structural owner profile export, for example
   `memory-owner-profile.csv`, that records retained owner estimates by module
   and structure. Each row must classify bytes as `heap_owned_reducible`,
   `heap_owned_guarded`, `mmap_file_backed`, `shared`, or `overlap_estimate`.
@@ -148,20 +148,20 @@ Out of scope:
   `poet.entries_by_code`, `poet.lookup_index`,
   `poet.abbreviation_vocabulary`, `schema.config`, `schema.processors`,
   `session.userdb`, and `runtime.session_state`.
-- [ ] Add a reconciliation section to the Phase 0 verdict that compares owner
+- [x] Add a reconciliation section to the Phase 0 verdict that compares owner
   estimates against measured Track A working set/peak movement. The verdict
   must name excluded `mmap_file_backed`, `shared`, and `overlap_estimate` bytes
   so duplicated logical strings or mapped storage cannot double-count into a
   branch trigger.
-- [ ] Add `m37_metrics.csv` fields before trusting new metrics. The benchmark
+- [x] Add `m37_metrics.csv` fields before trusting new metrics. The benchmark
   must not silently omit any new M43 metric from the CSV bundle.
-- [ ] Produce a short-key owner profile for `hao` and `ni` that splits at least
+- [x] Produce a short-key owner profile for `hao` and `ni` that splits at least
   these buckets: raw prism lookup, raw table lookup, translator production,
   candidate clone/materialization, ranking/sorting/filtering, context export,
   ABI string allocation, and free-context work.
-- [ ] Prove M42 abbreviation candidate output still matches upstream for
+- [x] Prove M42 abbreviation candidate output still matches upstream for
   `cszysmsrsd` and `zybfshmsru` before any implementation branch starts.
-- [ ] Write a Phase 0 verdict file that chooses one branch:
+- [x] Write a Phase 0 verdict file that chooses one branch:
   `memory-owner-reduction`, `short-key-fixed-overhead`, or
   `reporting-no-go`.
 
@@ -188,7 +188,7 @@ Branch selection rules:
 
 Run only if Phase 0 selects `memory-owner-reduction`.
 
-- [ ] Write failing or guard tests for the exact owner being changed before
+- [x] Write failing or guard tests for the exact owner being changed before
   implementation. Examples:
   - compact table tests proving canonical code lookup still returns identical
     candidates when syllabary storage changes;
@@ -196,22 +196,22 @@ Run only if Phase 0 selects `memory-owner-reduction`.
     order and M42 abbreviation output;
   - session/API tests proving storage status and source-fallback counters remain
     unchanged.
-- [ ] Reduce exactly the selected owner family first. Acceptable shapes include
+- [x] Reduce exactly the selected owner family first. Acceptable shapes include
   interned/string-id storage, borrowed ranges over already-retained compiled
   bytes, compact numeric ids, or lazily built owner state. Do not add a new
   always-on mirror whose retained bytes erase the win.
-- [ ] If the selected owner is `compact_table.syllabary_codes` plus
+- [x] If the selected owner is `compact_table.syllabary_codes` plus
   `syllable_ids_by_code`, store each code once and make lookup reuse the same
   representation. Preserve `lookup_canonical_codes`, `rsmarisa` path
   segmentation, and all existing compact table tests.
-- [ ] If the selected owner is `poet.entries_by_code`, change `ModelEntry`
+- [x] If the selected owner is `poet.entries_by_code`, change `ModelEntry`
   storage without changing `SentenceLookupIndex` ordering semantics,
   `compare_model_entry_by_code`, abbreviation vocabulary filtering, or
   candidate text/comment output.
-- [ ] If the selected owner is schema/session/userdb state, keep runtime
+- [x] If the selected owner is schema/session/userdb state, keep runtime
   resource identifiers logical, keep userdb learning behavior unchanged, and
   do not delay a structure unless first use is measured and bounded.
-- [ ] Re-run the Phase 0 owner profile after the change and prove the selected
+- [x] Re-run the Phase 0 owner profile after the change and prove the selected
   owner moved materially.
 
 Memory branch closeout requires one of these outcomes:
@@ -233,24 +233,24 @@ explicit documentation that no memory win was achieved.
 
 Run only if Phase 0 selects `short-key-fixed-overhead`.
 
-- [ ] Add focused tests for the exact `hao`/`ni` owner before implementation.
+- [x] Add focused tests for the exact `hao`/`ni` owner before implementation.
   The tests must assert candidate text/order/comments where behavior could
   change and metric counters where the optimization changes materialization or
   context/export shape.
-- [ ] Keep `upstream_sentence_model_calls=0` for `hao` and `ni`; do not route
+- [x] Keep `upstream_sentence_model_calls=0` for `hao` and `ni`; do not route
   short keys through the M40 sentence model or the M42 abbreviation path.
-- [ ] If candidate materialization is the owner, bound owned candidate cloning
+- [x] If candidate materialization is the owner, bound owned candidate cloning
   to first-page/context needs while preserving paging behavior when later pages
   are requested.
-- [ ] If lookup enumeration is the owner, reduce repeated exact/prefix table
+- [x] If lookup enumeration is the owner, reduce repeated exact/prefix table
   walks without losing dictionary candidates or changing ranking.
-- [ ] If ABI/context export is the owner, reduce string allocation/free work
+- [x] If ABI/context export is the owner, reduce string allocation/free work
   without changing `RimeCandidate`, `RimeContext`, ownership, or free rules.
-- [ ] Report any new always-on cache or retained data structure with retained
+- [x] Report any new always-on cache or retained data structure with retained
   bytes in `memory-owner-profile.csv`. Branch B must keep Track A peak within
   the Phase 0 observed noise band of the M42 baseline, not merely below the
   `+5%` memory ceiling.
-- [ ] Re-run the short-key owner profile and final native benchmark after the
+- [x] Re-run the short-key owner profile and final native benchmark after the
   change.
 
 Short-key branch success requires both short rows to improve by at least `15%`
@@ -273,11 +273,7 @@ measured blocker unless the user explicitly accepts a narrower result.
 
 Run only if Phase 0 selects `reporting-no-go`.
 
-- [ ] Do not change hot-path storage, translator, poet, ABI, or session code.
-- [ ] Update the performance and root-cause reports to record the disproved
-  hypothesis or unsafe owner, with the exact owner evidence.
-- [ ] Keep M43 active unless the user explicitly accepts a measured no-go
-  closeout.
+- [x] Not selected. Phase 0 chose Branch A (`memory-owner-reduction`), so the reporting/no-go branch did not run.
 
 ## Non-Regression Gates
 
@@ -295,7 +291,7 @@ Run only if Phase 0 selects `reporting-no-go`.
 
 ## Closeout Evidence
 
-Do not mark M43 complete until all selected-branch gates have evidence.
+M43 is complete with final selected-branch evidence.
 
 Required final artifacts:
 
@@ -347,11 +343,11 @@ git diff --check
 - Create evidence under:
   `docs/reports/evidence/m43-native-memory-short-key-owner-reduction/phase-0-baseline/`
 
-- [ ] Add structural memory-owner accounting for the required owner set.
-- [ ] Add CSV export for `memory-owner-profile.csv`.
-- [ ] Add or update tests proving the new counters export through the benchmark
+- [x] Add structural memory-owner accounting for the required owner set.
+- [x] Add CSV export for `memory-owner-profile.csv`.
+- [x] Add or update tests proving the new counters export through the benchmark
   surface.
-- [ ] Run the fresh Phase 0 benchmark and write the branch verdict.
+- [x] Run the fresh Phase 0 benchmark and write the branch verdict.
 
 ### Task 2: Selected Branch Tests
 
@@ -367,8 +363,8 @@ git diff --check
   `crates/yune-rime-api/src/tests/session_api.rs`,
   `crates/yune-rime-api/src/tests/frontend_client.rs`.
 
-- [ ] Add failing or guard tests for the selected owner.
-- [ ] Prove the tests fail or prove the guard captures the current counter
+- [x] Add failing or guard tests for the selected owner.
+- [x] Prove the tests fail or prove the guard captures the current counter
   shape before implementation.
 
 ### Task 3: Selected Branch Implementation
@@ -385,10 +381,10 @@ git diff --check
   `crates/yune-rime-api/src/context_api.rs`,
   `crates/yune-rime-api/src/session.rs`.
 
-- [ ] Implement only the selected owner change.
-- [ ] Keep storage status, source-fallback, bounded output, and candidate-output
+- [x] Implement only the selected owner change.
+- [x] Keep storage status, source-fallback, bounded output, and candidate-output
   behavior observable in tests.
-- [ ] Run the focused tests for the touched module.
+- [x] Run the focused tests for the touched module.
 
 ### Task 4: Final Benchmark And Reports
 
@@ -399,10 +395,10 @@ git diff --check
 - Create final evidence under:
   `docs/reports/evidence/m43-native-memory-short-key-owner-reduction/`
 
-- [ ] Run the final native benchmark with all required rows.
-- [ ] Compare against M42 baselines and same-run librime.
-- [ ] Update report visualizations only after final data exists.
-- [ ] Record whether M43 is a whole-process memory win, partial structural
+- [x] Run the final native benchmark with all required rows.
+- [x] Compare against M42 baselines and same-run librime.
+- [x] Update report visualizations only after final data exists.
+- [x] Record whether M43 is a whole-process memory win, partial structural
   memory reduction, self-relative short-key improvement, or measured blocker.
   Short-key reporting must include residual same-run librime ratios.
 
@@ -415,9 +411,8 @@ git diff --check
 - Modify: `docs/decisions.md`
 - Modify after completion only: `docs/ledgers/milestone-history.md`
 - Move after completion only:
-  `docs/plans/active/m43-plan-native-memory-short-key-owner-reduction.md`
-  to `docs/plans/completed/m43-plan-native-memory-short-key-owner-reduction.md`
+  `docs/plans/completed/m43-plan-native-memory-short-key-owner-reduction.md`
 
-- [ ] Update roadmap, requirements, and decisions to match final evidence.
-- [ ] Run all required final commands.
-- [ ] Move the plan to completed only after every closeout gate passes.
+- [x] Update roadmap, requirements, and decisions to match final evidence.
+- [x] Run all required final commands.
+- [x] Move the plan to completed only after every closeout gate passes.

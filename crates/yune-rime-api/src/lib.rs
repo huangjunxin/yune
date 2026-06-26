@@ -1,7 +1,7 @@
 use std::{
     collections::{HashMap, HashSet},
     ffi::{c_void, CStr, CString},
-    fs,
+    fs, mem,
     os::raw::{c_char, c_int},
     path::{Path, PathBuf},
     ptr,
@@ -382,6 +382,10 @@ pub extern "C" fn yune_m37_metrics_snapshot_json() -> *mut c_char {
         "owned_candidates_materialized",
         metrics.owned_candidates_materialized
     );
+    metric!(
+        "owned_candidate_materialization_ns",
+        metrics.owned_candidate_materialization_ns
+    );
     metric!("candidates_sorted", metrics.candidates_sorted);
     metric!("candidate_sort_ns", metrics.candidate_sort_ns);
     metric!("userdb_merge_ns", metrics.userdb_merge_ns);
@@ -460,8 +464,15 @@ pub extern "C" fn yune_m37_metrics_snapshot_json() -> *mut c_char {
         "rsmarisa_prefix_lookup_calls",
         metrics.rsmarisa_prefix_lookup_calls
     );
+    metric!("prism_lookup_calls", metrics.prism_lookup_calls);
+    metric!("prism_lookup_ns", metrics.prism_lookup_ns);
+    metric!("prism_lookup_codes", metrics.prism_lookup_codes);
     metric!("abi_c_string_allocations", metrics.abi_c_string_allocations);
     metric!("abi_c_string_bytes", metrics.abi_c_string_bytes);
+    metric!(
+        "abi_c_string_allocation_ns",
+        metrics.abi_c_string_allocation_ns
+    );
     metric!("sentence_candidate_calls", metrics.sentence_candidate_calls);
     metric!("sentence_candidate_ns", metrics.sentence_candidate_ns);
     metric!(
@@ -626,6 +637,182 @@ pub extern "C" fn yune_m37_metrics_snapshot_json() -> *mut c_char {
     );
     let json = serde_json::Value::Object(json);
     CString::new(json.to_string()).map_or(ptr::null_mut(), CString::into_raw)
+}
+
+#[no_mangle]
+pub extern "C" fn yune_m43_memory_owner_profile_json() -> *mut c_char {
+    let registry = sessions()
+        .lock()
+        .expect("session registry should not be poisoned");
+    let rows = registry
+        .sessions
+        .iter()
+        .flat_map(|(session_id, session)| session_memory_owner_rows(*session_id, session))
+        .map(|(session_id, row)| {
+            serde_json::json!({
+                "session_id": session_id,
+                "owner": row.owner,
+                "class": row.class.as_str(),
+                "estimated_bytes": row.estimated_bytes,
+                "item_count": row.item_count,
+                "storage": row.storage,
+                "notes": row.notes,
+            })
+        })
+        .collect::<Vec<_>>();
+    CString::new(serde_json::Value::Array(rows).to_string())
+        .map_or(ptr::null_mut(), CString::into_raw)
+}
+
+fn session_memory_owner_rows(
+    session_id: RimeSessionId,
+    session: &SessionState,
+) -> Vec<(RimeSessionId, yune_core::MemoryOwnerRow)> {
+    let mut rows = session.engine.memory_owner_rows();
+    rows.extend([
+        schema_config_owner_row(session),
+        schema_processors_owner_row(session),
+        session_userdb_owner_row(session),
+        runtime_session_state_owner_row(session),
+    ]);
+    rows.into_iter().map(|row| (session_id, row)).collect()
+}
+
+fn schema_config_owner_row(session: &SessionState) -> yune_core::MemoryOwnerRow {
+    let bytes = session
+        .schema_reload_signature
+        .as_ref()
+        .map_or(0, String::capacity)
+        .saturating_add(
+            session
+                .schema_reload_watch_signature
+                .as_ref()
+                .map_or(0, String::capacity),
+        );
+    yune_core::MemoryOwnerRow::new(
+        "schema.config",
+        yune_core::MemoryOwnerClass::OverlapEstimate,
+        bytes,
+        usize::from(session.schema_reload_signature.is_some())
+            + usize::from(session.schema_reload_watch_signature.is_some()),
+        "schema_reload_signature",
+        "deployed YAML config is parsed transiently; retained bytes are reload signatures",
+    )
+}
+
+fn schema_processors_owner_row(session: &SessionState) -> yune_core::MemoryOwnerRow {
+    let bytes = mem::size_of_val(&session.key_binder)
+        .saturating_add(mem::size_of_val(&session.speller))
+        .saturating_add(mem::size_of_val(&session.editor_processor))
+        .saturating_add(estimate_hashmap_bytes(&session.editor_bindings))
+        .saturating_add(mem::size_of_val(&session.editor_char_handler))
+        .saturating_add(mem::size_of_val(&session.chord_composer))
+        .saturating_add(estimate_hashmap_bytes(
+            &session.ascii_composer_switch_bindings,
+        ))
+        .saturating_add(mem::size_of_val(&session.punctuation_processor))
+        .saturating_add(mem::size_of_val(&session.recognizer_processor))
+        .saturating_add(estimate_selector_bindings_bytes(&session.selector_bindings))
+        .saturating_add(estimate_navigator_bindings_bytes(
+            &session.navigator_bindings,
+        ))
+        .saturating_add(session.navigator_delimiters.capacity())
+        .saturating_add(estimate_string_vec_capacity(&session.base_segment_tags))
+        .saturating_add(mem::size_of_val(&session.punct_segmentor))
+        .saturating_add(
+            session
+                .affix_segmentors
+                .capacity()
+                .saturating_mul(mem::size_of::<AffixSegmentor>()),
+        )
+        .saturating_add(mem::size_of_val(&session.matcher_segmentor))
+        .saturating_add(
+            session
+                .remaining_gear_deferrals
+                .capacity()
+                .saturating_mul(mem::size_of::<RemainingGearDeferral>()),
+        )
+        .saturating_add(mem::size_of_val(&session.menu_settings));
+    yune_core::MemoryOwnerRow::new(
+        "schema.processors",
+        yune_core::MemoryOwnerClass::HeapOwnedGuarded,
+        bytes,
+        session.affix_segmentors.len()
+            + session.base_segment_tags.len()
+            + session.remaining_gear_deferrals.len(),
+        "SessionState processors",
+        "processor and segmentor state installed from the selected schema",
+    )
+}
+
+fn session_userdb_owner_row(session: &SessionState) -> yune_core::MemoryOwnerRow {
+    let entries = session.engine.userdb().entries();
+    let bytes = mem::size_of_val(session.engine.userdb()).saturating_add(
+        entries
+            .iter()
+            .map(|entry| {
+                mem::size_of_val(entry)
+                    .saturating_add(entry.code.capacity())
+                    .saturating_add(entry.text.capacity())
+            })
+            .sum::<usize>(),
+    );
+    yune_core::MemoryOwnerRow::new(
+        "session.userdb",
+        yune_core::MemoryOwnerClass::HeapOwnedGuarded,
+        bytes,
+        entries.len(),
+        "UserDb",
+        "per-session learned entries; empty in clean native benchmark runs",
+    )
+}
+
+fn runtime_session_state_owner_row(session: &SessionState) -> yune_core::MemoryOwnerRow {
+    let bytes = mem::size_of::<SessionState>()
+        .saturating_add(
+            session
+                .input_buffer
+                .as_ref()
+                .map_or(0, |value| value.as_bytes_with_nul().len()),
+        )
+        .saturating_add(estimate_hashmap_bytes(&session.editor_bindings))
+        .saturating_add(estimate_hashmap_bytes(
+            &session.ascii_composer_switch_bindings,
+        ))
+        .saturating_add(estimate_string_vec_capacity(&session.base_segment_tags))
+        .saturating_add(session.user_dict_name.as_ref().map_or(0, String::capacity));
+    yune_core::MemoryOwnerRow::new(
+        "runtime.session_state",
+        yune_core::MemoryOwnerClass::HeapOwnedGuarded,
+        bytes,
+        1,
+        "SessionState",
+        "active native session runtime shell excluding shared translator internals",
+    )
+}
+
+fn estimate_hashmap_bytes<K, V>(map: &HashMap<K, V>) -> usize {
+    mem::size_of_val(map).saturating_add(map.capacity().saturating_mul(mem::size_of::<(K, V)>()))
+}
+
+fn estimate_string_vec_capacity(values: &[String]) -> usize {
+    values
+        .iter()
+        .map(String::capacity)
+        .sum::<usize>()
+        .saturating_add(values.len().saturating_mul(mem::size_of::<String>()))
+}
+
+fn estimate_selector_bindings_bytes(bindings: &SelectorBindings) -> usize {
+    estimate_hashmap_bytes(&bindings.horizontal_stacked)
+        .saturating_add(estimate_hashmap_bytes(&bindings.horizontal_linear))
+        .saturating_add(estimate_hashmap_bytes(&bindings.vertical_stacked))
+        .saturating_add(estimate_hashmap_bytes(&bindings.vertical_linear))
+}
+
+fn estimate_navigator_bindings_bytes(bindings: &NavigatorBindings) -> usize {
+    estimate_hashmap_bytes(&bindings.horizontal)
+        .saturating_add(estimate_hashmap_bytes(&bindings.vertical))
 }
 
 #[no_mangle]

@@ -28,6 +28,7 @@ type YuneM37MetricsSnapshotJson = unsafe extern "C" fn() -> *mut c_char;
 type YuneM37MetricsFreeString = unsafe extern "C" fn(*mut c_char);
 type YuneStartupTraceBegin = unsafe extern "C" fn();
 type YuneStartupTraceFinishJson = unsafe extern "C" fn() -> *mut c_char;
+type YuneM43MemoryOwnerProfileJson = unsafe extern "C" fn() -> *mut c_char;
 
 const DEFAULT_ITERATIONS: usize = 9;
 const DEFAULT_SESSION_ITERATIONS: usize = 60;
@@ -40,6 +41,7 @@ const M37_METRIC_FIELDS: &[&str] = &[
     "translator_ns",
     "lookup_views_visited",
     "owned_candidates_materialized",
+    "owned_candidate_materialization_ns",
     "candidates_sorted",
     "candidate_sort_ns",
     "userdb_merge_ns",
@@ -76,8 +78,12 @@ const M37_METRIC_FIELDS: &[&str] = &[
     "no_marisa_compact_prefix_lookup_calls",
     "rsmarisa_exact_lookup_calls",
     "rsmarisa_prefix_lookup_calls",
+    "prism_lookup_calls",
+    "prism_lookup_ns",
+    "prism_lookup_codes",
     "abi_c_string_allocations",
     "abi_c_string_bytes",
+    "abi_c_string_allocation_ns",
     "sentence_candidate_calls",
     "sentence_candidate_ns",
     "sentence_substrings_considered",
@@ -156,6 +162,11 @@ fn main() {
         &options.output.join("raw_lookup_microbench.csv"),
         &options,
         &samples,
+    );
+    write_memory_owner_profile(
+        &options.output.join("memory-owner-profile.csv"),
+        &engine,
+        &options,
     );
     write_metadata(&options.output.join("metadata.txt"), &options);
     println!("engine={}", options.engine);
@@ -303,6 +314,18 @@ impl LoadedRime {
             })
         }
     }
+
+    fn m43_memory_owner_profile(&self) -> Option<MemoryOwnerProfileExports> {
+        unsafe {
+            Some(MemoryOwnerProfileExports {
+                snapshot_json: *self
+                    .library
+                    .get(b"yune_m43_memory_owner_profile_json\0")
+                    .ok()?,
+                free_string: *self.library.get(b"yune_m37_metrics_free_string\0").ok()?,
+            })
+        }
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -353,6 +376,58 @@ struct StartupTraceExports {
     begin: YuneStartupTraceBegin,
     finish_json: YuneStartupTraceFinishJson,
     free_string: YuneM37MetricsFreeString,
+}
+
+#[derive(Clone, Copy)]
+struct MemoryOwnerProfileExports {
+    snapshot_json: YuneM43MemoryOwnerProfileJson,
+    free_string: YuneM37MetricsFreeString,
+}
+
+impl MemoryOwnerProfileExports {
+    fn snapshot(self) -> Vec<MemoryOwnerProfileRow> {
+        unsafe {
+            let value = (self.snapshot_json)();
+            if value.is_null() {
+                return Vec::new();
+            }
+            let text = CStr::from_ptr(value).to_string_lossy().into_owned();
+            (self.free_string)(value);
+            let Ok(json) = serde_json::from_str::<serde_json::Value>(&text) else {
+                return Vec::new();
+            };
+            json.as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(MemoryOwnerProfileRow::from_json)
+                .collect()
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+struct MemoryOwnerProfileRow {
+    session_id: u64,
+    owner: String,
+    byte_class: String,
+    estimated_bytes: u64,
+    item_count: u64,
+    storage: String,
+    notes: String,
+}
+
+impl MemoryOwnerProfileRow {
+    fn from_json(value: &serde_json::Value) -> Option<Self> {
+        Some(Self {
+            session_id: value.get("session_id")?.as_u64()?,
+            owner: value.get("owner")?.as_str()?.to_owned(),
+            byte_class: value.get("class")?.as_str()?.to_owned(),
+            estimated_bytes: value.get("estimated_bytes")?.as_u64()?,
+            item_count: value.get("item_count")?.as_u64()?,
+            storage: value.get("storage")?.as_str()?.to_owned(),
+            notes: value.get("notes")?.as_str()?.to_owned(),
+        })
+    }
 }
 
 impl StartupTraceExports {
@@ -1496,7 +1571,7 @@ fn selected_data_path(options: &Options, file_name: &str) -> Option<PathBuf> {
 }
 
 fn write_raw_lookup_microbench(path: &PathBuf, options: &Options, samples: &[Sample]) {
-    let mut output = String::from("engine,track,schema_id,input,iterations,table_path,prism_path,selected_storage,table_mapping_mode,prism_mapping_mode,raw_prism_median_us,raw_prism_code_count,raw_table_median_us,raw_table_lookup_codes,raw_table_candidate_count,translator_median_us,context_export_median_us,rsmarisa_exact_lookup_calls_per_op,rsmarisa_prefix_lookup_calls_per_op,owned_candidates_per_op,context_page_candidates_per_op,abi_c_string_allocations_per_op,abi_c_string_bytes_per_op\n");
+    let mut output = String::from("engine,track,schema_id,input,iterations,table_path,prism_path,selected_storage,table_mapping_mode,prism_mapping_mode,raw_prism_median_us,raw_prism_code_count,raw_table_median_us,raw_table_lookup_codes,raw_table_candidate_count,translator_median_us,real_prism_lookup_median_us,candidate_materialization_median_us,candidate_sort_median_us,filter_pipeline_median_us,ranker_pipeline_median_us,context_export_median_us,abi_c_string_allocation_median_us,free_context_median_us,rsmarisa_exact_lookup_calls_per_op,rsmarisa_prefix_lookup_calls_per_op,owned_candidates_per_op,context_page_candidates_per_op,abi_c_string_allocations_per_op,abi_c_string_bytes_per_op\n");
     if options.engine != "yune"
         || options.track != "track-a-comparison"
         || options.schema != "luna_pinyin"
@@ -1514,7 +1589,7 @@ fn write_raw_lookup_microbench(path: &PathBuf, options: &Options, samples: &[Sam
         }
         Err(error) => {
             output.push_str(&format!(
-                "{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n",
+                "{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n",
                 csv(&options.engine),
                 csv(&options.track),
                 csv(&options.schema),
@@ -1538,11 +1613,91 @@ fn write_raw_lookup_microbench(path: &PathBuf, options: &Options, samples: &[Sam
                 "unavailable",
                 "unavailable",
                 "unavailable",
+                "unavailable",
+                "unavailable",
+                "unavailable",
+                "unavailable",
+                "unavailable",
+                "unavailable",
+                "unavailable",
             ));
         }
     }
 
     fs::write(path, output).expect("raw lookup microbench CSV should be written");
+}
+
+fn write_memory_owner_profile(path: &PathBuf, engine: &LoadedRime, options: &Options) {
+    let mut output = String::from("engine,track,schema_id,session_id,owner_id,module,structure,byte_class,sharing_scope,retained_estimate_bytes,non_overlapping_reducible_bytes,logical_bytes,item_count,mapped_file_bytes,mapping_mode,evidence_source,notes\n");
+    if options.engine != "yune" {
+        fs::write(path, output).expect("memory owner profile CSV should be written");
+        return;
+    }
+    let Some(exports) = engine.m43_memory_owner_profile() else {
+        fs::write(path, output).expect("memory owner profile CSV should be written");
+        return;
+    };
+    with_service(engine, options, |api| {
+        let session_id = require("create_session", api.create_session)();
+        assert_ne!(session_id, 0, "create_session returned 0");
+        select_schema(api, session_id, &options.schema);
+        set_default_options(api, session_id);
+        for row in exports.snapshot() {
+            let (module, structure) = split_owner_id(&row.owner);
+            let non_overlapping_reducible_bytes = if row.byte_class == "heap_owned_reducible" {
+                row.estimated_bytes
+            } else {
+                0
+            };
+            let logical_bytes = if row.byte_class == "overlap_estimate" {
+                row.estimated_bytes
+            } else {
+                0
+            };
+            let mapped_file_bytes = if row.byte_class == "mmap_file_backed" {
+                row.estimated_bytes
+            } else {
+                0
+            };
+            let sharing_scope = match row.byte_class.as_str() {
+                "shared" => "shared_reference",
+                "mmap_file_backed" => "file_mapping",
+                "overlap_estimate" => "logical_overlap",
+                _ => "session_or_process_heap",
+            };
+            output.push_str(&format!(
+                "{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n",
+                csv(&options.engine),
+                csv(&options.track),
+                csv(&options.schema),
+                row.session_id,
+                csv(&row.owner),
+                csv(module),
+                csv(structure),
+                csv(&row.byte_class),
+                csv(sharing_scope),
+                row.estimated_bytes,
+                non_overlapping_reducible_bytes,
+                logical_bytes,
+                row.item_count,
+                mapped_file_bytes,
+                csv(&row.storage),
+                "yune_m43_memory_owner_profile_json",
+                csv(&row.notes),
+            ));
+        }
+        assert_eq!(
+            require("destroy_session", api.destroy_session)(session_id),
+            TRUE
+        );
+    });
+    fs::write(path, output).expect("memory owner profile CSV should be written");
+}
+
+fn split_owner_id(owner: &str) -> (&str, &str) {
+    owner
+        .split_once('.')
+        .map_or((owner, ""), |(module, structure)| (module, structure))
 }
 
 struct RawLookupFixture {
@@ -1616,7 +1771,7 @@ fn run_raw_lookup_microbench_row(
 
     let key_metrics = median_key_metrics(samples, input);
     format!(
-        "{},{},{},{},{},{},{},{},{},{},{:.3},{},{:.3},{},{},{},{},{},{},{},{},{},{}\n",
+        "{},{},{},{},{},{},{},{},{},{},{:.3},{},{:.3},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n",
         csv(&options.engine),
         csv(&options.track),
         csv(&options.schema),
@@ -1633,7 +1788,14 @@ fn run_raw_lookup_microbench_row(
         csv(&lookup_codes.join("|")),
         table_candidate_count,
         optional_f64(key_metrics.translator_median_us),
+        optional_f64(key_metrics.real_prism_lookup_median_us),
+        optional_f64(key_metrics.candidate_materialization_median_us),
+        optional_f64(key_metrics.candidate_sort_median_us),
+        optional_f64(key_metrics.filter_pipeline_median_us),
+        optional_f64(key_metrics.ranker_pipeline_median_us),
         optional_f64(key_metrics.context_export_median_us),
+        optional_f64(key_metrics.abi_c_string_allocation_median_us),
+        optional_f64(key_metrics.free_context_median_us),
         optional_f64(key_metrics.rsmarisa_exact_lookup_calls_per_op),
         optional_f64(key_metrics.rsmarisa_prefix_lookup_calls_per_op),
         optional_f64(key_metrics.owned_candidates_per_op),
@@ -1661,7 +1823,14 @@ fn raw_lookup_codes(fixture: &RawLookupFixture, input: &str) -> Vec<String> {
 #[derive(Default)]
 struct KeyOwnerMetrics {
     translator_median_us: Option<f64>,
+    real_prism_lookup_median_us: Option<f64>,
+    candidate_materialization_median_us: Option<f64>,
+    candidate_sort_median_us: Option<f64>,
+    filter_pipeline_median_us: Option<f64>,
+    ranker_pipeline_median_us: Option<f64>,
     context_export_median_us: Option<f64>,
+    abi_c_string_allocation_median_us: Option<f64>,
+    free_context_median_us: Option<f64>,
     rsmarisa_exact_lookup_calls_per_op: Option<f64>,
     rsmarisa_prefix_lookup_calls_per_op: Option<f64>,
     owned_candidates_per_op: Option<f64>,
@@ -1698,11 +1867,40 @@ fn median_key_metrics(samples: &[Sample], input: &str) -> KeyOwnerMetrics {
     KeyOwnerMetrics {
         translator_median_us: metric_per_operation(samples, input, "translator_ns", None)
             .map(|value| value / 1000.0),
+        real_prism_lookup_median_us: metric_per_operation(samples, input, "prism_lookup_ns", None)
+            .map(|value| value / 1000.0),
+        candidate_materialization_median_us: metric_per_operation(
+            samples,
+            input,
+            "owned_candidate_materialization_ns",
+            None,
+        )
+        .map(|value| value / 1000.0),
+        candidate_sort_median_us: metric_per_operation(samples, input, "candidate_sort_ns", None)
+            .map(|value| value / 1000.0),
+        filter_pipeline_median_us: metric_per_operation(samples, input, "filter_pipeline_ns", None)
+            .map(|value| value / 1000.0),
+        ranker_pipeline_median_us: metric_per_operation(samples, input, "ranker_pipeline_ns", None)
+            .map(|value| value / 1000.0),
         context_export_median_us: metric_per_operation(
             samples,
             input,
             "abi_get_context_ns",
             Some("abi_get_context_calls"),
+        )
+        .map(|value| value / 1000.0),
+        abi_c_string_allocation_median_us: metric_per_operation(
+            samples,
+            input,
+            "abi_c_string_allocation_ns",
+            None,
+        )
+        .map(|value| value / 1000.0),
+        free_context_median_us: metric_per_operation(
+            samples,
+            input,
+            "abi_free_context_ns",
+            Some("abi_free_context_calls"),
         )
         .map(|value| value / 1000.0),
         rsmarisa_exact_lookup_calls_per_op: metric_per_operation(

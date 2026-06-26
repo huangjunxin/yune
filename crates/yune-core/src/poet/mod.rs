@@ -1,8 +1,12 @@
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, HashMap};
+use std::mem;
 use std::time::Instant;
 
-use crate::{Candidate, CandidateSource, PresetVocabularyEntry, TableDictionary, TableEntry};
+use crate::{
+    Candidate, CandidateSource, MemoryOwnerClass, MemoryOwnerRow, PresetVocabularyEntry,
+    TableDictionary, TableEntry,
+};
 
 mod index;
 
@@ -448,6 +452,8 @@ fn partition_spread(lengths: &[usize]) -> usize {
 #[derive(Clone, Debug, Default)]
 pub struct UpstreamSentenceModel {
     entries_by_code: Vec<ModelEntry>,
+    entry_texts: ModelStringPool,
+    entry_codes: ModelStringPool,
     lookup_index: SentenceLookupIndex,
     vocabulary: Vec<ModelVocabularyEntry>,
     vocabulary_first_codes: Vec<(String, usize)>,
@@ -512,12 +518,12 @@ impl UpstreamSentenceModel {
     }
 
     fn from_model_entries(
-        entries: impl IntoIterator<Item = ModelEntry>,
+        entries: impl IntoIterator<Item = OwnedModelEntry>,
         vocabulary: &[PresetVocabularyEntry],
         abbreviation_vocabulary: &[PresetVocabularyEntry],
         max_candidates: usize,
     ) -> Self {
-        let mut entries_by_code = Vec::new();
+        let mut owned_entries = Vec::new();
         let mut character_codes: HashMap<char, Vec<String>> = HashMap::new();
         let mut abbreviation_character_codes: HashMap<char, Vec<String>> = HashMap::new();
         for entry in entries {
@@ -539,7 +545,7 @@ impl UpstreamSentenceModel {
                     }
                 }
             }
-            entries_by_code.push(entry);
+            owned_entries.push(entry);
         }
         for codes in character_codes.values_mut() {
             codes.sort();
@@ -549,9 +555,10 @@ impl UpstreamSentenceModel {
             codes.sort();
             codes.dedup();
         }
-        entries_by_code.sort_by(compare_model_entry_by_code);
+        owned_entries.sort_by(compare_model_entry_by_code);
+        let (entries_by_code, entry_texts, entry_codes) = pack_owned_model_entries(owned_entries);
         let index_start = crate::m37_metrics_enabled().then(Instant::now);
-        let lookup_index = SentenceLookupIndex::build(&entries_by_code);
+        let lookup_index = SentenceLookupIndex::build(&entries_by_code, &entry_codes);
         if let Some(index_start) = index_start {
             crate::m37_record_upstream_sentence_model_index_build(index_start.elapsed());
         }
@@ -561,6 +568,8 @@ impl UpstreamSentenceModel {
             build_model_vocabulary_index(abbreviation_vocabulary, &abbreviation_character_codes);
         Self {
             entries_by_code,
+            entry_texts,
+            entry_codes,
             lookup_index,
             vocabulary,
             vocabulary_first_codes,
@@ -575,6 +584,42 @@ impl UpstreamSentenceModel {
     #[must_use]
     pub fn candidates_for_input(&self, input: &str) -> Vec<Candidate> {
         self.candidates_for_input_with_limit(input, self.max_candidates)
+    }
+
+    #[must_use]
+    pub fn memory_owner_rows(&self) -> Vec<MemoryOwnerRow> {
+        vec![
+            MemoryOwnerRow::new(
+                "poet.entries_by_code",
+                MemoryOwnerClass::HeapOwnedReducible,
+                estimate_model_entries_bytes(
+                    &self.entries_by_code,
+                    &self.entry_texts,
+                    &self.entry_codes,
+                ),
+                self.entries_by_code.len(),
+                "Vec<ModelEntry>",
+                "sentence model entries cloned from table rows",
+            ),
+            MemoryOwnerRow::new(
+                "poet.lookup_index",
+                MemoryOwnerClass::HeapOwnedGuarded,
+                self.lookup_index.estimated_retained_bytes(),
+                self.lookup_index.range_count(),
+                "SentenceLookupIndex",
+                "sorted code-range index used by M40 sentence lookup",
+            ),
+            MemoryOwnerRow::new(
+                "poet.abbreviation_vocabulary",
+                MemoryOwnerClass::HeapOwnedReducible,
+                estimate_model_vocabulary_bytes(&self.abbreviation_vocabulary).saturating_add(
+                    estimate_string_usize_pairs_bytes(&self.abbreviation_vocabulary_first_codes),
+                ),
+                self.abbreviation_vocabulary.len(),
+                "Vec<ModelVocabularyEntry>",
+                "abbreviation-only vocabulary used by M42 guard rows",
+            ),
+        ]
     }
 
     #[must_use]
@@ -776,9 +821,13 @@ impl UpstreamSentenceModel {
             lookup_metrics.reachable_starts_visited += 1;
             let suffix = &input[start..];
             lookup_metrics.phrase_index_walk_calls += 1;
-            let walk =
-                self.lookup_index
-                    .walk_from(&self.entries_by_code, input, &boundaries, start_index);
+            let walk = self.lookup_index.walk_from(
+                &self.entries_by_code,
+                &self.entry_codes,
+                input,
+                &boundaries,
+                start_index,
+            );
             code_prefix_checks += walk.prefix_hits + walk.prefix_misses;
             lookup_metrics.prefix_filter_hits += walk.prefix_hits;
             lookup_metrics.prefix_filter_misses += walk.prefix_misses;
@@ -804,8 +853,8 @@ impl UpstreamSentenceModel {
                         .entry(span.end)
                         .or_default()
                         .push(WordGraphEntry::new(
-                            entry.text.clone(),
-                            entry.code.clone(),
+                            entry.text(&self.entry_texts).to_owned(),
+                            entry.code(&self.entry_codes).to_owned(),
                             f64::from(entry.weight),
                         ));
                     graph_edges += 1;
@@ -936,8 +985,8 @@ impl UpstreamSentenceModel {
                         .entry(span.end)
                         .or_default()
                         .push(WordGraphEntry::new(
-                            entry.text.clone(),
-                            entry.code.clone(),
+                            entry.text(&self.entry_texts).to_owned(),
+                            entry.code(&self.entry_codes).to_owned(),
                             f64::from(entry.weight),
                         ));
                     graph_edges += 1;
@@ -1000,7 +1049,7 @@ impl UpstreamSentenceModel {
 
     fn entries_for_code(&self, code: &str) -> Option<&[ModelEntry]> {
         self.lookup_index
-            .entries_for_code(&self.entries_by_code, code)
+            .entries_for_code(&self.entries_by_code, &self.entry_codes, code)
     }
 
     fn derive_matching_phrase_codes(
@@ -1162,29 +1211,169 @@ struct ModelVocabularyEntry {
     weight: f32,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) struct ModelStringRange {
+    start: u32,
+    end: u32,
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub(super) struct ModelStringPool {
+    bytes: Box<str>,
+    ranges: Box<[ModelStringRange]>,
+}
+
+impl ModelStringPool {
+    fn string(&self, range: ModelStringRange) -> &str {
+        &self.bytes[range.start as usize..range.end as usize]
+    }
+
+    fn indexed(&self, index: u32) -> &str {
+        self.string(self.ranges[index as usize])
+    }
+
+    fn estimated_retained_bytes(&self) -> usize {
+        mem::size_of::<Self>()
+            .saturating_add(self.bytes.len())
+            .saturating_add(
+                self.ranges
+                    .len()
+                    .saturating_mul(mem::size_of::<ModelStringRange>()),
+            )
+    }
+}
+
+fn pack_owned_model_entries(
+    entries: Vec<OwnedModelEntry>,
+) -> (Vec<ModelEntry>, ModelStringPool, ModelStringPool) {
+    let mut model_entries = Vec::with_capacity(entries.len());
+    let mut text_bytes = String::new();
+    let mut code_bytes = String::new();
+    let mut code_ranges = Vec::<ModelStringRange>::new();
+    for entry in entries {
+        let text_start =
+            u32::try_from(text_bytes.len()).expect("sentence model text pool exceeds u32");
+        text_bytes.push_str(&entry.text);
+        let text_end =
+            u32::try_from(text_bytes.len()).expect("sentence model text pool exceeds u32");
+        let new_code = match code_ranges.last() {
+            Some(range) => code_bytes[range.start as usize..range.end as usize] != entry.code,
+            None => true,
+        };
+        if new_code {
+            let code_start =
+                u32::try_from(code_bytes.len()).expect("sentence model code pool exceeds u32");
+            code_bytes.push_str(&entry.code);
+            let code_end =
+                u32::try_from(code_bytes.len()).expect("sentence model code pool exceeds u32");
+            code_ranges.push(ModelStringRange {
+                start: code_start,
+                end: code_end,
+            });
+        }
+        model_entries.push(ModelEntry {
+            text: ModelStringRange {
+                start: text_start,
+                end: text_end,
+            },
+            code_id: u32::try_from(code_ranges.len() - 1)
+                .expect("sentence model code id exceeds u32"),
+            weight: entry.weight,
+        });
+    }
+    (
+        model_entries,
+        ModelStringPool {
+            bytes: text_bytes.into_boxed_str(),
+            ranges: Box::default(),
+        },
+        ModelStringPool {
+            bytes: code_bytes.into_boxed_str(),
+            ranges: code_ranges.into_boxed_slice(),
+        },
+    )
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
 struct ModelEntry {
-    text: String,
-    code: String,
+    text: ModelStringRange,
+    code_id: u32,
     weight: f32,
 }
 
 impl ModelEntry {
-    fn from_table_entry(entry: &TableEntry) -> Self {
-        Self {
+    fn from_table_entry(entry: &TableEntry) -> OwnedModelEntry {
+        OwnedModelEntry {
             text: entry.text.clone(),
             code: entry.code.clone(),
             weight: entry.weight,
         }
     }
 
-    fn from_owned_table_entry(entry: TableEntry) -> Self {
-        Self {
+    fn from_owned_table_entry(entry: TableEntry) -> OwnedModelEntry {
+        OwnedModelEntry {
             text: entry.text,
             code: entry.code,
             weight: entry.weight,
         }
     }
+
+    fn text<'a>(&self, pool: &'a ModelStringPool) -> &'a str {
+        pool.string(self.text)
+    }
+
+    fn code<'a>(&self, pool: &'a ModelStringPool) -> &'a str {
+        pool.indexed(self.code_id)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+struct OwnedModelEntry {
+    text: String,
+    code: String,
+    weight: f32,
+}
+
+fn estimate_model_entries_bytes(
+    entries: &[ModelEntry],
+    texts: &ModelStringPool,
+    codes: &ModelStringPool,
+) -> usize {
+    mem::size_of::<Vec<ModelEntry>>()
+        .saturating_add(entries.len().saturating_mul(mem::size_of::<ModelEntry>()))
+        .saturating_add(texts.estimated_retained_bytes())
+        .saturating_add(codes.estimated_retained_bytes())
+}
+
+fn estimate_model_vocabulary_bytes(entries: &[ModelVocabularyEntry]) -> usize {
+    mem::size_of::<Vec<ModelVocabularyEntry>>()
+        .saturating_add(
+            entries
+                .len()
+                .saturating_mul(mem::size_of::<ModelVocabularyEntry>()),
+        )
+        .saturating_add(
+            entries
+                .iter()
+                .map(|entry| {
+                    entry.text.capacity().saturating_add(
+                        entry
+                            .chars
+                            .capacity()
+                            .saturating_mul(mem::size_of::<char>()),
+                    )
+                })
+                .sum::<usize>(),
+        )
+}
+
+fn estimate_string_usize_pairs_bytes(values: &[(String, usize)]) -> usize {
+    mem::size_of_val(values).saturating_add(
+        values
+            .iter()
+            .map(|(value, _)| value.capacity())
+            .sum::<usize>(),
+    )
 }
 
 fn compare_sentence_candidate(left: &Candidate, right: &Candidate) -> Ordering {
@@ -1203,13 +1392,13 @@ fn compare_word_graph_entry(left: &WordGraphEntry, right: &WordGraphEntry) -> Or
         .then_with(|| left.text.cmp(&right.text))
 }
 
-fn compare_model_entry_by_code(left: &ModelEntry, right: &ModelEntry) -> Ordering {
+fn compare_model_entry_by_code(left: &OwnedModelEntry, right: &OwnedModelEntry) -> Ordering {
     left.code
         .cmp(&right.code)
         .then_with(|| compare_model_entry(left, right))
 }
 
-fn compare_model_entry(left: &ModelEntry, right: &ModelEntry) -> Ordering {
+fn compare_model_entry(left: &OwnedModelEntry, right: &OwnedModelEntry) -> Ordering {
     right
         .weight
         .partial_cmp(&left.weight)

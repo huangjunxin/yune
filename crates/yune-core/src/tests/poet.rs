@@ -1,7 +1,7 @@
 use crate::{
     make_sentence, make_sentences, null_grammar_score, CandidateSource, SentenceCodeSpan,
-    StaticTableTranslator, TableDictionary, Translator, UpstreamSentenceModel, WordGraph,
-    WordGraphEntry, UPSTREAM_NO_GRAMMAR_PENALTY,
+    StaticTableTranslator, TableDictionary, TableEntry, Translator, UpstreamSentenceModel,
+    WordGraph, WordGraphEntry, UPSTREAM_NO_GRAMMAR_PENALTY,
 };
 
 #[test]
@@ -134,6 +134,36 @@ C\tef\t1000
     assert_eq!(candidates[0].text, "ABC");
     assert!(metrics.upstream_sentence_model_code_prefix_checks <= 21);
     assert!(metrics.upstream_sentence_model_table_entries_considered <= 3);
+}
+
+#[test]
+fn upstream_sentence_model_memory_profile_accounts_packed_entries() {
+    let repeated_code = "sharedsentencemodelcode".repeat(4);
+    let entries = (0..64)
+        .map(|index| TableEntry::new(&repeated_code, format!("phrase-{index:02}"), 100.0))
+        .collect::<Vec<_>>();
+    let old_owned_shape_lower_bound = std::mem::size_of::<Vec<TableEntry>>()
+        + entries.len() * (std::mem::size_of::<String>() * 2 + std::mem::size_of::<f32>())
+        + entries
+            .iter()
+            .map(|entry| entry.code.len() + entry.text.len())
+            .sum::<usize>();
+
+    let model = UpstreamSentenceModel::from_table_entries(entries, &[], 10);
+    let owner = model
+        .memory_owner_rows()
+        .into_iter()
+        .find(|row| row.owner == "poet.entries_by_code")
+        .expect("sentence model entry owner should be reported");
+
+    assert_eq!(owner.item_count, 64);
+    assert_eq!(owner.storage, "Vec<ModelEntry>");
+    assert!(
+        owner.estimated_bytes < old_owned_shape_lower_bound,
+        "packed owner {} should stay below old string-heavy shape {}",
+        owner.estimated_bytes,
+        old_owned_shape_lower_bound
+    );
 }
 
 #[test]

@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, HashMap, HashSet};
+use std::mem;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
@@ -14,8 +15,9 @@ use crate::poet::{SentenceCodeSpan, UpstreamSentenceModel};
 use crate::spelling_algebra::{ExpandedSpellingEntry, SpellingAlgebra};
 use crate::{
     Candidate, CandidateRequest, CandidateSource, Context, M37SentenceCandidateMetrics,
-    PresetVocabularyEntry, RimeCorrectionEntry, RimeToleranceRule, SpellingAlgebraDebug, Status,
-    TableDictionary, TableDictionaryParseError, TableEntry, TranslationResult, Translator,
+    MemoryOwnerClass, MemoryOwnerRow, PresetVocabularyEntry, RimeCorrectionEntry,
+    RimeToleranceRule, SpellingAlgebraDebug, Status, TableDictionary, TableDictionaryParseError,
+    TableEntry, TranslationResult, Translator,
 };
 
 const TYPEDUCK_CORRECTION_CREDIBILITY: f32 = -16.118_095; // log(1e-7)
@@ -288,6 +290,62 @@ impl TableStorage {
                 .collect(),
         }
     }
+
+    fn memory_owner_rows(&self) -> Vec<MemoryOwnerRow> {
+        match self {
+            Self::Heap(entries) => vec![MemoryOwnerRow::new(
+                "translator.entries_by_code",
+                MemoryOwnerClass::HeapOwnedGuarded,
+                estimate_entries_by_code_bytes(entries),
+                entries.values().map(Vec::len).sum(),
+                "BTreeMap<String, Vec<Candidate>>",
+                "heap dictionary rows used by source-YAML and small test translators",
+            )],
+            Self::Compact(store) => {
+                let mut rows = vec![MemoryOwnerRow::new(
+                    "translator.entries_by_code",
+                    MemoryOwnerClass::Shared,
+                    0,
+                    0,
+                    "compact_table",
+                    "compact storage path does not retain a translator BTreeMap",
+                )];
+                rows.extend(store.memory_owner_rows());
+                rows
+            }
+        }
+    }
+}
+
+fn estimate_entries_by_code_bytes(entries: &BTreeMap<String, Vec<Candidate>>) -> usize {
+    mem::size_of::<BTreeMap<String, Vec<Candidate>>>().saturating_add(
+        entries
+            .iter()
+            .map(|(code, candidates)| {
+                code.capacity()
+                    .saturating_add(mem::size_of::<(String, Vec<Candidate>)>())
+                    .saturating_add(
+                        candidates
+                            .capacity()
+                            .saturating_mul(mem::size_of::<Candidate>()),
+                    )
+                    .saturating_add(
+                        candidates
+                            .iter()
+                            .map(estimate_candidate_bytes)
+                            .sum::<usize>(),
+                    )
+            })
+            .sum::<usize>(),
+    )
+}
+
+fn estimate_candidate_bytes(candidate: &Candidate) -> usize {
+    candidate
+        .text
+        .capacity()
+        .saturating_add(candidate.comment.capacity())
+        .saturating_add(candidate.preedit.as_ref().map_or(0, String::capacity))
 }
 
 pub struct StaticTableTranslator {
@@ -790,7 +848,12 @@ impl StaticTableTranslator {
         if let (Some(prism), Some(syllabary_codes)) =
             (self.prism_payload.as_ref(), self.storage.syllabary_codes())
         {
-            for lookup in prism.lookup_canonical_codes(lookup_code, syllabary_codes) {
+            let prism_start = crate::m37_metrics_enabled().then(Instant::now);
+            let lookups = prism.lookup_canonical_codes(lookup_code, syllabary_codes);
+            if let Some(start) = prism_start {
+                crate::m37_record_prism_lookup(start.elapsed(), lookups.len());
+            }
+            for lookup in lookups {
                 if !lookup.correction
                     && !specs.iter().any(|spec| spec.code == lookup.code)
                     && self.storage.has_code(lookup.code)
@@ -953,8 +1016,12 @@ impl StaticTableTranslator {
                     break;
                 }
                 let spelling = &input[start..end];
-                let mut codes = prism
-                    .lookup_canonical_codes(spelling, syllabary_codes)
+                let prism_start = crate::m37_metrics_enabled().then(Instant::now);
+                let lookups = prism.lookup_canonical_codes(spelling, syllabary_codes);
+                if let Some(start) = prism_start {
+                    crate::m37_record_prism_lookup(start.elapsed(), lookups.len());
+                }
+                let mut codes = lookups
                     .into_iter()
                     .filter(|lookup| {
                         !lookup.correction
@@ -2545,6 +2612,41 @@ impl Translator for StaticTableTranslator {
 
     fn prediction_weight_threshold(&self) -> Option<f32> {
         self.prediction_weight_threshold
+    }
+
+    fn memory_owner_rows(&self) -> Vec<MemoryOwnerRow> {
+        let mut rows = self.storage.memory_owner_rows();
+        if let Some(model) = &self.upstream_sentence_model {
+            rows.extend(model.memory_owner_rows());
+        } else {
+            rows.extend([
+                MemoryOwnerRow::new(
+                    "poet.entries_by_code",
+                    MemoryOwnerClass::Shared,
+                    0,
+                    0,
+                    "none",
+                    "upstream sentence model not retained for this translator",
+                ),
+                MemoryOwnerRow::new(
+                    "poet.lookup_index",
+                    MemoryOwnerClass::Shared,
+                    0,
+                    0,
+                    "none",
+                    "upstream sentence model not retained for this translator",
+                ),
+                MemoryOwnerRow::new(
+                    "poet.abbreviation_vocabulary",
+                    MemoryOwnerClass::Shared,
+                    0,
+                    0,
+                    "none",
+                    "upstream sentence model not retained for this translator",
+                ),
+            ]);
+        }
+        rows
     }
 }
 

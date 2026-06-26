@@ -12,6 +12,7 @@ pub struct M37MetricsSnapshot {
     pub translator_ns: u64,
     pub lookup_views_visited: u64,
     pub owned_candidates_materialized: u64,
+    pub owned_candidate_materialization_ns: u64,
     pub candidates_sorted: u64,
     pub candidate_sort_ns: u64,
     pub userdb_merge_ns: u64,
@@ -48,8 +49,12 @@ pub struct M37MetricsSnapshot {
     pub no_marisa_compact_prefix_lookup_calls: u64,
     pub rsmarisa_exact_lookup_calls: u64,
     pub rsmarisa_prefix_lookup_calls: u64,
+    pub prism_lookup_calls: u64,
+    pub prism_lookup_ns: u64,
+    pub prism_lookup_codes: u64,
     pub abi_c_string_allocations: u64,
     pub abi_c_string_bytes: u64,
+    pub abi_c_string_allocation_ns: u64,
     pub sentence_candidate_calls: u64,
     pub sentence_candidate_ns: u64,
     pub sentence_substrings_considered: u64,
@@ -146,6 +151,7 @@ struct M37Metrics {
     translator_ns: AtomicU64,
     lookup_views_visited: AtomicU64,
     owned_candidates_materialized: AtomicU64,
+    owned_candidate_materialization_ns: AtomicU64,
     candidates_sorted: AtomicU64,
     candidate_sort_ns: AtomicU64,
     userdb_merge_ns: AtomicU64,
@@ -182,8 +188,12 @@ struct M37Metrics {
     no_marisa_compact_prefix_lookup_calls: AtomicU64,
     rsmarisa_exact_lookup_calls: AtomicU64,
     rsmarisa_prefix_lookup_calls: AtomicU64,
+    prism_lookup_calls: AtomicU64,
+    prism_lookup_ns: AtomicU64,
+    prism_lookup_codes: AtomicU64,
     abi_c_string_allocations: AtomicU64,
     abi_c_string_bytes: AtomicU64,
+    abi_c_string_allocation_ns: AtomicU64,
     sentence_candidate_calls: AtomicU64,
     sentence_candidate_ns: AtomicU64,
     sentence_substrings_considered: AtomicU64,
@@ -258,6 +268,9 @@ pub fn m37_metrics_reset() {
     metrics
         .owned_candidates_materialized
         .store(0, Ordering::Relaxed);
+    metrics
+        .owned_candidate_materialization_ns
+        .store(0, Ordering::Relaxed);
     metrics.candidates_sorted.store(0, Ordering::Relaxed);
     metrics.candidate_sort_ns.store(0, Ordering::Relaxed);
     metrics.userdb_merge_ns.store(0, Ordering::Relaxed);
@@ -322,8 +335,14 @@ pub fn m37_metrics_reset() {
     metrics
         .rsmarisa_prefix_lookup_calls
         .store(0, Ordering::Relaxed);
+    metrics.prism_lookup_calls.store(0, Ordering::Relaxed);
+    metrics.prism_lookup_ns.store(0, Ordering::Relaxed);
+    metrics.prism_lookup_codes.store(0, Ordering::Relaxed);
     metrics.abi_c_string_allocations.store(0, Ordering::Relaxed);
     metrics.abi_c_string_bytes.store(0, Ordering::Relaxed);
+    metrics
+        .abi_c_string_allocation_ns
+        .store(0, Ordering::Relaxed);
     metrics.sentence_candidate_calls.store(0, Ordering::Relaxed);
     metrics.sentence_candidate_ns.store(0, Ordering::Relaxed);
     metrics
@@ -462,6 +481,9 @@ pub fn m37_metrics_snapshot() -> M37MetricsSnapshot {
         owned_candidates_materialized: metrics
             .owned_candidates_materialized
             .load(Ordering::Relaxed),
+        owned_candidate_materialization_ns: metrics
+            .owned_candidate_materialization_ns
+            .load(Ordering::Relaxed),
         candidates_sorted: metrics.candidates_sorted.load(Ordering::Relaxed),
         candidate_sort_ns: metrics.candidate_sort_ns.load(Ordering::Relaxed),
         userdb_merge_ns: metrics.userdb_merge_ns.load(Ordering::Relaxed),
@@ -518,8 +540,12 @@ pub fn m37_metrics_snapshot() -> M37MetricsSnapshot {
             .load(Ordering::Relaxed),
         rsmarisa_exact_lookup_calls: metrics.rsmarisa_exact_lookup_calls.load(Ordering::Relaxed),
         rsmarisa_prefix_lookup_calls: metrics.rsmarisa_prefix_lookup_calls.load(Ordering::Relaxed),
+        prism_lookup_calls: metrics.prism_lookup_calls.load(Ordering::Relaxed),
+        prism_lookup_ns: metrics.prism_lookup_ns.load(Ordering::Relaxed),
+        prism_lookup_codes: metrics.prism_lookup_codes.load(Ordering::Relaxed),
         abi_c_string_allocations: metrics.abi_c_string_allocations.load(Ordering::Relaxed),
         abi_c_string_bytes: metrics.abi_c_string_bytes.load(Ordering::Relaxed),
+        abi_c_string_allocation_ns: metrics.abi_c_string_allocation_ns.load(Ordering::Relaxed),
         sentence_candidate_calls: metrics.sentence_candidate_calls.load(Ordering::Relaxed),
         sentence_candidate_ns: metrics.sentence_candidate_ns.load(Ordering::Relaxed),
         sentence_substrings_considered: metrics
@@ -672,6 +698,15 @@ pub fn m37_record_lookup_view() {
 
 pub fn m37_record_owned_candidate_materialized() {
     add(&metrics().owned_candidates_materialized, 1);
+}
+
+pub fn m37_record_owned_candidate_materialization(duration: Duration) {
+    if m37_metrics_enabled() {
+        metrics()
+            .owned_candidates_materialized
+            .fetch_add(1, Ordering::Relaxed);
+        add_duration(&metrics().owned_candidate_materialization_ns, duration);
+    }
 }
 
 pub fn m37_record_candidates_sorted(count: usize) {
@@ -831,6 +866,15 @@ pub fn m37_record_rsmarisa_prefix_lookup(duration: Duration, candidates: usize) 
     add(&metrics().rsmarisa_prefix_lookup_calls, 1);
 }
 
+pub fn m37_record_prism_lookup(duration: Duration, codes: usize) {
+    if m37_metrics_enabled() {
+        let metrics = metrics();
+        metrics.prism_lookup_calls.fetch_add(1, Ordering::Relaxed);
+        add_duration(&metrics.prism_lookup_ns, duration);
+        add(&metrics.prism_lookup_codes, codes as u64);
+    }
+}
+
 pub fn m37_record_abi_c_string_allocation(bytes: usize) {
     if m37_metrics_enabled() {
         let metrics = metrics();
@@ -838,6 +882,17 @@ pub fn m37_record_abi_c_string_allocation(bytes: usize) {
             .abi_c_string_allocations
             .fetch_add(1, Ordering::Relaxed);
         add(&metrics.abi_c_string_bytes, bytes as u64);
+    }
+}
+
+pub fn m37_record_abi_c_string_allocation_duration(bytes: usize, duration: Duration) {
+    if m37_metrics_enabled() {
+        let metrics = metrics();
+        metrics
+            .abi_c_string_allocations
+            .fetch_add(1, Ordering::Relaxed);
+        add(&metrics.abi_c_string_bytes, bytes as u64);
+        add_duration(&metrics.abi_c_string_allocation_ns, duration);
     }
 }
 

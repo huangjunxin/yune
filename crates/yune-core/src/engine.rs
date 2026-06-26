@@ -11,9 +11,9 @@ use crate::{
     parse_key_sequence, AiDecision, AiResult, Candidate, CandidateFilter, CandidateRanker,
     CandidateRequest, CandidateSource, CommitRecord, Composition, Context, EchoTranslator,
     EngineInspectorSnapshot, FilterAuditRecord, KeyCode, KeyEvent, KeyModifiers,
-    KeySequenceParseError, MemoryStore, PageSnapshot, RerankResult, SegmentDebug, Snapshot,
-    StagedAiCandidates, Status, Translator, UserDb, UserDbCommitMetadata, UserDbLookupRequest,
-    UserDbLookupResult,
+    KeySequenceParseError, MemoryOwnerRow, MemoryStore, PageSnapshot, RerankResult, SegmentDebug,
+    Snapshot, StagedAiCandidates, Status, Translator, UserDb, UserDbCommitMetadata,
+    UserDbLookupRequest, UserDbLookupResult,
 };
 
 pub struct Engine {
@@ -304,6 +304,14 @@ impl Engine {
     #[must_use]
     pub fn ai_memory(&self) -> &MemoryStore {
         &self.ai_memory
+    }
+
+    #[must_use]
+    pub fn memory_owner_rows(&self) -> Vec<MemoryOwnerRow> {
+        self.translators
+            .iter()
+            .flat_map(|translator| translator.memory_owner_rows())
+            .collect()
     }
 
     pub fn set_ai_memory(&mut self, memory_store: MemoryStore) {

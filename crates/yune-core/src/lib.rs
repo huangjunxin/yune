@@ -7,6 +7,7 @@ mod engine;
 mod filter;
 mod key;
 mod m37_metrics;
+mod memory_owner;
 mod poet;
 mod punctuation;
 mod spelling_algebra;
@@ -50,29 +51,30 @@ pub use filter::{
 pub use key::{parse_key_sequence, KeyCode, KeyEvent, KeyModifiers, KeySequenceParseError};
 pub use m37_metrics::{
     m37_metrics_enable, m37_metrics_enabled, m37_metrics_reset, m37_metrics_snapshot,
-    m37_record_abi_c_string_allocation, m37_record_abi_candidates_exported,
-    m37_record_abi_free_context, m37_record_abi_get_context, m37_record_ai_merge,
-    m37_record_bounded_iterator, m37_record_candidate_request_bounded,
+    m37_record_abi_c_string_allocation, m37_record_abi_c_string_allocation_duration,
+    m37_record_abi_candidates_exported, m37_record_abi_free_context, m37_record_abi_get_context,
+    m37_record_ai_merge, m37_record_bounded_iterator, m37_record_candidate_request_bounded,
     m37_record_candidate_request_unbounded, m37_record_candidate_sort,
     m37_record_candidates_sorted, m37_record_candidates_stored,
     m37_record_context_full_snapshot_clone, m37_record_context_page_snapshot_clone,
     m37_record_dynamic_correction, m37_record_filter_pipeline, m37_record_full_list_fallback,
     m37_record_full_list_translation, m37_record_heap_exact_lookup, m37_record_heap_prefix_lookup,
     m37_record_lookup_view, m37_record_no_marisa_compact_exact_lookup,
-    m37_record_no_marisa_compact_prefix_lookup, m37_record_owned_candidate_materialized,
-    m37_record_prefix_fallback, m37_record_process_key, m37_record_ranker_pipeline,
-    m37_record_rsmarisa_exact_lookup, m37_record_rsmarisa_prefix_lookup,
-    m37_record_sentence_candidate, m37_record_sentence_candidate_metrics,
-    m37_record_sentence_entry_matches_collected, m37_record_sentence_exact_lookup,
-    m37_record_sentence_max_live_paths, m37_record_sentence_path_clones,
-    m37_record_sentence_path_replacements, m37_record_sentence_paths_pruned,
-    m37_record_sentence_prefix_lookup, m37_record_sentence_substring_considered,
-    m37_record_translator, m37_record_upstream_sentence_model,
-    m37_record_upstream_sentence_model_index_build,
+    m37_record_no_marisa_compact_prefix_lookup, m37_record_owned_candidate_materialization,
+    m37_record_owned_candidate_materialized, m37_record_prefix_fallback, m37_record_prism_lookup,
+    m37_record_process_key, m37_record_ranker_pipeline, m37_record_rsmarisa_exact_lookup,
+    m37_record_rsmarisa_prefix_lookup, m37_record_sentence_candidate,
+    m37_record_sentence_candidate_metrics, m37_record_sentence_entry_matches_collected,
+    m37_record_sentence_exact_lookup, m37_record_sentence_max_live_paths,
+    m37_record_sentence_path_clones, m37_record_sentence_path_replacements,
+    m37_record_sentence_paths_pruned, m37_record_sentence_prefix_lookup,
+    m37_record_sentence_substring_considered, m37_record_translator,
+    m37_record_upstream_sentence_model, m37_record_upstream_sentence_model_index_build,
     m37_record_upstream_sentence_model_lookup_index, m37_record_upstream_sentence_model_scan,
     m37_record_userdb_merge, M37MetricsSnapshot, M37SentenceCandidateMetrics,
     M40SentenceLookupMetrics,
 };
+pub use memory_owner::{MemoryOwnerClass, MemoryOwnerRow};
 pub use poet::{
     make_sentence, make_sentences, null_grammar_score, Grammar, NullGrammar, SentenceCodeSpan,
     SentencePath, UpstreamSentenceModel, WordGraph, WordGraphEntry, UPSTREAM_NO_GRAMMAR_PENALTY,
@@ -138,6 +140,10 @@ pub trait Translator: Send + Sync {
 
     fn prediction_weight_threshold(&self) -> Option<f32> {
         None
+    }
+
+    fn memory_owner_rows(&self) -> Vec<MemoryOwnerRow> {
+        Vec::new()
     }
 }
 
