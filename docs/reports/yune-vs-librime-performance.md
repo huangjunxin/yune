@@ -19,6 +19,73 @@ sentence-model lookup. Track B remains a TypeDuck profile path dominated by
 no-marisa exact/prefix lookup plus profile fallback/full-list merge semantics.
 That path is preserved and gated rather than optimized by the Track A change.
 
+## Achievement Snapshot
+
+| Dimension | M39 outcome | Why it matters |
+| --- | --- | --- |
+| Startup/runtime-ready | `25.048 ms`, `0.917x` same-run librime | Engine startup remains at librime level after the long-input changes. |
+| Session create/select/destroy | `25.256 ms`, `0.938x` same-run librime | Schema/session lifecycle remains at librime level. |
+| Track A short/medium typing | `hao` `3.281x`, `ni` `3.863x`, `zhongguo` `0.329x` | Short rows stayed inside the established gate while long rows were fixed. |
+| Track A 37-character long input | `452.200 ms` -> `0.515 ms`, about `878x` faster | The original long-input stall is removed. |
+| Track A 59-character stress input | `1,240.081 ms` -> `0.918 ms`, about `1,351x` faster | 50+ character sentence input is now comfortably under the `5x` native gate. |
+| Track B 50+ profile row | `189.207 us/op` -> `188.857 us/op` | The protected profile path did not regress. |
+| Track A peak working set | `156.0 MiB` -> `118.2 MiB`, about `24%` lower | The sentence-model fix also removed a transient memory owner. |
+
+## Visual Summary
+
+### Final Same-Run Ratios
+
+Lower is better. `##########` is roughly librime parity (`1.0x`); the M39
+native gate for comparison rows is `5.0x`.
+
+| Row | Ratio | Visual |
+| --- | ---: | --- |
+| startup/runtime-ready | `0.917x` | `#########` |
+| session create/select/destroy | `0.938x` | `#########` |
+| `zhongguo` | `0.329x` | `###` |
+| `zhegeyinqingqishiyinggaizhichichaochangjuzishurucainengyong` | `1.320x` | `#############` |
+| `ceshiyixiachangjushuruxingnengzenyang` | `1.765x` | `##################` |
+| `hao` | `3.281x` | `#################################` |
+| `ni` | `3.863x` | `#######################################` |
+
+![Latency ratio of Yune divided by librime after M39: zhongguo, startup and session are below librime parity; long inputs and short keys are 1.3x to 3.9x, all within the 5x gate](./evidence/m39-long-input-engine-hardening/visuals/m39-latency-vs-librime.svg)
+
+### Long-Input Collapse
+
+M39 removed the long-input stall while keeping the final rows close to
+librime.
+
+| Row | Phase 0 Yune | M39 final Yune | Same-run librime | Yune improvement |
+| --- | ---: | ---: | ---: | ---: |
+| 37-character Track A row | `452.200 ms` | `0.515 ms` | `0.292 ms` | `878x` |
+| 59-character Track A row | `1,240.081 ms` | `0.918 ms` | `0.696 ms` | `1,351x` |
+
+![Long-input latency after M39: the 37-char and 59-char Yune rows are now 0.515 ms and 0.918 ms, close to librime's 0.292 ms and 0.696 ms, down from 452 ms and 1.24 s before M39](./evidence/m39-long-input-engine-hardening/visuals/m39-long-input-collapse.svg)
+
+A linear axis would render the M39 rows as invisible slivers next to the
+pre-M39 bars, so this view shows the final near-parity state with the pre-M39
+stall annotated. Exact before/after values are in the table above.
+
+### Bottleneck Shape
+
+```mermaid
+flowchart LR
+  subgraph "Before M39"
+    A["Track A long input"] --> B["Upstream sentence-model scan"]
+    B --> C["Hundreds of ms to more than 1 second"]
+  end
+
+  subgraph "After M39"
+    D["Track A long input"] --> E["Indexed bounded sentence-model lookup"]
+    E --> F["0.515 ms and 0.918 ms medians"]
+  end
+
+  subgraph "Protected profile path"
+    G["Track B 50+ profile row"] --> H["No-marisa exact/prefix lookup plus profile fallback"]
+    H --> I["188.857 us/op final, no regression"]
+  end
+```
+
 ## Evidence
 
 - M39 final gates:
@@ -102,6 +169,13 @@ Track B final status:
 | Track A 59-character working set | `116,555,776 B` | `112,635,904 B` | Lower. |
 | Track B long-row working set | `441,483,264 B` | `441,450,496 B` | Flat to slightly lower. |
 | Track B peak | `504,557,568 B` | `504,041,472 B` | Lower. |
+
+![Peak working set: librime luna is 14 MiB while Yune luna is 118 MiB, 8.4 times larger; the Yune jyut6ping3 product peak is 481 MiB on a separate schema with no librime peer](./evidence/m39-long-input-engine-hardening/visuals/m39-memory-gap.svg)
+
+Memory is the one dimension still far from librime: latency reached parity, but
+Yune's whole-process working set remains about `8.4x` librime on the fair Track
+A comparison, and the TypeDuck product peak is `~481 MiB`. This is the main open
+gap and the natural next target after a heap-owner profile.
 
 The M39-owned memory owner was transient upstream sentence-model construction:
 the old build path held a full temporary table-entry list alongside model
