@@ -93,10 +93,10 @@ Yune 是一个活跃的引擎项目。
 - **兼容性基线：** Phase 1 已完成。在普通话（`luna_pinyin`）和广东话（`jyut6ping3`，
   通过 TypeDuck profile）方案下，Yune 输出与 RIME 1.17.0 完全一致。已在真实前端
   （TypeDuck-Web、TypeDuck-Windows）中验证过可以无缝替换。
-- **当前工作：** 里程碑 M38 聚焦引擎性能追平——缩小与原生 RIME 的剩余速度差距。
-  工作重点：native engine 启动开销、mmap-backed `rsmarisa` table lookup、
-  lazy/page-bounded candidate production、context export、内存和 allocation shape，
-  全部以同机 RIME 证据为参照。
+- **当前工作：** 里程碑 M38（引擎性能追平）已完成——见
+  [final gates](docs/reports/evidence/m38-engine-performance-parity/final-gates.md)。
+  M39（长输入引擎加固）已启动，目标是将 37 字符、59 字符及粤拼 profile 的
+  长输入延迟追平至与同机 RIME 一致的水平。
 - **公开 demo：** `yune-web` 部署在 <https://yune-web.pages.dev>。它是 Yune 引擎
   demo，不表示浏览器层性能已经解决。
 - **AI 姿态：** AI 层已经存在，但在 web harness 中默认关闭、仅本地运行，并且不进入
@@ -127,9 +127,8 @@ Yune 的兼容性是目标驱动的，而非清单驱动的。
 
 ## 性能
 
-Yune 将 RIME 作为行为和性能的参照点，但当前不声称 typing-speed、memory-footprint
-或 browser-speed 胜出。里程碑 M33-M37 已消除了若干实际成本；M38 正聚焦于用同机
-证据弥合剩余的 native engine 差距。
+M38 已完成（全部关卡通过）。M39 已启动，聚焦弥合长输入延迟差距：在 37 字符、
+59 字符及粤拼 profile 行上，以同机 RIME 为参照追平性能。
 
 当前报告：
 

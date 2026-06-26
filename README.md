@@ -104,11 +104,11 @@ Yune is an active engine project.
   to RIME 1.17.0 for Mandarin (`luna_pinyin`) and Cantonese (`jyut6ping3` via
   TypeDuck profile). It has been validated as a drop-in replacement in real-world
   frontends (TypeDuck-Web, TypeDuck-Windows).
-- **Current work:** milestone M38 targets engine performance parity — closing the
-  remaining speed gap against native RIME. Focus areas: native engine startup
-  cost, mmap-backed `rsmarisa` table lookup, lazy/page-bounded candidate
-  production, context export, memory, and allocation shape — all measured against
-  same-run RIME evidence.
+- **Current work:** milestone M38 (engine performance parity) is complete —
+  see [final gates](docs/reports/evidence/m38-engine-performance-parity/final-gates.md).
+  M39 (long-input engine hardening) is now active, targeting uninterrupted
+  long-input latency parity for the 37-character, 59-character, and Cantonese
+  profile rows.
 - **Public demo:** `yune-web` is deployed at <https://yune-web.pages.dev>. It's
   a Yune engine demo, not a claim that browser-level performance is solved.
 - **AI posture:** the AI layer exists but is default-off, local-only in the web
@@ -140,10 +140,9 @@ are exposed exclusively through `rime_get_typeduck_profile_api()`.
 
 ## Performance
 
-Yune treats RIME as a behavioral and performance comparison point, but does not
-claim current typing-speed, memory-footprint, or browser-speed wins. Milestones
-M33-M37 removed several real costs. M38 is now focused on closing the remaining
-native engine gap with measured, same-run evidence.
+M38 is complete (all gates passed). M39 is now active, focused on closing the
+long-input latency gap: uninterrupted 37-character, 59-character, and Cantonese
+profile rows against same-run RIME evidence.
 
 Current reports:
 
