@@ -26,7 +26,8 @@ pub use ai::{
 use comment_format::CommentFormat;
 pub use dictionary::{
     build_prism_bin, build_reverse_bin, build_table_bin, execute_rebuild_plan,
-    parse_rime_prism_bin_metadata, parse_rime_prism_bin_payload, parse_rime_reverse_bin_dictionary,
+    parse_rime_preset_vocabulary_entries, parse_rime_prism_bin_metadata,
+    parse_rime_prism_bin_payload, parse_rime_reverse_bin_dictionary,
     parse_rime_reverse_bin_metadata, parse_rime_table_bin_advanced_data,
     parse_rime_table_bin_dictionary, parse_rime_table_bin_metadata, rime_checksum_bytes,
     rime_dict_rebuild_plan, rime_dict_source_checksum, rime_table_bin_dict_file_checksum,
@@ -73,8 +74,8 @@ pub use m37_metrics::{
     M40SentenceLookupMetrics,
 };
 pub use poet::{
-    make_sentence, make_sentences, null_grammar_score, Grammar, NullGrammar, SentencePath,
-    UpstreamSentenceModel, WordGraph, WordGraphEntry, UPSTREAM_NO_GRAMMAR_PENALTY,
+    make_sentence, make_sentences, null_grammar_score, Grammar, NullGrammar, SentenceCodeSpan,
+    SentencePath, UpstreamSentenceModel, WordGraph, WordGraphEntry, UPSTREAM_NO_GRAMMAR_PENALTY,
 };
 pub use punctuation::{PunctuationDefinition, PunctuationProcessor, PunctuationTranslator};
 pub use state::{

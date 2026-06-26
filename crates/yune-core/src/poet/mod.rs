@@ -14,6 +14,8 @@ pub const UPSTREAM_NO_GRAMMAR_PENALTY: f64 = -13.815510557964274;
 
 const CODE_LENGTH_QUALITY_BAND: f32 = 10_000_000.0;
 const MAX_WORD_GRAPH_ENTRIES_PER_SPAN: usize = 7;
+const MAX_DERIVED_PHRASE_CODES_PER_VOCABULARY_ENTRY: usize = 16;
+const ABBREVIATION_VOCABULARY_RAW_SPAN_BONUS: f64 = 500_000.0;
 
 pub trait Grammar {
     fn query(&self, context: &str, word: &str, is_rear: bool) -> f64;
@@ -48,6 +50,24 @@ impl WordGraphEntry {
 
 pub type WordGraph = BTreeMap<usize, BTreeMap<usize, Vec<WordGraphEntry>>>;
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct SentenceCodeSpan {
+    pub start: usize,
+    pub end: usize,
+    pub code: String,
+}
+
+impl SentenceCodeSpan {
+    #[must_use]
+    pub fn new(start: usize, end: usize, code: impl Into<String>) -> Self {
+        Self {
+            start,
+            end,
+            code: code.into(),
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct SentencePath {
     pub text: String,
@@ -58,6 +78,50 @@ pub struct SentencePath {
 #[must_use]
 pub fn null_grammar_score(entry_weight: f64) -> f64 {
     entry_weight + NullGrammar.query("", "", false)
+}
+
+fn build_model_vocabulary_index(
+    vocabulary: &[PresetVocabularyEntry],
+    character_codes: &HashMap<char, Vec<String>>,
+) -> (Vec<ModelVocabularyEntry>, Vec<(String, usize)>) {
+    let vocabulary = vocabulary
+        .iter()
+        .filter_map(|entry| {
+            let chars = entry.text.chars().collect::<Vec<_>>();
+            (chars.len() > 1).then(|| ModelVocabularyEntry {
+                text: entry.text.clone(),
+                chars,
+                weight: entry.weight,
+            })
+        })
+        .collect::<Vec<_>>();
+    let mut first_codes = Vec::new();
+    for (index, entry) in vocabulary.iter().enumerate() {
+        let Some(first_char) = entry.chars.first() else {
+            continue;
+        };
+        let Some(codes) = character_codes.get(first_char) else {
+            continue;
+        };
+        for code in codes {
+            first_codes.push((code.clone(), index));
+        }
+    }
+    first_codes.sort();
+    first_codes.dedup();
+    (vocabulary, first_codes)
+}
+
+fn vocabulary_indices_for_first_code<'a>(
+    vocabulary_first_codes: &'a [(String, usize)],
+    code: &str,
+) -> &'a [(String, usize)] {
+    let start =
+        vocabulary_first_codes.partition_point(|(entry_code, _)| entry_code.as_str() < code);
+    let end = vocabulary_first_codes[start..]
+        .partition_point(|(entry_code, _)| entry_code.as_str() == code)
+        + start;
+    &vocabulary_first_codes[start..end]
 }
 
 #[must_use]
@@ -95,6 +159,26 @@ fn make_sentences_by_end(
         .collect()
 }
 
+fn make_abbreviation_sentences_by_end(
+    graph: &WordGraph,
+    max_sentences: usize,
+) -> BTreeMap<usize, Vec<SentencePath>> {
+    if max_sentences == 0 {
+        return BTreeMap::new();
+    }
+
+    collect_abbreviation_sentence_states(graph, max_sentences)
+        .into_iter()
+        .filter(|(end, _)| *end > 0)
+        .map(|(end, states)| {
+            (
+                end,
+                abbreviation_sentence_paths_from_states(states, max_sentences),
+            )
+        })
+        .collect()
+}
+
 fn collect_sentence_states(
     graph: &WordGraph,
     max_sentences: usize,
@@ -121,11 +205,57 @@ fn collect_sentence_states(
     states
 }
 
+fn collect_abbreviation_sentence_states(
+    graph: &WordGraph,
+    max_sentences: usize,
+) -> BTreeMap<usize, Vec<PathState>> {
+    let mut states: BTreeMap<usize, Vec<PathState>> = BTreeMap::new();
+    states.insert(0, vec![PathState::default()]);
+    for (start, edges) in graph {
+        let Some(source_states) = states.get(start).cloned() else {
+            continue;
+        };
+        for (end, entries) in edges {
+            for source in &source_states {
+                for entry in entries {
+                    let mut next = source.clone();
+                    next.weight += null_grammar_score(entry.weight);
+                    next.text.push_str(&entry.text);
+                    next.word_lengths.push(end - start);
+                    insert_abbreviation_state(
+                        states.entry(*end).or_default(),
+                        next,
+                        max_sentences * 3,
+                    );
+                }
+            }
+        }
+    }
+
+    states
+}
+
 fn sentence_paths_from_states(
     mut states: Vec<PathState>,
     max_sentences: usize,
 ) -> Vec<SentencePath> {
     states.sort_by(compare_path_state);
+    states
+        .into_iter()
+        .take(max_sentences)
+        .map(|state| SentencePath {
+            text: state.text,
+            weight: state.weight,
+            word_lengths: state.word_lengths,
+        })
+        .collect()
+}
+
+fn abbreviation_sentence_paths_from_states(
+    mut states: Vec<PathState>,
+    max_sentences: usize,
+) -> Vec<SentencePath> {
+    states.sort_by(compare_abbreviation_path_state);
     states
         .into_iter()
         .take(max_sentences)
@@ -164,6 +294,26 @@ fn insert_state(states: &mut Vec<PathState>, candidate: PathState, beam_width: u
     }
 }
 
+fn insert_abbreviation_state(states: &mut Vec<PathState>, candidate: PathState, beam_width: usize) {
+    if let Some(existing_index) = states
+        .iter()
+        .position(|existing| existing.text == candidate.text)
+    {
+        if compare_abbreviation_path_state(&candidate, &states[existing_index]) == Ordering::Less {
+            states.remove(existing_index);
+        } else {
+            return;
+        }
+    }
+    let index = states
+        .binary_search_by(|existing| compare_abbreviation_path_state(existing, &candidate))
+        .unwrap_or_else(|index| index);
+    states.insert(index, candidate);
+    if states.len() > beam_width {
+        states.pop();
+    }
+}
+
 fn compare_path_state(left: &PathState, right: &PathState) -> Ordering {
     right
         .weight
@@ -174,13 +324,137 @@ fn compare_path_state(left: &PathState, right: &PathState) -> Ordering {
         .then_with(|| left.text.cmp(&right.text))
 }
 
+fn compare_abbreviation_path_state(left: &PathState, right: &PathState) -> Ordering {
+    left.word_lengths
+        .len()
+        .cmp(&right.word_lengths.len())
+        .then_with(|| {
+            singleton_word_count(&left.word_lengths).cmp(&singleton_word_count(&right.word_lengths))
+        })
+        .then_with(|| right.word_lengths.cmp(&left.word_lengths))
+        .then_with(|| {
+            right
+                .weight
+                .partial_cmp(&left.weight)
+                .unwrap_or(Ordering::Equal)
+        })
+        .then_with(|| left.text.cmp(&right.text))
+}
+
+fn singleton_word_count(word_lengths: &[usize]) -> usize {
+    word_lengths.iter().filter(|length| **length == 1).count()
+}
+
+fn abbreviation_synthesized_sentence(
+    graph: &WordGraph,
+    first_end: usize,
+    total_end: usize,
+) -> Option<SentencePath> {
+    let mut segments = vec![(0usize, first_end)];
+    segments.extend(abbreviation_best_suffix_partition(
+        graph, first_end, total_end,
+    )?);
+    let mut text = String::new();
+    let mut weight = 0.0;
+    let mut word_lengths = Vec::with_capacity(segments.len());
+    for (start, end) in segments {
+        let entry = graph.get(&start)?.get(&end)?.first()?;
+        text.push_str(&entry.text);
+        weight += null_grammar_score(entry.weight);
+        word_lengths.push(end - start);
+    }
+    Some(SentencePath {
+        text,
+        weight,
+        word_lengths,
+    })
+}
+
+fn abbreviation_best_suffix_partition(
+    graph: &WordGraph,
+    start: usize,
+    total_end: usize,
+) -> Option<Vec<(usize, usize)>> {
+    if start == total_end {
+        return Some(Vec::new());
+    }
+    let mut candidates = Vec::new();
+    collect_abbreviation_suffix_partitions(
+        graph,
+        start,
+        total_end,
+        &mut Vec::new(),
+        &mut candidates,
+    );
+    candidates
+        .into_iter()
+        .min_by(|left, right| compare_abbreviation_partition(left, right))
+}
+
+fn collect_abbreviation_suffix_partitions(
+    graph: &WordGraph,
+    start: usize,
+    total_end: usize,
+    current: &mut Vec<(usize, usize)>,
+    candidates: &mut Vec<Vec<(usize, usize)>>,
+) {
+    if start == total_end {
+        candidates.push(current.clone());
+        return;
+    }
+    for len in 1..=4 {
+        let end = start + len;
+        if end > total_end {
+            break;
+        }
+        if !graph
+            .get(&start)
+            .is_some_and(|edges| edges.contains_key(&end))
+        {
+            continue;
+        }
+        current.push((start, end));
+        collect_abbreviation_suffix_partitions(graph, end, total_end, current, candidates);
+        current.pop();
+    }
+}
+
+fn compare_abbreviation_partition(left: &[(usize, usize)], right: &[(usize, usize)]) -> Ordering {
+    let left_lengths = partition_lengths(left);
+    let right_lengths = partition_lengths(right);
+    left.len()
+        .cmp(&right.len())
+        .then_with(|| {
+            singleton_word_count(&left_lengths).cmp(&singleton_word_count(&right_lengths))
+        })
+        .then_with(|| partition_spread(&left_lengths).cmp(&partition_spread(&right_lengths)))
+        .then_with(|| left_lengths.cmp(&right_lengths))
+}
+
+fn partition_lengths(partition: &[(usize, usize)]) -> Vec<usize> {
+    partition.iter().map(|(start, end)| end - start).collect()
+}
+
+fn partition_spread(lengths: &[usize]) -> usize {
+    let Some(min) = lengths.iter().min() else {
+        return 0;
+    };
+    let Some(max) = lengths.iter().max() else {
+        return 0;
+    };
+    max - min
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct UpstreamSentenceModel {
     entries_by_code: Vec<ModelEntry>,
     lookup_index: SentenceLookupIndex,
     vocabulary: Vec<ModelVocabularyEntry>,
     vocabulary_first_codes: Vec<(String, usize)>,
+    abbreviation_vocabulary: Vec<ModelVocabularyEntry>,
+    abbreviation_vocabulary_first_codes: Vec<(String, usize)>,
     character_codes: HashMap<char, Vec<String>>,
+    abbreviation_character_codes: HashMap<char, Vec<String>>,
     max_candidates: usize,
 }
 
@@ -203,6 +477,7 @@ impl UpstreamSentenceModel {
         Self::from_model_entries(
             entries.iter().map(ModelEntry::from_table_entry),
             vocabulary,
+            vocabulary,
             max_candidates,
         )
     }
@@ -213,9 +488,25 @@ impl UpstreamSentenceModel {
         vocabulary: &[PresetVocabularyEntry],
         max_candidates: usize,
     ) -> Self {
+        Self::from_table_entries_with_abbreviation_vocabulary(
+            entries,
+            vocabulary,
+            vocabulary,
+            max_candidates,
+        )
+    }
+
+    #[must_use]
+    pub fn from_table_entries_with_abbreviation_vocabulary(
+        entries: impl IntoIterator<Item = TableEntry>,
+        vocabulary: &[PresetVocabularyEntry],
+        abbreviation_vocabulary: &[PresetVocabularyEntry],
+        max_candidates: usize,
+    ) -> Self {
         Self::from_model_entries(
             entries.into_iter().map(ModelEntry::from_owned_table_entry),
             vocabulary,
+            abbreviation_vocabulary,
             max_candidates,
         )
     }
@@ -223,10 +514,12 @@ impl UpstreamSentenceModel {
     fn from_model_entries(
         entries: impl IntoIterator<Item = ModelEntry>,
         vocabulary: &[PresetVocabularyEntry],
+        abbreviation_vocabulary: &[PresetVocabularyEntry],
         max_candidates: usize,
     ) -> Self {
         let mut entries_by_code = Vec::new();
         let mut character_codes: HashMap<char, Vec<String>> = HashMap::new();
+        let mut abbreviation_character_codes: HashMap<char, Vec<String>> = HashMap::new();
         for entry in entries {
             if entry.code.is_empty() {
                 continue;
@@ -238,11 +531,21 @@ impl UpstreamSentenceModel {
                         .entry(ch)
                         .or_default()
                         .push(entry.code.clone());
+                    if entry.weight > 0.0 {
+                        abbreviation_character_codes
+                            .entry(ch)
+                            .or_default()
+                            .push(entry.code.clone());
+                    }
                 }
             }
             entries_by_code.push(entry);
         }
         for codes in character_codes.values_mut() {
+            codes.sort();
+            codes.dedup();
+        }
+        for codes in abbreviation_character_codes.values_mut() {
             codes.sort();
             codes.dedup();
         }
@@ -252,37 +555,19 @@ impl UpstreamSentenceModel {
         if let Some(index_start) = index_start {
             crate::m37_record_upstream_sentence_model_index_build(index_start.elapsed());
         }
-        let vocabulary = vocabulary
-            .iter()
-            .filter_map(|entry| {
-                let chars = entry.text.chars().collect::<Vec<_>>();
-                (chars.len() > 1).then(|| ModelVocabularyEntry {
-                    text: entry.text.clone(),
-                    chars,
-                    weight: entry.weight,
-                })
-            })
-            .collect::<Vec<_>>();
-        let mut vocabulary_first_codes = Vec::new();
-        for (index, entry) in vocabulary.iter().enumerate() {
-            let Some(first_char) = entry.chars.first() else {
-                continue;
-            };
-            let Some(first_codes) = character_codes.get(first_char) else {
-                continue;
-            };
-            for code in first_codes {
-                vocabulary_first_codes.push((code.clone(), index));
-            }
-        }
-        vocabulary_first_codes.sort();
-        vocabulary_first_codes.dedup();
+        let (vocabulary, vocabulary_first_codes) =
+            build_model_vocabulary_index(vocabulary, &character_codes);
+        let (abbreviation_vocabulary, abbreviation_vocabulary_first_codes) =
+            build_model_vocabulary_index(abbreviation_vocabulary, &abbreviation_character_codes);
         Self {
             entries_by_code,
             lookup_index,
             vocabulary,
             vocabulary_first_codes,
+            abbreviation_vocabulary,
+            abbreviation_vocabulary_first_codes,
             character_codes,
+            abbreviation_character_codes,
             max_candidates: max_candidates.max(1),
         }
     }
@@ -302,9 +587,38 @@ impl UpstreamSentenceModel {
             return Vec::new();
         }
 
-        let max_candidates = max_candidates.max(1).min(self.max_candidates);
         let graph = self.word_graph_for_input(input);
-        let sentences_by_end = make_sentences_by_end(&graph, max_candidates);
+        self.candidates_for_graph_with_limit(input, &graph, max_candidates)
+    }
+
+    #[must_use]
+    pub fn candidates_for_code_spans_with_limit(
+        &self,
+        input: &str,
+        spans: &[SentenceCodeSpan],
+        max_candidates: usize,
+    ) -> Vec<Candidate> {
+        if input.is_empty() || spans.is_empty() {
+            return Vec::new();
+        }
+
+        let graph = self.word_graph_for_code_spans(input, spans);
+        self.candidates_for_abbreviation_graph_with_limit(input, &graph, max_candidates)
+    }
+
+    #[must_use]
+    pub fn has_code(&self, code: &str) -> bool {
+        self.entries_for_code(code).is_some()
+    }
+
+    fn candidates_for_graph_with_limit(
+        &self,
+        input: &str,
+        graph: &WordGraph,
+        max_candidates: usize,
+    ) -> Vec<Candidate> {
+        let max_candidates = max_candidates.max(1).min(self.max_candidates);
+        let sentences_by_end = make_sentences_by_end(graph, max_candidates);
         let mut candidates = HashMap::new();
         for end in input
             .char_indices()
@@ -342,6 +656,95 @@ impl UpstreamSentenceModel {
         let mut candidates = candidates.into_values().collect::<Vec<_>>();
         candidates.sort_by(compare_sentence_candidate);
         candidates.truncate(max_candidates);
+        candidates
+    }
+
+    fn candidates_for_abbreviation_graph_with_limit(
+        &self,
+        input: &str,
+        graph: &WordGraph,
+        max_candidates: usize,
+    ) -> Vec<Candidate> {
+        let max_candidates = max_candidates.max(1).min(self.max_candidates);
+        let sentence_limit = self.max_candidates.max(max_candidates);
+        let sentences_by_end = make_abbreviation_sentences_by_end(graph, sentence_limit);
+        let total_end = input.len();
+        let first_segment_end = sentences_by_end
+            .get(&total_end)
+            .and_then(|sentences| sentences.first())
+            .and_then(|sentence| sentence.word_lengths.first())
+            .copied()
+            .filter(|end| *end < total_end);
+
+        let mut ranked = Vec::<RankedSentence>::new();
+        if let Some(sentence) = first_segment_end
+            .and_then(|end| abbreviation_synthesized_sentence(graph, end, total_end))
+            .or_else(|| {
+                sentences_by_end
+                    .get(&total_end)
+                    .and_then(|sentences| sentences.first().cloned())
+            })
+        {
+            ranked.push(RankedSentence {
+                end: total_end,
+                sentence,
+            });
+        }
+        if let Some(end) = first_segment_end {
+            if let Some(sentences) = sentences_by_end.get(&end) {
+                ranked.extend(
+                    sentences
+                        .iter()
+                        .cloned()
+                        .map(|sentence| RankedSentence { end, sentence }),
+                );
+            }
+        }
+        if ranked.len() < max_candidates {
+            for (end, sentences) in sentences_by_end.iter().rev() {
+                if *end == total_end || Some(*end) == first_segment_end {
+                    continue;
+                }
+                ranked.extend(sentences.iter().cloned().map(|sentence| RankedSentence {
+                    end: *end,
+                    sentence,
+                }));
+                if ranked.len() >= sentence_limit {
+                    break;
+                }
+            }
+        }
+
+        ranked.sort_by(compare_ranked_abbreviation_sentence);
+        let mut seen = HashMap::new();
+        let mut candidates = Vec::new();
+        for item in ranked {
+            if seen.insert(item.sentence.text.clone(), ()).is_some() {
+                continue;
+            }
+            let source = if item.end < total_end {
+                CandidateSource::PartialTable {
+                    consumed: item.end,
+                    recompose_on_default: false,
+                }
+            } else {
+                CandidateSource::Sentence
+            };
+            candidates.push(Candidate {
+                text: item.sentence.text,
+                comment: String::new(),
+                preedit: None,
+                source,
+                quality: 0.0,
+            });
+            if candidates.len() >= max_candidates {
+                break;
+            }
+        }
+        let base_quality = candidates.len() as f32;
+        for (index, candidate) in candidates.iter_mut().enumerate() {
+            candidate.quality = base_quality - index as f32;
+        }
         candidates
     }
 
@@ -411,7 +814,8 @@ impl UpstreamSentenceModel {
                 if inserted_edge {
                     reachable[span.end_index] = true;
                 }
-                let vocabulary_entries = self.vocabulary_indices_for_first_code(code);
+                let vocabulary_entries =
+                    vocabulary_indices_for_first_code(&self.vocabulary_first_codes, code);
                 for (_, index) in vocabulary_entries {
                     let vocabulary_entry = &self.vocabulary[*index];
                     vocabulary_entries_considered += 1;
@@ -457,19 +861,146 @@ impl UpstreamSentenceModel {
         graph
     }
 
+    fn word_graph_for_code_spans(&self, input: &str, spans: &[SentenceCodeSpan]) -> WordGraph {
+        let rebuild_start = crate::m37_metrics_enabled().then(Instant::now);
+        let mut graph = WordGraph::new();
+        let boundaries = input
+            .char_indices()
+            .map(|(index, _)| index)
+            .chain(std::iter::once(input.len()))
+            .collect::<Vec<_>>();
+        let mut spans_by_start = vec![Vec::new(); boundaries.len()];
+        for span in spans {
+            if span.start >= span.end
+                || span.end > input.len()
+                || !input.is_char_boundary(span.start)
+                || !input.is_char_boundary(span.end)
+                || span.code.is_empty()
+            {
+                continue;
+            }
+            let Ok(start_index) = boundaries.binary_search(&span.start) else {
+                continue;
+            };
+            let Ok(end_index) = boundaries.binary_search(&span.end) else {
+                continue;
+            };
+            spans_by_start[start_index].push(InputCodeSpan {
+                end: span.end,
+                end_index,
+                code: span.code.as_str(),
+            });
+        }
+        for spans in &mut spans_by_start {
+            spans.sort_by(|left, right| {
+                left.end
+                    .cmp(&right.end)
+                    .then_with(|| left.code.cmp(right.code))
+            });
+            spans.dedup_by(|left, right| left.end == right.end && left.code == right.code);
+        }
+
+        let mut reachable = vec![false; boundaries.len()];
+        if let Some(first) = reachable.first_mut() {
+            *first = true;
+        }
+        let mut table_entries_considered = 0usize;
+        let mut vocabulary_entries_considered = 0usize;
+        let mut graph_edges = 0usize;
+        let mut lookup_metrics = crate::M40SentenceLookupMetrics::default();
+        for (start_index, start) in boundaries.iter().copied().enumerate() {
+            if start >= input.len() {
+                continue;
+            }
+            if !reachable[start_index] {
+                lookup_metrics.unreachable_starts_skipped += 1;
+                continue;
+            }
+            lookup_metrics.reachable_starts_visited += 1;
+            for span in &spans_by_start[start_index] {
+                lookup_metrics.phrase_index_walk_calls += 1;
+                lookup_metrics.phrase_index_nodes_visited += 1;
+                let Some(entries) = self.entries_for_code(span.code) else {
+                    lookup_metrics.exact_range_index_misses += 1;
+                    lookup_metrics.partition_point_fallback_calls += 1;
+                    continue;
+                };
+                lookup_metrics.exact_range_index_hits += 1;
+                let bounded_entries = entries.iter().take(MAX_WORD_GRAPH_ENTRIES_PER_SPAN);
+                table_entries_considered += entries.len().min(MAX_WORD_GRAPH_ENTRIES_PER_SPAN);
+                let mut inserted_edge = false;
+                for entry in bounded_entries {
+                    graph
+                        .entry(start)
+                        .or_default()
+                        .entry(span.end)
+                        .or_default()
+                        .push(WordGraphEntry::new(
+                            entry.text.clone(),
+                            entry.code.clone(),
+                            f64::from(entry.weight),
+                        ));
+                    graph_edges += 1;
+                    inserted_edge = true;
+                }
+                if inserted_edge {
+                    reachable[span.end_index] = true;
+                }
+                let vocabulary_entries = vocabulary_indices_for_first_code(
+                    &self.abbreviation_vocabulary_first_codes,
+                    span.code,
+                );
+                for (_, index) in vocabulary_entries {
+                    let vocabulary_entry = &self.abbreviation_vocabulary[*index];
+                    vocabulary_entries_considered += 1;
+                    for (phrase_code, phrase_end, phrase_end_index) in self
+                        .derive_matching_phrase_codes_from_spans(
+                            vocabulary_entry,
+                            &spans_by_start,
+                            *span,
+                        )
+                    {
+                        graph
+                            .entry(start)
+                            .or_default()
+                            .entry(phrase_end)
+                            .or_default()
+                            .push(WordGraphEntry::new(
+                                vocabulary_entry.text.clone(),
+                                phrase_code,
+                                f64::from(vocabulary_entry.weight)
+                                    + ABBREVIATION_VOCABULARY_RAW_SPAN_BONUS
+                                        * (phrase_end - start).pow(2) as f64,
+                            ));
+                        graph_edges += 1;
+                        reachable[phrase_end_index] = true;
+                    }
+                }
+            }
+        }
+        for edges in graph.values_mut() {
+            for entries in edges.values_mut() {
+                entries.sort_by(compare_word_graph_entry);
+                entries.truncate(MAX_WORD_GRAPH_ENTRIES_PER_SPAN);
+            }
+        }
+        crate::m37_record_upstream_sentence_model_scan(
+            0,
+            table_entries_considered,
+            vocabulary_entries_considered,
+            graph_edges,
+        );
+        if let Some(rebuild_start) = rebuild_start {
+            lookup_metrics.graph_rebuild_duration = rebuild_start.elapsed();
+            lookup_metrics.incremental_discarded_rebuild_chars = input.chars().count();
+            crate::m37_record_upstream_sentence_model_lookup_index(lookup_metrics);
+        }
+        graph
+    }
+
     fn entries_for_code(&self, code: &str) -> Option<&[ModelEntry]> {
         self.lookup_index
             .entries_for_code(&self.entries_by_code, code)
-    }
-
-    fn vocabulary_indices_for_first_code(&self, code: &str) -> &[(String, usize)] {
-        let start = self
-            .vocabulary_first_codes
-            .partition_point(|(entry_code, _)| entry_code.as_str() < code);
-        let end = self.vocabulary_first_codes[start..]
-            .partition_point(|(entry_code, _)| entry_code.as_str() == code)
-            + start;
-        &self.vocabulary_first_codes[start..end]
     }
 
     fn derive_matching_phrase_codes(
@@ -515,6 +1046,113 @@ impl UpstreamSentenceModel {
             }
         }
     }
+
+    fn derive_matching_phrase_codes_from_spans(
+        &self,
+        entry: &ModelVocabularyEntry,
+        spans_by_start: &[Vec<InputCodeSpan<'_>>],
+        first_span: InputCodeSpan<'_>,
+    ) -> Vec<(String, usize, usize)> {
+        let mut codes = Vec::new();
+        self.derive_matching_phrase_span_codes_from(
+            &entry.chars,
+            spans_by_start,
+            PhraseSpanCodeState {
+                index: 1,
+                start_index: first_span.end_index,
+                end: first_span.end,
+                code: first_span.code.to_owned(),
+            },
+            &mut codes,
+        );
+        codes.sort_by(|left, right| left.0.cmp(&right.0).then_with(|| left.1.cmp(&right.1)));
+        codes.dedup();
+        codes
+    }
+
+    fn derive_matching_phrase_span_codes_from(
+        &self,
+        chars: &[char],
+        spans_by_start: &[Vec<InputCodeSpan<'_>>],
+        state: PhraseSpanCodeState,
+        codes: &mut Vec<(String, usize, usize)>,
+    ) {
+        if codes.len() >= MAX_DERIVED_PHRASE_CODES_PER_VOCABULARY_ENTRY {
+            return;
+        }
+        if state.index == chars.len() {
+            codes.push((state.code, state.end, state.start_index));
+            return;
+        }
+        let Some(next_codes) = self.abbreviation_character_codes.get(&chars[state.index]) else {
+            return;
+        };
+        let Some(spans) = spans_by_start.get(state.start_index) else {
+            return;
+        };
+        for span in spans {
+            if !next_codes.iter().any(|code| code == span.code) {
+                continue;
+            }
+            self.derive_matching_phrase_span_codes_from(
+                chars,
+                spans_by_start,
+                PhraseSpanCodeState {
+                    index: state.index + 1,
+                    start_index: span.end_index,
+                    end: span.end,
+                    code: format!("{}{}", state.code, span.code),
+                },
+                codes,
+            );
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+struct InputCodeSpan<'a> {
+    end: usize,
+    end_index: usize,
+    code: &'a str,
+}
+
+#[derive(Clone, Debug)]
+struct PhraseSpanCodeState {
+    index: usize,
+    start_index: usize,
+    end: usize,
+    code: String,
+}
+
+#[derive(Clone, Debug)]
+struct RankedSentence {
+    end: usize,
+    sentence: SentencePath,
+}
+
+fn compare_ranked_abbreviation_sentence(left: &RankedSentence, right: &RankedSentence) -> Ordering {
+    right
+        .end
+        .cmp(&left.end)
+        .then_with(|| {
+            left.sentence
+                .word_lengths
+                .len()
+                .cmp(&right.sentence.word_lengths.len())
+        })
+        .then_with(|| {
+            singleton_word_count(&left.sentence.word_lengths)
+                .cmp(&singleton_word_count(&right.sentence.word_lengths))
+        })
+        .then_with(|| right.sentence.word_lengths.cmp(&left.sentence.word_lengths))
+        .then_with(|| {
+            right
+                .sentence
+                .weight
+                .partial_cmp(&left.sentence.weight)
+                .unwrap_or(Ordering::Equal)
+        })
+        .then_with(|| left.sentence.text.cmp(&right.sentence.text))
 }
 
 #[derive(Clone, Debug, PartialEq)]

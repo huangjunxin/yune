@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 
 use crate::{
-    CandidateRequest, CandidateSource, Context, Engine, HistoryTranslator, PunctuationTranslator,
-    ReverseLookupTranslator, StaticTableTranslator, Status, TableDictionary, Translator,
+    build_prism_bin, parse_rime_prism_bin_payload, CandidateRequest, CandidateSource, Context,
+    Engine, HistoryTranslator, PunctuationTranslator, ReverseLookupTranslator,
+    StaticTableTranslator, Status, TableDictionary, Translator,
 };
 
 #[test]
@@ -585,6 +586,69 @@ C	ef	1000
     assert!(!result.is_complete);
     assert_eq!(metrics.full_list_fallback_count, 0);
     assert_eq!(metrics.upstream_sentence_model_calls, 1);
+}
+
+#[test]
+fn bounded_compact_translator_uses_prism_abbreviation_spans_for_sentence_model() {
+    let _guard = super::m37_metrics_test_guard();
+    let dictionary = TableDictionary::parse_rime_dict_yaml_with_imports_packs_and_vocabulary(
+        r#"
+---
+name: compact_abbreviation_sentence
+version: "0.1"
+sort: by_weight
+use_preset_vocabulary: true
+...
+
+A	chong	100
+B	shang	100
+C	zhu	100
+D	yi	100
+"#,
+        std::iter::empty::<&str>(),
+        |_| None,
+        |name| (name == "essay").then(|| "ABCD\t1000\n".to_owned()),
+    )
+    .expect("dictionary should parse");
+    let syllabary = ["chong", "shang", "yi", "zhu"].map(str::to_owned);
+    let formulas = vec!["abbrev/^([a-z]).+$/$1/".to_owned()];
+    let prism = parse_rime_prism_bin_payload(build_prism_bin(&syllabary, &formulas, 1, 2))
+        .expect("test prism should parse");
+    let translator = StaticTableTranslator::from_compact_dictionary(dictionary, Some(prism))
+        .with_sentence(true)
+        .with_spelling_algebra(&formulas)
+        .with_upstream_sentence_model(10);
+    let context = Context::default();
+
+    crate::m37_metrics_enable(true);
+    crate::m37_metrics_reset();
+    let full_pinyin_result = translator.translate_with_context_and_request(
+        "chongshangzhuyi",
+        &Status::default(),
+        &HashMap::new(),
+        &context,
+        CandidateRequest::bounded(5),
+    );
+    let full_pinyin_metrics = crate::m37_metrics_snapshot();
+    crate::m37_metrics_enable(false);
+
+    assert_eq!(full_pinyin_result.candidates[0].text, "ABCD");
+    assert_eq!(
+        full_pinyin_metrics.upstream_sentence_model_vocabulary_entries_considered, 0,
+        "full-pinyin sentence lookup must stay on the M40 model without abbreviation vocabulary"
+    );
+
+    let result = translator.translate_with_context_and_request(
+        "cszy",
+        &Status::default(),
+        &HashMap::new(),
+        &context,
+        CandidateRequest::bounded(5),
+    );
+
+    assert_eq!(result.candidates[0].text, "ABCD");
+    assert_eq!(result.candidates[0].source, CandidateSource::Sentence);
+    assert!(result.is_complete);
 }
 
 #[test]

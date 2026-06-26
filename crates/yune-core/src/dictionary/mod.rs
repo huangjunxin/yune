@@ -40,7 +40,8 @@ pub use rebuild_executor::{
 pub use reverse_writer::build_reverse_bin;
 pub(crate) use source::normalize_table_code;
 pub use source::{
-    DictionaryLookupRecord, PresetVocabularyEntry, RimeCorrectionEntry, RimeToleranceRule,
-    TableDictionary, TableDictionaryAdvancedData, TableDictionaryParseError, TableEntry,
+    parse_rime_preset_vocabulary_entries, DictionaryLookupRecord, PresetVocabularyEntry,
+    RimeCorrectionEntry, RimeToleranceRule, TableDictionary, TableDictionaryAdvancedData,
+    TableDictionaryParseError, TableEntry,
 };
 pub use table_writer::build_table_bin;

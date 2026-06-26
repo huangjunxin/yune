@@ -1513,7 +1513,7 @@ fn parse_rime_preset_vocabulary(input: &str) -> HashMap<String, f32> {
         .collect()
 }
 
-fn parse_rime_preset_vocabulary_entries(input: &str) -> Vec<PresetVocabularyEntry> {
+pub fn parse_rime_preset_vocabulary_entries(input: &str) -> Vec<PresetVocabularyEntry> {
     let mut vocabulary = Vec::new();
     let mut comments_enabled = true;
     for line in input.lines() {

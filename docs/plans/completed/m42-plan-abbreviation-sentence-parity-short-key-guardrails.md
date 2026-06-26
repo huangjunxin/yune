@@ -1,6 +1,6 @@
 # M42 Abbreviation Sentence Parity And Short-Key Guardrails Plan
 
-> **Status:** Active - **Milestone:** M42 (abbreviation sentence parity and
+> **Status:** Complete with measured performance blocker - **Milestone:** M42 (abbreviation sentence parity and
 > short-key guardrails) - **Created:** 2026-06-26 - **Type:**
 > native-engine plan
 >
@@ -24,6 +24,49 @@ abbreviation-driven sentence and lexicon candidates, but Phase 0 must confirm
 the exact upstream librime `1.17.0` candidate shape, comments, order, preedit,
 and count before implementation hard-codes expected output. M42 must make those
 rows behavior-comparable before using their latency as performance evidence.
+
+## Closeout Result
+
+M42 followed the implementation branch. Phase 0 native upstream librime `1.17.0`
+evidence proved meaningful `luna_pinyin` candidates for both rows, so the
+no-go branch did not apply.
+
+Final behavior:
+
+- `cszysmsrsd` matches upstream first-page candidate text, comments, order,
+  context preedit, commit preview, and first-page metadata.
+- `zybfshmsru` matches upstream first-page candidate text, comments, order,
+  context preedit, commit preview, and first-page metadata.
+- `RimeGetInput` remains Yune's raw keystroke buffer while context preedit
+  carries the segmented display string.
+
+Final performance:
+
+- `cszysmsrsd`: Yune `4,127.580us`, librime `1,189.890us`, ratio `3.469x`.
+- `zybfshmsru`: Yune `4,257.100us`, librime `839.860us`, ratio `5.069x`.
+- `ni` and `hao` were profiled before short-key optimization; no short-key
+  optimization was attempted.
+- Full-pinyin Track A long rows remain protected at `0.957x` and `0.721x`
+  same-run librime.
+- Track A peak working set is `119,775,232 B`, below the M40 baseline and 5%
+  guard; selected storage remains `rsmarisa_byte_backed`, table/prism remain
+  mmap, selected heap mirrors remain `0`, and `source_fallback=false`.
+- Track B remains a guard-only row at `186.513us/op` median and `204.680us/op`
+  p95; no TypeDuck-profile speed claim is made.
+
+Evidence:
+
+- Phase 0 oracle:
+  [`../../reports/evidence/m42-abbreviation-sentence-parity/phase-0-oracle/`](../../reports/evidence/m42-abbreviation-sentence-parity/phase-0-oracle/)
+- Final candidate comparison:
+  [`../../reports/evidence/m42-abbreviation-sentence-parity/final-candidate-comparison/oracle-vs-yune-candidate-output.md`](../../reports/evidence/m42-abbreviation-sentence-parity/final-candidate-comparison/oracle-vs-yune-candidate-output.md)
+- Final native benchmark:
+  [`../../reports/evidence/m42-abbreviation-sentence-parity/final-native-benchmark/`](../../reports/evidence/m42-abbreviation-sentence-parity/final-native-benchmark/)
+- Final gates:
+  [`../../reports/evidence/m42-abbreviation-sentence-parity/final-gates.md`](../../reports/evidence/m42-abbreviation-sentence-parity/final-gates.md)
+
+M42 closes as a behavior-parity correction with a measured abbreviation latency
+blocker, not as a performance win.
 
 ## Architecture
 
@@ -270,6 +313,11 @@ Implementation branch only.
 
 ## Required Final Gates
 
+Closeout note: M42 now satisfies these gates; the final recorded results live
+in
+[`../../reports/evidence/m42-abbreviation-sentence-parity/final-gates.md`](../../reports/evidence/m42-abbreviation-sentence-parity/final-gates.md).
+The checklist above is retained as the original branch-conditional work plan.
+
 Do not mark M42 complete until these are run and the evidence is recorded:
 
 ```powershell
@@ -295,6 +343,8 @@ artifact for `cszysmsrsd` and `zybfshmsru`, with candidate count, text,
 comments, order, preedit, schema metadata, and capture provenance.
 
 ## Closeout Criteria
+
+Closeout note: the criteria below are satisfied by the M42 closeout evidence.
 
 M42 is complete only when all of these are true:
 

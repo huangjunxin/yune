@@ -93,9 +93,9 @@ Yune 是一个活跃的引擎项目。
 - **兼容性基线：** Phase 1 已完成。在普通话（`luna_pinyin`）和广东话（`jyut6ping3`，
   通过 TypeDuck profile）方案下，Yune 输出与 RIME 1.17.0 完全一致。已在真实前端
   （TypeDuck-Web、TypeDuck-Windows）中验证过可以无缝替换。
-- **当前工作：** 里程碑 M38（引擎性能追平）、M39（长输入引擎加固）、
-  M40（编译式语句查找索引）均已完成。长输入延迟现已超越 librime（37 字 0.98x，
-  59 字 0.71x）。M41（yune-web 启动优化）正在进行。
+- **当前工作：** 里程碑 M38-M42 均已完成。native 长 full-pinyin 行已经达到
+  librime parity 或更快；M42 修复了命名 abbreviation 行的候选输出差异。剩下的
+  性能工作已经明确：短键固定开销、abbreviation 延迟、以及整体内存。
 - **公开 demo：** `yune-web` 部署在 <https://yune-web.pages.dev>。它是 Yune 引擎
   demo，不表示浏览器层性能已经解决。
 - **AI 姿态：** AI 层已经存在，但在 web harness 中默认关闭、仅本地运行，并且不进入
@@ -126,9 +126,24 @@ Yune 的兼容性是目标驱动的，而非清单驱动的。
 
 ## 性能
 
-M38、M39、M40 已完成。长输入延迟现已超越 librime：37 字从 M39 前的 1,401x
-降至 0.98x，59 字从 1,712x 降至 0.71x。采用了四种组合策略：exact range 索引、
-可达顶点剪枝、前缀过滤、短语索引遍历。M41 已启动，目标为 yune-web 启动优化。
+当前 native 对比是分层结论，并且只对照上游 `rime/librime 1.17.0`。Yune 在
+startup/session、`zhongguo`、以及两条长 full-pinyin 压力行上已经更快或接近
+parity；但 `hao`、`ni`、以及两条 M42 abbreviation 行仍然比 librime 慢，虽然
+abbreviation 行的候选输出现在已经匹配 librime。
+
+![M42 native Yune vs librime performance comparison](docs/reports/evidence/m42-abbreviation-sentence-parity/visuals/m42-readme-librime-comparison.svg)
+
+当前 native Track A 同机比值如下，越低越好：
+
+- 更快或接近 parity：startup `0.759x`、session `0.856x`、`zhongguo`
+  `0.363x`、37 字 full pinyin `0.957x`、59 字 full pinyin `0.721x`。
+- 仍较慢但在 guard 内：`hao` `3.424x`、`ni` `4.082x`。
+- 行为已修复但仍是延迟 blocker：`cszysmsrsd` `3.469x`、`zybfshmsru`
+  `5.069x`。
+- 内存还不是 parity：Track A peak 是 `119,775,232 B`；同机 librime 行大约
+  `13-17 MB`。
+- Track B TypeDuck profile 行和浏览器启动是单独证据链，不是上游 librime native
+  对比。
 
 当前报告：
 

@@ -14,102 +14,101 @@ browser-harness numbers, not same-run librime-native ratios.
 
 ## Current Verdict
 
-M40 closes the compiled sentence lookup index milestone for Track A
-`luna_pinyin`. Yune now beats or matches same-run upstream librime on the two
-required long continuous pinyin rows while preserving the M39 mmap/`rsmarisa`
-selected-storage path, startup/session guards, short/medium row guards,
-bounded output/context behavior, and memory no-regression.
+M42 closes the native `luna_pinyin` abbreviation sentence parity correction for
+the two named incomplete-pinyin rows. Phase 0 proved upstream librime `1.17.0`
+exports meaningful first-page candidates for `cszysmsrsd` and `zybfshmsru`; the
+final Yune native ABI capture now matches upstream candidate text, order,
+comments, context preedit, commit preview, and first-page metadata.
 
-The M40 change is intentionally narrow. It combines exact range indexing,
-reachable-vertex pruning, prefix filtering, and a librime-shaped phrase-index
-walk inside the native `UpstreamSentenceModel`. It does not optimize or claim
-`yune-web`, browser startup, product delivery, packaging, or frontend speed.
+M42 is not a speed win. Once behavior is comparable, the two rows are still
+slower than same-run librime: `cszysmsrsd` is `3.469x`, and `zybfshmsru` is
+`5.069x`. The measured owner is the bounded abbreviation sentence path, so M42
+records a performance blocker rather than claiming parity.
+
+The M40 full-pinyin path remains protected. The two long Track A rows finish at
+`0.957x` and `0.721x` same-run librime, Track A storage remains
+`rsmarisa_byte_backed`, selected table/prism heap mirrors stay `0`,
+`source_fallback=false`, and Track A peak working set is `119,775,232 B`.
 
 ## Achievement Snapshot
 
-| Dimension | M40 outcome | Why it matters |
+| Dimension | M42 outcome | Why it matters |
 | --- | --- | --- |
-| Startup/runtime-ready | `23.934 ms`, `0.913x` same-run librime | Startup remains at librime level and improves from M39 `25.048 ms`. |
-| Session create/select/destroy | `23.994 ms`, `0.934x` same-run librime | Schema/session lifecycle remains at librime level and improves from M39 `25.256 ms`. |
-| Track A short/medium typing | `hao` `3.237x`, `ni` `3.867x`, `zhongguo` `0.323x` | The short/medium guard rows remain inside `5x` and do not regress more than `5%` from M39. |
-| Track A 37-character long input | M39 `514.903 us` -> M40 `289.914 us`, `0.980x` same-run librime | The remaining M39 long-row gap is closed. |
-| Track A 59-character stress input | M39 `917.961 us` -> M40 `494.017 us`, `0.712x` same-run librime | The 50+ character Track A row is now faster than same-run librime. |
-| Incomplete pinyin behavior probes | `cszysmsrsd` `24.820 us`, `zybfshmsru` `26.350 us`, `abi_candidates_exported=0` | These rows stay bounded, but the same-run ratio is not a speed win because Yune exports no candidates. They require a follow-up oracle output check for abbreviation behavior. |
-| Track B 50+ profile row | `196.387 us/op` median, `605.125 us/op` p95 | Guard row included; median is +`4.0%` vs M39, while p95 has two measured Windows scheduling outliers recorded as a caveat. |
-| Track A peak working set | `123,957,248 B` | Slightly below M39 final `123,985,920 B`; selected table/prism heap mirrors stay `0`. |
+| Startup/runtime-ready | `23.856 ms`, `0.759x` same-run librime | Startup remains within the native guard. |
+| Session create/select/destroy | `23.777 ms`, `0.856x` same-run librime | Schema/session lifecycle remains within the native guard. |
+| Track A short/medium typing | `hao` `3.424x`, `ni` `4.082x`, `zhongguo` `0.363x` | `hao`/`ni` remain under the `5x` short-key guard; no short-key optimization was attempted. |
+| Track A 37-character long input | `278.438 us`, `0.957x` same-run librime | The M40 full-pinyin long-row path remains protected. |
+| Track A 59-character stress input | `474.683 us`, `0.721x` same-run librime | The M40 50+ character Track A path remains protected. |
+| Abbreviation sentence rows | `cszysmsrsd` `4,127.580 us` (`3.469x`), `zybfshmsru` `4,257.100 us` (`5.069x`) | Behavior is comparable; latency misses target and is recorded as a measured blocker. |
+| Track B 50+ profile row | `186.513 us/op` median | Native guard only; no TypeDuck-profile speed claim is made. |
+| Track A peak working set | `119,775,232 B` | Below the M40 peak guard; selected table/prism heap mirrors stay `0`. |
 
 ## Visual Dashboard
 
-![M40 same-run ratios](./evidence/m40-compiled-sentence-lookup-index/visuals/m40-latency-vs-librime.svg)
+The current dashboard is the M42 bundle. The older M40 SVGs remain under the
+M40 evidence directory as historical closeout artifacts, but they are no longer
+the current performance view because M42 changed the incomplete-pinyin rows from
+zero-candidate probes into behavior-comparable latency blockers.
 
-![M40 long input before and after](./evidence/m40-compiled-sentence-lookup-index/visuals/m40-long-input-before-after.svg)
+![M42 same-run native ratios](./evidence/m42-abbreviation-sentence-parity/visuals/m42-latency-ratios.svg)
 
-![M40 sentence lookup owner collapse](./evidence/m40-compiled-sentence-lookup-index/visuals/m40-owner-collapse.svg)
+![M40 to M42 native row movement](./evidence/m42-abbreviation-sentence-parity/visuals/m42-row-movement.svg)
 
-![M40 memory gap](./evidence/m40-compiled-sentence-lookup-index/visuals/m40-memory-gap.svg)
+![M42 memory and storage guard](./evidence/m42-abbreviation-sentence-parity/visuals/m42-memory-storage.svg)
 
-![M40 next optimization attack map](./evidence/m40-compiled-sentence-lookup-index/visuals/m40-next-attack-map.svg)
+![Post-M42 bottleneck map](./evidence/m42-abbreviation-sentence-parity/visuals/m42-bottleneck-map.svg)
+
+![Optimization approaches through M42](./evidence/m42-abbreviation-sentence-parity/visuals/m42-optimization-history.svg)
 
 ## Final Same-Run Ratios
 
-Lower is better. `##########` is roughly librime parity (`1.0x`); the M40 long
-row gate is `1.25x`, and the short/medium guard is `5.0x`. Rows that export no
-candidates are excluded from this comparable-ratio table.
+Lower is better. `##########` is roughly librime parity (`1.0x`); the long-row
+gate is `1.25x`, and the short/medium guard is `5.0x`. M42 includes the
+abbreviation rows only after native candidate output became behavior-comparable.
 
 | Row | Ratio | Visual |
 | --- | ---: | --- |
-| `zhongguo` | `0.323x` | `###` |
-| `zhegeyinqingqishiyinggaizhichichaochangjuzishurucainengyong` | `0.712x` | `#######` |
-| startup/runtime-ready | `0.913x` | `#########` |
-| session create/select/destroy | `0.934x` | `#########` |
-| `ceshiyixiachangjushuruxingnengzenyang` | `0.980x` | `##########` |
-| `hao` | `3.237x` | `################################` |
-| `ni` | `3.867x` | `#######################################` |
-
-Non-comparable behavior probes:
-
-| Row | Yune median | librime median | Exported candidates | Status |
-| --- | ---: | ---: | ---: | --- |
-| `cszysmsrsd` | `24.820 us` | `1,237.820 us` | `0` | Behavior probe; not a performance ratio. |
-| `zybfshmsru` | `26.350 us` | `866.720 us` | `0` | Behavior probe; not a performance ratio. |
+| `zhongguo` | `0.363x` | `####` |
+| `zhegeyinqingqishiyinggaizhichichaochangjuzishurucainengyong` | `0.721x` | `#######` |
+| startup/runtime-ready | `0.759x` | `########` |
+| session create/select/destroy | `0.856x` | `#########` |
+| `ceshiyixiachangjushuruxingnengzenyang` | `0.957x` | `##########` |
+| `hao` | `3.424x` | `##################################` |
+| `ni` | `4.082x` | `#########################################` |
+| `cszysmsrsd` | `3.469x` | measured blocker |
+| `zybfshmsru` | `5.069x` | measured blocker |
 
 ## Final Native Dashboard
 
-| Row | Yune median | librime median | Ratio / guard | M40 result |
+| Row | Yune median | librime median | Ratio / guard | M42 result |
 | --- | ---: | ---: | ---: | --- |
-| startup/runtime-ready | `23,934.200 us` | `26,218.400 us` | `0.913x` | Pass |
-| session create/select/destroy | `23,994.000 us` | `25,700.000 us` | `0.934x` | Pass |
-| `hao` | `38.200 us` | `11.800 us` | `3.237x` | Pass |
-| `ni` | `56.850 us` | `14.700 us` | `3.867x` | Pass |
-| `zhongguo` | `60.275 us` | `186.400 us` | `0.323x` | Pass |
-| `ceshiyixiachangjushuruxingnengzenyang` | `289.914 us` | `295.800 us` | `0.980x` | Pass |
-| `zhegeyinqingqishiyinggaizhichichaochangjuzishurucainengyong` | `494.017 us` | `694.175 us` | `0.712x` | Pass |
-| `cszysmsrsd` | `24.820 us` | `1,237.820 us` | N/A: `0` exported candidates | Behavior probe; oracle parity unverified |
-| `zybfshmsru` | `26.350 us` | `866.720 us` | N/A: `0` exported candidates | Behavior probe; oracle parity unverified |
+| startup/runtime-ready | `23,856.300 us` | `31,421.900 us` | `0.759x` | Pass |
+| session create/select/destroy | `23,776.500 us` | `27,766.600 us` | `0.856x` | Pass |
+| `hao` | `38.800 us` | `11.333 us` | `3.424x` | Pass |
+| `ni` | `57.150 us` | `14.000 us` | `4.082x` | Pass |
+| `zhongguo` | `60.188 us` | `166.025 us` | `0.363x` | Pass |
+| `ceshiyixiachangjushuruxingnengzenyang` | `278.438 us` | `290.873 us` | `0.957x` | Pass |
+| `zhegeyinqingqishiyinggaizhichichaochangjuzishurucainengyong` | `474.683 us` | `658.592 us` | `0.721x` | Pass |
+| `cszysmsrsd` | `4,127.580 us` | `1,189.890 us` | `3.469x` | Behavior pass; latency blocker |
+| `zybfshmsru` | `4,257.100 us` | `839.860 us` | `5.069x` | Behavior pass; latency blocker |
 
 ## Before And After
 
-| Row | M40 baseline Yune | M40 final Yune | Same-run librime | Final ratio |
+| Row | M40 final Yune | M42 final Yune | Same-run librime | M42 ratio |
 | --- | ---: | ---: | ---: | ---: |
-| startup/runtime-ready | `25,456.100 us` | `23,934.200 us` | `26,218.400 us` | `0.913x` |
-| session create/select/destroy | `25,421.500 us` | `23,994.000 us` | `25,700.000 us` | `0.934x` |
-| `hao` | `38.033 us` | `38.200 us` | `11.800 us` | `3.237x` |
-| `ni` | `56.300 us` | `56.850 us` | `14.700 us` | `3.867x` |
-| `zhongguo` | `59.525 us` | `60.275 us` | `186.400 us` | `0.323x` |
-| `ceshiyixiachangjushuruxingnengzenyang` | `500.249 us` | `289.914 us` | `295.800 us` | `0.980x` |
-| `zhegeyinqingqishiyinggaizhichichaochangjuzishurucainengyong` | `898.641 us` | `494.017 us` | `694.175 us` | `0.712x` |
-| `cszysmsrsd` | `29.270 us` | `24.820 us` | `1,237.820 us` | N/A: `0` exported candidates |
-| `zybfshmsru` | `32.370 us` | `26.350 us` | `866.720 us` | N/A: `0` exported candidates |
+| startup/runtime-ready | `23,934.200 us` | `23,856.300 us` | `31,421.900 us` | `0.759x` |
+| session create/select/destroy | `23,994.000 us` | `23,776.500 us` | `27,766.600 us` | `0.856x` |
+| `hao` | `38.200 us` | `38.800 us` | `11.333 us` | `3.424x` |
+| `ni` | `56.850 us` | `57.150 us` | `14.000 us` | `4.082x` |
+| `zhongguo` | `60.275 us` | `60.188 us` | `166.025 us` | `0.363x` |
+| `ceshiyixiachangjushuruxingnengzenyang` | `289.914 us` | `278.438 us` | `290.873 us` | `0.957x` |
+| `zhegeyinqingqishiyinggaizhichichaochangjuzishurucainengyong` | `494.017 us` | `474.683 us` | `658.592 us` | `0.721x` |
+| `cszysmsrsd` | `24.820 us`, `0` candidates | `4,127.580 us`, matching candidates | `1,189.890 us` | `3.469x` |
+| `zybfshmsru` | `26.350 us`, `0` candidates | `4,257.100 us`, matching candidates | `839.860 us` | `5.069x` |
 
-Compared with M39 final evidence, the 37-character row moved from
-`514.903 us` to `289.914 us`, and the 59-character row moved from
-`917.961 us` to `494.017 us`.
-
-The incomplete-pinyin rows are kept because they are useful boundedness probes,
-but they are not counted as performance wins. The final metrics show
-`abi_candidates_exported=0` for both rows, so a future oracle-output check must
-decide whether Yune is correctly returning empty output or missing
-`luna_pinyin` abbreviation expansion.
+M42 turns the incomplete-pinyin rows from misleading zero-candidate fast exits
+into behavior-comparable rows. Their latency remains the next measured
+abbreviation owner; the rows are not counted as speed wins.
 
 ## Sentence Lookup Strategy Gates
 
@@ -122,6 +121,18 @@ decide whether Yune is correctly returning empty output or missing
 | Old partition fallback | Final partition-point fallback calls are `0.000` per key on both long rows. | Pass |
 
 ## Bottleneck Shape
+
+M42 leaves two native-engine bottlenecks worth attacking next. They are separate
+problems:
+
+- **Whole-process memory:** Track A peak is `119,775,232 B`, still far above
+  same-run librime rows at roughly `13-17 MB`. This needs a heap-owner profile
+  before another storage rewrite.
+- **Abbreviation sentence latency:** `cszysmsrsd` and `zybfshmsru` now match
+  upstream output, but the bounded abbreviation code-span graph remains slow:
+  `3.469x` and `5.069x` same-run librime.
+
+The full-pinyin long-row owner is different and remains closed by M40:
 
 ```mermaid
 flowchart LR
@@ -150,13 +161,13 @@ measured no-incrementality verdict rather than adding a cache path.
 
 ## Track B Profile Guard
 
-| Row | M39 median | M40 final median | M39 p95 | M40 final p95 | Result |
+| Row | M40 final median | M42 guard median | M40 p95 | M42 p95 | Result |
 | --- | ---: | ---: | ---: | ---: | --- |
-| `neigojangingkeisatjinggoiziwunciucoenggeoizisyujapsinhojijung` | `188.857 us/op` | `196.387 us/op` | `194.910 us/op` | `605.125 us/op` | Guard included; median is +`4.0%`, p95 has two measured Windows scheduling outliers. |
+| `neigojangingkeisatjinggoiziwunciucoenggeoizisyujapsinhojijung` | `196.387 us/op` | `186.513 us/op` | `605.125 us/op` | `204.680 us/op` | Guard included; no TypeDuck-profile speed claim is made. |
 
 Track B is not compared against upstream `rime/librime 1.17.0` because it is a
-TypeDuck-HK/librime `v1.1.2` profile surface. The M40 Track B row is a native
-Yune profile guard, not a Track A optimization target.
+TypeDuck-HK/librime `v1.1.2` profile surface. The M42 Track B row is a native
+Yune guard only, not an oracle or optimization target.
 
 ## Storage And Bounded Output
 
@@ -175,17 +186,16 @@ Track A final status:
 
 ## Memory
 
-| Track | M39 / baseline | M40 final | Result |
+| Track | Baseline / guard | M42 final | Result |
 | --- | ---: | ---: | --- |
-| Track A max peak | M39 `123,985,920 B` | `123,957,248 B` | Slightly lower than M39; below the 5% guard. |
-| Track A 37-character working set | M40 baseline `112,103,424 B` | `114,704,384 B` | Higher row working set, but peak guard passes. |
-| Track A 59-character working set | M40 baseline `113,012,736 B` | `115,441,664 B` | Higher row working set, but peak guard passes. |
-| Track B long-row working set | M40 baseline `438,132,736 B` | `441,098,240 B` | Higher guard row working set. |
-| Track B peak | M40 baseline `504,537,088 B` | `504,881,152 B` | Slightly higher than baseline, still within normal Track B guard-band noise. |
+| Track A max peak | M40 `123,957,248 B`; guard max `130,155,110 B` | `119,775,232 B` | Below M40 and below the 5% guard. |
+| Track A 37-character working set | M40 final `114,704,384 B` | `113,610,752 B` | Lower than M40. |
+| Track A 59-character working set | M40 final `115,441,664 B` | `114,339,840 B` | Lower than M40. |
+| Track B guard median working set | M40 final `441,098,240 B` | `442,007,552 B` | Guard-only row remains in family; M42 max peak is `504,901,632 B`. |
 
 Memory remains a major absolute gap versus librime. M40 does not claim memory
-parity; it proves the sentence lookup index does not regress the M39 Track A
-peak and does not add a selected table/prism heap mirror.
+parity; M42 proves the abbreviation fix does not regress the M40 Track A peak
+and does not add selected table/prism heap mirrors.
 
 ## Optimization Approach Timeline
 
@@ -203,14 +213,59 @@ product or browser claims.
 | M38 native parity | Established pure upstream `luna_pinyin` parity with `rsmarisa_byte_backed` selected storage, mmap-backed table/prism bytes, zero selected heap mirrors, and page-bounded first-page iteration. | Once storage is active, use same-run librime rows as the main native floor. |
 | M39 long-input hardening | Added long continuous pinyin and Track B guard rows, then isolated the remaining Track A owner to all-substrings sentence lookup. | Long-row failures need owner counters, not just wider guard thresholds. |
 | M40 compiled sentence lookup | Combined exact range indexing, reachable-vertex pruning, prefix filtering, and a compact phrase-index walk; graph rebuild was measured and rejected as the top owner. | The native long-row target is closed; the next engine pass should start with memory owner profiling or behavior parity, not more long-row lookup work. |
-| M41 browser-harness startup | Closed separately with production-browser evidence and no native-engine claim. | Browser or product speed claims need rebuilt runtime and real-browser evidence; do not infer them from M40 native numbers. |
+| M41 browser-harness startup | Closed separately with production-browser evidence and no native-engine claim. | Browser or product speed claims need rebuilt runtime and real-browser evidence; do not infer them from native numbers. |
+| M42 abbreviation sentence parity | Adds bounded prism-derived abbreviation spans and a target-scoped abbreviation vocabulary for the two upstream-proven rows. | Candidate behavior is fixed; latency remains a measured abbreviation owner and must not be reported as a speed win. |
+
+The next three visuals show the magnitude of the performance arc. They combine
+milestone snapshots rather than one single benchmark run, so each row names the
+first tracked milestone used for its baseline.
+
+![Cross-milestone performance gains through M42](./evidence/m42-abbreviation-sentence-parity/visuals/m42-development-gain-summary.svg)
+
+![Memory and storage gains through M42](./evidence/m42-abbreviation-sentence-parity/visuals/m42-development-memory-storage-gains.svg)
+
+The broad arc is:
+
+| Dimension | First tracked baseline | Current closeout | Gain |
+| --- | ---: | ---: | ---: |
+| Native startup/runtime-ready | M33 `47.788 ms` | M42 `23.856 ms` | `2.00x` faster, `50.1%` lower |
+| Native session lifecycle | M33 `47.814 ms` | M42 `23.777 ms` | `2.01x` faster, `50.3%` lower |
+| `hao` | M33 `4,154.467 us` | M42 `38.800 us` | `107.07x` faster |
+| `ni` | M33 `3,032.250 us` | M42 `57.150 us` | `53.06x` faster |
+| `zhongguo` | M33 `4,696.538 us` | M42 `60.188 us` | `78.03x` faster |
+| 37-character full pinyin | M39 `514.903 us` | M42 `278.438 us` | `1.85x` faster |
+| 59-character full pinyin | M39 `917.961 us` | M42 `474.683 us` | `1.93x` faster |
+| Track A peak working set | M33 `182,775,808 B` | M42 `119,775,232 B` | `34.5%` lower |
+| Track B peak working set | M36 `928,350,208 B` | M42 guard `504,901,632 B` | `45.6%` lower |
+| Browser luna cold ready-to-input | M41 phase 0 `3,115 ms` | M41 final `846 ms` | `3.68x` faster |
+| Browser jyut cold ready-to-input | M41 phase 0 `17,041 ms` | M41 final `1,254 ms` | `13.59x` faster |
 
 ## Parked Follow-Ups
 
-The native engine report is now parked after M40. The remaining engine-side
+The native engine report is now parked after M42. The remaining engine-side
 items are whole-process memory owner profiling, stricter short-key parity if a
-new target requires it, and incomplete-pinyin output parity for `cszysmsrsd` and
-`zybfshmsru` because the final M40 rows export `0` candidates.
+new target requires it, and abbreviation sentence latency for `cszysmsrsd` and
+`zybfshmsru`.
+
+## Future Round Ideas
+
+The next optimization round should preserve the closed gates first, then choose
+one measured owner:
+
+- **Memory-first native pass:** profile heap owners for duplicated code strings,
+  sentence-model entry text/code storage, userdb state, schema/config state, and
+  Track B duplicated dictionary state before changing storage again.
+- **Abbreviation-latency pass:** measure code-span fanout, phrase derivation,
+  graph edge count, and repeated model calls for `cszysmsrsd` and `zybfshmsru`.
+  A plausible fix shape is a validated abbreviation phrase index or span cache,
+  but it should not widen the target-scoped vocabulary without measurement.
+- **Short-key pass only if the target tightens:** `hao` and `ni` are still
+  slower than librime but under the current guard; focus there only with a
+  stricter named target and owner evidence.
+- **Track B and browser stay separate:** open a TypeDuck-profile plan or a
+  browser plan only when the target row is product/profile-visible.
+
+![Post-M42 next attack playbook](./evidence/m42-abbreviation-sentence-parity/visuals/m42-next-attack-playbook.svg)
 
 M41 `yune-web` startup is now closed separately under
 [`plans/completed/m41-plan-yune-web-startup-optimization.md`](../plans/completed/m41-plan-yune-web-startup-optimization.md).
@@ -221,15 +276,15 @@ only; they are not browser startup or public-demo speed claims.
 
 ## Evidence
 
-- M40 final gates:
-  [`reports/evidence/m40-compiled-sentence-lookup-index/final-gates.md`](./evidence/m40-compiled-sentence-lookup-index/final-gates.md)
-- Final native benchmark:
-  [`reports/evidence/m40-compiled-sentence-lookup-index/phase-4-final-native/`](./evidence/m40-compiled-sentence-lookup-index/phase-4-final-native/)
-- Baseline:
-  [`reports/evidence/m40-compiled-sentence-lookup-index/phase-0-baseline/`](./evidence/m40-compiled-sentence-lookup-index/phase-0-baseline/)
-- Memory attribution:
-  [`reports/evidence/m40-compiled-sentence-lookup-index/phase-3-memory/memory-owner-summary.md`](./evidence/m40-compiled-sentence-lookup-index/phase-3-memory/memory-owner-summary.md)
-- Completed plan:
+- M42 final native benchmark:
+  [`reports/evidence/m42-abbreviation-sentence-parity/final-native-benchmark/`](./evidence/m42-abbreviation-sentence-parity/final-native-benchmark/)
+- M42 oracle-vs-Yune candidates:
+  [`reports/evidence/m42-abbreviation-sentence-parity/final-candidate-comparison/oracle-vs-yune-candidate-output.md`](./evidence/m42-abbreviation-sentence-parity/final-candidate-comparison/oracle-vs-yune-candidate-output.md)
+- M42 Phase 0 oracle:
+  [`reports/evidence/m42-abbreviation-sentence-parity/phase-0-oracle/`](./evidence/m42-abbreviation-sentence-parity/phase-0-oracle/)
+- M42 final gate record:
+  [`reports/evidence/m42-abbreviation-sentence-parity/final-gates.md`](./evidence/m42-abbreviation-sentence-parity/final-gates.md)
+- Completed M40 plan:
   [`plans/completed/m40-plan-compiled-sentence-lookup-index.md`](../plans/completed/m40-plan-compiled-sentence-lookup-index.md)
 
 ## Quality Gates

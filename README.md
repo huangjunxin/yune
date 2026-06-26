@@ -104,10 +104,11 @@ Yune is an active engine project.
   to RIME 1.17.0 for Mandarin (`luna_pinyin`) and Cantonese (`jyut6ping3` via
   TypeDuck profile). It has been validated as a drop-in replacement in real-world
   frontends (TypeDuck-Web, TypeDuck-Windows).
-- **Current work:** milestones M38 (engine performance parity), M39 (long-input
-  engine hardening), and M40 (compiled sentence lookup index) are complete.
-  Long-input latency is now faster than librime (37-char at 0.98x, 59-char at
-  0.71x). M41 (yune-web startup optimization) is active.
+- **Current work:** milestones M38-M42 are complete. Native long full-pinyin
+  rows are now at parity or faster than librime, M42 fixed the named
+  abbreviation candidate-output gap, and the remaining performance work is now
+  explicit: short-key fixed overhead, abbreviation latency, and whole-process
+  memory.
 - **Public demo:** `yune-web` is deployed at <https://yune-web.pages.dev>. It's
   a Yune engine demo, not a claim that browser-level performance is solved.
 - **AI posture:** the AI layer exists but is default-off, local-only in the web
@@ -139,11 +140,26 @@ are exposed exclusively through `rime_get_typeduck_profile_api()`.
 
 ## Performance
 
-M38, M39, and M40 are complete. Long-input latency is now faster than librime:
-37-character at 0.98x (down from 1,401x before M39) and 59-character at 0.71x
-(down from 1,712x). This was achieved by four combined strategies: exact range
-indexing, reachable-vertex pruning, prefix filtering, and phrase-index walk.
-M41 is now active, targeting yune-web startup optimization.
+The current native comparison is mixed and intentionally measured against
+upstream `rime/librime 1.17.0`. Yune is now faster or near parity for
+startup/session, `zhongguo`, and the two long full-pinyin stress rows. It is
+still slower for `hao`, `ni`, and the two M42 abbreviation rows, even though
+those abbreviation rows now match librime candidate output.
+
+![M42 native Yune vs librime performance comparison](docs/reports/evidence/m42-abbreviation-sentence-parity/visuals/m42-readme-librime-comparison.svg)
+
+Current native Track A same-run ratios, where lower is better:
+
+- Faster or near parity: startup `0.759x`, session `0.856x`, `zhongguo`
+  `0.363x`, 37-character full pinyin `0.957x`, and 59-character full pinyin
+  `0.721x`.
+- Slower but guarded: `hao` `3.424x` and `ni` `4.082x`.
+- Behavior fixed but still a latency blocker: `cszysmsrsd` `3.469x` and
+  `zybfshmsru` `5.069x`.
+- Memory is not parity: Track A peak is `119,775,232 B`; same-run librime rows
+  are roughly `13-17 MB`.
+- Track B TypeDuck-profile rows and browser startup are separate evidence lanes,
+  not upstream-librime native comparisons.
 
 Current reports:
 

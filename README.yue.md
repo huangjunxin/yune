@@ -87,9 +87,9 @@ code——抄 code 即係抄埋 bug 同舊架構。Yune 嘅做法係將 RIME 當
 - **兼容性基線：** Phase 1 已完成。喺普通話（`luna_pinyin`）粵拼（`jyut6ping3`，
   經 TypeDuck profile）方案之下，Yune 輸出同 RIME 1.17.0 完全一致。已經喺真實
   frontend（TypeDuck-Web、TypeDuck-Windows）度驗證過可以無縫替換。
-- **而家做緊：** milestone M38（引擎性能追平）、M39（長輸入引擎加固）、
-  M40（編譯式語句查找索引）都已經完成。長輸入延遲而家快過 librime（37 字 0.98x，
-  59 字 0.71x）。M41（yune-web 啟動優化）做緊。
+- **而家做緊：** milestone M38-M42 都已經完成。native 長 full-pinyin 行已經
+  去到 librime parity 或者更快；M42 修復咗命名 abbreviation 行嘅候選輸出差異。
+  剩低嘅性能工作已經好清楚：短鍵固定開銷、abbreviation 延遲、同整體 memory。
 - **公開 demo：** `yune-web` 部署喺 <https://yune-web.pages.dev>。佢係 Yune 引擎
   demo，唔代表 browser 層嘅性能已經解決。
 - **AI 姿態：** AI layer 已經存在，但喺 web harness 入面預設熄咗、只行本地，而且
@@ -120,9 +120,24 @@ Yune 嘅兼容性係 target-driven，而唔係 checklist-driven。
 
 ## 性能
 
-M38、M39、M40 都搞掂咗。長輸入延遲而家快過 librime：37 字由 M39 前嘅 1,401x
-跌到 0.98x，59 字由 1,712x 跌到 0.71x。用咗四種組合策略：exact range 索引、
-可達頂點剪枝、prefix 過濾、短語索引遍歷。M41 已經啟動，目標係 yune-web 啟動優化。
+而家 native 對比要分開講，而且淨係對照上游 `rime/librime 1.17.0`。Yune 喺
+startup/session、`zhongguo`、同兩條長 full-pinyin 壓力行已經快過或者接近
+parity；但 `hao`、`ni`、同兩條 M42 abbreviation 行仍然慢過 librime，雖然
+abbreviation 行嘅候選輸出而家已經同 librime 對得上。
+
+![M42 native Yune vs librime performance comparison](docs/reports/evidence/m42-abbreviation-sentence-parity/visuals/m42-readme-librime-comparison.svg)
+
+目前 native Track A 同機比值如下，越低越好：
+
+- 更快或者接近 parity：startup `0.759x`、session `0.856x`、`zhongguo`
+  `0.363x`、37 字 full pinyin `0.957x`、59 字 full pinyin `0.721x`。
+- 仍然較慢但喺 guard 內：`hao` `3.424x`、`ni` `4.082x`。
+- 行為已修復但仍然係 latency blocker：`cszysmsrsd` `3.469x`、`zybfshmsru`
+  `5.069x`。
+- memory 仲未係 parity：Track A peak 係 `119,775,232 B`；同機 librime 行大約
+  `13-17 MB`。
+- Track B TypeDuck profile 行同 browser 啟動係獨立 evidence lane，唔係上游
+  librime native 對比。
 
 目前報告：
 

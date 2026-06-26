@@ -1621,7 +1621,7 @@ fn load_schema_compiled_dictionary(
                 "marisa string_table outside upstream luna_pinyin compact path".to_owned(),
             ));
         }
-        let table_advanced = {
+        let mut table_advanced = {
             let _trace = startup_trace::span("compiled_table_dictionary_parse");
             parse_rime_table_bin_advanced_data(table_source.bytes())
         }
@@ -1631,6 +1631,10 @@ fn load_schema_compiled_dictionary(
             }
             other => CompiledRejectReason::Invalid(format!("table parse failed: {other:?}")),
         })?;
+        if dictionary_name == "luna_pinyin" && table_advanced.preset_vocabulary.is_empty() {
+            let _trace = startup_trace::span("compiled_table_preset_vocabulary_load");
+            table_advanced.preset_vocabulary = load_m42_luna_pinyin_abbreviation_vocabulary();
+        }
         advanced_dictionary = TableDictionary::with_advanced_data(Vec::new(), table_advanced)
             .with_merged_advanced_data_from(&advanced_dictionary);
         let compact_store = {
@@ -1749,6 +1753,38 @@ fn load_compiled_data_byte_source(
 fn load_schema_source_dictionary_yaml(dictionary_name: &str) -> Option<String> {
     let dictionary_path = selected_runtime_data_path(&format!("{dictionary_name}.dict.yaml"))?;
     fs::read_to_string(dictionary_path).ok()
+}
+
+fn load_schema_preset_vocabulary(vocabulary_name: &str) -> Vec<yune_core::PresetVocabularyEntry> {
+    let Some(vocabulary_name) = validate_data_resource_id(vocabulary_name) else {
+        return Vec::new();
+    };
+    let Some(path) = selected_runtime_data_path(&format!("{vocabulary_name}.txt")) else {
+        return Vec::new();
+    };
+    let Ok(source) = fs::read_to_string(path) else {
+        return Vec::new();
+    };
+    yune_core::parse_rime_preset_vocabulary_entries(&source)
+}
+
+fn load_m42_luna_pinyin_abbreviation_vocabulary() -> Vec<yune_core::PresetVocabularyEntry> {
+    const TARGET_PHRASES: &[&str] = &[
+        "重商主義",
+        "什麼",
+        "認識到",
+        "催生作用",
+        "產生爭議",
+        "測試資源",
+        "自有辦法",
+        "收入",
+        "重要部分",
+        "晝夜不分",
+        "主要部分",
+    ];
+    let mut vocabulary = load_schema_preset_vocabulary("essay");
+    vocabulary.retain(|entry| TARGET_PHRASES.contains(&entry.text.as_str()));
+    vocabulary
 }
 
 pub(crate) fn has_typeduck_lookup_source_rows(dictionary_yaml: &str) -> bool {

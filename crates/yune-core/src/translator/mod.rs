@@ -10,7 +10,7 @@ use crate::dictionary::{
     RimePrismBinPayload, TableLookup,
 };
 use crate::filter::contains_extended_cjk;
-use crate::poet::UpstreamSentenceModel;
+use crate::poet::{SentenceCodeSpan, UpstreamSentenceModel};
 use crate::spelling_algebra::{ExpandedSpellingEntry, SpellingAlgebra};
 use crate::{
     Candidate, CandidateRequest, CandidateSource, Context, M37SentenceCandidateMetrics,
@@ -22,6 +22,10 @@ const TYPEDUCK_CORRECTION_CREDIBILITY: f32 = -16.118_095; // log(1e-7)
 const TYPEDUCK_CORRECTION_MAX_DISTANCE: usize = 4;
 const DEFAULT_SENTENCE_WORD_PENALTY: f32 = 0.0;
 const BOUNDED_SENTENCE_MODEL_PAGE_LIMIT: usize = 5;
+const MAX_ABBREVIATION_SENTENCE_INPUT_BYTES: usize = 16;
+const MAX_ABBREVIATION_SENTENCE_SPAN_BYTES: usize = 6;
+const MAX_ABBREVIATION_SENTENCE_CODES_PER_SPAN: usize = 128;
+const MAX_ABBREVIATION_SENTENCE_TOTAL_SPANS: usize = 4096;
 /// Yune-internal heuristic calibrated to the M21 TypeDuck v1.1.2 sentence-composition fixture
 /// and the M28 follow-up upstream-Jyutping composition fixture; install only for the
 /// jyut6ping3 TypeDuck profile.
@@ -668,21 +672,41 @@ impl StaticTableTranslator {
 
     #[must_use]
     pub fn with_upstream_sentence_model(mut self, max_candidates: usize) -> Self {
-        self.upstream_sentence_model = Some(if let Some(entries) = self.source_entries.take() {
-            UpstreamSentenceModel::from_table_entries(
-                entries.into_iter().map(|(code, candidate)| {
-                    TableEntry::new(code, candidate.text, candidate.quality)
-                }),
+        let build_abbreviation_model = matches!(self.storage, TableStorage::Compact(_))
+            && self.prism_payload.is_some()
+            && self.single_letter_sentence_guard_enabled
+            && !self.preset_vocabulary.is_empty();
+        if let Some(entries) = self.source_entries.take() {
+            let table_entries = entries
+                .into_iter()
+                .map(|(code, candidate)| TableEntry::new(code, candidate.text, candidate.quality))
+                .collect::<Vec<_>>();
+            self.upstream_sentence_model = Some(UpstreamSentenceModel::from_table_entries(
+                table_entries,
                 &self.preset_vocabulary,
                 max_candidates,
-            )
+            ));
         } else {
-            UpstreamSentenceModel::from_table_entries(
-                self.storage.table_entry_iter(),
-                &self.preset_vocabulary,
-                max_candidates,
-            )
-        });
+            let full_pinyin_vocabulary = if build_abbreviation_model {
+                &[][..]
+            } else {
+                self.preset_vocabulary.as_slice()
+            };
+            self.upstream_sentence_model = Some(if build_abbreviation_model {
+                UpstreamSentenceModel::from_table_entries_with_abbreviation_vocabulary(
+                    self.storage.table_entry_iter(),
+                    full_pinyin_vocabulary,
+                    &self.preset_vocabulary,
+                    max_candidates,
+                )
+            } else {
+                UpstreamSentenceModel::from_table_entries(
+                    self.storage.table_entry_iter(),
+                    full_pinyin_vocabulary,
+                    max_candidates,
+                )
+            });
+        }
         self
     }
 
@@ -710,8 +734,9 @@ impl StaticTableTranslator {
         let algebra = SpellingAlgebra::parse(formulas);
         if !algebra.is_empty() {
             if matches!(self.storage, TableStorage::Compact(_)) && self.prism_payload.is_some() {
-                self.single_letter_sentence_guard_enabled =
-                    formulas.iter().any(|formula| formula.contains("/abbrev"));
+                self.single_letter_sentence_guard_enabled = formulas
+                    .iter()
+                    .any(|formula| formula_is_abbreviation(formula));
                 return self;
             }
             let source_entries = self
@@ -875,6 +900,96 @@ impl StaticTableTranslator {
             }
         }
         specs
+    }
+
+    fn abbreviation_sentence_candidates(
+        &self,
+        model: &UpstreamSentenceModel,
+        input: &str,
+        limit: usize,
+        filter_by_charset: bool,
+    ) -> Vec<Candidate> {
+        let Some((spans, preedit)) = self.abbreviation_sentence_spans(model, input) else {
+            return Vec::new();
+        };
+        let mut candidates = model
+            .candidates_for_code_spans_with_limit(input, &spans, limit)
+            .into_iter()
+            .filter(|candidate| !filter_by_charset || !contains_extended_cjk(&candidate.text))
+            .collect::<Vec<_>>();
+        for candidate in &mut candidates {
+            candidate.preedit = Some(preedit.clone());
+        }
+        candidates
+    }
+
+    fn abbreviation_sentence_spans(
+        &self,
+        model: &UpstreamSentenceModel,
+        input: &str,
+    ) -> Option<(Vec<SentenceCodeSpan>, String)> {
+        if !self.single_letter_sentence_guard_enabled
+            || input.is_empty()
+            || input.len() > MAX_ABBREVIATION_SENTENCE_INPUT_BYTES
+            || !input.is_ascii()
+        {
+            return None;
+        }
+        let prism = self.prism_payload.as_ref()?;
+        let syllabary_codes = self.storage.syllabary_codes()?;
+        let boundaries = input
+            .char_indices()
+            .map(|(index, _)| index)
+            .chain(std::iter::once(input.len()))
+            .collect::<Vec<_>>();
+        let mut spans = Vec::new();
+        let mut saw_abbreviation = false;
+        for (start_index, start) in boundaries.iter().copied().enumerate() {
+            if start >= input.len() {
+                continue;
+            }
+            for end in boundaries.iter().copied().skip(start_index + 1) {
+                if end - start > MAX_ABBREVIATION_SENTENCE_SPAN_BYTES {
+                    break;
+                }
+                let spelling = &input[start..end];
+                let mut codes = prism
+                    .lookup_canonical_codes(spelling, syllabary_codes)
+                    .into_iter()
+                    .filter(|lookup| {
+                        !lookup.correction
+                            && (lookup.abbreviation || lookup.code == spelling)
+                            && model.has_code(lookup.code)
+                    })
+                    .map(|lookup| {
+                        if lookup.abbreviation {
+                            saw_abbreviation = true;
+                        }
+                        lookup.code.to_owned()
+                    })
+                    .collect::<Vec<_>>();
+                codes.sort();
+                codes.dedup();
+                codes.truncate(MAX_ABBREVIATION_SENTENCE_CODES_PER_SPAN);
+                for code in codes {
+                    spans.push(SentenceCodeSpan::new(start, end, code));
+                    if spans.len() >= MAX_ABBREVIATION_SENTENCE_TOTAL_SPANS {
+                        break;
+                    }
+                }
+                if spans.len() >= MAX_ABBREVIATION_SENTENCE_TOTAL_SPANS {
+                    break;
+                }
+            }
+            if spans.len() >= MAX_ABBREVIATION_SENTENCE_TOTAL_SPANS {
+                break;
+            }
+        }
+        if !saw_abbreviation || spans.is_empty() {
+            return None;
+        }
+        let preedit = abbreviation_preedit_from_spans(input, &boundaries, &spans)?;
+        Some((spans, preedit))
     }
 
     fn exact_lookup_min_syllable_count(&self, lookup_code: &str) -> Option<usize> {
@@ -1373,6 +1488,41 @@ impl StaticTableTranslator {
                         include_full_count,
                     );
                 }
+                let abbreviation_start = crate::m37_metrics_enabled().then(Instant::now);
+                let abbreviation_limit = limit.min(BOUNDED_SENTENCE_MODEL_PAGE_LIMIT);
+                let mut candidates = self.abbreviation_sentence_candidates(
+                    model,
+                    input,
+                    abbreviation_limit,
+                    filter_by_charset,
+                );
+                if let Some(start) = abbreviation_start {
+                    crate::m37_record_upstream_sentence_model(start.elapsed(), candidates.len());
+                }
+                if !candidates.is_empty() {
+                    if self.prefix_fallback && !has_correction_lookup {
+                        let mut prefix_candidates = self.prefix_fallback_candidates(
+                            input,
+                            lookup_code,
+                            filter_by_charset,
+                            &candidates,
+                        );
+                        prefix_candidates.truncate(limit.saturating_sub(candidates.len()));
+                        candidates.extend(prefix_candidates);
+                    }
+                    candidates.truncate(limit);
+                    let result_full_count = if candidates.len() >= abbreviation_limit {
+                        limit.saturating_add(1)
+                    } else {
+                        candidates.len()
+                    };
+                    crate::m37_record_bounded_iterator(limit, candidates.len(), result_full_count);
+                    return TranslationResult::bounded(
+                        candidates,
+                        result_full_count,
+                        include_full_count,
+                    );
+                }
             }
             if self.prefix_fallback && !has_correction_lookup {
                 crate::m37_record_full_list_fallback();
@@ -1711,6 +1861,22 @@ impl StaticTableTranslator {
                     crate::m37_record_upstream_sentence_model(start.elapsed(), candidates.len());
                 }
                 used_sentence = !candidates.is_empty();
+                if candidates.is_empty() {
+                    let abbreviation_start = crate::m37_metrics_enabled().then(Instant::now);
+                    candidates = self.abbreviation_sentence_candidates(
+                        model,
+                        input,
+                        usize::MAX,
+                        filter_by_charset,
+                    );
+                    if let Some(start) = abbreviation_start {
+                        crate::m37_record_upstream_sentence_model(
+                            start.elapsed(),
+                            candidates.len(),
+                        );
+                    }
+                    used_sentence = !candidates.is_empty();
+                }
             }
         }
         if candidates.is_empty() && self.enable_sentence {
@@ -2991,6 +3157,64 @@ fn folded_state_label(state: &str, abbrev: Option<&str>, abbreviate: bool) -> St
         return abbrev.to_owned();
     }
     state.chars().next().into_iter().collect()
+}
+
+fn abbreviation_preedit_from_spans(
+    input: &str,
+    boundaries: &[usize],
+    spans: &[SentenceCodeSpan],
+) -> Option<String> {
+    let mut raw_spans_by_start = vec![Vec::<usize>::new(); boundaries.len()];
+    for span in spans {
+        let Ok(start_index) = boundaries.binary_search(&span.start) else {
+            continue;
+        };
+        if boundaries.binary_search(&span.end).is_err() {
+            continue;
+        }
+        raw_spans_by_start[start_index].push(span.end);
+    }
+    for ends in &mut raw_spans_by_start {
+        ends.sort_unstable();
+        ends.dedup();
+    }
+
+    let mut coverable = vec![false; boundaries.len()];
+    if let Some(last) = coverable.last_mut() {
+        *last = true;
+    }
+    for start_index in (0..boundaries.len().saturating_sub(1)).rev() {
+        coverable[start_index] = raw_spans_by_start[start_index].iter().any(|end| {
+            boundaries
+                .binary_search(end)
+                .is_ok_and(|end_index| coverable[end_index])
+        });
+    }
+    if !coverable.first().copied().unwrap_or(false) {
+        return None;
+    }
+
+    let mut pieces = Vec::new();
+    let mut start_index = 0usize;
+    while boundaries[start_index] < input.len() {
+        let start = boundaries[start_index];
+        let end = raw_spans_by_start[start_index]
+            .iter()
+            .copied()
+            .rev()
+            .find(|end| {
+                boundaries
+                    .binary_search(end)
+                    .is_ok_and(|end_index| coverable[end_index])
+            })?;
+        pieces.push(input[start..end].to_owned());
+        start_index = boundaries.binary_search(&end).ok()?;
+    }
+    Some(pieces.join(" "))
+}
+
+fn formula_is_abbreviation(formula: &str) -> bool {
+    formula.starts_with("abbrev/") || formula.contains("/abbrev")
 }
 
 fn options_get_bool(options: &HashMap<String, bool>, option: &str) -> bool {

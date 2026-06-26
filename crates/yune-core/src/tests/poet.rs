@@ -1,7 +1,7 @@
 use crate::{
-    make_sentence, make_sentences, null_grammar_score, CandidateSource, StaticTableTranslator,
-    TableDictionary, Translator, UpstreamSentenceModel, WordGraph, WordGraphEntry,
-    UPSTREAM_NO_GRAMMAR_PENALTY,
+    make_sentence, make_sentences, null_grammar_score, CandidateSource, SentenceCodeSpan,
+    StaticTableTranslator, TableDictionary, Translator, UpstreamSentenceModel, WordGraph,
+    WordGraphEntry, UPSTREAM_NO_GRAMMAR_PENALTY,
 };
 
 #[test]
@@ -210,4 +210,132 @@ fn upstream_sentence_model_accepts_owned_table_entry_stream() {
     let candidates = model.candidates_for_input("abcd");
 
     assert_eq!(candidates[0].text, "AB");
+}
+
+#[test]
+fn upstream_sentence_model_uses_supplied_code_spans_for_abbreviation_sentences() {
+    let entries = [
+        crate::TableEntry::new("chong", "A", 100.0),
+        crate::TableEntry::new("shang", "B", 100.0),
+        crate::TableEntry::new("zhu", "C", 100.0),
+        crate::TableEntry::new("yi", "D", 100.0),
+    ];
+    let vocabulary = [crate::PresetVocabularyEntry::new("ABCD", 1000.0)];
+    let model = UpstreamSentenceModel::from_table_entries(entries, &vocabulary, 10);
+
+    assert!(model.candidates_for_input("cszy").is_empty());
+
+    let candidates = model.candidates_for_code_spans_with_limit(
+        "cszy",
+        &[
+            SentenceCodeSpan::new(0, 1, "chong"),
+            SentenceCodeSpan::new(1, 2, "shang"),
+            SentenceCodeSpan::new(2, 3, "zhu"),
+            SentenceCodeSpan::new(3, 4, "yi"),
+        ],
+        5,
+    );
+
+    assert_eq!(candidates[0].text, "ABCD");
+    assert_eq!(candidates[0].source, CandidateSource::Sentence);
+}
+
+#[test]
+fn upstream_sentence_model_prefers_long_abbreviation_phrase_over_short_phrase_pairs() {
+    let entries = [
+        crate::TableEntry::new("c1", "A", 100.0),
+        crate::TableEntry::new("s1", "B", 100.0),
+        crate::TableEntry::new("z1", "C", 100.0),
+        crate::TableEntry::new("y1", "D", 100.0),
+        crate::TableEntry::new("c2", "W", 100.0),
+        crate::TableEntry::new("s2", "X", 100.0),
+        crate::TableEntry::new("z2", "Y", 100.0),
+        crate::TableEntry::new("y2", "Z", 100.0),
+    ];
+    let vocabulary = [
+        crate::PresetVocabularyEntry::new("ABCD", 1.0),
+        crate::PresetVocabularyEntry::new("WX", 1_000_000.0),
+        crate::PresetVocabularyEntry::new("YZ", 1_000_000.0),
+    ];
+    let model = UpstreamSentenceModel::from_table_entries(entries, &vocabulary, 10);
+
+    let candidates = model.candidates_for_code_spans_with_limit(
+        "cszy",
+        &[
+            SentenceCodeSpan::new(0, 1, "c1"),
+            SentenceCodeSpan::new(0, 1, "c2"),
+            SentenceCodeSpan::new(1, 2, "s1"),
+            SentenceCodeSpan::new(1, 2, "s2"),
+            SentenceCodeSpan::new(2, 3, "z1"),
+            SentenceCodeSpan::new(2, 3, "z2"),
+            SentenceCodeSpan::new(3, 4, "y1"),
+            SentenceCodeSpan::new(3, 4, "y2"),
+        ],
+        5,
+    );
+
+    assert_eq!(candidates[0].text, "ABCD");
+}
+
+#[test]
+fn upstream_sentence_model_ignores_zero_weight_character_codes_for_phrase_derivation() {
+    let entries = [
+        crate::TableEntry::new("a", "A", 100.0),
+        crate::TableEntry::new("b", "B", 100.0),
+        crate::TableEntry::new("x", "X", 0.0),
+    ];
+    let vocabulary = [
+        crate::PresetVocabularyEntry::new("AX", 1_000_000.0),
+        crate::PresetVocabularyEntry::new("AB", 1.0),
+    ];
+    let model = UpstreamSentenceModel::from_table_entries(entries, &vocabulary, 10);
+
+    let candidates = model.candidates_for_code_spans_with_limit(
+        "ab",
+        &[
+            SentenceCodeSpan::new(0, 1, "a"),
+            SentenceCodeSpan::new(1, 2, "b"),
+            SentenceCodeSpan::new(1, 2, "x"),
+        ],
+        5,
+    );
+
+    assert_eq!(candidates[0].text, "AB");
+}
+
+#[test]
+fn upstream_sentence_model_prefers_abbreviation_phrase_paths_without_singletons() {
+    let entries = [
+        crate::TableEntry::new("a", "A", 100.0),
+        crate::TableEntry::new("b", "B", 100.0),
+        crate::TableEntry::new("c", "C", 100.0),
+        crate::TableEntry::new("d", "D", 100.0),
+        crate::TableEntry::new("w", "W", 100.0),
+        crate::TableEntry::new("x", "X", 100.0),
+        crate::TableEntry::new("y", "Y", 100.0),
+        crate::TableEntry::new("z", "Z", 100.0),
+    ];
+    let vocabulary = [
+        crate::PresetVocabularyEntry::new("AB", 1.0),
+        crate::PresetVocabularyEntry::new("CD", 1.0),
+        crate::PresetVocabularyEntry::new("WXY", 1_000_000.0),
+    ];
+    let model = UpstreamSentenceModel::from_table_entries(entries, &vocabulary, 10);
+
+    let candidates = model.candidates_for_code_spans_with_limit(
+        "abcd",
+        &[
+            SentenceCodeSpan::new(0, 1, "a"),
+            SentenceCodeSpan::new(1, 2, "b"),
+            SentenceCodeSpan::new(2, 3, "c"),
+            SentenceCodeSpan::new(3, 4, "d"),
+            SentenceCodeSpan::new(0, 1, "w"),
+            SentenceCodeSpan::new(1, 2, "x"),
+            SentenceCodeSpan::new(2, 3, "y"),
+            SentenceCodeSpan::new(3, 4, "z"),
+        ],
+        5,
+    );
+
+    assert_eq!(candidates[0].text, "ABCD");
 }
