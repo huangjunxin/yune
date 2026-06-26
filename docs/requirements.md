@@ -577,6 +577,94 @@ were profiled first and not optimized.
   `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings`,
   `cargo test --workspace`, and `git diff --check`.
 
+## M43 Native Memory And Short-Key Owner Reduction Requirements
+
+**Status: active.** M43 is tracked in
+[`plans/active/m43-plan-native-memory-short-key-owner-reduction.md`](./plans/active/m43-plan-native-memory-short-key-owner-reduction.md).
+It is a native-engine-only follow-up to M42. It does not target abbreviation
+latency for `cszysmsrsd` or `zybfshmsru`; those rows remain behavior guards.
+M43 must first prove whether the next safe owner is Track A whole-process
+memory or `hao`/`ni` fixed overhead, then implement only the selected branch.
+
+- [ ] **M43-ENGINE-01**: Phase 0 captures a fresh same-run native benchmark
+  under `docs/reports/evidence/m43-native-memory-short-key-owner-reduction/`
+  for startup, session, `hao`, `ni`, `zhongguo`, both Track A long rows,
+  `cszysmsrsd`, `zybfshmsru`, and the Track B 50+ guard row.
+- [ ] **M43-ENGINE-02**: Phase 0 adds deterministic structural memory-owner
+  evidence for Track A retained state, covering at minimum compact-table
+  syllabary codes, syllable-id lookup keys, compact table storage, translator
+  `entries_by_code`, poet `ModelEntry` storage, sentence lookup index,
+  abbreviation vocabulary, schema config/processors, userdb state, and runtime
+  session state. Owner rows must classify bytes as `heap_owned_reducible`,
+  `heap_owned_guarded`, `mmap_file_backed`, `shared`, or `overlap_estimate`;
+  branch triggers use only non-overlapping `heap_owned_reducible` bytes.
+  Phase 0 must reconcile owner estimates against measured Track A working
+  set/peak evidence and explain excluded mmap/shared/overlap bytes. Any new
+  metric must be present in the benchmark CSV bundle.
+- [ ] **M43-ENGINE-03**: Phase 0 adds a `hao`/`ni` owner profile that separates
+  raw prism lookup, raw table lookup, translator production, candidate
+  clone/materialization, ranking/sorting/filtering, context export, ABI string
+  allocation, and free-context work.
+- [ ] **M43-ENGINE-04**: Phase 0 records a branch verdict before hot-path code
+  changes: `memory-owner-reduction`, `short-key-fixed-overhead`, or
+  `reporting-no-go`. Memory branch selection requires a bounded retained owner
+  of at least `10 MB` of non-overlapping `heap_owned_reducible` bytes, or
+  related owners of at least `15 MB` of non-overlapping
+  `heap_owned_reducible` bytes. `mmap_file_backed` storage, shared bytes, and
+  overlap estimates cannot satisfy the memory branch trigger. Short-key branch
+  selection requires `hao`/`ni` to remain at least `75%` dominated by a named
+  translator/materialization/export bucket after memory has no safe bounded
+  owner.
+- [ ] **M43-ENGINE-05**: Memory branch only: the selected retained owner family
+  is reduced without source fallback, selected table/prism heap mirrors,
+  unbounded allocation, or candidate-output drift. A whole-process memory win
+  requires Track A peak `<=107,797,708 B`. A named owner-family reduction of at
+  least `15 MB` may close only as a partial structural reduction, not a
+  whole-process memory win, unless Track A peak also moves; the owner drop must
+  be corroborated by the post-change owner profile and Track A peak must stay
+  within the Phase 0 observed noise band. Otherwise M43 may close only as a
+  measured blocker.
+- [ ] **M43-ENGINE-06**: Short-key branch only: `hao` and `ni` keep
+  `upstream_sentence_model_calls=0`, preserve candidate behavior, and improve
+  by at least `15%` from M42 medians (`hao <=32.980us`, `ni <=48.577us`),
+  clear the Phase 0 observed run-to-run noise band, and show a commensurate
+  drop in the named owner counter. The result is a self-relative Yune
+  improvement unless final same-run librime ratios prove parity; reports must
+  publish the residual librime ratios and must not describe Branch B as closing
+  the short-key librime gap while the rows remain multiple times slower than
+  librime. If either row misses, M43 may close only as a measured blocker
+  unless the narrower result is explicitly accepted.
+- [ ] **M43-ENGINE-07**: M42 abbreviation behavior is preserved. Final native
+  candidate count, text, comments, order, preedit, commit preview, and
+  first-page metadata for `cszysmsrsd` and `zybfshmsru` still match the
+  captured upstream oracle. M43 must not claim an abbreviation speed win.
+- [ ] **M43-ENGINE-08**: Startup/runtime-ready, session, `zhongguo`, and both
+  Track A full-pinyin long rows remain within their M42 no-regression guards.
+  The long rows also remain within `1.25x` same-run librime, and full-pinyin
+  rows must not invoke M42 abbreviation span expansion.
+- [ ] **M43-ENGINE-09**: Track A storage remains `rsmarisa_byte_backed`,
+  selected table/prism bytes remain mmap or byte-backed, selected table/prism
+  heap mirror bytes remain `0`, `source_fallback=false`, and positive runtime
+  `rsmarisa` counters remain present.
+- [ ] **M43-ENGINE-10**: Memory/output/profile guards remain intact: Track A
+  peak never exceeds M42 peak `119,775,232 B` by more than `5%`
+  (`125,763,994 B`), first-page output and `RimeGetContext` remain
+  page-bounded, and the Track B 50+ row remains guard-only within `10%` of the
+  M42 median/p95 unless a measured blocker is recorded. If Branch B is selected,
+  Track A peak must stay within the Phase 0 observed memory noise band, and any
+  new always-on cache or retained structure must report retained bytes.
+- [ ] **M43-ENGINE-11**: Reports and roadmap keep M43 native-only. No web,
+  frontend, product, packaging, deployment, public-demo, browser-speed, or
+  TypeDuck-profile speed claim may be made from M43 evidence.
+- [ ] **M43-ENGINE-12**: Final closeout updates the performance report,
+  root-cause report, roadmap, requirements, decisions, and milestone ledger;
+  records Phase 0 owner evidence, final selected-branch benchmark evidence,
+  Phase 0 and final noise-band summaries, M42 abbreviation candidate-output
+  preservation, storage/memory/status evidence, and passes `cargo fmt --check`,
+  `cargo clippy --workspace --all-targets -- -D warnings`,
+  `cargo test --workspace`, and `git diff --check`. The active plan moves to
+  completed only after these gates pass.
+
 ## Post-M38 Engine Performance Follow-Up Requirements
 
 **Status: complete through M39.** These requirements do not reopen M38. The post-M38 baseline
@@ -943,6 +1031,18 @@ Which phases cover which requirements. Updated during roadmap creation.
 | M42-ENGINE-10 | M42 | Complete - Track A peak memory is `119,775,232 B`, first-page output remains bounded, and abbreviation owners are attributed |
 | M42-ENGINE-11 | M42 | Complete - Track B 50+ row remains guard-only at `186.513us/op` median with no TypeDuck-profile speed claim |
 | M42-ENGINE-12 | M42 | Complete - final docs, reports, candidate-output artifact, evidence bundle, native benchmark rows, and Rust/diff quality gates are required in the final gate record |
+| M43-ENGINE-01 | M43 | Active - fresh same-run native baseline must include startup, session, Track A target rows, M42 abbreviation rows, and Track B guard |
+| M43-ENGINE-02 | M43 | Active - structural Track A memory-owner evidence must classify heap/mmap/shared/overlap bytes and reconcile estimates against measured memory |
+| M43-ENGINE-03 | M43 | Active - `hao`/`ni` owner profile must split lookup, translation, materialization, ranking/filtering, context/export, and ABI allocation/free buckets |
+| M43-ENGINE-04 | M43 | Active - Phase 0 must choose memory reduction, short-key reduction, or reporting/no-go before hot-path implementation |
+| M43-ENGINE-05 | M43 | Active - memory branch reserves whole-process win for measured Track A peak movement; estimate-backed owner movement is partial structural reduction only |
+| M43-ENGINE-06 | M43 | Active - short-key branch requires both `hao` and `ni` to improve by at least `15%`, clear noise, reduce the named owner, preserve behavior, and report residual librime ratios |
+| M43-ENGINE-07 | M43 | Active - M42 abbreviation candidate-output parity remains a guard and cannot become a speed claim |
+| M43-ENGINE-08 | M43 | Active - startup/session, `zhongguo`, and both Track A long rows preserve M42/M40 guards |
+| M43-ENGINE-09 | M43 | Active - `rsmarisa`, mmap/byte-backed selected bytes, zero heap mirrors, no source fallback, and positive counters remain intact |
+| M43-ENGINE-10 | M43 | Active - Track A memory, bounded output/context, and Track B guard rows remain within numeric guards; Branch B must be memory-neutral within observed noise |
+| M43-ENGINE-11 | M43 | Active - M43 reporting stays native-only with no web/product/browser/TypeDuck-profile speed claim |
+| M43-ENGINE-12 | M43 | Active - final closeout requires reports/docs/evidence updates plus Rust and diff quality gates |
 | POST-M38-PERF-01 | Post-M38 | Complete through M39 - final same-run native benchmark includes required long continuous pinyin rows and Track B row |
 | POST-M38-PERF-02 | Post-M38 | Complete through M39 - long-input rows carry owner/status/memory evidence |
 | POST-M38-PERF-03 | Post-M38 | Complete through M39 - optimization claim names the measured owner |
@@ -986,10 +1086,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 - M40 compiled sentence lookup index requirements: 12 total, 12 complete, 0 active
 - M41 yune-web startup optimization requirements: 10 total, 9 complete, 1 complete with measured caveat, 0 active
 - M42 abbreviation sentence parity and short-key guardrail requirements: 12 total, 11 complete, 1 complete with measured blocker, 0 active
+- M43 native memory and short-key owner reduction requirements: 12 total, 12 active
 - Post-M38 engine performance follow-up requirements: 9 total, 9 complete, 0 draft
-- Mapped to phases: 296
+- Mapped to phases: 308
 - Unmapped: 0
 
 ---
 
-_Requirements defined: 2026-04-28_ _Last updated: 2026-06-26 - M42 abbreviation sentence parity and short-key guardrails are complete with a measured performance blocker: Phase 0 captured upstream librime `1.17.0` candidate output for `cszysmsrsd` and `zybfshmsru`, Yune now matches the native first-page candidate output, `ni`/`hao` fixed overhead was profiled before any short-key optimization, and M40 startup/session, full-pinyin long rows, storage, memory, bounded-output/context, and Track B guard evidence remain intact. The M42 rows are not speed wins because final same-run ratios are `3.469x` and `5.069x`; the next abbreviation latency work needs a new scoped plan. M41 yune-web startup optimization remains complete as a separate browser-harness milestone with production-browser evidence and no native-engine claim. M40 compiled sentence lookup index, M39 long-input engine hardening, M38 engine performance parity, and earlier milestones remain complete as previously recorded._
+_Requirements defined: 2026-04-28_ _Last updated: 2026-06-26 - M43 native memory and short-key owner reduction is active. It must first capture Track A structural memory-owner evidence and `hao`/`ni` fixed-overhead owner evidence, then choose memory reduction, short-key reduction, or reporting/no-go before hot-path implementation. M43 preserves M42 abbreviation candidate-output parity for `cszysmsrsd` and `zybfshmsru` as a guard, not as an abbreviation-latency target. M42 abbreviation sentence parity and short-key guardrails remain complete with a measured performance blocker; M41 yune-web startup optimization remains complete as a separate browser-harness milestone with production-browser evidence and no native-engine claim. M40 compiled sentence lookup index, M39 long-input engine hardening, M38 engine performance parity, and earlier milestones remain complete as previously recorded._
