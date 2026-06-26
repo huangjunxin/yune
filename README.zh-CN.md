@@ -93,10 +93,9 @@ Yune 是一个活跃的引擎项目。
 - **兼容性基线：** Phase 1 已完成。在普通话（`luna_pinyin`）和广东话（`jyut6ping3`，
   通过 TypeDuck profile）方案下，Yune 输出与 RIME 1.17.0 完全一致。已在真实前端
   （TypeDuck-Web、TypeDuck-Windows）中验证过可以无缝替换。
-- **当前工作：** 里程碑 M38（引擎性能追平）与 M39（长输入引擎加固）均已完成——
-  见 [M38 gates](docs/reports/evidence/m38-engine-performance-parity/final-gates.md)
-  与 [M39 gates](docs/reports/evidence/m39-long-input-engine-hardening/final-gates.md)。
-  下一里程碑规划中。
+- **当前工作：** 里程碑 M38（引擎性能追平）、M39（长输入引擎加固）、
+  M40（编译式语句查找索引）均已完成。长输入延迟现已超越 librime（37 字 0.98x，
+  59 字 0.71x）。M41（yune-web 启动优化）正在进行。
 - **公开 demo：** `yune-web` 部署在 <https://yune-web.pages.dev>。它是 Yune 引擎
   demo，不表示浏览器层性能已经解决。
 - **AI 姿态：** AI 层已经存在，但在 web harness 中默认关闭、仅本地运行，并且不进入
@@ -127,10 +126,9 @@ Yune 的兼容性是目标驱动的，而非清单驱动的。
 
 ## 性能
 
-M38 和 M39 已完成。原生引擎现在在 59 字连续输入上与 librime 的差距已缩小至
-1.32x（此前为 1,712x），37 字为 1.77x（此前为 1,401x），启动保持 0.92x，
-短键保持 3-4x。解法：将无界的 sentence model 扫描替换为有界索引化的 word-graph
-构建。
+M38、M39、M40 已完成。长输入延迟现已超越 librime：37 字从 M39 前的 1,401x
+降至 0.98x，59 字从 1,712x 降至 0.71x。采用了四种组合策略：exact range 索引、
+可达顶点剪枝、前缀过滤、短语索引遍历。M41 已启动，目标为 yune-web 启动优化。
 
 当前报告：
 
