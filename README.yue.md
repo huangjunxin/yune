@@ -5,13 +5,13 @@
 
 **語言：** [English](README.md) | [简体中文](README.zh-CN.md) | 粵語
 
-> 將你打嘅拼音變成漢字。
-> 打 `nihao`，出 你好。打 `nei5 hou2`，出粵拼嘅 你好。
-> 用 Rust 由頭寫過——桌面、瀏覽器、邊度都行得。
+> 用 Rust 重寫
+> 桌面、瀏覽器、電話手機所有設備都支援。
+> 原生 AI 支援
 
 ## 目錄
 
-- [Yune 做乜嘢](#yune-做乜嘢)
+- [Yune 係乜](#yune-係乜)
 - [點解要有 Yune](#點解要有-yune)
 - [原理簡介](#原理簡介)
 - [而家狀態](#而家狀態)
@@ -25,15 +25,12 @@
 - [參與貢獻](#參與貢獻)
 - [許可證](#許可證)
 
-## Yune 做乜嘢
+## Yune 係乜
 
-你喺鍵盤度打拼音（普通話）或者粵拼（廣東話），Yune 即時將佢轉做啱嘅中文字。
+Yune 係個輸入法引擎，兼容 [RIME](https://rime.im) 嘅字典同設定檔。librime 係開源中文 輸入法入面最廣泛使用嘅引擎。社區多年累積嘅幾 RIME 輸入方案同
+詞庫 Yune 全部用得。
 
-Yune 讀嘅字典同設定檔，同 [RIME](https://rime.im) 係一樣嘅——RIME 係開源中文
-輸入法入面用得最多嘅引擎。即係話，社區咁多年累積落嚟嘅幾千種 RIME 輸入方案同
-詞庫，Yune 都用到。
-
-**[yune-web.pages.dev](https://yune-web.pages.dev)** ——喺瀏覽器度即刻試下。
+**[yune-web.pages.dev](https://yune-web.pages.dev)** ——即刻喺瀏覽器度試下。
 
 ### 做到嘅嘢
 
@@ -55,14 +52,13 @@ Yune 讀嘅字典同設定檔，同 [RIME](https://rime.im) 係一樣嘅——RI
 
 ## 點解要有 Yune
 
-RIME 做開源中文輸入法嘅基石已經超過十年，佢好好用。但佢係一個好大嘅 C++ 項目，
-好難改、好難測試，亦好難嵌入到瀏覽器、手機 app 呢類現代環境入面。
+RIME 已超過十年歷史，作為 C++ 項目難以測試亦難以嵌入手機 app 同瀏覽器呢類現代環境入面。
 
-Yune 由零開始，用 Rust 重寫成個引擎，為咗三個目標：
+Yune 用 Rust 重寫成個引擎，主要有三個目標：
 
-**邊度都行得。** 同一份核心引擎可以編譯做原生 shared library（畀 Squirrel、
+**全平台可用。** 同一份核心引擎可以編譯做原生 shared library（畀 Squirrel、
 Weasel、ibus-rime 呢啲桌面輸入法用），可以編譯做 WebAssembly（喺瀏覽器度行），
-亦可以編譯做 command-line 工具（用嚟測試同做 performance 分析）。
+亦可以編譯做 command-line 工具（用嚟測試同做性能分析）。
 
 **可以驗證。** 每一個行為都同真嘅 RIME 引擎逐 byte 比對。Yune 唔抄 C++ source
 code——抄 code 即係抄埋 bug 同舊架構。Yune 嘅做法係將 RIME 當做「行為參考」：
@@ -86,11 +82,9 @@ code——抄 code 即係抄埋 bug 同舊架構。Yune 嘅做法係將 RIME 當
 
 全部 code 係 safe Rust，workspace 強制 `unsafe_code = "forbid"`。
 
-## 而家狀態
+## 現況
 
-Yune 係一個活躍緊嘅引擎項目。
-
-- **兼容性基線：** Phase 1 已完成。喺普通話（`luna_pinyin`）同廣東話（`jyut6ping3`，
+- **兼容性基線：** Phase 1 已完成。喺普通話（`luna_pinyin`）粵拼（`jyut6ping3`，
   經 TypeDuck profile）方案之下，Yune 輸出同 RIME 1.17.0 完全一致。已經喺真實
   frontend（TypeDuck-Web、TypeDuck-Windows）度驗證過可以無縫替換。
 - **而家做緊：** milestone M38 聚焦引擎性能追平——收窄同原生 RIME 嘅剩餘速度差距。
@@ -194,16 +188,16 @@ Browser 層嘅聲明需要 Playwright 或者等價嘅真 browser 驗證。
 
 ## 倉庫結構
 
-| 路徑 | 係乜 |
-| --- | --- |
-| `crates/yune-core` | 核心引擎：字典查詢、拼音規則、候選排序、filter、user dictionary、AI staging。 |
-| `crates/yune-rime-api` | C ABI 適配層：將引擎打包成可以替換 RIME shared library 嘅格式。 |
-| `crates/yune-cli` | 開發者 command-line：餵 key sequence，出 JSON，用嚟測試同 debug。 |
-| `packages/yune-web-runtime` | WASM build 嘅 TypeScript 封裝。 |
-| `apps/yune-web` | Browser demo app——個 project 嘅對外面。 |
-| `docs` | Roadmap、架構決策、規範、報告。 |
-| `fixtures` | 確定性測試 fixture（畀定輸入嘅預期引擎輸出）。 |
-| `scripts` | Build helper、benchmark、行為 capture 工具。 |
+| 路徑                        | 係乜                                                                          |
+| --------------------------- | ----------------------------------------------------------------------------- |
+| `crates/yune-core`          | 核心引擎：字典查詢、拼音規則、候選排序、filter、user dictionary、AI staging。 |
+| `crates/yune-rime-api`      | C ABI 適配層：將引擎打包成可以替換 RIME shared library 嘅格式。               |
+| `crates/yune-cli`           | 開發者 command-line：餵 key sequence，出 JSON，用嚟測試同 debug。             |
+| `packages/yune-web-runtime` | WASM build 嘅 TypeScript 封裝。                                               |
+| `apps/yune-web`             | Browser demo app——個 project 嘅對外面。                                       |
+| `docs`                      | Roadmap、架構決策、規範、報告。                                               |
+| `fixtures`                  | 確定性測試 fixture（畀定輸入嘅預期引擎輸出）。                                |
+| `scripts`                   | Build helper、benchmark、行為 capture 工具。                                  |
 
 ## 文檔
 
