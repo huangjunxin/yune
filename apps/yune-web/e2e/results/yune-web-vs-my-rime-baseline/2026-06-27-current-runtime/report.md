@@ -1,5 +1,11 @@
 # Yune Web Comparator Benchmark
 
+## Comparison Read
+
+Only `luna_pinyin` rows are fair cross-engine comparisons. Jyutping rows are
+guard evidence: My RIME uses the Cantonese-only `@rime-contrib/cantonese`
+package, while Yune runs TypeDuck's multilingual `jyut6ping3_mobile` profile.
+
 | Scenario | Schema | Samples | Ready ms | Input ms | Commit ms | WASM ready | WASM peak | Unique encoded resources | Commit |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
 | yune-tracked | luna_pinyin | 3 | 930 | 69 | 116 | 128.0 MiB | 128.0 MiB | 5.4 MiB | `伱` |

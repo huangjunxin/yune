@@ -16,6 +16,22 @@ deployment, public-demo speed, or product-delivery claim. It is only about
 browser WASM linear memory, browser startup, worker resources, and
 browser-harness evidence.
 
+## Comparison Validity (read first)
+
+Only the `luna_pinyin` rows are a fair cross-engine comparison. Both Yune and My
+RIME run `luna_pinyin` with the same upstream dictionary, so Yune-web vs My RIME
+on `luna_pinyin` is apples-to-apples. **The fair browser memory signal is the
+`luna_pinyin` row: Yune-web `160.0 MiB` vs My RIME `16.0 MiB` (~10x), same
+schema, no dictionary confound.**
+
+The **Jyutping rows are not a fair comparison** and must not be read as one. My
+RIME's Jyutping uses the Cantonese-only
+[`rime-cantonese`](https://github.com/rime/rime-cantonese) dictionary, while Yune
+runs TypeDuck's `jyut6ping3`, which also carries English, Hindi, Urdu, and Nepali
+entries (a much larger multilingual dataset). So the Yune Jyutping rows are a
+**Yune-only integration / correctness / performance guard**, not a head-to-head
+number against My RIME.
+
 The closeout plans are:
 
 - [`docs/plans/completed/web01-plan-yune-web-wasm-heap-payload-optimization.md`](../plans/completed/web01-plan-yune-web-wasm-heap-payload-optimization.md)
@@ -175,8 +191,9 @@ Final attribution:
 
 4. Payload is still visible but not yet safe to prune.
 
-   Final Yune public-demo Jyutping unique encoded resources are `31.8 MiB`
-   versus My RIME `24.9 MiB`. The attribution table names the scolar,
+   Final Yune public-demo Jyutping unique encoded resources are `31.8 MiB`.
+   My RIME's `24.9 MiB` Jyutping resource row is retained only as guard context,
+   not a same-dictionary resource floor. The attribution table names the scolar,
    reverse-lookup, OpenCC, and core byte groups. At WEB-01 closeout, focused
    reverse lookup and multi-schema switching smokes still blocked safe pruning
    or lazy-loading changes. M46 later fixed the correctness blocker without
@@ -236,8 +253,11 @@ the browser attribution benchmark and configurable initial-memory build flag,
 but it does not claim a browser heap reduction, native memory win, payload win,
 public-demo speed win, or product delivery win. Remaining measured blockers:
 
-- Yune public-demo `luna_pinyin`: `160.0 MiB` peak versus My RIME `16.0 MiB`.
-- Yune public-demo Jyutping: `893.1 MiB` peak versus My RIME `68.0 MiB`.
+- Fair comparison — Yune public-demo `luna_pinyin`: `160.0 MiB` peak versus My
+  RIME `16.0 MiB` (same schema, ~10x; this is the real browser memory gap).
+- Guard only (not comparable) — Yune public-demo Jyutping `893.1 MiB`: My RIME
+  Jyutping `68.0 MiB` runs Cantonese-only `rime-cantonese`, while Yune carries
+  TypeDuck's multilingual `jyut6ping3`, so the two are not head-to-head.
 - Final attribution: Jyutping `extras`, `jyutping-core`, and `full-jyutping`
   all remain `893.1 MiB`.
 - Focused regression smoke: heap diagnostics, user dictionary persistence, and

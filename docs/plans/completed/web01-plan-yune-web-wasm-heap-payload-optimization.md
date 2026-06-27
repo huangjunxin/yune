@@ -79,11 +79,12 @@ loading, worker memory retention, public-demo packaging, and browser evidence.
 The current working hypothesis is that the bulk of the `893.1 MiB` Jyutping
 WASM high-water is engine/runtime heap materialization inside the WASM instance,
 not just the absence of native `mmap()` and not only transfer payload. My RIME's
-same-browser Jyutping row at `68.0 MiB` proves the browser category is
-reducible, but WEB-01 cannot fix that engine owner because its executable diff
-must stay outside `crates/`. Its realistic Jyutping outcome is therefore either
-a harness payload/defer win plus a measured no-go, or a quantified handoff to a
-future WASM-memory engine milestone.
+`68.0 MiB` Jyutping row is smaller browser guard context, not a same-dictionary
+floor, because it uses a Cantonese-only package while Yune runs TypeDuck's
+multilingual profile. WEB-01 cannot fix the engine owner because its executable
+diff must stay outside `crates/`. Its realistic Jyutping outcome is therefore
+either a harness payload/defer win plus a measured no-go, or a quantified handoff
+to a future WASM-memory engine milestone.
 
 ## Tech Stack
 
@@ -245,10 +246,10 @@ Out of scope:
 - `crates/yune-core/`.
 - `crates/yune-rime-api/` behavior, C ABI, native runtime, schema installer, or
   native memory owners.
-- Any actual fix for the engine-side WASM memory owner that would move
-  Jyutping from `893.1 MiB` toward the My RIME `68.0 MiB` browser comparator.
-  That belongs in a future WASM-memory engine plan after WEB-01 produces
-  attribution evidence.
+- Any actual fix for the engine-side WASM memory owner that would move Yune's
+  Jyutping `893.1 MiB` guard row. My RIME's `68.0 MiB` row is not a
+  same-dictionary target floor. Future WASM-memory engine work must start from
+  fresh attribution evidence.
 - M44 native/profile behavior and future native residual-owner reductions.
 - AI behavior, remote providers, or candidate ranking changes.
 - Replacing the deterministic engine with TypeScript-side fake learning,

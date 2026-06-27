@@ -14,6 +14,44 @@ TypeDuck/Jyutping native Track B and browser WASM memory handoff as a useful
 partial result: schema-switch correctness is fixed, but memory remains a
 measured no-go/unclassified blocker.
 
+## Comparison Lanes
+
+Three lanes, only two of which are fair cross-engine comparisons:
+
+| Lane | Comparison | Schema | Fair? |
+| --- | --- | --- | --- |
+| **Track A** | Yune vs upstream **librime 1.17.0**, native | `luna_pinyin` | Yes — same schema/dictionary, same-run |
+| **Track B** | Yune-web vs **My RIME**, browser | `luna_pinyin` | Yes — same schema (see [browser report](./yune-web-vs-my-rime-browser-baseline.md)) |
+| **Jyutping guard** | Yune only, native + browser | `jyut6ping3_mobile` | No — TypeDuck multilingual dictionary; no librime/My-RIME equivalent |
+
+The Jyutping path is a Yune-only integration / correctness / performance guard,
+not a head-to-head number: My RIME's Jyutping uses Cantonese-only
+[`rime-cantonese`](https://github.com/rime/rime-cantonese), while Yune carries
+TypeDuck's multilingual `jyut6ping3` (Cantonese plus English/Hindi/Urdu/Nepali).
+**Every cross-engine speed and memory claim in this report is a fair
+`luna_pinyin` lane; the Jyutping numbers are guard evidence, never a
+comparison.** On the fair lanes, Yune is several times faster than librime on
+most native rows, and several times heavier in memory — about `127 MB` native
+(Track A) versus `13-17 MB` for librime, and about `160 MiB` browser (Track B)
+versus My RIME's `16 MiB`, both on `luna_pinyin` (~10x).
+
+## Latest Review Snapshot
+
+The run-labeled review snapshot under
+[`./evidence/reframed-comparison-review-2026-06-27/`](./evidence/reframed-comparison-review-2026-06-27/)
+confirms the same current Track A shape while showing normal short-key
+run-to-run noise. Fresh Track A ratios are `hao 2.199x`, `n 3.534x`, and
+`ni 3.698x`; the public README and README SVG intentionally summarize those as
+approximate ranges rather than repinning public docs to one benchmark run.
+
+Only the fresh Track A rows from that native snapshot are valid for comparison
+claims. Its Track B native rows are invalid product evidence because the run did
+not use `-DeployProductBeforeBenchmark`: `product_path_status.csv` records
+`compiled_ready=false`, `selected_storage=unavailable`, and
+`source_fallback=true` for the Jyutping dictionaries. Those rows materialize a
+source-YAML fallback `translator.entries_by_code` BTreeMap and peak near
+`1.05 GB`; they must not replace M46's valid byte-backed Track B result below.
+
 ## Current Verdict
 
 M45 closes as a partial native-engine result with measured blockers, not as a

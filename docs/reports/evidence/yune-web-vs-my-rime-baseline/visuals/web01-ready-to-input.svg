@@ -21,7 +21,7 @@
   <text x="40" y="153" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#111827">Yune public Luna Pinyin</text>
   <rect x="280" y="138" width="144" height="20" rx="4" fill="#f97316"/>
   <text x="436" y="153" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#f97316">1,248 ms</text>
-  <text x="40" y="195" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#111827">My RIME Jyutping</text>
+  <text x="40" y="195" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#111827">My RIME Jyutping (guard)</text>
   <rect x="280" y="180" width="105" height="20" rx="4" fill="#2563eb"/>
   <text x="397" y="195" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#2563eb">914 ms</text>
   <text x="40" y="237" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#111827">Yune public Jyutping</text>

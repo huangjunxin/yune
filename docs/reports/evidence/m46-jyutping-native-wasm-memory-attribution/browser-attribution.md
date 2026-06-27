@@ -1,5 +1,9 @@
 # M46 Phase 0 Browser Attribution
 
+Scope note: these Jyutping rows are Yune-only guard/attribution evidence. They
+must not be read as a same-dictionary comparison against My RIME's
+Cantonese-only Jyutping package.
+
 Evidence root:
 [`../../../../apps/yune-web/e2e/results/yune-web-jyutping-memory-attribution/`](../../../../apps/yune-web/e2e/results/yune-web-jyutping-memory-attribution/)
 

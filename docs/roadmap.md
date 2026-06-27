@@ -82,7 +82,7 @@ multi-schema Jyutping correctness bug, and closed memory as
 | --- | --- | --- |
 | Core compatibility | Phase 1 named-target upstream behavior is complete for `luna_pinyin` and common-schema basics against upstream librime `1.17.0`. | Preserve upstream-observable behavior on every engine change. |
 | Engine performance | M45 is complete as a partial native-engine follow-up to M44. Phase 0 selected `short-key-measured-no-go`, so no short-key engine implementation was retained. Final `hao` preserves the M44 pass at `24.267us` / `2.110x`, while `n` remains `68.900us` / `3.313x` and `ni` remains `49.450us` / `3.458x`. Track A steady resident rows meet the resident target (`87,498,752-98,684,928 B`), but the real cold-start peak remains `127,475,712 B`, so M45 records a standing peak-cost blocker. M46 confirms Track B still peaks at `504,627,200 B` with mostly unclassified process memory. | Keep `n`/`ni` as separate future Track A blockers unless a new plan targets them. Future Track B/Jyutping memory work needs a new measured-owner plan. |
-| Web harness startup and memory | M41 is complete for the tracked `apps/yune-web/` browser harness. WEB-01 is complete as measured no-go: final public-demo `luna_pinyin` is `160.0 MiB` peak versus My RIME `16.0 MiB`, final public-demo Jyutping is `893.1 MiB` peak versus My RIME `68.0 MiB`, and final attribution keeps Jyutping at `893.1 MiB` even for `extras` and `jyutping-core`. M46 fixed the Cangjie -> Luna -> Jyutping no-candidate row, but the browser high-water remains `893.1 MiB`; the older `~1.9 GiB` high-water remains historical WEB-01 evidence, not the fresh current high-water. | Do not start another WEB-01-style harness plan. Browser memory claims need measured WASM ready/peak/steady movement in a new scoped plan. |
+| Web harness startup and memory | M41 is complete for the tracked `apps/yune-web/` browser harness. WEB-01 is complete as measured no-go: fair `luna_pinyin` comparison is `160.0 MiB` peak versus My RIME `16.0 MiB`; Jyutping remains a Yune-only guard at `893.1 MiB` because My RIME's `68.0 MiB` row uses a smaller Cantonese-only package. Final attribution keeps Yune Jyutping at `893.1 MiB` even for `extras` and `jyutping-core`. M46 fixed the Cangjie -> Luna -> Jyutping no-candidate row, but the browser high-water remains `893.1 MiB`; the older `~1.9 GiB` high-water remains historical WEB-01 evidence, not the fresh current high-water. | Do not start another WEB-01-style harness plan. Browser memory claims need measured WASM ready/peak/steady movement in a new scoped plan. |
 | AI-native engine layer | M11/M13 proved a default-off local AI layer can sit on top of the deterministic engine. | Keep AI outside the classic deterministic performance path unless a named engine experiment explicitly enables it. |
 | Future platform work | Platform-specific native frontends remain outside this repo roadmap. | Start a separate repository or separate plan before changing platform/application contracts. |
 
@@ -113,8 +113,9 @@ M46 started from four facts:
 
 - Native Track B product memory peaks around `504,639,488 B` with steady
   resident rows around `427,003,904-440,885,248 B`.
-- Browser Jyutping remains `893.1 MiB` after WEB-01, while My RIME Jyutping is
-  `68.0 MiB`.
+- Browser Jyutping remains `893.1 MiB` after WEB-01; My RIME's `68.0 MiB`
+  Jyutping row is retained only as external guard context because it uses a
+  smaller Cantonese-only package, not TypeDuck's multilingual dictionary set.
 - Current owner evidence names only small selected owners: Track B
   `compact_table.syllabary_codes` is about `4.2 MB`, and the `8.3 MB`
   `translator.entries_by_code` row is guarded/source-YAML or small-test state,

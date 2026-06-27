@@ -5,6 +5,11 @@ Samples per scenario/schema: 3
 
 ## Summary
 
+Only `luna_pinyin` rows are fair cross-engine comparisons. Jyutping rows are
+historical guard evidence: My RIME uses the Cantonese-only
+`@rime-contrib/cantonese` package, while Yune runs TypeDuck's multilingual
+`jyut6ping3_mobile` profile.
+
 | scenario | schema | input | ready ms | input->candidate ms | commit ms | WASM ready MiB | measured peak MiB | transfer MiB | unique encoded MiB | JS heap MiB | commit |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
 | my-rime-live | jyutping | nei | 894 | 30 | 19 | 56.6 | 68.0 | 24.9 | 24.9 | 11.3 | 你 |

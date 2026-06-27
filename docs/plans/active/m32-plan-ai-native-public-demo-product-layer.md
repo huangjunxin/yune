@@ -4,17 +4,43 @@
 >
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **Plan currency update (2026-06-27):** This plan was written 2026-06-22, before
+> several renames and before the M43–M46 memory work. Apply these corrections when
+> executing — the verified-current facts override any stale reference in the body:
+>
+> - **Sequencing.** Per the current roadmap, native platform frontends are out of
+>   the repo roadmap, and AI-native is gated on "classic engine performance no
+>   longer dominated by avoidable pipeline costs" — i.e. after M46
+>   (Jyutping/WASM memory). Treat M32 as a post-M46 product milestone that starts
+>   only after an explicit product-priority decision.
+> - **Paths/names (verified current).** `packages/yune-web-runtime` (not
+>   `yune-typeduck-runtime`); `crates/yune-rime-api/src/web_runtime.rs` (not
+>   `typeduck_web.rs`); `crates/yune-rime-api/tests/yune_web.rs` and `--test
+>   yune_web` (not `typeduck_web`); the browser AI sidecar export is
+>   `yune_web_stage_ai` (not `yune_typeduck_stage_ai`); Yune-owned UI lives under
+>   `apps/yune-web/src/` and the seam under `apps/yune-web/src/yune-integration/`
+>   (`apps/yune-web/source/` is gitignored upstream reference, not an edit target);
+>   the harness is "yune-web," distinct from the external "TypeDuck-Web" product.
+> - **Memory reality (new constraint).** M32 as scoped exposes the *existing
+>   rule-backed* local provider — not a real LLM — so the plan stays valid. But any
+>   future real-model step must reckon with the M43–M46 finding that the browser
+>   already uses ~893 MiB for Jyutping, which makes a browser-local LLM likely
+>   infeasible. The real model decision (native-app local vs opt-in remote) belongs
+>   in Task 1's provider policy and is bounded by M46's measured memory ceiling.
+> - **Numbering.** "M32" predates the completed M33–M46; consider renumbering to
+>   the next free milestone at execution time to avoid out-of-sequence confusion.
+
 **Goal:** Expand Yune's AI-native layer into a richer public-demo/product surface after an explicit product-priority decision, without changing deterministic classic input behavior or delaying the Windows frontend by default.
 
-**Architecture:** M32 builds on the completed M11 core/CLI AI layer and the completed M13 default-off TypeDuck-Web exposure. Classic input remains provider-free, synchronous, and byte-identical when AI is off. AI is a second-pass, explicitly labeled, local-first layer with privacy and memory controls; any remote-provider path requires an explicit decision and remains off by default. The first public Yune web demo should keep AI hidden or developer-only unless M32 deliberately changes that with reviewed evidence.
+**Architecture:** M32 builds on the completed M11 core/CLI AI layer and the completed M13 default-off yune-web exposure. Classic input remains provider-free, synchronous, and byte-identical when AI is off. AI is a second-pass, explicitly labeled, local-first layer with privacy and memory controls; any remote-provider path requires an explicit decision and remains off by default. The first public Yune web demo should keep AI hidden or developer-only unless M32 deliberately changes that with reviewed evidence.
 
-**Tech Stack:** Rust (`yune-core` AI modules, `yune-rime-api` TypeDuck-Web exports), `packages/yune-web-runtime`, TypeDuck-Web Vite + React + Tailwind, Playwright, existing M11/M13 AI tests and evidence, and the M31 public-demo deployment harness.
+**Tech Stack:** Rust (`yune-core` AI modules, `yune-rime-api` yune-web exports), `packages/yune-web-runtime`, yune-web Vite + React + Tailwind, Playwright, existing M11/M13 AI tests and evidence, and the M31 public-demo deployment harness.
 
 ---
 
 ## Status
 
-Planned. Do not fold M32 into M31. M31 may only add AI posture gates; M32 owns richer AI UX, public-demo AI controls, and any provider-policy expansion. M32 should not run ahead of P2-WIN-01 unless the user explicitly chooses an AI/web-product detour over the Windows product track.
+Planned. Do not fold M32 into M31. M31 may only add AI posture gates; M32 owns richer AI UX, public-demo AI controls, and any provider-policy expansion. M32 should start only after an explicit post-M46 product-priority decision confirms AI/web work is next.
 
 ## Scope
 
@@ -34,14 +60,14 @@ Out of scope:
 - Making remote AI calls by default.
 - Storing provider secrets in the repo or browser bundle.
 - Exposing AI through Windows/native frontends without a separate host-context and privacy plan.
-- Replacing the deterministic TypeDuck-Web harness with a new product repo.
+- Replacing the deterministic yune-web harness with a new product repo.
 - Turning on AI in the first public web demo by accident or as a side effect of M31.
-- Running before P2-WIN-01 by default.
+- Running before the post-M46 product-priority decision.
 
 ## Preconditions
 
 - M31 is complete or the public-demo harness is stable enough to run browser evidence locally.
-- P2-WIN-01 has either resumed as the primary product track, or the user has explicitly decided to prioritize AI/web-product work first.
+- M46 is complete, and the user has explicitly decided to prioritize AI/web-product work next.
 - `docs/plans/reference/m11-design-ai-native.md` and `docs/plans/completed/m13-plan-ai-native-frontend-exposure.md` are read before implementation.
 - AI-off output identity, classic index 0, no default AI auto-commit, no userdb leak, privacy gating, and local-first behavior are treated as hard invariants.
 
@@ -59,14 +85,14 @@ Out of scope:
 ## File Responsibilities
 
 - `docs/plans/reference/m11-design-ai-native.md`: source of truth for AI architecture and invariants.
-- `docs/plans/completed/m13-plan-ai-native-frontend-exposure.md`: source of truth for existing TypeDuck-Web AI exposure and safety evidence.
+- `docs/plans/completed/m13-plan-ai-native-frontend-exposure.md`: source of truth for existing yune-web AI exposure and safety evidence.
 - `crates/yune-core/src/ai/`: owns provider, privacy, memory, and local-model behavior.
 - `crates/yune-core/src/engine.rs`: owns staged AI merge and commit-boundary safety.
-- `crates/yune-rime-api/src/typeduck_web.rs`: owns browser/WASM AI exports and response source labels.
-- `crates/yune-rime-api/tests/typeduck_web.rs`: owns native browser-runtime AI contract tests.
+- `crates/yune-rime-api/src/web_runtime.rs`: owns browser/WASM AI exports and response source labels.
+- `crates/yune-rime-api/tests/yune_web.rs`: owns native browser-runtime AI contract tests.
 - `packages/yune-web-runtime/`: owns TypeScript AI control bindings.
-- `apps/yune-web/yune-integration/`: owns bridge-level AI wiring.
-- `apps/yune-web/source/`: owns public-demo AI UI.
+- `apps/yune-web/src/yune-integration/`: owns bridge-level AI wiring.
+- `apps/yune-web/src/`: owns public-demo AI UI (`apps/yune-web/source/` is gitignored upstream reference only, not an edit target).
 - `apps/yune-web/e2e/`: owns browser evidence.
 - `docs/roadmap.md`, `docs/requirements.md`, `docs/decisions.md`: own milestone status, requirements, and any remote-provider decision.
 
@@ -92,7 +118,7 @@ Write `product-priority-decision.md` with one of these decisions:
 
 Decision: hidden_developer_only | public_opt_in | defer_until_native_frontend
 
-Windows priority: P2-WIN-01 remains primary | AI/web product intentionally prioritized first
+Classic memory/platform follow-up remains priority | AI/web product intentionally prioritized first
 
 Reason:
 
@@ -104,7 +130,7 @@ Remote provider policy:
 Expected default:
 
 - Use `hidden_developer_only` or `defer_until_native_frontend` unless the user explicitly asks to expose AI publicly.
-- If `P2-WIN-01` is ready to proceed and not blocked, do not start M32 unless the decision says AI/web work is intentionally prioritized first.
+- If post-M46 memory/platform direction is not decided, do not start M32 unless the decision says AI/web work is intentionally prioritized first.
 
 - [ ] **Step 0.2: Extract the invariant checklist**
 
@@ -128,8 +154,8 @@ Run:
 
 ```powershell
 cargo test -p yune-core ai -- --nocapture
-cargo test -p yune-rime-api --test typeduck_web ai -- --nocapture
-npm.cmd --prefix packages\yune-typeduck-runtime test
+cargo test -p yune-rime-api --test yune_web ai -- --nocapture
+npm.cmd --prefix packages\yune-web-runtime test
 ```
 
 Expected:
@@ -188,7 +214,7 @@ Expected default:
 
 **Files:**
 
-- Modify: `crates/yune-rime-api/tests/typeduck_web.rs`
+- Modify: `crates/yune-rime-api/tests/yune_web.rs`
 - Modify only if needed: `crates/yune-core/src/ai/`
 - Create evidence: `apps/yune-web/e2e/results/m32-ai-product/native-ai-gates.md`
 
@@ -199,7 +225,7 @@ Add or extend focused tests with names like:
 ```rust
 #[test]
 fn m32_ai_off_matches_classic_response_bytes() {
-    // Drive TypeDuck-Web runtime with AI disabled.
+    // Drive yune-web runtime with AI disabled.
     // Drive the same input after AI enable/disable round trip.
     // Assert the classic response bytes are unchanged.
 }
@@ -223,21 +249,21 @@ fn m32_ai_memory_never_writes_librime_userdb() {
 Run:
 
 ```powershell
-cargo test -p yune-rime-api --test typeduck_web m32_ai -- --nocapture
+cargo test -p yune-rime-api --test yune_web m32_ai -- --nocapture
 ```
 
 Expected before UI/product changes:
 
 - Tests pass if existing M13 behavior already covers the invariant, or fail only where M32 needs additional product controls.
 
-## Task 3 - AI UX In TypeDuck-Web
+## Task 3 - AI UX In yune-web
 
 **Files:**
 
 - Modify: `packages/yune-web-runtime/src/`
-- Modify: `apps/yune-web/yune-integration/`
-- Modify: `apps/yune-web/source/src/`
-- Modify: `apps/yune-web/e2e/yune-typeduck.spec.ts`
+- Modify: `apps/yune-web/src/yune-integration/`
+- Modify: `apps/yune-web/src/`
+- Modify: `apps/yune-web/e2e/yune-web.spec.ts`
 - Regenerate: `apps/yune-web/patches/yune-web-runtime.patch`
 - Create evidence: `apps/yune-web/e2e/results/m32-ai-product/browser-ai-ux.md`
 
@@ -269,9 +295,9 @@ Add or verify browser behavior:
 Run:
 
 ```powershell
-npm.cmd --prefix packages\yune-typeduck-runtime test
-npm.cmd --prefix packages\yune-typeduck-runtime run build
-npm.cmd --prefix apps\yune-web\source run build
+npm.cmd --prefix packages\yune-web-runtime test
+npm.cmd --prefix packages\yune-web-runtime run build
+npm.cmd --prefix apps\yune-web run build
 npm.cmd --prefix apps\yune-web\e2e run test:e2e -- --grep "M32 AI" --workers=1
 ```
 
@@ -284,9 +310,9 @@ Expected:
 **Files:**
 
 - Modify: `crates/yune-core/src/ai/`
-- Modify: `crates/yune-rime-api/src/typeduck_web.rs`
-- Modify: `apps/yune-web/source/src/`
-- Modify: `apps/yune-web/e2e/yune-typeduck.spec.ts`
+- Modify: `crates/yune-rime-api/src/web_runtime.rs`
+- Modify: `apps/yune-web/src/`
+- Modify: `apps/yune-web/e2e/yune-web.spec.ts`
 - Create evidence: `apps/yune-web/e2e/results/m32-ai-product/privacy-memory.md`
 
 - [ ] **Step 4.1: Expose memory controls only if native support is present**
@@ -314,7 +340,7 @@ Run:
 
 ```powershell
 cargo test -p yune-core ai_memory -- --nocapture
-cargo test -p yune-rime-api --test typeduck_web m32_ai_memory -- --nocapture
+cargo test -p yune-rime-api --test yune_web m32_ai_memory -- --nocapture
 ```
 
 Expected:
@@ -326,7 +352,7 @@ Expected:
 
 **Files:**
 
-- Modify: `apps/yune-web/e2e/yune-typeduck.spec.ts`
+- Modify: `apps/yune-web/e2e/yune-web.spec.ts`
 - Create evidence: `apps/yune-web/e2e/results/m32-ai-product/public-demo-ai.md`
 
 - [ ] **Step 5.1: Run local public-demo smoke**
@@ -379,11 +405,11 @@ Run:
 cargo fmt --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test -p yune-core ai -- --nocapture
-cargo test -p yune-rime-api --test typeduck_web m32_ai -- --nocapture
+cargo test -p yune-rime-api --test yune_web m32_ai -- --nocapture
 cargo test --workspace
-npm.cmd --prefix packages\yune-typeduck-runtime test
-npm.cmd --prefix packages\yune-typeduck-runtime run build
-npm.cmd --prefix apps\yune-web\source run build
+npm.cmd --prefix packages\yune-web-runtime test
+npm.cmd --prefix packages\yune-web-runtime run build
+npm.cmd --prefix apps\yune-web run build
 npm.cmd --prefix apps\yune-web\e2e run test:e2e -- --grep "M32 AI" --workers=1
 git diff --check
 ```
@@ -391,7 +417,7 @@ git diff --check
 Expected:
 
 - Full gates pass.
-- If TypeDuck-Web source changed, patch reverse/forward checks pass.
+- If yune-web source changed, patch reverse/forward checks pass.
 
 - [ ] **Step 6.2: Update requirements and roadmap**
 
@@ -419,7 +445,7 @@ Only include `docs\decisions.md`, `crates`, `packages`, or `apps\yune-web` paths
 
 ## Review Questions
 
-- Should M32 start before P2-WIN-01, or should it stay deferred while Windows product work resumes?
+- Should M32 start as the next product milestone after M46, or should it stay deferred while memory/platform work resumes?
 - Should M32 expose AI publicly at all, or keep it hidden behind a local-only developer control after the safety evidence lands?
 - Should remote providers remain absent, or should a separate provider decision be written before any remote experiment?
 - Which context fields can the browser public demo honestly provide for privacy classification?

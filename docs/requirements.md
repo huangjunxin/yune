@@ -851,8 +851,10 @@ remaining Jyutping WASM high-water as outside the WEB-01 harness-only scope.
   `engine-owned-measured-no-go` at the WASM boundary. Final attribution keeps
   Jyutping at `893.1 MiB` for `extras`, `jyutping-core`, and `full-jyutping`.
 - [x] **WEB01-07**: Payload ownership is quantified but not claimed as a win.
-  Final public-demo Jyutping unique encoded resources are `31.8 MiB` versus My
-  RIME `24.9 MiB`; reverse/schema-switch smokes currently block safe pruning.
+  Final public-demo Jyutping unique encoded resources are `31.8 MiB`; My RIME's
+  `24.9 MiB` Jyutping resource row is retained only as external guard context
+  because it uses a smaller Cantonese-only package. Reverse/schema-switch smokes
+  currently block safe pruning.
   The schema-switch row is a named follow-up because Cangjie -> Luna ->
   Jyutping can grow the browser heap to about `1.9 GiB` and return no Jyutping
   candidates. WEB-01 evidence proves the current-runtime failure, but does not

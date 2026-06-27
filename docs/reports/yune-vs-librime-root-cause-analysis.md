@@ -2,9 +2,10 @@
 
 Date: 2026-06-27
 
-This report explains current M45 native-engine evidence. It does not claim
-browser, frontend, product-delivery, packaging, public-demo, deployment, WASM,
-or broad product speed wins.
+This report explains current M45 and M46 native-engine evidence. It does not
+claim browser, frontend, product-delivery, packaging, public-demo, deployment,
+WASM, or broad product speed wins; the browser/WASM figures below are recorded
+as measured gaps, not wins.
 
 ## Current Verdict
 
@@ -24,6 +25,21 @@ Measured outcomes:
   librime `1.17.0`.
 - Steady Track A resident memory is below `107,797,708 B`, but first startup
   still records `127,475,712 B` peak working set, so peak memory is not solved.
+
+Latest review snapshot:
+[`./evidence/reframed-comparison-review-2026-06-27/`](./evidence/reframed-comparison-review-2026-06-27/).
+It confirms the same Track A conclusion with normal run-to-run noise:
+`hao 2.199x`, `n 3.534x`, and `ni 3.698x`, with a `128,364,544 B` Track A peak.
+Those precise values are recorded only in the run-labeled evidence; public
+summary docs use ranges for short-key ratios.
+
+Do not use that snapshot's native Track B rows for product root cause. The run
+omitted `-DeployProductBeforeBenchmark`; Track B status is
+`compiled_ready=false`, `selected_storage=unavailable`, and
+`source_fallback=true`, producing a `510,925,748 B`
+`translator.entries_by_code` source-YAML fallback BTreeMap and about `1.05 GB`
+peak. M46's byte-backed `source_fallback=false` evidence remains the valid Track
+B product memory source.
 
 ![M45 short-key same-run ratio gates](./evidence/m45-native-short-key-memory-attribution/visuals/m45-short-key-ratios.svg)
 
@@ -183,3 +199,48 @@ success is claimed.
 
 M46 evidence:
 [`./evidence/m46-jyutping-native-wasm-memory-attribution/`](./evidence/m46-jyutping-native-wasm-memory-attribution/).
+
+## Memory Synthesis: M43-M46
+
+Four milestones attacked memory and the headline never moved. That convergence
+is itself the finding:
+
+- The **structural-owner approach is exhausted.** Named owners explain at most
+  about `12%` of the Track B peak (`~60 MB` of `~504 MB`), and the easy
+  hypotheses are measured-dead: a Jyutping `rsmarisa` string table saves
+  `~4 MB`, not `~200 MB`; candidate text/comment payloads are `~2.5 MB`
+  combined; `jyut6ping3_scolar` is mmap source bytes, not a retained owner.
+  There is no large reducible structure left to refactor, and M43 already proved
+  that shrinking a named owner (`poet.entries_by_code`, `-19.5 MB`) does not
+  move process peak.
+- The browser headline is most likely an **init-transient, not a resident
+  owner.** Browser Jyutping stays at `893.1 MiB` regardless of loaded asset
+  bytes (`0 B` extras through `26 MB` full Jyutping all reach the same
+  high-water), JS heap is only `5-6 MB`, and Emscripten linear memory never
+  shrinks below the peak reached during schema initialization. The heap most
+  likely spikes during Jyutping init and is then stuck; steady-state *need* may
+  be far lower (Luna settles at `160 MiB`).
+- The cross-engine browser comparison is **not like-for-like**, so the size of
+  any Yune inefficiency is unquantified. The librime-based My RIME browser build
+  runs Jyutping in `68 MiB`, but on the Cantonese-only
+  [`rime-cantonese`](https://github.com/rime/rime-cantonese) dictionary. Yune runs
+  TypeDuck's `jyut6ping3`, which also carries English, Hindi, Urdu, and Nepali
+  entries and is a much larger dataset. So `68 MiB` is **not** a valid target, and
+  part of the `893 MiB` is a legitimately bigger dictionary. The init-transient
+  evidence above still implies *some* inefficiency — the high-water does not scale
+  with loaded asset bytes — and the fair same-schema baseline below quantifies it.
+- **The fair same-schema baseline gives the answer: ~10x.** On `luna_pinyin` —
+  same schema, same dictionary, no multilingual confound — Yune is roughly `10x`
+  heavier than a librime-family engine both natively (`127 MB` vs librime
+  `13-17 MB`) and in the browser (`160 MiB` vs My RIME `16 MiB`). So the memory
+  inefficiency is **real and ~10x**, independent of any Jyutping dictionary
+  difference; the Jyutping `893 MiB` is that ~10x base inefficiency plus a larger
+  multilingual dictionary on top. The Jyutping number is therefore a guard, not a
+  comparison, and the clean target for any memory work is the fair `luna_pinyin`
+  gap.
+
+The next memory step, if pursued, is therefore **init-time allocation high-water
+profiling targeting the fair `luna_pinyin` gap** — which initialization phase
+spikes the heap, and why a librime-family engine fits the same schema in ~10x
+less. Another structural-owner pass is not the move; M43-M46 proved that dry.
+This is recorded as future work; M46 changes no memory code.

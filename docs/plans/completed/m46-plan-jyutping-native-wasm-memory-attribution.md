@@ -96,8 +96,9 @@ Start from these already-published facts:
   `memory-owner-profile.csv` confirms the same owner class. Any claim of a
   `27.3 MB` mapped retained region must cite the exact evidence row or be
   removed.
-- WEB-01 final browser evidence reports Luna at `160.0 MiB`, Jyutping at
-  `893.1 MiB`, My RIME Jyutping at `68.0 MiB`, and no reduction from
+- WEB-01 final browser evidence reports fair Luna comparison at `160.0 MiB`
+  versus My RIME `16.0 MiB`, Yune Jyutping guard at `893.1 MiB`, My RIME
+  Jyutping guard context at `68.0 MiB`, and no reduction from
   `INITIAL_MEMORY=64 MiB`.
 - WEB-01 asset-family attribution leaves Jyutping at `893.1 MiB` for
   `extras`, `jyutping-core`, and `full-jyutping`.

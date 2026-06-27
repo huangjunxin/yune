@@ -52,6 +52,7 @@ export interface ComparatorSummaryRow {
   app: "yune-web" | "my-rime";
   build: string;
   schema: "luna_pinyin" | "jyutping";
+  comparisonLane: "fair comparison" | "guard";
   input: string;
   samples: number;
   medianReadyToInputMs: number;
@@ -94,6 +95,7 @@ export function summarizeComparatorSamples(samples: ComparatorSample[]): Compara
       app: first?.app ?? "yune-web",
       build: first?.build ?? "",
       schema: first?.schema ?? "luna_pinyin",
+      comparisonLane: comparisonLane(first?.schema ?? "luna_pinyin"),
       input: first?.schemaInput ?? "",
       samples: group.length,
       medianReadyToInputMs: median(group.map(sample => sample.readyToInputMs)),
@@ -247,6 +249,7 @@ function summaryCsv(rows: ComparatorSummaryRow[]): string {
     app: "",
     build: "",
     schema: "",
+    comparisonLane: "",
     input: "",
     samples: "",
     medianReadyToInputMs: "",
@@ -278,7 +281,7 @@ function summaryCsv(rows: ComparatorSummaryRow[]): string {
 
 function reportMarkdown(rows: ComparatorSummaryRow[]): string {
   const tableRows = rows
-    .map(row => `| ${row.scenarioId} | ${row.schema} | ${row.samples} | ${row.medianReadyToInputMs.toFixed(0)} | ${row.medianInputToCandidateMs.toFixed(0)} | ${row.medianCommitMs.toFixed(0)} | ${bytes(row.medianWasmReadyBytes)} | ${bytes(row.medianWasmPeakBytes)} | ${bytes(row.medianResourceUniqueEncodedBytes)} | ${row.committedValues.map(value => `\`${value}\``).join(", ")} |`)
+    .map(row => `| ${row.scenarioId} | ${row.schema} | ${row.comparisonLane} | ${row.samples} | ${row.medianReadyToInputMs.toFixed(0)} | ${row.medianInputToCandidateMs.toFixed(0)} | ${row.medianCommitMs.toFixed(0)} | ${bytes(row.medianWasmReadyBytes)} | ${bytes(row.medianWasmPeakBytes)} | ${bytes(row.medianResourceUniqueEncodedBytes)} | ${row.committedValues.map(value => `\`${value}\``).join(", ")} |`)
     .join("\n");
   const resourceSections = rows.map(row => [
     `### ${row.scenarioId} ${row.schema}`,
@@ -290,8 +293,14 @@ function reportMarkdown(rows: ComparatorSummaryRow[]): string {
   ].join("\n")).join("\n");
   return `# Yune Web Comparator Benchmark
 
-| Scenario | Schema | Samples | Ready ms | Input ms | Commit ms | WASM ready | WASM peak | Unique encoded resources | Commit |
-| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+## Comparison Read
+
+Only \`luna_pinyin\` rows are fair cross-engine comparisons. Jyutping rows are
+guard evidence: My RIME uses the Cantonese-only \`@rime-contrib/cantonese\`
+package, while Yune runs TypeDuck's multilingual \`jyut6ping3_mobile\` profile.
+
+| Scenario | Schema | Lane | Samples | Ready ms | Input ms | Commit ms | WASM ready | WASM peak | Unique encoded resources | Commit |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
 ${tableRows}
 
 ## Top Resources
@@ -312,4 +321,8 @@ function bytes(value: number): string {
     index += 1;
   }
   return `${current.toFixed(index === 0 ? 0 : 1)} ${units[index]}`;
+}
+
+function comparisonLane(schema: ComparatorSummaryRow["schema"]): string {
+  return schema === "luna_pinyin" ? "fair comparison" : "guard";
 }
