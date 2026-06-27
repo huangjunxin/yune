@@ -4079,7 +4079,7 @@ test.describe("yune-web Browser E2E", () => {
     const luna = await typeCompositionAndWaitForTopCandidate(
       page,
       "hao",
-      "\u4fb4",
+      "\u597d",
     );
     const lunaStatus = await readYuneStatus(page);
     expect(lunaStatus.schema).toBe("luna_pinyin");

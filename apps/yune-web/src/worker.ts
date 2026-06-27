@@ -334,6 +334,15 @@ const YUNE_WEB_WASM_BUILD_PROFILE = "release";
 const YUNE_WEB_M27_EVIDENCE_VERSION = "m27-startup-v1";
 const YUNE_WEB_M31_EVIDENCE_VERSION = "m31-yune-web-public-demo-v3";
 const YUNE_PUBLIC_DEMO = typeof YUNE_PUBLIC_DEMO_BUILD !== "undefined" && YUNE_PUBLIC_DEMO_BUILD === true;
+type WasmAttributionAssetFamily =
+  | "luna-core"
+  | "jyutping-core"
+  | "jyutping-scolar"
+  | "reverse-lookup"
+  | "opencc"
+  | "extras"
+  | "full-jyutping";
+const YUNE_WEB_WASM_ATTRIBUTION_FAMILY = wasmAttributionAssetFamilyFromWorkerUrl();
 const YUNE_WEB_COMMON_SHARED_ASSETS = [
   "default.custom.yaml",
   "common.yaml",
@@ -411,6 +420,36 @@ const YUNE_WEB_JYUTPING_SHARED_ASSETS = [
   "jyut6ping3_scolar.table.bin",
   "jyut6ping3_scolar.reverse.bin",
   "jyut6ping3_scolar.prism.bin",
+] as const;
+const YUNE_WEB_JYUTPING_CORE_SHARED_ASSETS = [
+  ...YUNE_WEB_COMMON_SHARED_ASSETS,
+  "jyut6ping3.schema.yaml",
+  "jyut6ping3_mobile.schema.yaml",
+  "jyut6ping3.table.bin",
+  "jyut6ping3.reverse.bin",
+  "jyut6ping3_mobile.prism.bin",
+] as const;
+const YUNE_WEB_JYUTPING_SCOLAR_SHARED_ASSETS = [
+  ...YUNE_WEB_JYUTPING_CORE_SHARED_ASSETS,
+  "jyut6ping3_scolar.schema.yaml",
+  "jyut6ping3_scolar.dict.yaml",
+  "jyut6ping3_scolar.table.bin",
+  "jyut6ping3_scolar.reverse.bin",
+  "jyut6ping3_scolar.prism.bin",
+] as const;
+const YUNE_WEB_REVERSE_LOOKUP_SHARED_ASSETS = [
+  ...YUNE_WEB_JYUTPING_CORE_SHARED_ASSETS,
+  "loengfan.schema.yaml",
+  "loengfan.dict.yaml",
+  "cangjie3.schema.yaml",
+  "cangjie3.dict.yaml",
+  "cangjie5.schema.yaml",
+  "cangjie5.dict.yaml",
+  "luna_pinyin_yune_reverse.dict.yaml",
+] as const;
+const YUNE_WEB_OPENCC_ATTRIBUTION_SHARED_ASSETS = [
+  ...YUNE_WEB_JYUTPING_CORE_SHARED_ASSETS,
+  ...YUNE_WEB_OPENCC_SHARED_ASSETS,
 ] as const;
 const PLAYGROUND_SCHEMAS: Record<RimeSchemaId, PlaygroundSchema> = {
   jyut6ping3: {
@@ -559,6 +598,7 @@ const loadRime = (async () => {
         schema: PLAYGROUND_SCHEMAS[INITIAL_SCHEMA_ID].runtimeId,
         wasmMemory: startupWasmMemorySnapshot(startupMemory),
         wasmBuildProfile: YUNE_WEB_WASM_BUILD_PROFILE,
+        wasmAttributionAssetFamily: YUNE_WEB_WASM_ATTRIBUTION_FAMILY ?? undefined,
         wasmGlue: "yune-web.js",
         wasmBinary: "yune-web.wasm",
         assetCache: YUNE_PUBLIC_DEMO ? publicAssetCacheStats : undefined,
@@ -607,6 +647,25 @@ function initialSchemaFromWorkerUrl(): RimeSchemaId {
     // Fall through to the app default below.
   }
   return DEFAULT_SCHEMA_ID;
+}
+
+function wasmAttributionAssetFamilyFromWorkerUrl(): WasmAttributionAssetFamily | null {
+  try {
+    const raw = new URL(location.href).searchParams.get("assetFamily");
+    return isWasmAttributionAssetFamily(raw) ? raw : null;
+  } catch {
+    return null;
+  }
+}
+
+function isWasmAttributionAssetFamily(value: string | null): value is WasmAttributionAssetFamily {
+  return value === "luna-core"
+    || value === "jyutping-core"
+    || value === "jyutping-scolar"
+    || value === "reverse-lookup"
+    || value === "opencc"
+    || value === "extras"
+    || value === "full-jyutping";
 }
 
 function defaultStartupDeployPreferences(): Partial<RimePreferences> {
@@ -744,6 +803,9 @@ async function ensureSharedAssetsForSchema(schemaId: RimeSchemaId): Promise<void
 }
 
 function sharedAssetPathsForSchema(schemaId: RimeSchemaId): readonly string[] {
+  if (YUNE_WEB_WASM_ATTRIBUTION_FAMILY !== null) {
+    return uniqueSharedAssetPaths(sharedAssetPathsForAttributionFamily(YUNE_WEB_WASM_ATTRIBUTION_FAMILY));
+  }
   switch (schemaId) {
     case "luna_pinyin":
       return uniqueSharedAssetPaths(YUNE_WEB_LUNA_SHARED_ASSETS);
@@ -752,6 +814,25 @@ function sharedAssetPathsForSchema(schemaId: RimeSchemaId): readonly string[] {
     case "jyut6ping3":
     default:
       return uniqueSharedAssetPaths(YUNE_WEB_JYUTPING_SHARED_ASSETS);
+  }
+}
+
+function sharedAssetPathsForAttributionFamily(family: WasmAttributionAssetFamily): readonly string[] {
+  switch (family) {
+    case "luna-core":
+      return YUNE_WEB_LUNA_SHARED_ASSETS;
+    case "jyutping-core":
+      return YUNE_WEB_JYUTPING_CORE_SHARED_ASSETS;
+    case "jyutping-scolar":
+      return YUNE_WEB_JYUTPING_SCOLAR_SHARED_ASSETS;
+    case "reverse-lookup":
+      return YUNE_WEB_REVERSE_LOOKUP_SHARED_ASSETS;
+    case "opencc":
+      return YUNE_WEB_OPENCC_ATTRIBUTION_SHARED_ASSETS;
+    case "extras":
+      return [];
+    case "full-jyutping":
+      return YUNE_WEB_JYUTPING_SHARED_ASSETS;
   }
 }
 

@@ -1,8 +1,8 @@
 # WEB-01 Yune Web WASM Heap And Payload Optimization Plan
 
-> **Status:** Active - **Milestone:** WEB-01 (browser-harness WASM
-> heap and payload optimization) - **Updated:** 2026-06-27 - **Type:**
-> browser-harness execution plan
+> **Status:** Complete with measured no-go - **Milestone:** WEB-01
+> (browser-harness WASM heap and payload optimization) - **Updated:**
+> 2026-06-27 - **Type:** browser-harness execution plan
 >
 > **For agentic workers:** REQUIRED SUB-SKILL: Use
 > superpowers:subagent-driven-development (recommended) or
@@ -14,6 +14,35 @@
 Reduce `apps/yune-web` browser WASM linear-memory reservation and startup
 payload for `jyut6ping3_mobile` and `luna_pinyin`, using My RIME as a browser
 comparator, without making or claiming native-engine changes.
+
+## Closeout Summary
+
+WEB-01 closes as `engine-owned-measured-no-go` / measured no-go, not as a
+browser heap, payload, native memory, public-demo speed, packaging, deployment,
+or product-delivery win.
+
+Final evidence:
+
+- `apps/yune-web/e2e/results/yune-web-vs-my-rime-baseline/final/`
+- `apps/yune-web/e2e/results/yune-web-wasm-heap-optimization/final/`
+- `apps/yune-web/e2e/results/yune-web-wasm-heap-optimization/attribution/final-attribution/`
+- `apps/yune-web/e2e/results/yune-web-wasm-heap-optimization/initial-memory-67108864-post-m45/`
+- `apps/yune-web/e2e/results/yune-web-wasm-heap-optimization/initial-memory-50331648-post-m45/`
+- `docs/reports/yune-web-vs-my-rime-browser-baseline.md`
+
+Final measured outcome:
+
+- `INITIAL_MEMORY=64 MiB` still settles at `160.0 MiB` peak for Luna and
+  `893.1 MiB` peak for Jyutping.
+- `INITIAL_MEMORY=48 MiB` worsens Luna to `176.0 MiB` and leaves Jyutping at
+  `893.1 MiB`, so `32 MiB` was not pursued.
+- Final attribution keeps Jyutping at `893.1 MiB` for `extras`,
+  `jyutping-core`, and `full-jyutping`; payload movement is not the linear
+  memory owner.
+- Focused heap metrics, M42 user dictionary persistence, and ASCII mode smokes
+  pass. Reverse lookup and multi-schema switching fail on the current runtime
+  even with a 128 MiB comparison artifact, blocking safe asset pruning in
+  WEB-01.
 
 ## Architecture
 

@@ -6,6 +6,7 @@ export default defineConfig({
     "yune-web.spec.ts",
     "yune-web-startup-benchmark.spec.ts",
     "yune-web-comparator-benchmark.spec.ts",
+    "yune-web-wasm-attribution.spec.ts",
   ],
   fullyParallel: true,
   workers: process.env.CI ? 2 : 4,

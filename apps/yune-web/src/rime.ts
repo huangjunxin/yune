@@ -348,7 +348,16 @@ function workerUrl() {
 		v: YUNE_WEB_WORKER_VERSION,
 		schema: initialWorkerSchema(),
 	});
+	const attributionFamily = wasmAttributionFamily();
+	if (attributionFamily) {
+		params.set("assetFamily", attributionFamily);
+	}
 	return `./worker.js?${params.toString()}`;
+}
+
+function wasmAttributionFamily() {
+	const params = new URLSearchParams(location.search);
+	return params.get("wasmAttributionFamily");
 }
 
 function initialWorkerSchema(): RimeSchemaId {

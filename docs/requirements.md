@@ -821,6 +821,49 @@ before any storage rewrite.
   `cargo clippy --workspace --all-targets -- -D warnings`,
   `cargo test --workspace`, and `git diff --check`.
 
+## WEB-01 Yune Web WASM Heap And Payload Requirements
+
+**Status: complete with measured no-go.** WEB-01 is tracked in
+[`plans/completed/web01-plan-yune-web-wasm-heap-payload-optimization.md`](./plans/completed/web01-plan-yune-web-wasm-heap-payload-optimization.md).
+It is a browser-harness-only sidecar after M45. It adds reusable browser
+attribution evidence, calibrates browser `INITIAL_MEMORY`, and records the
+remaining Jyutping WASM high-water as outside the WEB-01 harness-only scope.
+
+- [x] **WEB01-00**: The executable WEB-01 diff contains no `crates/` changes.
+  Inherited M45 native state is labelled post-M45 baseline only.
+- [x] **WEB01-01**: The yune-web/My RIME comparator benchmark is reusable and
+  writes evidence under
+  `apps/yune-web/e2e/results/yune-web-vs-my-rime-baseline/`.
+- [x] **WEB01-02**: Task 0 attribution writes an asset-family table for
+  `luna-core`, `jyutping-core`, `jyutping-scolar`, `reverse-lookup`, `opencc`,
+  `extras`, and `full-jyutping` under
+  `apps/yune-web/e2e/results/yune-web-wasm-heap-optimization/attribution/`.
+- [x] **WEB01-03**: The M41/current-runtime reconciliation is documented under
+  `apps/yune-web/e2e/results/yune-web-wasm-heap-optimization/attribution/post-m45-baseline-attribution/reconciliation.md`.
+- [x] **WEB01-04**: `scripts/yune-web-wasm-build.sh` accepts
+  `YUNE_WEB_INITIAL_MEMORY_BYTES` while preserving `ALLOW_MEMORY_GROWTH`,
+  linear growth, and stack-size flags.
+- [x] **WEB01-05**: Lower `INITIAL_MEMORY` calibration is complete with
+  measured no-go. `64 MiB` still settles at `160.0 MiB` for Luna and
+  `893.1 MiB` for Jyutping; `48 MiB` grows Luna higher to `176.0 MiB`, so the
+  `32 MiB` candidate is not pursued.
+- [x] **WEB01-06**: Jyutping high-water is classified as
+  `engine-owned-measured-no-go` at the WASM boundary. Final attribution keeps
+  Jyutping at `893.1 MiB` for `extras`, `jyutping-core`, and `full-jyutping`.
+- [x] **WEB01-07**: Payload ownership is quantified but not claimed as a win.
+  Final public-demo Jyutping unique encoded resources are `31.8 MiB` versus My
+  RIME `24.9 MiB`; reverse/schema-switch smokes currently block safe pruning.
+- [x] **WEB01-08**: Final report and visuals are refreshed in
+  `docs/reports/yune-web-vs-my-rime-browser-baseline.md` and
+  `docs/reports/evidence/yune-web-vs-my-rime-baseline/visuals/`.
+- [x] **WEB01-09**: Final gates record passed typecheck/build/public build,
+  final WASM heap benchmark, final attribution benchmark, final comparator
+  benchmark, and focused smoke results in
+  `apps/yune-web/e2e/results/yune-web-wasm-heap-optimization/final/final-gates.md`.
+- [x] **WEB01-10**: Reports do not claim native-engine memory wins, browser heap
+  wins, public-demo speed wins, packaging wins, deployment wins, or
+  product-delivery wins from WEB-01.
+
 ## Post-M38 Engine Performance Follow-Up Requirements
 
 **Status: complete through M39.** These requirements do not reopen M38. The post-M38 baseline
@@ -1223,6 +1266,17 @@ Which phases cover which requirements. Updated during roadmap creation.
 | M45-ENGINE-10 | M45 | Complete - startup/session, `zhongguo`, M40 long rows, M42/M44 abbreviations, bounded output/context, and Track B guard remain inside gates |
 | M45-ENGINE-11 | M45 | Complete - reporting stays native-engine-scoped with no web/WASM/product/browser claim |
 | M45-ENGINE-12 | M45 | Complete - final reports, docs, evidence, candidate-output comparison, memory verdict, and Rust/diff quality gates are recorded |
+| WEB01-00 | WEB-01 | Complete - executable WEB-01 diff contains no `crates/` changes |
+| WEB01-01 | WEB-01 | Complete - yune-web/My RIME comparator benchmark is reusable and writes evidence |
+| WEB01-02 | WEB-01 | Complete - asset-family attribution benchmark covers Luna and Jyutping families |
+| WEB01-03 | WEB-01 | Complete - M41/current-runtime reconciliation note is recorded |
+| WEB01-04 | WEB-01 | Complete - browser WASM initial memory is configurable by environment variable |
+| WEB01-05 | WEB-01 | Complete with measured no-go - 64 MiB does not reduce settled heap and 48 MiB worsens Luna |
+| WEB01-06 | WEB-01 | Complete with measured no-go - Jyutping remains `893.1 MiB` for `extras`, `jyutping-core`, and `full-jyutping` |
+| WEB01-07 | WEB-01 | Complete with blocker - payload ownership is quantified, but reverse/schema-switch smokes block safe pruning |
+| WEB01-08 | WEB-01 | Complete - report and visualizations are refreshed from final evidence |
+| WEB01-09 | WEB-01 | Complete - final gates record benchmark, build, and focused smoke outcomes |
+| WEB01-10 | WEB-01 | Complete - WEB-01 makes no native, browser heap, payload, public-demo speed, or product-delivery win claim |
 | POST-M38-PERF-01 | Post-M38 | Complete through M39 - final same-run native benchmark includes required long continuous pinyin rows and Track B row |
 | POST-M38-PERF-02 | Post-M38 | Complete through M39 - long-input rows carry owner/status/memory evidence |
 | POST-M38-PERF-03 | Post-M38 | Complete through M39 - optimization claim names the measured owner |
@@ -1269,10 +1323,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 - M43 native memory and short-key owner reduction requirements: 12 total, 10 complete, 2 complete with measured blocker, 0 active
 - M44 native performance owner reduction requirements: 12 total, 10 complete, 2 complete with measured blocker, 0 active
 - M45 native short-key latency and memory attribution requirements: 12 total, 10 complete, 2 complete with measured blocker, 0 active
+- WEB-01 yune-web WASM heap and payload requirements: 11 total, 8 complete, 3 complete with measured blocker/no-go, 0 active
 - Post-M38 engine performance follow-up requirements: 9 total, 9 complete, 0 draft
-- Mapped to phases: 332
+- Mapped to phases: 343
 - Unmapped: 0
 
 ---
 
-_Requirements defined: 2026-04-28_ _Last updated: 2026-06-27 - M45 is complete with measured native-engine blockers. It captures upstream candidate-output oracle evidence for Track A `n`/`ni`/`hao`, keeps final short-key output matching upstream, and records `hao` as passing while `n` and `ni` remain above the `<=3.0x` same-run librime target. M45 also resolves the memory target as resident-target success with a standing peak-cost blocker: steady Track A rows are below `107,797,708 B`, but the real cold-start peak remains `127,475,712 B`. No web, WASM, frontend, public-demo, packaging, deployment, product-delivery, broad TypeDuck-profile, AI, learned `.gram`/octagram, or plugin ABI claim is made. M44 remains complete as a partial native/profile performance owner-reduction milestone; M43 native memory and short-key owner reduction remains complete as a partial structural memory reduction. M42 abbreviation sentence parity and short-key guardrails remain complete with a measured performance blocker; M41 yune-web startup optimization remains complete as a separate browser-harness milestone with production-browser evidence and no native-engine claim. M40 compiled sentence lookup index, M39 long-input engine hardening, M38 engine performance parity, and earlier milestones remain complete as previously recorded._
+_Requirements defined: 2026-04-28_ _Last updated: 2026-06-27 - WEB-01 is complete with measured browser-harness no-go: the final 64 MiB initial-memory candidate still settles at `160.0 MiB` for Luna and `893.1 MiB` for Jyutping, 48 MiB worsens Luna, and asset-family attribution keeps Jyutping at `893.1 MiB` even for `extras` and `jyutping-core`. WEB-01 makes no native, browser heap, payload, public-demo speed, packaging, deployment, or product-delivery win claim. M45 remains complete with measured native-engine blockers: `hao` passes, `n` and `ni` remain above the `<=3.0x` target, and the real `127,475,712 B` cold-start peak remains a standing blocker. M44 remains complete as a partial native/profile performance owner-reduction milestone; M43 native memory and short-key owner reduction remains complete as a partial structural memory reduction. M42 abbreviation sentence parity and short-key guardrails remain complete with a measured performance blocker; M41 yune-web startup optimization remains complete as a separate browser-harness milestone with production-browser evidence and no native-engine claim. M40 compiled sentence lookup index, M39 long-input engine hardening, M38 engine performance parity, and earlier milestones remain complete as previously recorded._

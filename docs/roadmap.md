@@ -2,15 +2,14 @@
 
 Yune is a Rust input-method engine that uses **upstream librime as a
 compatibility and performance oracle** while building a cleaner Rust engine.
-M45 is complete with measured native-engine blockers. It confirmed upstream
+M45 and WEB-01 are complete with measured blockers. M45 confirmed upstream
 candidate-output parity for Track A `n`/`ni`/`hao`, kept `hao` inside the
 short-key ratio target, and split steady resident memory from real peak memory.
-It does not close as a full performance or memory success because `n` and `ni`
-remain above the `<=3.0x` short-key target and Track A still records a real
-`127,475,712 B` cold-start peak. WEB-01 is active next as the browser-harness
-sidecar for WASM linear-memory reservation and startup payload only. It must
-label inherited native changes as post-M45 baseline, must not include new
-`crates/` changes, and must not claim native engine memory wins.
+WEB-01 then proved that the current browser `893.1 MiB` Jyutping WASM
+high-water is not fixed by browser `INITIAL_MEMORY` or shared-asset-family
+payload changes. It is closed as a browser-harness measured no-go with no
+native engine, browser heap, public-demo speed, packaging, deployment, or
+product-delivery win claimed.
 
 > **Compatibility oracle.** Upstream librime latest stable is the default
 > behavior reference for user-visible schema semantics, standard ABI contracts,
@@ -32,9 +31,10 @@ label inherited native changes as post-M45 baseline, must not include new
 - [`decisions.md`](./decisions.md) - standing principles plus project-wide
   decision log.
 - [`requirements.md`](./requirements.md) - requirement IDs and status,
-  including completed M45 native-engine gates, completed M44 native-engine gates,
-  completed M43 native-engine gates, completed M42 native-engine gates, closed
-  M37-M40 engine gates, and completed M41 web-harness gates.
+  including completed WEB-01 browser measured-no-go gates, completed M45
+  native-engine gates, completed M44 native-engine gates, completed M43
+  native-engine gates, completed M42 native-engine gates, closed M37-M40 engine
+  gates, and completed M41 web-harness gates.
 - [`reports/yune-vs-librime-performance.md`](./reports/yune-vs-librime-performance.md)
   and [`reports/yune-vs-librime-root-cause-analysis.md`](./reports/yune-vs-librime-root-cause-analysis.md)
   - current performance comparison and diagnosis.
@@ -47,9 +47,10 @@ label inherited native changes as post-M45 baseline, must not include new
 - [`plans/completed/m43-plan-native-memory-short-key-owner-reduction.md`](./plans/completed/m43-plan-native-memory-short-key-owner-reduction.md)
   - completed native-engine plan for memory-owner attribution and the selected
   `poet.entries_by_code` owner reduction.
-- [`plans/active/web01-plan-yune-web-wasm-heap-payload-optimization.md`](./plans/active/web01-plan-yune-web-wasm-heap-payload-optimization.md)
-  - active browser-harness sidecar for yune-web/My RIME comparison,
-  `INITIAL_MEMORY` calibration, and Jyutping startup payload reduction.
+- [`plans/completed/web01-plan-yune-web-wasm-heap-payload-optimization.md`](./plans/completed/web01-plan-yune-web-wasm-heap-payload-optimization.md)
+  - completed browser-harness measured-no-go sidecar for yune-web/My RIME
+  comparison, `INITIAL_MEMORY` calibration, and Jyutping asset-family
+  attribution.
 - [`plans/completed/m42-plan-abbreviation-sentence-parity-short-key-guardrails.md`](./plans/completed/m42-plan-abbreviation-sentence-parity-short-key-guardrails.md)
   - completed native-engine plan for incomplete-pinyin abbreviation sentence
   parity and short-key guardrails.
@@ -76,19 +77,17 @@ label inherited native changes as post-M45 baseline, must not include new
 | --- | --- | --- |
 | Core compatibility | Phase 1 named-target upstream behavior is complete for `luna_pinyin` and common-schema basics against upstream librime `1.17.0`. | Preserve upstream-observable behavior on every engine change. |
 | Engine performance | M45 is complete as a partial native-engine follow-up to M44. Final `hao` passes at `24.267us` / `2.110x`, while `n` remains `68.900us` / `3.313x` and `ni` remains `49.450us` / `3.458x`. Track A steady resident rows meet the resident target (`87,498,752-98,684,928 B`), but the real cold-start peak remains `127,475,712 B`, so M45 records a standing peak-cost blocker. | Keep native reports scoped to M45 evidence. Any next native slice needs a new plan and a narrower owner for the `n`/`ni` constant factor or peak-memory attribution. |
-| Web harness startup and memory | M41 is complete for the tracked `apps/yune-web/` browser harness. WEB-01 is active as a browser-only WASM linear-memory reservation and Jyutping payload plan. The fresh 2026-06-27 comparator baseline records Yune public-demo `luna_pinyin` at `128.0 MiB` peak WASM linear memory versus My RIME `16.0 MiB`, and Yune public-demo Jyutping at `893.1 MiB` versus My RIME `68.0 MiB`; Yune Jyutping also loads `33.5 MiB` unique encoded resources versus My RIME `24.9 MiB`. | Run WEB-01 on post-M45 main with evidence labelled post-M45. Draft win gates are Luna `<=64 MiB`, Jyutping `<=256 MiB` with `<=128 MiB` stretch, and Jyutping resources below `28 MiB` or a path-owned no-go. Claims stay limited to browser linear-memory, payload, and worker-retention owners. |
+| Web harness startup and memory | M41 is complete for the tracked `apps/yune-web/` browser harness. WEB-01 is complete as measured no-go: final public-demo `luna_pinyin` is `160.0 MiB` peak versus My RIME `16.0 MiB`, final public-demo Jyutping is `893.1 MiB` peak versus My RIME `68.0 MiB`, and final attribution keeps Jyutping at `893.1 MiB` even for `extras` and `jyutping-core`. | A future WASM-memory runtime/engine plan should start from WEB-01 attribution evidence and the multi-schema/reverse-lookup blocker. Do not claim native or browser wins from WEB-01. |
 | AI-native engine layer | M11/M13 proved a default-off local AI layer can sit on top of the deterministic engine. | Keep AI outside the classic deterministic performance path unless a named engine experiment explicitly enables it. |
 | Future platform work | Platform-specific native frontends remain outside this repo roadmap. | Start a separate repository or separate plan before changing platform/application contracts. |
 
 ## Authoritative Sequence
 
-1. **WEB-01 yune-web WASM linear memory and payload sidecar** - active under
-   [`plans/active/web01-plan-yune-web-wasm-heap-payload-optimization.md`](./plans/active/web01-plan-yune-web-wasm-heap-payload-optimization.md).
-   It covers browser-harness code, public-demo packaging, WASM build flags,
-   browser benchmarks, reports, and evidence. It must calibrate lower browser
-   `INITIAL_MEMORY` from observed WASM linear-memory high-water plus headroom
-   before claiming a browser win, and it must not widen M45/M44 native-engine
-   claims.
+1. **Future WASM-memory runtime/engine attribution** - later, with a new scoped
+   plan. It should start from WEB-01 `final-attribution` rows, especially
+   `extras` and `jyutping-core` both reaching `893.1 MiB`, and from the
+   multi-schema/reverse-lookup failure context where schema switching can grow
+   the browser heap to about `1.9 GiB`.
 2. **Future AI-native engine experiments** - later, and only after classic
    engine performance is no longer dominated by avoidable pipeline costs.
 3. **Future TypeDuck/profile-storage slices** - only with a new scoped plan,
@@ -130,8 +129,9 @@ storage rewrite is retained.
 
 M45 remains native-engine scoped. It makes no browser, frontend, WASM,
 product-delivery, packaging, deployment, public-demo, broad TypeDuck-profile,
-AI, learned `.gram`/octagram, or plugin ABI claim. WEB-01 starts after this
-point and must label inherited native evidence as post-M45 baseline.
+AI, learned `.gram`/octagram, or plugin ABI claim. WEB-01 follows this point
+as a separate completed browser-harness measured no-go and labels inherited
+native evidence as post-M45 baseline.
 
 ## M44 Closeout
 
@@ -444,7 +444,7 @@ Closed M38 gates:
 | Track | Scope | Current source of truth |
 | --- | --- | --- |
 | Engine performance | Native engine startup, schema/session lifecycle, mmap-backed `rsmarisa` marisa-table lookup, lazy/page-bounded translation, context export, memory, allocation, completed M40 sentence lookup indexing, completed M42 abbreviation sentence parity/short-key guardrails, completed M43 memory-owner reduction, and completed partial M44 native/profile performance owner reduction | Completed M44 plan: [`plans/completed/m44-plan-native-performance-owner-reduction.md`](./plans/completed/m44-plan-native-performance-owner-reduction.md). Completed M43 plan: [`plans/completed/m43-plan-native-memory-short-key-owner-reduction.md`](./plans/completed/m43-plan-native-memory-short-key-owner-reduction.md). Completed M42 plan: [`plans/completed/m42-plan-abbreviation-sentence-parity-short-key-guardrails.md`](./plans/completed/m42-plan-abbreviation-sentence-parity-short-key-guardrails.md). Completed M40 plan: [`plans/completed/m40-plan-compiled-sentence-lookup-index.md`](./plans/completed/m40-plan-compiled-sentence-lookup-index.md). |
-| Web harness startup and memory | Tracked `apps/yune-web/` production build, public-demo dist, browser shell, asset/cache delivery, worker/WASM startup, persistence, schema selection, first key-to-paint, and Chromium memory | Active WEB-01 plan: [`plans/active/web01-plan-yune-web-wasm-heap-payload-optimization.md`](./plans/active/web01-plan-yune-web-wasm-heap-payload-optimization.md). Completed M41 plan: [`plans/completed/m41-plan-yune-web-startup-optimization.md`](./plans/completed/m41-plan-yune-web-startup-optimization.md); final evidence under [`apps/yune-web/e2e/results/m41-yune-web-startup-optimization/`](../apps/yune-web/e2e/results/m41-yune-web-startup-optimization/). |
+| Web harness startup and memory | Tracked `apps/yune-web/` production build, public-demo dist, browser shell, asset/cache delivery, worker/WASM startup, persistence, schema selection, first key-to-paint, and Chromium memory | Completed WEB-01 measured-no-go plan: [`plans/completed/web01-plan-yune-web-wasm-heap-payload-optimization.md`](./plans/completed/web01-plan-yune-web-wasm-heap-payload-optimization.md). Completed M41 plan: [`plans/completed/m41-plan-yune-web-startup-optimization.md`](./plans/completed/m41-plan-yune-web-startup-optimization.md); final evidence under [`apps/yune-web/e2e/results/m41-yune-web-startup-optimization/`](../apps/yune-web/e2e/results/m41-yune-web-startup-optimization/). |
 | Core compatibility | Upstream behavior fixtures and standard ABI-observable behavior | [`requirements.md`](./requirements.md), [`decisions.md`](./decisions.md), and per-milestone plans. |
 | AI-native engine research | Default-off AI behavior layered above the deterministic engine | Future explicit engine experiments only. |
 | Historical record | Completed milestone outcomes and reference/provenance pointers | [`ledgers/milestone-history.md`](./ledgers/milestone-history.md). |
@@ -461,7 +461,7 @@ Closed M38 gates:
 | M42 | Complete with measured blocker | Native-engine abbreviation sentence parity and short-key guardrails: Phase 0 proved the upstream target, Yune now matches candidate output for `cszysmsrsd`/`zybfshmsru`, `ni`/`hao` were profiled, and M40 wins were preserved. The abbreviation rows remain `3.469x`/`5.069x` same-run librime, so future latency work needs a new scoped plan. |
 | M43 | Complete with measured blocker | Native-engine memory-owner reduction: Phase 0 selected `poet.entries_by_code`, final evidence reduced that owner by `19,513,879 B`, and whole-process memory remains a measured blocker because Track A peak stayed inside Phase 0 noise rather than reaching the memory-win target. |
 | M44 | Complete with measured blockers | Native-engine partial owner reduction closed Track A abbreviation latency, Track B native product-profile short-row lookup explosion, and the `hao` short-key target. `ni` latency and Track A whole-process memory remain measured blockers; no browser, frontend, packaging, deployment, or public-demo speed claim is made from M44 evidence. |
-| WEB-01 | Active | Browser-harness WASM linear-memory and payload sidecar for `apps/yune-web/`, with claims limited to browser linear-memory reservation, startup payload, worker retention, and browser evidence. |
+| WEB-01 | Complete with measured no-go | Browser-harness WASM linear-memory and payload sidecar for `apps/yune-web/`. The final 64 MiB initial-memory candidate still settles at `160.0 MiB` for Luna and `893.1 MiB` for Jyutping; attribution shows Jyutping remains `893.1 MiB` even for `extras` and `jyutping-core`. No browser heap, payload, native memory, or product-delivery win is claimed. |
 
 ## Scope Ledger
 

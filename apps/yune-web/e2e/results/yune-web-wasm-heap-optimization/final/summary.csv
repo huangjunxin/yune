@@ -1,0 +1,11 @@
+scenarioId,schema,mode,publicDemo,samples,medianReadyToInputMs,p95ReadyToInputMs,medianStartupCompleteMs,p95StartupCompleteMs,medianFirstKeyToPaintMs,p95FirstKeyToPaintMs,transferBytes,encodedBytes,medianWasmHeapBytes,p95WasmHeapBytes,medianPeakWasmHeapBytes,p95PeakWasmHeapBytes,maxPeakWasmHeapBytes,cacheHits,cacheMisses,cacheErrors,topOwner,topOwnerMedianMs
+tracked-luna-cold,luna_pinyin,real-worker-cold,false,3,1208,1216,589,610,38,133,36594991,36593791,167772160,167772160,167772160,167772160,167772160,0,0,0,React/browser ready residual,600
+tracked-luna-warm-reload,luna_pinyin,real-worker-warm-reload,false,3,598,637,539,568,38,132,0,36875347,167772160,167772160,167772160,167772160,167772160,0,0,0,worker total to initialized,539
+tracked-luna-warm-new-page,luna_pinyin,real-worker-warm-new-page,false,3,653,663,550,556,39,116,0,36593791,167772160,167772160,167772160,167772160,167772160,0,0,0,worker total to initialized,550
+tracked-jyut-cold,jyut6ping3_mobile,real-worker-cold,false,3,5990,5995,5384,5398,47,169,33359094,33357894,936509440,936509440,936509440,936509440,936509440,0,0,0,worker total to initialized,5384
+tracked-jyut-warm-reload,jyut6ping3_mobile,real-worker-warm-reload,false,3,5317,5348,5263,5280,50,132,0,36666793,936509440,936509440,936509440,936509440,936509440,0,0,0,worker total to initialized,5263
+tracked-jyut-warm-new-page,jyut6ping3_mobile,real-worker-warm-new-page,false,3,5403,5654,5298,5554,46,148,0,33357906,936509440,936509440,936509440,936509440,936509440,0,0,0,worker total to initialized,5298
+tracked-mock-cold,luna_pinyin,mock-worker-cold,false,3,592,609,0,0,25,28,747840,746640,0,0,0,0,0,0,0,0,React/browser ready residual,592
+tracked-mock-warm,luna_pinyin,mock-worker-warm,false,3,379,386,0,0,26,27,747840,746640,0,0,0,0,0,0,0,0,React/browser ready residual,379
+public-luna-cold,luna_pinyin,real-worker-cold,true,3,1238,1249,635,643,37,118,36594931,36593731,167772160,167772160,167772160,167772160,167772160,2,24,0,worker total to initialized,635
+public-jyut-cold,jyut6ping3_mobile,real-worker-cold,true,3,5859,5942,5214,5344,46,126,33359046,33357846,936509440,936509440,936509440,936509440,936509440,1,35,0,worker total to initialized,5214
