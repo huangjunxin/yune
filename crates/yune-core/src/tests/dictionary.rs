@@ -40,6 +40,82 @@ fn darts_double_array_exact_and_prefix_search_round_trip_inserted_keys() {
 }
 
 #[test]
+fn build_prism_bin_round_trips_multi_syllable_toneless_spellings() {
+    // Regression for a double-array construction bug: a parent node validated its
+    // child slots as free but did not reserve them before recursing, so one child's
+    // subtree could occupy a not-yet-assigned sibling's slot and corrupt the trie.
+    // `exact_match` then returned out-of-range values for some keys. With the rich
+    // Jyutping tone algebra this dropped the toneless form of multi-syllable codes
+    // (e.g. "litbiu" from "lit6biu2"), so byte-backed Jyutping returned garbage
+    // candidates in the browser. The expected codes are just the input syllabary
+    // codes — this asserts the spelling algebra round-trips, not any oracle ranking.
+    let syllabary: Vec<String> = [
+        "lit6biu2",
+        "siu2baan1doek3muk6niu5",
+        "lit6",
+        "biu2",
+        "caam1haau2",
+        "caam1",
+        "haau2",
+    ]
+    .iter()
+    .map(|code| (*code).to_owned())
+    .collect();
+    let algebra: Vec<String> = [
+        "derive/^ng(?=[aeiou])//",
+        "derive/^(?=[aeiou])/ng/",
+        "derive/^n(?!g)/l/",
+        "derive/^ng(?=\\d)/m/",
+        "derive/^(g|k)w(?=o)/$1/",
+        "derive/^jy?(?=[aeiou])/y/",
+        "derive/^jyu/ju/",
+        "derive/yu(?!ng|k)/y/",
+        "derive/(g|k)u(?!ng|k)/$1wu/",
+        "derive/^([zcs])/$1h/",
+        "derive/eoi(?=\\d)/eoy/",
+        "derive/eo/oe/",
+        "derive/oe/eo/",
+        "derive/aa(?=\\d)/a/",
+        "derive/\\d//",
+        "abbrev/^([a-z]).+$/$1/",
+        "xform/1/v/",
+        "xform/4/vv/",
+        "xform/2/x/",
+        "xform/5/xx/",
+        "xform/3/q/",
+        "xform/6/qq/",
+    ]
+    .iter()
+    .map(|formula| (*formula).to_owned())
+    .collect();
+
+    let prism = parse_rime_prism_bin_payload(build_prism_bin(&syllabary, &algebra, 1, 2))
+        .expect("generated prism should parse");
+
+    for (spelling, expected_code) in [("litbiu", "lit6biu2"), ("caamhaau", "caam1haau2")] {
+        let codes = prism.lookup_canonical_codes(spelling, &syllabary);
+        assert!(
+            codes.iter().any(|code| code.code == expected_code),
+            "toneless spelling {spelling} should map to {expected_code}, got {codes:?}"
+        );
+    }
+
+    // No key may resolve to an index beyond the spelling map (the collision bug
+    // produced values far larger than the spelling count).
+    if let Some(double_array) = prism.double_array.as_ref() {
+        for spelling in ["litbiu", "lit", "biu", "caamhaau", "caam", "haau"] {
+            if let Some(index) = double_array.exact_match(spelling) {
+                assert!(
+                    (index as usize) < prism.spelling_map.len(),
+                    "exact_match({spelling}) returned out-of-range index {index} (spelling map len {})",
+                    prism.spelling_map.len()
+                );
+            }
+        }
+    }
+}
+
+#[test]
 fn heap_table_lookup_exposes_exact_prefix_and_all_code_queries() {
     let mut lookup = BTreeMap::<String, Vec<Candidate>>::new();
     for (code, text, quality) in [

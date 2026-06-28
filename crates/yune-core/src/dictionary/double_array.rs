@@ -191,8 +191,17 @@ impl DartsBuilder {
             .iter()
             .map(|(byte, child)| (*byte, *child))
             .collect::<Vec<_>>();
+        // Reserve every sibling slot before recursing. `find_offset` only checked
+        // that these slots were free at this instant; without reserving them now, a
+        // child's own subtree could be placed into a not-yet-assigned sibling's slot
+        // and corrupt the trie (producing out-of-range `exact_match` values for some
+        // keys). Reserving them up front keeps each sibling's slot exclusive.
+        let offset_index = usize::try_from(offset).unwrap();
+        for (byte, _) in &children {
+            self.reserve(array_index ^ offset_index ^ usize::from(*byte));
+        }
         for (byte, child) in children {
-            let child_index = array_index ^ usize::try_from(offset).unwrap() ^ usize::from(byte);
+            let child_index = array_index ^ offset_index ^ usize::from(byte);
             self.assign(child, child_index, byte)?;
         }
         Ok(())
