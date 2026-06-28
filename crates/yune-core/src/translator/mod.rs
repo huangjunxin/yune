@@ -2951,6 +2951,9 @@ impl Translator for StaticTableTranslator {
 
     fn memory_owner_rows(&self) -> Vec<MemoryOwnerRow> {
         let mut rows = self.storage.memory_owner_rows();
+        if let Some(prism_payload) = &self.prism_payload {
+            rows.extend(prism_payload.memory_owner_rows());
+        }
         if let Some(model) = &self.upstream_sentence_model {
             rows.extend(model.memory_owner_rows());
         } else {

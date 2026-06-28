@@ -3,6 +3,8 @@ use crate::dictionary::compiled::{
     parse_rime_format_version_for_payload, read_f32_le, read_i32_le, read_u32_le,
 };
 use crate::dictionary::double_array::DartsDoubleArray;
+use crate::{MemoryOwnerClass, MemoryOwnerRow};
+use std::mem;
 
 const MAX_CORRECTION_COUNT: usize = 4096;
 const MAX_TOLERANCE_RULE_COUNT: usize = 4096;
@@ -39,6 +41,60 @@ pub struct PrismLookupCode<'a> {
 }
 
 impl RimePrismBinPayload {
+    #[must_use]
+    pub fn memory_owner_rows(&self) -> Vec<MemoryOwnerRow> {
+        let descriptor_count = self.spelling_map.iter().map(Vec::len).sum::<usize>();
+        let tip_count = self
+            .spelling_map
+            .iter()
+            .flatten()
+            .filter(|descriptor| !descriptor.tips.is_empty())
+            .count();
+        vec![
+            MemoryOwnerRow::new(
+                "prism.double_array_units",
+                MemoryOwnerClass::HeapOwnedRequired,
+                estimate_double_array_units_bytes(&self.double_array),
+                self.double_array
+                    .as_ref()
+                    .map_or(0, |double_array| double_array.units().len()),
+                "DartsDoubleArray Vec<u32>",
+                "parsed prism double-array units retained on heap for spelling lookup",
+            ),
+            MemoryOwnerRow::new(
+                "prism.spelling_map",
+                MemoryOwnerClass::HeapOwnedRequired,
+                estimate_spelling_map_bytes(&self.spelling_map, self.spelling_map.capacity()),
+                descriptor_count,
+                "Vec<Vec<RimePrismSpellingDescriptor>>",
+                "parsed prism spelling descriptor vectors retained on heap",
+            ),
+            MemoryOwnerRow::new(
+                "prism.corrections_tolerance",
+                MemoryOwnerClass::HeapOwnedRequired,
+                estimate_correction_tolerance_bytes(
+                    &self.corrections,
+                    self.corrections.capacity(),
+                    &self.tolerance_rules,
+                    self.tolerance_rules.capacity(),
+                ),
+                self.corrections
+                    .len()
+                    .saturating_add(self.tolerance_rules.len()),
+                "Vec<RimeCorrectionEntry> + Vec<RimeToleranceRule>",
+                "parsed prism correction/tolerance payload retained on heap",
+            ),
+            MemoryOwnerRow::new(
+                "prism.tips_payload",
+                MemoryOwnerClass::HeapOwnedRequired,
+                estimate_tips_payload_bytes(&self.spelling_map),
+                tip_count,
+                "String payloads in RimePrismSpellingDescriptor",
+                "parsed prism descriptor tips string payload retained on heap when present",
+            ),
+        ]
+    }
+
     #[must_use]
     pub fn lookup_canonical_codes<'a>(
         &self,
@@ -79,6 +135,85 @@ impl RimePrismBinPayload {
             .take(limit)
             .collect()
     }
+}
+
+fn estimate_double_array_units_bytes(double_array: &Option<DartsDoubleArray>) -> usize {
+    double_array.as_ref().map_or(0, |double_array| {
+        mem::size_of::<DartsDoubleArray>().saturating_add(
+            double_array
+                .units_capacity()
+                .saturating_mul(mem::size_of::<u32>()),
+        )
+    })
+}
+
+fn estimate_spelling_map_bytes(
+    map: &[Vec<RimePrismSpellingDescriptor>],
+    outer_capacity: usize,
+) -> usize {
+    mem::size_of::<Vec<Vec<RimePrismSpellingDescriptor>>>()
+        .saturating_add(
+            outer_capacity.saturating_mul(mem::size_of::<Vec<RimePrismSpellingDescriptor>>()),
+        )
+        .saturating_add(
+            map.iter()
+                .map(|descriptors| {
+                    descriptors
+                        .capacity()
+                        .saturating_mul(mem::size_of::<RimePrismSpellingDescriptor>())
+                })
+                .sum::<usize>(),
+        )
+}
+
+fn estimate_correction_tolerance_bytes(
+    corrections: &[RimeCorrectionEntry],
+    correction_capacity: usize,
+    tolerance_rules: &[RimeToleranceRule],
+    tolerance_rule_capacity: usize,
+) -> usize {
+    mem::size_of::<Vec<RimeCorrectionEntry>>()
+        .saturating_add(correction_capacity.saturating_mul(mem::size_of::<RimeCorrectionEntry>()))
+        .saturating_add(
+            corrections
+                .iter()
+                .map(|entry| {
+                    entry
+                        .observed_input
+                        .capacity()
+                        .saturating_add(entry.canonical_code.capacity())
+                })
+                .sum::<usize>(),
+        )
+        .saturating_add(mem::size_of::<Vec<RimeToleranceRule>>())
+        .saturating_add(tolerance_rule_capacity.saturating_mul(mem::size_of::<RimeToleranceRule>()))
+        .saturating_add(
+            tolerance_rules
+                .iter()
+                .map(|rule| {
+                    rule.near_code
+                        .capacity()
+                        .saturating_add(
+                            rule.candidate_codes
+                                .capacity()
+                                .saturating_mul(mem::size_of::<String>()),
+                        )
+                        .saturating_add(
+                            rule.candidate_codes
+                                .iter()
+                                .map(String::capacity)
+                                .sum::<usize>(),
+                        )
+                })
+                .sum::<usize>(),
+        )
+}
+
+fn estimate_tips_payload_bytes(map: &[Vec<RimePrismSpellingDescriptor>]) -> usize {
+    map.iter()
+        .flatten()
+        .map(|descriptor| descriptor.tips.capacity())
+        .sum()
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

@@ -87,6 +87,11 @@ impl DartsDoubleArray {
     }
 
     #[must_use]
+    pub(crate) fn units_capacity(&self) -> usize {
+        self.units.capacity()
+    }
+
+    #[must_use]
     pub fn exact_match(&self, key: &str) -> Option<u32> {
         let mut node_pos = 0usize;
         let mut unit = *self.units.get(node_pos)?;

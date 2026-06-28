@@ -169,10 +169,9 @@ The double/side load is confirmed and owner-named:
 | Secondary `luna_pinyin_yune_reverse` compact table `lookup_records` | 13.8 MB | No for unprefixed Jyutping; used by grave-prefix Mandarin reverse lookup UI | Lazy-load on reverse trigger or optional UI pack |
 | `dictionary_lookup_filter.lookup_records` (`jyut6ping3_scolar`) | 50.7 MB | No; dictionary-panel/comment enrichment filter | Highest-leverage lazy/optional branch |
 
-Recommended first reduction branch: **eager-materialization removal for
-dictionary-panel/reverse/comment payloads**, starting with
-`dictionary_lookup_filter.lookup_records`, then compact `lookup_records`, and
-then lazy loading for the `luna_pinyin_yune_reverse` reverse UI translator. Keep
+This table selected RED-01 first and remains the Phase 0 pre-reduction ordering.
+The post-RED-01 prism attribution correction below supersedes the next-branch
+order: run prism storage/lazy parsing before reverse/UI lazy loading. Keep
 candidate-output correctness gates green; this is not an allocator-strategy
 branch.
 
@@ -207,9 +206,42 @@ loaded on first request.
 
 RED-01 is a meaningful reduction but not close to the target: after the branch,
 isolated `jyut6ping3_mobile` is still **~3.5x** over the 48 MB steady target and
-**~3.4x** over the 64 MB peak target. The next branch should target
-`luna_pinyin_yune_reverse` / reverse-UI loading and then primary compact
-`lookup_records`, not allocator strategy.
+**~3.4x** over the 64 MB peak target. The named heap total in this RED-01 table
+was later corrected by the prism attribution section below.
+
+## Post-RED-01 prism attribution correction (Windows-measured, 2026-06-28)
+
+Evidence:
+[`evidence/m47-ios-budget-native-memory-prism-attribution-2026-06-28/`](./evidence/m47-ios-budget-native-memory-prism-attribution-2026-06-28/)
+from the same native probe and RED-01 keyboard-profile opt-out. This is an
+owner-table correction, not a reduction branch.
+
+| Metric | RED-01 owner table | Corrected owner table | Delta |
+| --- | ---: | ---: | ---: |
+| Steady WS | **169.2 MB** | **169.1 MB** | noise only |
+| Steady private | **147.7 MB** | **146.6 MB** | noise only |
+| Steady allocator live | **104.9 MB** | **104.9 MB** | **0.0 MB** |
+| Peak WS | **217.3 MB** | **217.2 MB** | noise only |
+| Named heap owners | **48.2 MB** | **86.6 MB** | **+38.4 MB** |
+| Named total owners | **70.3 MB** | **108.7 MB** | **+38.4 MB** |
+
+The corrected owner rows name parsed prism payload heap retained by
+`StaticTableTranslator`:
+
+| Owner | Bytes | Verdict |
+| --- | ---: | --- |
+| `prism.spelling_map` | `31,337,240 B` | Largest newly named owner; parsed spelling descriptor vectors. |
+| `prism.double_array_units` | `8,896,560 B` | Parsed Darts double-array units. |
+| `prism.corrections_tolerance` | `96 B` | Empty correction/tolerance vector headers in this profile. |
+| `prism.tips_payload` | `0 B` | No non-empty descriptor tips in this profile. |
+
+The primary `jyut6ping3_mobile` prism accounts for `28,767,208 B` of spelling
+map and `8,388,632 B` of double-array units; `luna_pinyin_yune_reverse` accounts
+for `2,570,032 B` and `507,928 B`. `dictionary_lookup_filter.lookup_records`
+remains absent, so RED-01's keyboard-profile skip is still active. After this
+correction, the remaining gap is no longer mainly unnamed prism heap: compact
+`lookup_records` are still `45,689,298 B`, and the next reduction decision should
+compare prism byte-backed/lazy parsing against compact lookup-record strategy.
 
 ## Verdict (Windows-measured)
 
@@ -220,18 +252,20 @@ target. After RED-01, the keyboard-profile run is still **~3.5× over** steady a
 borderline-under at steady but ~4.6× over at peak. Even a small-schema base is
 ~60-95 MB. The multilingual Jyutping keyboard **does not fit** in its current
 shape, and closing the gap remains **architecture-level work, not tuning**. The
-portable levers (drop remaining `create_session` eager materialization, defer
-reverse/UI payloads, reduce compact `lookup_records`, bound transients, slim the
-mobile profile) are Windows-implementable and benefit every platform. **No
-"iOS-ready" claim** until a later real-Apple-device validation pass.
+portable levers (byte-back or lazily parse prism payloads, drop remaining
+`create_session` eager materialization, reduce compact `lookup_records`, defer
+reverse/UI payloads, bound transients, slim the mobile profile) are
+Windows-implementable and benefit every platform. **No "iOS-ready" claim** until
+a later real-Apple-device validation pass.
 
 ## Next work
 
-RED-01 is complete. Start RED-02 by deferring `script_translator@luna_pinyin` /
-`luna_pinyin_yune_reverse` until the grave-prefix reverse lookup path is used, or
-by isolating it as an optional UI pack for keyboard-extension builds. Do not use
-allocator changes as the next branch unless a later allocator-specific probe
-shows a steady live-vs-resident gap that Phase 0/RED-01 did not show.
+RED-01 is complete and the post-RED-01 owner table is corrected. Start the next
+branch with prism storage: make parsed prism spelling-map descriptors and
+double-array units mmap/byte-backed or lazy. Do not start the reverse/UI branch
+until the prism branch is measured. Do not use allocator changes as the next
+branch unless a later allocator-specific probe shows a steady live-vs-resident
+gap that Phase 0/RED-01/prism attribution did not show.
 
 ## Evidence
 
@@ -243,4 +277,6 @@ shows a steady live-vs-resident gap that Phase 0/RED-01 did not show.
   [`evidence/m47-ios-budget-native-memory-attribution-2026-06-28/`](./evidence/m47-ios-budget-native-memory-attribution-2026-06-28/)
 - M47 RED-01 reduction:
   [`evidence/m47-ios-budget-native-memory-reduction-red01-2026-06-28/`](./evidence/m47-ios-budget-native-memory-reduction-red01-2026-06-28/)
+- M47 post-RED-01 prism attribution correction:
+  [`evidence/m47-ios-budget-native-memory-prism-attribution-2026-06-28/`](./evidence/m47-ios-budget-native-memory-prism-attribution-2026-06-28/)
 - Probe: [`crates/yune-rime-api/tests/native_memory_probe.rs`](../../crates/yune-rime-api/tests/native_memory_probe.rs)

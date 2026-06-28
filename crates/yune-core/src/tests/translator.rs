@@ -2,10 +2,11 @@ use std::collections::{BTreeMap, HashMap};
 
 use crate::{
     build_prism_bin, parse_rime_prism_bin_payload, Candidate, CandidateFilter, CandidateRequest,
-    CandidateSource, Context, DictionaryLookupRecord, Engine, HistoryTranslator, MemoryOwnerClass,
-    PresetVocabularyEntry, PunctuationTranslator, ReverseLookupTranslator, RimeCorrectionEntry,
-    RimeToleranceRule, StaticTableTranslator, Status, TableDictionary, TableDictionaryAdvancedData,
-    TableEntry, Translator,
+    CandidateSource, Context, DartsDoubleArray, DictionaryLookupRecord, Engine, HistoryTranslator,
+    MemoryOwnerClass, PresetVocabularyEntry, PunctuationTranslator, ReverseLookupTranslator,
+    RimeCorrectionEntry, RimePrismBinPayload, RimePrismSpellingDescriptor, RimeToleranceRule,
+    StaticTableTranslator, Status, TableDictionary, TableDictionaryAdvancedData, TableEntry,
+    Translator,
 };
 
 struct DropFirstWindowFilter;
@@ -199,6 +200,65 @@ fn compact_table_memory_owner_rows_cover_m46_payload_owner_set() {
     ] {
         assert_eq!(owner_class(owner), MemoryOwnerClass::HeapOwnedRequired);
     }
+}
+
+#[test]
+fn compact_table_memory_owner_rows_cover_parsed_prism_payload_owner_set() {
+    let dictionary = TableDictionary::new([TableEntry::new("nei", "你", 10.0)]);
+    let prism_payload = RimePrismBinPayload {
+        dict_file_checksum: 1,
+        schema_file_checksum: 2,
+        num_syllables: 1,
+        num_spellings: 2,
+        double_array_size: 4,
+        double_array: Some(DartsDoubleArray::from_units(vec![1, 2, 3, 4]).unwrap()),
+        spelling_map: vec![
+            vec![
+                RimePrismSpellingDescriptor {
+                    syllable_id: 0,
+                    spelling_type: 0,
+                    is_correction: false,
+                    credibility: 0.0,
+                    tips: "tip".to_owned(),
+                },
+                RimePrismSpellingDescriptor {
+                    syllable_id: 0,
+                    spelling_type: 2,
+                    is_correction: false,
+                    credibility: -0.5,
+                    tips: String::new(),
+                },
+            ],
+            Vec::new(),
+        ],
+        corrections: vec![RimeCorrectionEntry::new("nri", "nei")],
+        tolerance_rules: vec![RimeToleranceRule::new("nei", ["nri", "lei"])],
+    };
+    let translator =
+        StaticTableTranslator::from_compact_dictionary(dictionary, Some(prism_payload));
+
+    let rows = translator.memory_owner_rows();
+    let owner = |name: &str| {
+        rows.iter()
+            .find(|row| row.owner == name)
+            .unwrap_or_else(|| panic!("owner row {name} should be present"))
+    };
+
+    for name in [
+        "prism.double_array_units",
+        "prism.spelling_map",
+        "prism.corrections_tolerance",
+        "prism.tips_payload",
+    ] {
+        assert_eq!(owner(name).class, MemoryOwnerClass::HeapOwnedRequired);
+        assert!(
+            owner(name).estimated_bytes > 0,
+            "owner row {name} should name retained heap bytes"
+        );
+    }
+    assert_eq!(owner("prism.double_array_units").item_count, 4);
+    assert_eq!(owner("prism.spelling_map").item_count, 2);
+    assert_eq!(owner("prism.tips_payload").item_count, 1);
 }
 
 #[test]
