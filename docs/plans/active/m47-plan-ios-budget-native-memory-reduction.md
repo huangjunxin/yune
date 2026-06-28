@@ -1,6 +1,6 @@
 # M47 iOS-Budget Native Memory Reduction Plan
 
-> **Status:** Active / Phase 0 attribution complete - **Track:** Engine performance (portable; cross-platform memory budget) - **Created:** 2026-06-28 - **Updated:** 2026-06-28 - **Type:** attribution-first measurement-and-reduction plan
+> **Status:** Active / RED-01 complete - **Track:** Engine performance (portable; cross-platform memory budget) - **Created:** 2026-06-28 - **Updated:** 2026-06-28 - **Type:** attribution-first measurement-and-reduction plan
 >
 > **For agentic workers:** attribution before optimization (the M43/M45/M46 rule). Do not retain a reduction branch that is not justified by a measured owner. Steps use checkbox (`- [ ]`) syntax.
 
@@ -39,7 +39,7 @@ Source: lean native probe `crates/yune-rime-api/tests/native_memory_probe.rs` (r
 
 ## Phase 0 — Attribution (mandatory before any reduction branch)
 
-The original Phase 0 blocker was **~235 MB of the 298 MB steady un-owned**. Phase 0 is now closed by [`../../reports/evidence/m47-ios-budget-native-memory-attribution-2026-06-28/`](../../reports/evidence/m47-ios-budget-native-memory-attribution-2026-06-28/): the old bucket is mostly live retained heap / process-private memory, not primarily allocator-retained-free memory. No reduction implementation has landed yet; Phase 1+ remains gated on the owner table below.
+The original Phase 0 blocker was **~235 MB of the 298 MB steady un-owned**. Phase 0 is now closed by [`../../reports/evidence/m47-ios-budget-native-memory-attribution-2026-06-28/`](../../reports/evidence/m47-ios-budget-native-memory-attribution-2026-06-28/): the old bucket is mostly live retained heap / process-private memory, not primarily allocator-retained-free memory. RED-01 is now closed by [`../../reports/evidence/m47-ios-budget-native-memory-reduction-red01-2026-06-28/`](../../reports/evidence/m47-ios-budget-native-memory-reduction-red01-2026-06-28/); Phase 1+ continues with the next measured owners below.
 
 - [x] **M47-ATTR-01:** Add an allocator/private-byte instrument to the lean probe — a counting `#[global_allocator]` wrapper (live bytes + high-water) and/or per-phase `PROCESS_MEMORY_COUNTERS_EX` private bytes — to split the 298 MB into **live retained heap** vs **allocator-retained-free** vs **mmap'd-clean file pages**. Closed with Windows `PrivateUsage`, working set, peak working set, allocator live, and allocator high-water in the M47 evidence folder.
 - [x] **M47-ATTR-02:** Bisect the +283 MB `create_session` jump with phase probes *inside* the load: after table mmap, after `read_yune_table_advanced_payload` (`lookup_records`), after the `all_codes()`→`normal_codes` HashSet build, and after the secondary/reverse dictionary load. Closed by ordered `create-session-events.csv` rows for table byte-source open, advanced lookup payload parse, compact store parse, `normal_codes` HashSet, reverse dictionary parse, and filter install.
@@ -48,9 +48,9 @@ The original Phase 0 blocker was **~235 MB of the 298 MB steady un-owned**. Phas
 
 ## Phase 1+ — Reduction (gated on Phase 0 owners)
 
-Candidate levers, now ordered by Phase 0 owner evidence (do not implement speculatively in the attribution commit):
+Candidate levers, now ordered by Phase 0 and RED-01 owner evidence:
 
-- [ ] **M47-RED-01 (dictionary-panel/reverse payload lazy/skip):** `dictionary_lookup_filter.lookup_records` (**50.7 MB**), primary `jyut6ping3` `lookup_records` (**31.9 MB**), and secondary `luna_pinyin_yune_reverse` `lookup_records` (**13.8 MB**) are not normal unprefixed Jyutping candidate text generation. Prototype lazy/optional loading on the keyboard path; measure the steady delta on the lean probe; keep committed-asset candidate tests green.
+- [x] **M47-RED-01 (dictionary-panel lookup optional skip):** `dictionary_lookup_filter.lookup_records` from `jyut6ping3_scolar` (**50.7 MB**, `127,144` records) is not normal unprefixed Jyutping candidate text generation. Closed with an explicit `dictionary_lookup_filter/load_lookup_records: false` keyboard-profile gate. Isolated `jyut6ping3_mobile` steady moved **223.9 -> 169.2 MB** WS, **202.2 -> 147.7 MB** private, **155.0 -> 104.9 MB** allocator-live, peak **231.6 -> 217.3 MB**. Default/public behavior remains eager; rich dictionary-panel comments are disabled only for profiles that opt out.
 - [ ] **M47-RED-02 (reverse/UI lazy load):** Defer `script_translator@luna_pinyin` / `luna_pinyin_yune_reverse` until the grave-prefix reverse lookup path is used, or isolate it as an optional UI pack for keyboard-extension builds.
 - [ ] **M47-RED-03 (bound load transients):** Stream/avoid the large transient allocator high-water (`~415 MB` default-list run, `~165 MB` isolated mobile run) so peak approaches steady; avoid materializing full temporary lookup/index structures where a bounded/iterator form suffices.
 - [ ] **M47-RED-04 (allocator strategy, lower priority):** Phase 0 did not show a large steady allocator-retained-free gap in the isolated mobile run. Revisit decaying allocator work only after eager-materialization owners move, or with a dedicated allocator A/B proof.

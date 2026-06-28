@@ -4,6 +4,7 @@
 // test-local allocator live/high-water estimate. Run one schema per process:
 //   $env:YUNE_MEM_SCHEMA="jyut6ping3_mobile"
 //   $env:YUNE_MEM_DEFAULT="jyut6ping3_mobile"
+//   $env:YUNE_MEM_DISABLE_DICTIONARY_LOOKUP_RECORDS="1"
 //   $env:YUNE_MEM_EVIDENCE_DIR="docs/reports/evidence/m47-ios-budget-native-memory-attribution-2026-06-28"
 //   cargo test -p yune-rime-api --test native_memory_probe -- --ignored --exact native_memory_probe_reports_working_set --nocapture
 use std::{
@@ -270,6 +271,9 @@ fn native_memory_probe_reports_working_set() {
         let _ = fs::remove_file(shared.join("build").join("default.yaml"));
     }
 
+    let disable_dictionary_lookup_records =
+        std::env::var("YUNE_MEM_DISABLE_DICTIONARY_LOOKUP_RECORDS").is_ok();
+
     if std::env::var("YUNE_MEM_NOSENTENCE").is_ok() {
         for name in ["jyut6ping3.schema.yaml", "jyut6ping3_mobile.schema.yaml"] {
             let path = shared.join(name);
@@ -311,6 +315,20 @@ fn native_memory_probe_reports_working_set() {
         "RimeApi initialize complete",
     ));
     assert_eq!(deploy(), TRUE, "deploy should succeed");
+    if disable_dictionary_lookup_records {
+        let mut patched = 0usize;
+        for name in ["jyut6ping3.schema.yaml", "jyut6ping3_mobile.schema.yaml"] {
+            let path = user.join("build").join(name);
+            if path.exists() {
+                patch_schema_disable_dictionary_lookup_records(&path);
+                patched += 1;
+            }
+        }
+        assert!(
+            patched > 0,
+            "YUNE_MEM_DISABLE_DICTIONARY_LOOKUP_RECORDS requested but no target deployed schema was present"
+        );
+    }
     phases.push(capture_phase(
         "after_deploy",
         "deploy reused prebuilt assets; create_session has not run",
@@ -383,6 +401,26 @@ fn native_memory_probe_reports_working_set() {
     }
 
     let _ = fs::remove_dir_all(&root);
+}
+
+fn patch_schema_disable_dictionary_lookup_records(path: &Path) {
+    let text = fs::read_to_string(path).unwrap_or_else(|error| {
+        panic!(
+            "YUNE_MEM_DISABLE_DICTIONARY_LOOKUP_RECORDS requested but deployed schema {} could not be read: {error}",
+            path.display()
+        )
+    });
+    if text.contains("load_lookup_records: false") {
+        return;
+    }
+    let marker = "dictionary_lookup_filter:\n  dictionary: jyut6ping3_scolar\n";
+    assert!(
+        text.contains(marker),
+        "YUNE_MEM_DISABLE_DICTIONARY_LOOKUP_RECORDS requested but deployed schema {} does not contain the dictionary_lookup_filter block",
+        path.display()
+    );
+    let patched = text.replace(marker, "dictionary_lookup_filter:\n  dictionary: jyut6ping3_scolar\n  load_lookup_records: false\n");
+    fs::write(path, patched).expect("patch dictionary lookup filter config");
 }
 
 fn evidence_path(raw_path: &str) -> PathBuf {

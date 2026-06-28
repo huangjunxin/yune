@@ -176,25 +176,62 @@ then lazy loading for the `luna_pinyin_yune_reverse` reverse UI translator. Keep
 candidate-output correctness gates green; this is not an allocator-strategy
 branch.
 
+## RED-01 reduction closeout (Windows-measured, 2026-06-28)
+
+Evidence:
+[`evidence/m47-ios-budget-native-memory-reduction-red01-2026-06-28/`](./evidence/m47-ios-budget-native-memory-reduction-red01-2026-06-28/)
+from the same native probe. This is Windows `WorkingSetSize` / `PrivateUsage`
+evidence, not iOS `phys_footprint`.
+
+RED-01 adds an explicit keyboard-profile gate:
+`dictionary_lookup_filter/load_lookup_records: false`. When set, schema install
+skips loading and retaining `jyut6ping3_scolar` lookup records. The default is
+still eager (`true`), so public/web and TypeDuck-rich-comment paths remain
+unchanged unless a profile opts out.
+
+| Metric | Before | After | Delta |
+| --- | ---: | ---: | ---: |
+| Steady WS | **223.9 MB** | **169.2 MB** | **-54.7 MB** |
+| Steady private | **202.2 MB** | **147.7 MB** | **-54.5 MB** |
+| Steady allocator live | **155.0 MB** | **104.9 MB** | **-50.1 MB** |
+| Peak WS | **231.6 MB** | **217.3 MB** | **-14.3 MB** |
+| Named heap owners | **96.6 MB** | **48.2 MB** | **-48.4 MB** |
+
+The measured owner delta is direct: `dictionary_lookup_filter.lookup_records`
+went from `50,695,595 B` / `127,144` records in the before owner profile to no
+owner row in the after profile. Candidate correctness remains covered by the
+committed Jyutping asset regression; dictionary-panel comments and TypeDuck
+comment parity remain preserved on the default/eager path. For the keyboard
+profile, dictionary-panel enrichment is intentionally disabled, not lazily
+loaded on first request.
+
+RED-01 is a meaningful reduction but not close to the target: after the branch,
+isolated `jyut6ping3_mobile` is still **~3.5x** over the 48 MB steady target and
+**~3.4x** over the 64 MB peak target. The next branch should target
+`luna_pinyin_yune_reverse` / reverse-UI loading and then primary compact
+`lookup_records`, not allocator strategy.
+
 ## Verdict (Windows-measured)
 
-Against the 64 MB hard budget: jyut6ping3_mobile steady **~4.6× over**, peak
-**~7.5× over**; cangjie5 ~1.5× over; luna_pinyin borderline-under at steady but
-~4.6× over at peak. Even a small-schema base is ~60–95 MB. The multilingual
-Jyutping keyboard **does not fit** in its current shape, and closing the gap is
-**architecture-level work, not tuning**. The portable levers (attribute and remove
-the ~235 MB, drop `create_session` eager materialization, fix the double load,
-bound the transient, consider a decaying allocator, slim the mobile profile) are
-all Windows-implementable and benefit every platform. **No "iOS-ready" claim**
-until a later real-Apple-device validation pass.
+Against the 64 MB hard budget, the original isolated `jyut6ping3_mobile` baseline
+was **~4.7× over** the 48 MB steady target and **~3.6× over** the 64 MB peak
+target. After RED-01, the keyboard-profile run is still **~3.5× over** steady and
+**~3.4× over** peak. Cangjie5 remains ~1.5× over at steady; luna_pinyin is
+borderline-under at steady but ~4.6× over at peak. Even a small-schema base is
+~60-95 MB. The multilingual Jyutping keyboard **does not fit** in its current
+shape, and closing the gap remains **architecture-level work, not tuning**. The
+portable levers (drop remaining `create_session` eager materialization, defer
+reverse/UI payloads, reduce compact `lookup_records`, bound transients, slim the
+mobile profile) are Windows-implementable and benefit every platform. **No
+"iOS-ready" claim** until a later real-Apple-device validation pass.
 
 ## Next work
 
-Phase 0 is complete. Start the first reduction branch by making
-dictionary-panel/reverse/comment payloads lazy or optional on the keyboard path,
-then re-run the M47 probe. Do not use allocator changes as the first branch
-unless a later allocator-specific probe shows a steady live-vs-resident gap that
-this Phase 0 run did not show.
+RED-01 is complete. Start RED-02 by deferring `script_translator@luna_pinyin` /
+`luna_pinyin_yune_reverse` until the grave-prefix reverse lookup path is used, or
+by isolating it as an optional UI pack for keyboard-extension builds. Do not use
+allocator changes as the next branch unless a later allocator-specific probe
+shows a steady live-vs-resident gap that Phase 0/RED-01 did not show.
 
 ## Evidence
 
@@ -204,4 +241,6 @@ this Phase 0 run did not show.
   [`evidence/current-performance-dashboard-2026-06-28/native-current-benchmark/track-b-yune-product/memory-owner-profile.csv`](./evidence/current-performance-dashboard-2026-06-28/native-current-benchmark/track-b-yune-product/memory-owner-profile.csv)
 - M47 Phase 0 attribution:
   [`evidence/m47-ios-budget-native-memory-attribution-2026-06-28/`](./evidence/m47-ios-budget-native-memory-attribution-2026-06-28/)
+- M47 RED-01 reduction:
+  [`evidence/m47-ios-budget-native-memory-reduction-red01-2026-06-28/`](./evidence/m47-ios-budget-native-memory-reduction-red01-2026-06-28/)
 - Probe: [`crates/yune-rime-api/tests/native_memory_probe.rs`](../../crates/yune-rime-api/tests/native_memory_probe.rs)

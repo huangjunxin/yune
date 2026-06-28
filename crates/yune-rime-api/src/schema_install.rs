@@ -1111,6 +1111,16 @@ fn install_schema_dictionary_lookup_filter_from_config(
         );
         return;
     };
+    let load_lookup_records =
+        find_config_value(schema_config, &format!("{name_space}/load_lookup_records"))
+            .and_then(config_scalar_bool)
+            .unwrap_or(true);
+    if !load_lookup_records {
+        memory_probe_mark(format!(
+            "m47:filter:dictionary_lookup_filter@{name_space}:dictionary:{dictionary_name}:skip_dictionary_load:load_lookup_records=false"
+        ));
+        return;
+    }
     memory_probe_mark(format!(
         "m47:filter:dictionary_lookup_filter@{name_space}:dictionary:{dictionary_name}:before_dictionary_load"
     ));
