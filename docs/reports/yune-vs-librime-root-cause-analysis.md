@@ -338,6 +338,11 @@ The final Jyutping-only sanity check after the last WASM rebuild records the
 same two long rows at `142 ms` and `78 ms`, also with ready/peak WASM memory at
 `160.0 MiB`.
 
+The follow-up guard now covers both long Jyutping rows, asserts their expected
+first candidates, and caps byte-backed prefix/sentence expansion counters. That
+turns the user-visible latency row into a standing regression dimension instead
+of another one-off browser measurement.
+
 Post-closeout correction: the phrase-composition regression is now fixed and
 gated. Final follow-up evidence records full native `yune_web` 33/0 with 2
 ignored evidence-only tests, `cantonese_parity` 37/0, WEB-03 byte-backed guard

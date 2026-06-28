@@ -935,7 +935,9 @@ path.
   expansion guard and focused browser latency evidence. Rebuilt local
   public-demo rows record `sihaacoenggeoisyujapgecukdou` at `130 ms` and
   `taihaajyugwodaahoucoenggegeoizigosingnangwuidimjoeng` at `74 ms`, with
-  ready/peak WASM memory still `160.0 MiB`.
+  ready/peak WASM memory still `160.0 MiB`. The native guard now covers both
+  long rows, expected first candidates, and bounded byte-backed prefix/sentence
+  expansion counters.
 
 ## M46 Jyutping Native And WASM Memory Attribution Requirements
 

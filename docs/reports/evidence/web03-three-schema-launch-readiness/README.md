@@ -106,7 +106,9 @@ Final follow-up gates:
 
 - Full native `yune_web`: 33 passed, 0 failed, 2 ignored.
 - `cantonese_parity`: 37 passed, 0 failed.
-- WEB-03 byte-backed guard now asserts `ngogokdak -> 我覺得`.
+- WEB-03 byte-backed guards now assert `ngogokdak -> 我覺得`, plus both
+  long-input Jyutping rows used in the latency follow-up with expected first
+  candidates.
 - Browser smoke against rebuilt public demo: `ngogokdak -> 我覺得` and
   `zouhapci` visible lookup rows both pass.
 
@@ -171,7 +173,10 @@ cargo test -p yune-rime-api --test yune_web web03_byte_backed_jyutping_long_inpu
 
 Focused verification:
 
-- long-input expansion guard: passed;
+- long-input expansion guard: passed for
+  `sihaacoenggeoisyujapgecukdou` and
+  `taihaajyugwodaahoucoenggegeoizigosingnangwuidimjoeng`, including first
+  candidate quality plus bounded prefix/sentence expansion counters;
 - WEB-03 byte-backed launch guard: passed;
 - public mobile phrase composition: passed;
 - visible lookup enrichment: passed;

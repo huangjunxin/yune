@@ -1702,28 +1702,50 @@ fn web03_byte_backed_jyutping_long_input_avoids_candidate_expansion_explosion() 
         yune_web_process_key(state, 0xff1b, 0)
     }));
 
-    m37_metrics_enable(true);
-    m37_metrics_reset();
-    let long_input = "sihaacoenggeoisyujapgecukdou";
-    let response = process_input(state, long_input);
-    let metrics = m37_metrics_snapshot();
-    m37_metrics_enable(false);
+    let long_inputs = [
+        (
+            "sihaacoenggeoisyujapgecukdou",
+            "\u{8a66}\u{4e0b}\u{5834}\u{64da}\u{8f38}\u{5165}\u{5605}\u{901f}\u{90fd}",
+            5_000,
+        ),
+        (
+            "taihaajyugwodaahoucoenggegeoizigosingnangwuidimjoeng",
+            "\u{7747}\u{4e0b}\u{5982}\u{679c}\u{6253}\u{597d}\u{5834}\u{5605}\u{64da}\u{81ea}\u{500b}\u{8cac}\u{6703}\u{9ede}\u{6a23}",
+            6_000,
+        ),
+    ];
 
-    let candidates = response["context"]["candidates"]
-        .as_array()
-        .expect("candidate rows should be an array");
-    assert!(
-        !candidates.is_empty(),
-        "long byte-backed Jyutping input should still produce candidates: {response:?}"
-    );
-    assert!(
-        metrics.prefix_fallback_views_visited <= 5_000,
-        "long byte-backed Jyutping input should not materialize every prefix fallback row: {metrics:?}"
-    );
-    assert!(
-        metrics.sentence_entry_matches_collected <= 5_000,
-        "long byte-backed Jyutping input should not materialize every sentence substring row: {metrics:?}"
-    );
+    for (long_input, expected_first_candidate, prefix_fallback_visit_limit) in long_inputs {
+        drop(response_json(unsafe {
+            yune_web_process_key(state, 0xff1b, 0)
+        }));
+
+        m37_metrics_enable(true);
+        m37_metrics_reset();
+        let response = process_input(state, long_input);
+        let metrics = m37_metrics_snapshot();
+        m37_metrics_enable(false);
+
+        let candidates = response["context"]["candidates"]
+            .as_array()
+            .expect("candidate rows should be an array");
+        let first_candidate = candidates
+            .first()
+            .and_then(|candidate| candidate["text"].as_str());
+        assert_eq!(
+            first_candidate,
+            Some(expected_first_candidate),
+            "long byte-backed Jyutping input should preserve first-candidate quality for {long_input}: {response:?}"
+        );
+        assert!(
+            metrics.prefix_fallback_views_visited <= prefix_fallback_visit_limit,
+            "long byte-backed Jyutping input should not materialize every prefix fallback row for {long_input}: {metrics:?}"
+        );
+        assert!(
+            metrics.sentence_entry_matches_collected <= 5_000,
+            "long byte-backed Jyutping input should not materialize every sentence substring row for {long_input}: {metrics:?}"
+        );
+    }
 
     unsafe { yune_web_cleanup(state) };
     runtime.remove();

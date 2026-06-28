@@ -193,6 +193,11 @@ The final Jyutping-only sanity check after the last WASM rebuild records the
 same two long rows at `142 ms` and `78 ms`, also with ready/peak WASM memory at
 `160.0 MiB`.
 
+Guardrail follow-up: the native WEB-03 long-input guard now covers both
+Jyutping rows above, checks the expected first candidate for each, and caps the
+byte-backed prefix/sentence expansion counters so the latency fix cannot be
+kept by silently dropping candidate quality.
+
 Evidence:
 [`../../apps/yune-web/e2e/results/web03-latency-regression-fix/local-browser-latency/`](../../apps/yune-web/e2e/results/web03-latency-regression-fix/local-browser-latency/).
 
