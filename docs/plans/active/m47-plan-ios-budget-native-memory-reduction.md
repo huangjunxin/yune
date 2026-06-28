@@ -1,19 +1,19 @@
 # M47 iOS-Budget Native Memory Reduction Plan
 
-> **Status:** Active / post-RED-01 prism attribution corrected - **Track:** Engine performance (portable; cross-platform memory budget) - **Created:** 2026-06-28 - **Updated:** 2026-06-28 - **Type:** attribution-first measurement-and-reduction plan
+> **Status:** Active / post-RED-02 prism runtime storage reduced - **Track:** Engine performance (portable; cross-platform memory budget) - **Created:** 2026-06-28 - **Updated:** 2026-06-28 - **Type:** attribution-first measurement-and-reduction plan
 >
 > **For agentic workers:** attribution before optimization (the M43/M45/M46 rule). Do not retain a reduction branch that is not justified by a measured owner. Steps use checkbox (`- [ ]`) syntax.
 
-**Goal:** Drive the **single-active-schema native working set under an iOS keyboard-extension budget** so that Yune can be embedded in a Cantoboard-style iOS keyboard (and benefit Android, Windows IME, WASM, and desktop/server embedding at the same time). Target: **steady ≤ 48 MB, peak ≤ 64 MB** for one active schema; **stretch peak ≤ 48 MB**. The current measured baseline is `jyut6ping3_mobile` steady **~298 MB** / peak **~482 MB** — roughly **4.6×/7.5× over** — so this is architecture-level reduction, not tuning.
+**Goal:** Drive the **single-active-schema native working set under an iOS keyboard-extension budget** so that Yune can be embedded in a Cantoboard-style iOS keyboard (and benefit Android, Windows IME, WASM, and desktop/server embedding at the same time). Target: **steady <= 48 MB, peak <= 64 MB** for one active schema; **stretch peak <= 48 MB**. The initial measured baseline was `jyut6ping3_mobile` steady **~298 MB** / peak **~482 MB**; after RED-02 the Windows proxy is steady **138.1 MB** / peak **172.1 MB**, so this remains architecture-level reduction, not tuning.
 
 **Why now / why portable:** The product target is an iOS keyboard extension (reference: [Cantoboard](https://github.com/Cantoboard/Cantoboard), which ships librime via [librime-ios-build](https://github.com/Cantoboard/librime-ios-build) under the extension's hard memory ceiling). iOS app extensions are jetsam-killed at a small budget (treated here as **64 MB**, target **48 MB**). All of the reduction levers — dictionary storage, lazy loading, compact indexes, allocator pressure, eager-materialization removal, startup transients, asset size — are **portable engine work** that can be designed, implemented, and measured on Windows and ships to every platform. Only the **final** "fits in an actual iOS keyboard extension" proof needs an Apple device; that validation is a later Phase 2 frontend gate, explicitly out of this plan.
 
 ## Budget (iOS-shaped, measured on Windows)
 
-| Dimension | Target | Stretch | Current (lean native probe, jyut6ping3_mobile) |
+| Dimension | Target | Stretch | Current after RED-02 (lean native probe, jyut6ping3_mobile) |
 | --- | --- | --- | --- |
-| Steady working set, one active schema | ≤ 48 MB | ≤ 40 MB | **~298 MB** |
-| Peak working set (load transient included) | ≤ 64 MB | ≤ 48 MB | **~482 MB** |
+| Steady working set, one active schema | <= 48 MB | <= 40 MB | **138.1 MB** |
+| Peak working set (load transient included) | <= 64 MB | <= 48 MB | **172.1 MB** |
 | Startup | no source-fallback, no rebuild, no large transient parse spike | — | deploy ~11 MB (cheap); the spike is at `create_session` |
 | Assets | compiled-only mobile profile, lazy/optional packs | — | shipped compiled; multilingual profile loaded eagerly |
 | Correctness | committed-asset tests for real typing cases stay green | — | WEB03-10 committed-asset Jyutping test green |
@@ -49,11 +49,11 @@ The original Phase 0 blocker was **~235 MB of the 298 MB steady un-owned**. Phas
 
 ## Phase 1+ — Reduction (gated on Phase 0 owners)
 
-Candidate levers, now ordered by Phase 0, RED-01, and the post-RED-01 prism attribution correction:
+Candidate levers, now ordered by Phase 0, RED-01, the post-RED-01 prism attribution correction, and RED-02:
 
 - [x] **M47-RED-01 (dictionary-panel lookup optional skip):** `dictionary_lookup_filter.lookup_records` from `jyut6ping3_scolar` (**50.7 MB**, `127,144` records) is not normal unprefixed Jyutping candidate text generation. Closed with an explicit `dictionary_lookup_filter/load_lookup_records: false` keyboard-profile gate. Isolated `jyut6ping3_mobile` steady moved **223.9 -> 169.2 MB** WS, **202.2 -> 147.7 MB** private, **155.0 -> 104.9 MB** allocator-live, peak **231.6 -> 217.3 MB**. Default/public behavior remains eager; rich dictionary-panel comments are disabled only for profiles that opt out.
-- [ ] **M47-RED-02 (parsed-prism byte-backed/lazy storage):** Make parsed prism spelling-map descriptors and double-array units mmap/byte-backed or lazy. Current corrected owners: primary `jyut6ping3_mobile` `prism.spelling_map` **28.8 MB** + `prism.double_array_units` **8.4 MB**; reverse `luna_pinyin_yune_reverse` adds **3.1 MB**. This is the next branch; do not start reverse/UI loading work first.
-- [ ] **M47-RED-03 (compact lookup-record strategy):** Reduce or lazily load compact `lookup_records` still retained after RED-01: primary `jyut6ping3_mobile` **31.9 MB** plus `luna_pinyin_yune_reverse` **13.8 MB**. Keep dictionary-panel/comment behavior explicit.
+- [x] **M47-RED-02 (parsed-prism byte-backed/lazy storage):** Closed by [`../../reports/evidence/m47-ios-budget-native-memory-reduction-prism-storage-2026-06-28/`](../../reports/evidence/m47-ios-budget-native-memory-reduction-prism-storage-2026-06-28/). Runtime compiled-prism loading now reads spelling-map descriptors and Darts double-array units from the existing byte source instead of retaining parsed heap mirrors. Isolated `jyut6ping3_mobile` with RED-01 lookup-record opt-out moved steady **169.1 -> 138.1 MB** WS, **146.6 -> 101.8 MB** private, **104.9 -> 66.6 MB** allocator-live, peak **217.2 -> 172.1 MB**. `prism.spelling_map` and `prism.double_array_units` moved from heap-owned rows to mmap-file-backed rows.
+- [ ] **M47-RED-03 (compact lookup-record strategy):** Next branch. Reduce or lazily load compact `lookup_records` still retained after RED-02: primary `jyut6ping3_mobile` **31.9 MB** plus `luna_pinyin_yune_reverse` **13.8 MB**. Keep dictionary-panel/comment behavior explicit.
 - [ ] **M47-RED-04 (reverse/UI lazy load):** Defer `script_translator@luna_pinyin` / `luna_pinyin_yune_reverse` until the grave-prefix reverse lookup path is used, or isolate it as an optional UI pack for keyboard-extension builds.
 - [ ] **M47-RED-05 (bound load transients):** Stream/avoid the large transient allocator high-water (`~415 MB` default-list run, `~165 MB` isolated mobile run) so peak approaches steady; avoid materializing full temporary lookup/index structures where a bounded/iterator form suffices.
 - [ ] **M47-RED-06 (allocator strategy, lower priority):** Phase 0 did not show a large steady allocator-retained-free gap in the isolated mobile run. Revisit decaying allocator work only after eager-materialization owners move, or with a dedicated allocator A/B proof.

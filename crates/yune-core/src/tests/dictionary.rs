@@ -2,6 +2,7 @@ use std::{
     collections::{BTreeMap, HashMap, HashSet},
     fs,
     path::Path,
+    sync::Arc,
 };
 
 use serde_json::Value;
@@ -9,12 +10,34 @@ use serde_json::Value;
 use crate::dictionary::{parse_compact_table_bin_lookup, TableLookup};
 use crate::{
     build_prism_bin, build_reverse_bin, build_table_bin, execute_rebuild_plan,
-    parse_rime_prism_bin_payload, parse_rime_reverse_bin_dictionary,
-    parse_rime_table_bin_dictionary, parse_rime_table_bin_metadata, Candidate, CandidateSource,
-    DartsDoubleArray, RimeCorrectionEntry, RimeDictArtifactStatus, RimeDictRebuildExecutionReport,
-    RimeDictRebuildPlan, RimeDictRebuildSources, RimePrismSpellingDescriptor, RimeToleranceRule,
-    TableDictionary, TableDictionaryAdvancedData, TableEncoder, TableEntry,
+    parse_rime_prism_bin_payload, parse_rime_prism_runtime_payload,
+    parse_rime_reverse_bin_dictionary, parse_rime_table_bin_dictionary,
+    parse_rime_table_bin_metadata, Candidate, CandidateSource, CompactTableByteSource,
+    DartsDoubleArray, MemoryOwnerClass, RimeCorrectionEntry, RimeDictArtifactStatus,
+    RimeDictRebuildExecutionReport, RimeDictRebuildPlan, RimeDictRebuildSources,
+    RimePrismSpellingDescriptor, RimeToleranceRule, TableDictionary, TableDictionaryAdvancedData,
+    TableEncoder, TableEntry,
 };
+
+#[derive(Debug)]
+struct TestPrismByteSource {
+    bytes: Arc<[u8]>,
+    mapping_mode: &'static str,
+}
+
+impl CompactTableByteSource for TestPrismByteSource {
+    fn bytes(&self) -> &[u8] {
+        &self.bytes
+    }
+
+    fn storage_label(&self) -> &'static str {
+        "byte_backed"
+    }
+
+    fn mapping_mode(&self) -> &'static str {
+        self.mapping_mode
+    }
+}
 
 #[test]
 fn darts_double_array_exact_and_prefix_search_round_trip_inserted_keys() {
@@ -396,6 +419,62 @@ fn prism_lookup_resolves_spelling_to_table_payload_codes() {
         .map(|candidate| candidate.text().to_owned())
         .collect::<Vec<_>>();
     assert_eq!(texts, ["payload-ai", "payload-an"]);
+}
+
+#[test]
+fn prism_runtime_payload_reads_lookup_storage_from_byte_source() {
+    let dictionary = TableDictionary::new([
+        TableEntry::new("ai", "payload-ai", 2.0),
+        TableEntry::new("an", "payload-an", 3.0),
+    ]);
+    let compact = parse_compact_table_bin_lookup(build_table_bin(&dictionary, 0x1234_5678))
+        .expect("compact table should parse");
+    let bytes = Arc::<[u8]>::from(build_prism_bin(
+        compact.syllabary_codes(),
+        &[
+            "derive/^ai$/a/".to_owned(),
+            "derive/^an$/a/abbrev".to_owned(),
+        ],
+        0x1234_5678,
+        0x8765_4321,
+    ));
+    let source: Arc<dyn CompactTableByteSource> = Arc::new(TestPrismByteSource {
+        bytes,
+        mapping_mode: "mmap",
+    });
+    let prism = parse_rime_prism_runtime_payload(source).expect("byte-backed prism should parse");
+
+    let resolved = prism
+        .lookup_canonical_codes("a", compact.syllabary_codes())
+        .into_iter()
+        .map(|code| (code.code.to_owned(), code.abbreviation))
+        .collect::<Vec<_>>();
+    assert_eq!(
+        resolved,
+        [("ai".to_owned(), false), ("an".to_owned(), true)]
+    );
+
+    let rows = prism.memory_owner_rows();
+    let owner = |name: &str| {
+        rows.iter()
+            .find(|row| row.owner == name)
+            .unwrap_or_else(|| panic!("owner row {name} should be present"))
+    };
+    assert_eq!(
+        owner("prism.double_array_units").class,
+        MemoryOwnerClass::MmapFileBacked
+    );
+    assert_eq!(
+        owner("prism.spelling_map").class,
+        MemoryOwnerClass::MmapFileBacked
+    );
+    assert!(owner("prism.double_array_units").estimated_bytes > 0);
+    assert!(owner("prism.spelling_map").estimated_bytes > 0);
+    assert_eq!(
+        owner("prism.corrections_tolerance").class,
+        MemoryOwnerClass::HeapOwnedRequired
+    );
+    assert!(owner("prism.corrections_tolerance").estimated_bytes < 128);
 }
 
 #[test]

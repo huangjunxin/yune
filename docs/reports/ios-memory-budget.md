@@ -23,12 +23,13 @@ three different numbers; only one is the iOS proxy:
 
 | Source | jyut6ping3_mobile | What it is |
 | --- | ---: | --- |
-| **Lean native probe** | **~298 MB steady / 482 MB peak** | Real `RimeApi`, mmap path, prebuilt assets, one schema per fresh Rust process — **the iOS proxy** |
+| Initial lean native probe | **~298 MB steady / 482 MB peak** | Original M47 baseline: real `RimeApi`, mmap path, prebuilt assets, one schema per fresh Rust process |
+| Current lean native probe after RED-02 | **138.1 MB steady / 172.1 MB peak** | Current Windows proxy after RED-01 lookup-record opt-out and RED-02 prism byte-backed runtime storage |
 | .NET in-process benchmark (Track B) | ~436 MB after-ready / 504 MB peak | A .NET process hosting **both** Yune *and* librime DLLs — polluted upper bound, **not** the iOS number |
 | Browser WASM | 160 MiB | WASM linear memory, **no mmap**, owned tables — a different deployment |
 
 The earlier "Jyutping native ~504 MB" headline was the dual-DLL harness; the
-iOS-relevant steady is **~298 MB**.
+iOS-relevant steady was initially **~298 MB** and is now **138.1 MB** after RED-02.
 
 ## Methodology
 
@@ -238,34 +239,66 @@ The corrected owner rows name parsed prism payload heap retained by
 The primary `jyut6ping3_mobile` prism accounts for `28,767,208 B` of spelling
 map and `8,388,632 B` of double-array units; `luna_pinyin_yune_reverse` accounts
 for `2,570,032 B` and `507,928 B`. `dictionary_lookup_filter.lookup_records`
-remains absent, so RED-01's keyboard-profile skip is still active. After this
-correction, the remaining gap is no longer mainly unnamed prism heap: compact
-`lookup_records` are still `45,689,298 B`, and the next reduction decision should
-compare prism byte-backed/lazy parsing against compact lookup-record strategy.
+remains absent, so RED-01's keyboard-profile skip is still active.
+
+## RED-02 prism runtime storage closeout (Windows-measured, 2026-06-28)
+
+Evidence:
+[`evidence/m47-ios-budget-native-memory-reduction-prism-storage-2026-06-28/`](./evidence/m47-ios-budget-native-memory-reduction-prism-storage-2026-06-28/)
+from the same native probe and RED-01 keyboard-profile opt-out. The `before/`
+folder is the 682be75a prism-attribution baseline; `current/` is the RED-02
+runtime parser result.
+
+RED-02 keeps the public owned prism parser intact for fixture/facade tests, but
+compiled native runtime loading now stores a `RimePrismRuntimePayload` that reads
+the Darts double-array units and spelling-map descriptors from the existing
+compiled prism byte source instead of expanding them into heap-owned `Vec<u32>`
+and `Vec<Vec<RimePrismSpellingDescriptor>>` structures.
+
+| Metric | Before | After | Delta |
+| --- | ---: | ---: | ---: |
+| Steady WS | **169.1 MB** | **138.1 MB** | **-31.0 MB** |
+| Steady private | **146.6 MB** | **101.8 MB** | **-44.8 MB** |
+| Steady allocator live | **104.9 MB** | **66.6 MB** | **-38.3 MB** |
+| Peak WS | **217.2 MB** | **172.1 MB** | **-45.1 MB** |
+| Named heap owners | **86.6 MB** | **48.2 MB** | **-38.4 MB** |
+
+| Owner | Before | After | Verdict |
+| --- | ---: | ---: | --- |
+| `prism.double_array_units` | `8,896,560 B` heap | `8,896,512 B` mmap-backed | Moved to byte-backed runtime reads. |
+| `prism.spelling_map` | `31,337,240 B` heap | `11,955,056 B` mmap-backed | Moved to lazy byte-backed descriptor reads; raw descriptor bytes are smaller than heap expansion. |
+| `prism.corrections_tolerance` | `96 B` heap | `96 B` heap | Unchanged small parsed metadata. |
+| `compact_table.lookup_records` | `45,689,298 B` heap | `45,689,298 B` heap | Largest remaining heap owner. |
+
+RED-02 is a successful reduction but not a budget closeout: the isolated mobile
+keyboard profile is still roughly **2.9x** over the 48 MB steady target and
+**2.7x** over the 64 MB peak target on the Windows proxy harness. The next
+measured blocker is compact lookup-record materialization, not prism storage.
 
 ## Verdict (Windows-measured)
 
 Against the 64 MB hard budget, the original isolated `jyut6ping3_mobile` baseline
-was **~4.7× over** the 48 MB steady target and **~3.6× over** the 64 MB peak
-target. After RED-01, the keyboard-profile run is still **~3.5× over** steady and
-**~3.4× over** peak. Cangjie5 remains ~1.5× over at steady; luna_pinyin is
-borderline-under at steady but ~4.6× over at peak. Even a small-schema base is
+was **~4.7x over** the 48 MB steady target and **~3.6x over** the 64 MB peak
+target. After RED-02, the keyboard-profile run is still **~2.9x over** steady and
+**~2.7x over** peak. Cangjie5 remains ~1.5x over at steady; luna_pinyin is
+borderline-under at steady but ~4.6x over at peak. Even a small-schema base is
 ~60-95 MB. The multilingual Jyutping keyboard **does not fit** in its current
 shape, and closing the gap remains **architecture-level work, not tuning**. The
-portable levers (byte-back or lazily parse prism payloads, drop remaining
-`create_session` eager materialization, reduce compact `lookup_records`, defer
-reverse/UI payloads, bound transients, slim the mobile profile) are
-Windows-implementable and benefit every platform. **No "iOS-ready" claim** until
-a later real-Apple-device validation pass.
+portable levers (drop remaining `create_session` eager materialization, reduce
+compact `lookup_records`, defer reverse/UI payloads, bound transients, slim the
+mobile profile) are Windows-implementable and benefit every platform. **No
+"iOS-ready" claim** until a later real-Apple-device validation pass.
 
 ## Next work
 
-RED-01 is complete and the post-RED-01 owner table is corrected. Start the next
-branch with prism storage: make parsed prism spelling-map descriptors and
-double-array units mmap/byte-backed or lazy. Do not start the reverse/UI branch
-until the prism branch is measured. Do not use allocator changes as the next
-branch unless a later allocator-specific probe shows a steady live-vs-resident
-gap that Phase 0/RED-01/prism attribution did not show.
+RED-01 and RED-02 are complete. Start the next branch with compact
+`lookup_records`: reduce or lazily load the primary `jyut6ping3_mobile` and
+secondary `luna_pinyin_yune_reverse` lookup-record maps while keeping
+dictionary-panel/comment behavior explicit. Do not start the reverse/UI branch
+until the compact lookup-record branch is measured, unless the branch itself
+proves lookup records cannot move without deferring that UI path. Do not use
+allocator changes as the next branch unless a later allocator-specific probe
+shows a steady live-vs-resident gap that Phase 0/RED-01/RED-02 did not show.
 
 ## Evidence
 
@@ -279,4 +312,6 @@ gap that Phase 0/RED-01/prism attribution did not show.
   [`evidence/m47-ios-budget-native-memory-reduction-red01-2026-06-28/`](./evidence/m47-ios-budget-native-memory-reduction-red01-2026-06-28/)
 - M47 post-RED-01 prism attribution correction:
   [`evidence/m47-ios-budget-native-memory-prism-attribution-2026-06-28/`](./evidence/m47-ios-budget-native-memory-prism-attribution-2026-06-28/)
+- M47 RED-02 prism runtime storage reduction:
+  [`evidence/m47-ios-budget-native-memory-reduction-prism-storage-2026-06-28/`](./evidence/m47-ios-budget-native-memory-reduction-prism-storage-2026-06-28/)
 - Probe: [`crates/yune-rime-api/tests/native_memory_probe.rs`](../../crates/yune-rime-api/tests/native_memory_probe.rs)

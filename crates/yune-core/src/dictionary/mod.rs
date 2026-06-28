@@ -19,8 +19,8 @@ pub use compiled::{
     RimePrismBinMetadata, RimePrismChecksumMetadata, RimeReverseBinMetadata, RimeTableBinMetadata,
 };
 pub use compiled_prism::{
-    parse_rime_prism_bin_payload, RimePrismBinParseError, RimePrismBinPayload,
-    RimePrismSpellingDescriptor,
+    parse_rime_prism_bin_payload, parse_rime_prism_runtime_payload, RimePrismBinParseError,
+    RimePrismBinPayload, RimePrismRuntimePayload, RimePrismSpellingDescriptor,
 };
 pub use compiled_reverse::{parse_rime_reverse_bin_dictionary, RimeReverseBinParseError};
 #[cfg(test)]

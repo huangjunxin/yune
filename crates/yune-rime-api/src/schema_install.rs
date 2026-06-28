@@ -11,12 +11,12 @@ use std::{
 use regex::Regex;
 use serde_yaml::{Mapping, Value};
 use yune_core::{
-    memory_probe_mark, parse_rime_prism_bin_payload, parse_rime_reverse_bin_dictionary,
+    memory_probe_mark, parse_rime_prism_runtime_payload, parse_rime_reverse_bin_dictionary,
     parse_rime_table_bin_advanced_data, parse_rime_table_bin_dictionary,
     parse_rime_table_bin_metadata, rime_dict_source_checksum, rime_table_bin_dict_file_checksum,
     CharsetFilter, CompactTableByteSource, CompactTableStore, DictionaryLookupFilter,
     EchoTranslator, HistoryTranslator, ReverseLookupFilter, ReverseLookupTranslator,
-    RimePrismBinPayload, SchemaListTranslator, SimplifierFilter, SingleCharFilter,
+    RimePrismRuntimePayload, SchemaListTranslator, SimplifierFilter, SingleCharFilter,
     StaticTableTranslator, SwitchTranslator, TableDictionary, TaggedFilter, Translator,
     UniquifierFilter, TYPEDUCK_SENTENCE_WORD_PENALTY,
 };
@@ -393,10 +393,13 @@ fn install_schema_dictionary_translator_from_config(
         let _trace = startup_trace::span("translator_index_build");
         match (use_compact_storage, compact_store, dictionary) {
             (true, Some(store), _) => {
-                StaticTableTranslator::from_compact_table_store(store, prism_payload)
+                StaticTableTranslator::from_compact_table_store_with_prism_runtime(
+                    store,
+                    prism_payload,
+                )
             }
             (true, None, Some(dictionary)) => {
-                StaticTableTranslator::from_compact_dictionary(dictionary, prism_payload)
+                StaticTableTranslator::from_compact_dictionary(dictionary, None)
             }
             (false, _, Some(dictionary)) => StaticTableTranslator::from_dictionary(dictionary),
             (_, _, None) => {
@@ -1281,7 +1284,7 @@ fn default_simplifier_opencc_config(name_space: &str) -> String {
 struct CompiledDictionary {
     dictionary: Option<TableDictionary>,
     compact_store: Option<CompactTableStore>,
-    prism_payload: Option<RimePrismBinPayload>,
+    prism_payload: Option<RimePrismRuntimePayload>,
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -1321,17 +1324,6 @@ impl CompactTableByteSource for OwnedCompiledTableBytes {
 
     fn mapping_mode(&self) -> &'static str {
         "owned_bytes"
-    }
-}
-
-trait CompiledDataByteSource: fmt::Debug + Send + Sync {
-    fn bytes(&self) -> &[u8];
-}
-
-#[cfg(target_arch = "wasm32")]
-impl CompiledDataByteSource for OwnedCompiledTableBytes {
-    fn bytes(&self) -> &[u8] {
-        &self.bytes
     }
 }
 
@@ -1400,9 +1392,17 @@ impl CompactTableByteSource for MappedCompiledTableBytes {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-impl CompiledDataByteSource for MappedCompiledDataBytes {
+impl CompactTableByteSource for MappedCompiledDataBytes {
     fn bytes(&self) -> &[u8] {
         &self.mmap
+    }
+
+    fn storage_label(&self) -> &'static str {
+        "byte_backed"
+    }
+
+    fn mapping_mode(&self) -> &'static str {
+        self.mapping_mode
     }
 }
 
@@ -1643,7 +1643,7 @@ fn load_schema_compiled_dictionary(
         let _trace = startup_trace::span("compiled_prism_parse");
         prism_source
             .as_ref()
-            .map(|source| parse_rime_prism_bin_payload(source.bytes()))
+            .map(|source| parse_rime_prism_runtime_payload(Arc::clone(source)))
             .transpose()
             .map_err(|error| match error {
                 yune_core::RimePrismBinParseError::UnsupportedSection { role } => {
@@ -1690,8 +1690,8 @@ fn load_schema_compiled_dictionary(
             &TableDictionary::with_advanced_data(
                 Vec::new(),
                 yune_core::TableDictionaryAdvancedData {
-                    corrections: prism_payload.corrections.clone(),
-                    tolerance_rules: prism_payload.tolerance_rules.clone(),
+                    corrections: prism_payload.corrections().to_vec(),
+                    tolerance_rules: prism_payload.tolerance_rules().to_vec(),
                     ..yune_core::TableDictionaryAdvancedData::default()
                 },
             ),
@@ -1808,7 +1808,7 @@ fn load_compiled_table_byte_source(
 fn load_compiled_data_byte_source(
     path: &Path,
     role: &'static str,
-) -> Result<Arc<dyn CompiledDataByteSource>, CompiledRejectReason> {
+) -> Result<Arc<dyn CompactTableByteSource>, CompiledRejectReason> {
     let file = fs::File::open(path)
         .map_err(|error| CompiledRejectReason::Invalid(format!("{role} open failed: {error}")))?;
     let mmap = {
@@ -1838,7 +1838,7 @@ fn load_compiled_table_byte_source(
 fn load_compiled_data_byte_source(
     path: &Path,
     role: &'static str,
-) -> Result<Arc<dyn CompiledDataByteSource>, CompiledRejectReason> {
+) -> Result<Arc<dyn CompactTableByteSource>, CompiledRejectReason> {
     let bytes = fs::read(path)
         .map_err(|error| CompiledRejectReason::Invalid(format!("{role} read failed: {error}")))?;
     Ok(Arc::new(OwnedCompiledTableBytes {

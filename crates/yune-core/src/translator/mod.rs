@@ -8,7 +8,7 @@ use std::time::{Duration, Instant};
 use crate::comment_format::CommentFormat;
 use crate::dictionary::{
     normalize_table_code, CompactTableStore, LookupCandidate, LookupCandidateEntry,
-    RimePrismBinPayload, TableLookup,
+    RimePrismBinPayload, RimePrismRuntimePayload, TableLookup,
 };
 use crate::filter::contains_extended_cjk;
 use crate::poet::{SentenceCodeSpan, UpstreamSentenceModel};
@@ -412,7 +412,7 @@ fn estimate_string_vec_hash_map_bytes(values: &HashMap<String, Vec<String>>) -> 
 pub struct StaticTableTranslator {
     source_entries: Option<Vec<(String, Candidate)>>,
     storage: TableStorage,
-    prism_payload: Option<RimePrismBinPayload>,
+    prism_payload: Option<RimePrismRuntimePayload>,
     spelling_abbreviation_entries: HashSet<(String, String, String)>,
     normal_codes: HashSet<String>,
     enable_completion: bool,
@@ -577,7 +577,7 @@ impl StaticTableTranslator {
             storage: TableStorage::Compact(Box::new(CompactTableStore::from_dictionary(
                 dictionary,
             ))),
-            prism_payload,
+            prism_payload: prism_payload.map(RimePrismRuntimePayload::from),
             spelling_abbreviation_entries: HashSet::new(),
             normal_codes,
             enable_completion: false,
@@ -614,6 +614,17 @@ impl StaticTableTranslator {
     pub fn from_compact_table_store(
         store: CompactTableStore,
         prism_payload: Option<RimePrismBinPayload>,
+    ) -> Self {
+        Self::from_compact_table_store_with_prism_runtime(
+            store,
+            prism_payload.map(RimePrismRuntimePayload::from),
+        )
+    }
+
+    #[must_use]
+    pub fn from_compact_table_store_with_prism_runtime(
+        store: CompactTableStore,
+        prism_payload: Option<RimePrismRuntimePayload>,
     ) -> Self {
         let advanced = store.advanced_data();
         let preset_vocabulary = advanced.preset_vocabulary.clone();
