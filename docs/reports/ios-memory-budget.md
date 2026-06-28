@@ -44,6 +44,26 @@ subtracted. Verified faithful (C1, high confidence): the native load path mmaps
 via `memmap2` (`schema_install.rs`), and the search order returns the deployed
 staging copy.
 
+## Measurement caveat (what this proxy does and does not say)
+
+Windows `WorkingSet64` is **total resident physical memory**, including clean,
+shared, file-backed (mmap'd) pages. iOS jetsam accounts a keyboard extension
+roughly by **`phys_footprint` (dirty + compressed memory)**, which *excludes*
+clean mmap'd pages that can be evicted and re-faulted. So the iOS number for the
+same engine could be **lower** than this Windows working set — but, as GPT's
+review put it, *a ~300 MB native session footprint does not become 48 MB by
+platform accounting alone*: the dominant **~235 MB un-owned** mass is almost
+certainly dirty heap, which counts on iOS. This is exactly why M47 Phase 0
+instruments private/dirty bytes — the dirty-vs-clean split is both the
+attribution we need and the closest Windows-measurable analog to iOS
+`phys_footprint`. Treat every number here as a Windows proxy that justifies the
+work; the on-device figure is a later Phase 2 validation gate.
+
+**Independent reproduction (GPT review, 2026-06-28, separate Windows machine):**
+after_deploy `14.9`, after_session `297.5`, after_select/steady `302.3`, peak
+`486.0` MB — same shape and magnitude as below (deploy cheap; `create_session`
+is the owner; ~300 MB steady / ~486 MB peak).
+
 ## Findings
 
 ### 1. The cost is at `create_session`, not `deploy` (verified, high confidence)
