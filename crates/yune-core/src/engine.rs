@@ -309,10 +309,17 @@ impl Engine {
 
     #[must_use]
     pub fn memory_owner_rows(&self) -> Vec<MemoryOwnerRow> {
-        self.translators
+        let mut rows = self
+            .translators
             .iter()
             .flat_map(|translator| translator.memory_owner_rows())
-            .collect()
+            .collect::<Vec<_>>();
+        rows.extend(
+            self.filters
+                .iter()
+                .flat_map(|filter| filter.memory_owner_rows()),
+        );
+        rows
     }
 
     #[must_use]

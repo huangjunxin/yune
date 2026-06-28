@@ -8,6 +8,7 @@ mod filter;
 mod key;
 mod m37_metrics;
 mod memory_owner;
+mod memory_probe;
 mod poet;
 mod punctuation;
 mod spelling_algebra;
@@ -84,6 +85,9 @@ pub use m37_metrics::{
     M40SentenceLookupMetrics,
 };
 pub use memory_owner::{MemoryOwnerClass, MemoryOwnerRow, StorageDiagnosticsRow};
+pub use memory_probe::{
+    begin_memory_probe, finish_memory_probe, memory_probe_mark, MemoryProbeEvent, MemoryProbeSample,
+};
 pub use poet::{
     make_sentence, make_sentences, null_grammar_score, Grammar, NullGrammar, SentenceCodeSpan,
     SentencePath, UpstreamSentenceModel, WordGraph, WordGraphEntry, UPSTREAM_NO_GRAMMAR_PENALTY,
@@ -256,6 +260,10 @@ pub trait CandidateFilter: Send + Sync {
         _context: &Context,
     ) {
         self.apply_with_options(candidates, options);
+    }
+
+    fn memory_owner_rows(&self) -> Vec<MemoryOwnerRow> {
+        Vec::new()
     }
 }
 

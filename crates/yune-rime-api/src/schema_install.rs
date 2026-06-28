@@ -11,7 +11,7 @@ use std::{
 use regex::Regex;
 use serde_yaml::{Mapping, Value};
 use yune_core::{
-    parse_rime_prism_bin_payload, parse_rime_reverse_bin_dictionary,
+    memory_probe_mark, parse_rime_prism_bin_payload, parse_rime_reverse_bin_dictionary,
     parse_rime_table_bin_advanced_data, parse_rime_table_bin_dictionary,
     parse_rime_table_bin_metadata, rime_dict_source_checksum, rime_table_bin_dict_file_checksum,
     CharsetFilter, CompactTableByteSource, CompactTableStore, DictionaryLookupFilter,
@@ -341,6 +341,10 @@ fn install_schema_dictionary_translator_from_config(
         .as_ref()
         .and_then(|key| cached_dictionary_translator(key))
     {
+        memory_probe_mark(format!(
+            "m47:translator:{component_name}@{name_space}:dictionary:{}:cache_hit",
+            user_dict_name.as_deref().unwrap_or("<none>")
+        ));
         session.engine.add_shared_translator(translator);
         return;
     }
@@ -348,6 +352,12 @@ fn install_schema_dictionary_translator_from_config(
     let prefer_compact_storage = is_upstream_luna_pinyin_profile
         || is_typeduck_jyut6ping3_profile
         || is_yune_web_launch_byte_backed_profile;
+    let probe_dictionary_name = user_dict_name
+        .clone()
+        .unwrap_or_else(|| "<none>".to_owned());
+    memory_probe_mark(format!(
+        "m47:translator:{component_name}@{name_space}:dictionary:{probe_dictionary_name}:before_dictionary_load"
+    ));
     let (dictionary, compact_store, prism_payload, loaded_from_compiled) =
         match load_schema_table_dictionary_with_compact_preference(
             schema_config,
@@ -372,6 +382,9 @@ fn install_schema_dictionary_translator_from_config(
                 return;
             }
         };
+    memory_probe_mark(format!(
+        "m47:translator:{component_name}@{name_space}:dictionary:{probe_dictionary_name}:after_dictionary_load"
+    ));
     let use_compact_storage = prism_payload.is_some()
         && (is_upstream_luna_pinyin_profile
             || (loaded_from_compiled
@@ -431,6 +444,9 @@ fn install_schema_dictionary_translator_from_config(
     if is_typeduck_jyut6ping3_profile {
         translator = translator.with_sentence_word_penalty(TYPEDUCK_SENTENCE_WORD_PENALTY);
     }
+    memory_probe_mark(format!(
+        "m47:translator:{component_name}@{name_space}:dictionary:{probe_dictionary_name}:after_translator_index_build"
+    ));
     let translator: SharedTranslator = Arc::new(translator);
     if let Some(cache_key) = cache_key {
         dictionary_translator_cache()
@@ -1095,6 +1111,9 @@ fn install_schema_dictionary_lookup_filter_from_config(
         );
         return;
     };
+    memory_probe_mark(format!(
+        "m47:filter:dictionary_lookup_filter@{name_space}:dictionary:{dictionary_name}:before_dictionary_load"
+    ));
     let source_yaml = load_schema_source_dictionary_yaml(&dictionary_name);
     let dictionary = match source_yaml.as_deref() {
         Some(dictionary_yaml) if has_typeduck_lookup_source_rows(dictionary_yaml) => {
@@ -1140,10 +1159,18 @@ fn install_schema_dictionary_lookup_filter_from_config(
             }
         },
     };
+    memory_probe_mark(format!(
+        "m47:filter:dictionary_lookup_filter@{name_space}:dictionary:{dictionary_name}:after_dictionary_load:lookup_texts={}:lookup_records={}",
+        dictionary.lookup_record_text_count(),
+        dictionary.lookup_record_count()
+    ));
     let tags = schema_filter_tags(schema_config, name_space);
     session.engine.add_filter(TaggedFilter::new(
         DictionaryLookupFilter::new(dictionary),
         tags,
+    ));
+    memory_probe_mark(format!(
+        "m47:filter:dictionary_lookup_filter@{name_space}:dictionary:{dictionary_name}:after_filter_install"
     ));
 }
 
@@ -1556,6 +1583,10 @@ fn load_schema_compiled_dictionary(
         let _trace = startup_trace::span("compiled_table_load");
         load_compiled_table_byte_source(&table_path)?
     };
+    memory_probe_mark(format!(
+        "m47:compiled_dictionary:{dictionary_name}:after_table_byte_source_open:table_bytes={}",
+        table_source.bytes().len()
+    ));
     let prism_source = {
         let _trace = startup_trace::span("compiled_prism_load");
         prism_path
@@ -1563,12 +1594,22 @@ fn load_schema_compiled_dictionary(
             .map(|path| load_compiled_data_byte_source(path, "prism"))
             .transpose()?
     };
+    if let Some(prism_source) = prism_source.as_ref() {
+        memory_probe_mark(format!(
+            "m47:compiled_dictionary:{dictionary_name}:after_prism_byte_source_open:prism_bytes={}",
+            prism_source.bytes().len()
+        ));
+    }
     let reverse_bytes = {
         let _trace = startup_trace::span("compiled_reverse_load");
         fs::read(reverse_path).map_err(|error| {
             CompiledRejectReason::Invalid(format!("reverse read failed: {error}"))
         })?
     };
+    memory_probe_mark(format!(
+        "m47:compiled_dictionary:{dictionary_name}:after_reverse_bytes_read:reverse_bytes={}",
+        reverse_bytes.len()
+    ));
     let table_metadata = parse_rime_table_bin_metadata(table_source.bytes()).map_err(|error| {
         CompiledRejectReason::Invalid(format!("table metadata parse failed: {error:?}"))
     })?;
@@ -1623,6 +1664,11 @@ fn load_schema_compiled_dictionary(
             }
         }
     };
+    memory_probe_mark(format!(
+        "m47:compiled_dictionary:{dictionary_name}:after_reverse_dictionary_parse:lookup_texts={}:lookup_records={}",
+        reverse_dictionary.lookup_record_text_count(),
+        reverse_dictionary.lookup_record_count()
+    ));
 
     let mut advanced_dictionary = TableDictionary::with_advanced_data(
         Vec::new(),
@@ -1658,6 +1704,11 @@ fn load_schema_compiled_dictionary(
             }
             other => CompiledRejectReason::Invalid(format!("table parse failed: {other:?}")),
         })?;
+        memory_probe_mark(format!(
+            "m47:compiled_dictionary:{dictionary_name}:after_table_advanced_payload_parse:lookup_texts={}:lookup_records={}",
+            table_advanced.lookup_records.len(),
+            table_advanced.lookup_records.values().map(Vec::len).sum::<usize>()
+        ));
         if dictionary_name == "luna_pinyin" && table_advanced.preset_vocabulary.is_empty() {
             let _trace = startup_trace::span("compiled_table_preset_vocabulary_load");
             table_advanced.preset_vocabulary = load_m42_luna_pinyin_abbreviation_vocabulary();
@@ -1677,6 +1728,9 @@ fn load_schema_compiled_dictionary(
             }
             other => CompiledRejectReason::Invalid(format!("table parse failed: {other:?}")),
         })?;
+        memory_probe_mark(format!(
+            "m47:compiled_dictionary:{dictionary_name}:after_compact_table_store_parse"
+        ));
         (None, Some(compact_store))
     } else {
         let dictionary = {
@@ -1689,6 +1743,11 @@ fn load_schema_compiled_dictionary(
             }
             other => CompiledRejectReason::Invalid(format!("table parse failed: {other:?}")),
         })?;
+        memory_probe_mark(format!(
+            "m47:compiled_dictionary:{dictionary_name}:after_table_dictionary_parse:lookup_texts={}:lookup_records={}",
+            dictionary.lookup_record_text_count(),
+            dictionary.lookup_record_count()
+        ));
         (
             Some(dictionary.with_merged_advanced_data_from(&advanced_dictionary)),
             None,

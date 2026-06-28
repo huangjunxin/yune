@@ -623,6 +623,10 @@ impl StaticTableTranslator {
             .all_codes()
             .map(Cow::into_owned)
             .collect::<HashSet<_>>();
+        crate::memory_probe_mark(format!(
+            "m47:compact_table:after_all_codes_normal_codes_hashset:normal_codes={}",
+            normal_codes.len()
+        ));
         Self {
             source_entries: None,
             storage: TableStorage::Compact(Box::new(store)),

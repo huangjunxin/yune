@@ -348,6 +348,16 @@ impl TableDictionary {
     }
 
     #[must_use]
+    pub fn lookup_record_text_count(&self) -> usize {
+        self.lookup_records.len()
+    }
+
+    #[must_use]
+    pub fn lookup_record_count(&self) -> usize {
+        self.lookup_records.values().map(Vec::len).sum()
+    }
+
+    #[must_use]
     pub fn preset_vocabulary_entries(&self) -> &[PresetVocabularyEntry] {
         &self.preset_vocabulary
     }

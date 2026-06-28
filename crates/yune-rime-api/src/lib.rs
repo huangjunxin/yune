@@ -13,6 +13,9 @@ use resource_id::{
     validate_config_resource_id, validate_data_resource_id, validate_runtime_config_resource_id,
 };
 use serde_yaml::{Mapping, Value};
+pub use yune_core::{
+    begin_memory_probe, finish_memory_probe, memory_probe_mark, MemoryProbeEvent, MemoryProbeSample,
+};
 use yune_core::{
     parse_key_sequence, CandidateSource, FoldedSwitchOptions, KeyCode, KeyEvent, KeyModifiers,
     SwitchTranslatorSwitch,

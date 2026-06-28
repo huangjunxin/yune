@@ -1,9 +1,10 @@
 use super::{
     Candidate, CandidateFilter, CandidateSource, CommentFormat, Context, DictionaryLookupRecord,
-    TableDictionary,
+    MemoryOwnerClass, MemoryOwnerRow, TableDictionary,
 };
 use std::{
     collections::{HashMap, HashSet},
+    mem,
     sync::OnceLock,
 };
 
@@ -208,6 +209,64 @@ impl CandidateFilter for DictionaryLookupFilter {
             }
         }
     }
+
+    fn memory_owner_rows(&self) -> Vec<MemoryOwnerRow> {
+        vec![MemoryOwnerRow::new(
+            "dictionary_lookup_filter.lookup_records",
+            MemoryOwnerClass::HeapOwnedRequired,
+            estimate_dictionary_lookup_records_bytes(&self.records_by_text),
+            self.records_by_text.values().map(Vec::len).sum(),
+            "HashMap<String, Vec<DictionaryLookupRecord>>",
+            "retained TypeDuck dictionary-panel records applied by dictionary_lookup_filter",
+        )]
+    }
+}
+
+fn estimate_dictionary_lookup_records_bytes(
+    values: &HashMap<String, Vec<DictionaryLookupRecord>>,
+) -> usize {
+    mem::size_of::<HashMap<String, Vec<DictionaryLookupRecord>>>()
+        .saturating_add(
+            values
+                .capacity()
+                .saturating_mul(mem::size_of::<(String, Vec<DictionaryLookupRecord>)>()),
+        )
+        .saturating_add(
+            values
+                .iter()
+                .map(|(text, records)| {
+                    text.capacity()
+                        .saturating_add(
+                            records
+                                .capacity()
+                                .saturating_mul(mem::size_of::<DictionaryLookupRecord>()),
+                        )
+                        .saturating_add(
+                            records
+                                .iter()
+                                .map(|record| {
+                                    record
+                                        .code
+                                        .capacity()
+                                        .saturating_add(
+                                            record
+                                                .fields
+                                                .capacity()
+                                                .saturating_mul(mem::size_of::<String>()),
+                                        )
+                                        .saturating_add(
+                                            record
+                                                .fields
+                                                .iter()
+                                                .map(String::capacity)
+                                                .sum::<usize>(),
+                                        )
+                                })
+                                .sum::<usize>(),
+                        )
+                })
+                .sum::<usize>(),
+        )
 }
 
 fn composition_lookup_record(
@@ -291,6 +350,10 @@ impl CandidateFilter for TaggedFilter {
         if self.accepts_segment_tags(&context.segment_tags) {
             self.filter.apply_with_context(candidates, options, context);
         }
+    }
+
+    fn memory_owner_rows(&self) -> Vec<MemoryOwnerRow> {
+        self.filter.memory_owner_rows()
     }
 }
 

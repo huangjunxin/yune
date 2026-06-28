@@ -2458,6 +2458,11 @@ fn read_lookup_record_payload(
             role: "trailing table payload".to_owned(),
         });
     }
+    crate::memory_probe_mark(format!(
+        "m47:compact_table:after_lookup_record_payload_parse:lookup_texts={}:lookup_records={}",
+        lookup_records.len(),
+        lookup_records.values().map(Vec::len).sum::<usize>()
+    ));
     Ok(lookup_records)
 }
 

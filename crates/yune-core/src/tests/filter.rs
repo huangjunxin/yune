@@ -1,8 +1,8 @@
 use crate::{
     Candidate, CandidateFilter, CandidateSource, CharsetFilter, DictionaryLookupFilter, Engine,
-    ReverseLookupFilter, ReverseLookupTranslator, RimeCorrectionEntry, SimplifierFilter,
-    SingleCharFilter, StaticTableTranslator, TableDictionary, TableDictionaryAdvancedData,
-    TableEntry, TaggedFilter, Translator, UniquifierFilter,
+    MemoryOwnerClass, ReverseLookupFilter, ReverseLookupTranslator, RimeCorrectionEntry,
+    SimplifierFilter, SingleCharFilter, StaticTableTranslator, TableDictionary,
+    TableDictionaryAdvancedData, TableEntry, TaggedFilter, Translator, UniquifierFilter,
 };
 
 #[test]
@@ -155,6 +155,34 @@ word	lei5	2	l	variant	lei5	you alt
         "\u{000c}\r1,word,lei5,2,l,variant,lei5,you alt\r0,word,nei5,1,n,primary,nei5,you"
     );
     assert_eq!(candidates[2].comment, "history");
+}
+
+#[test]
+fn dictionary_lookup_filter_reports_lookup_record_owner() {
+    let dictionary = TableDictionary::parse_rime_dict_yaml(
+        r#"
+---
+name: typeduck_lookup
+version: "0.1"
+sort: original
+columns: [text, code, weight, stem, source, jyutping, english]
+...
+
+word	nei5	1	n	primary	nei5	you
+word	lei5	2	l	variant	lei5	you alt
+"#,
+    )
+    .expect("dictionary lookup rows should parse");
+    let filter = DictionaryLookupFilter::new(dictionary);
+
+    let rows = filter.memory_owner_rows();
+    let owner = rows
+        .iter()
+        .find(|row| row.owner == "dictionary_lookup_filter.lookup_records")
+        .expect("dictionary lookup filter owner row should be present");
+    assert_eq!(owner.class, MemoryOwnerClass::HeapOwnedRequired);
+    assert_eq!(owner.item_count, 2);
+    assert!(owner.estimated_bytes > 0);
 }
 
 #[test]

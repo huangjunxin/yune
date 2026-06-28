@@ -119,10 +119,11 @@ lock the user-visible words down.
    binding goal is fitting the single-active-schema native working set under an
    iOS keyboard-extension budget (steady ≤ 48 MB, peak ≤ 64 MB; stretch 48 MB) as
    portable engine work that benefits iOS/Android/Windows IME/WASM/embedding.
-   Lean-probe baseline: `jyut6ping3_mobile` steady `~298 MB` / peak `~482 MB`,
-   loaded eagerly at `create_session`; ~44 MB classified, ~235 MB un-owned.
-   Attribution-first (M43/M45/M46 rule): Phase 0 resolves the un-owned bulk before
-   any reduction branch. Plan:
+   Phase 0 now attributes the old un-owned bucket with Windows `PrivateUsage`,
+   working-set, and allocator-live evidence: default-list steady `301.2 MB` /
+   peak `485.1 MB`, isolated `jyut6ping3_mobile` steady `223.9 MB` / peak
+   `231.5 MB`. The first reduction branch is lazy/optional
+   dictionary-panel/reverse/comment payloads, not allocator strategy. Plan:
    [`plans/active/m47-plan-ios-budget-native-memory-reduction.md`](./plans/active/m47-plan-ios-budget-native-memory-reduction.md);
    evidence: [`reports/ios-memory-budget.md`](./reports/ios-memory-budget.md).
    On-device iOS validation is a later Phase 2 frontend gate, not part of M47.
@@ -569,7 +570,7 @@ Closed M38 gates:
 | M46 | Complete with measured no-go | Attribution-first TypeDuck/Jyutping native Track B and browser WASM memory milestone and WEB-01 handoff. It fixed schema-switch correctness but closed memory as `measured-no-go-owner-unclassified`: native Track B remains around `504 MB`, and the then-current browser Jyutping row stayed at `893.1 MiB`. |
 | WEB-02 | Complete with measured blocker | Public-demo Jyutping browser owner classification: stale `Rime::Prism/3.0` assets force source fallback and `owned_heap` storage, naming the compiled-asset contract as the next branch. At WEB-02 closeout the browser high-water remained `893.1 MiB`; no memory win was claimed. |
 | WEB-03 | Complete | Engine fix `3ffd4b21` unblocked clean rebuilds; asset commit `ef37bfe9` regenerated launch assets for `jyut6ping3_mobile`, `cangjie5`, and `luna_pinyin`, shipped Cangjie compiled assets, refreshed manifests/dist, and proved native public-demo storage is byte-backed with no fallback rows. Fresh Emscripten/Playwright evidence records public-demo `full-jyutping` at `160.0 MiB` ready/peak/steady, with ready `1306 ms`, input-to-candidate `100 ms`, and commit `110 ms`; follow-up gates restore byte-backed `ngogokdak -> 我覺得` and `zouhapci` visible lookup rows. A later correctness follow-up (`a76fcd59`, guard `d1c0171a`) fixed a `DartsDoubleArray` prism construction bug that had broken the byte-backed Jyutping toneless-to-canonical mapping for common multi-syllable words. The old `893.1 MiB` value is retained only as the synthetic `extras` negative control. |
-| M47 | Active (attribution-first) | iOS-budget native memory reduction: drive single-active-schema native working set under an iOS keyboard-extension budget (steady ≤ 48 MB, peak ≤ 64 MB; stretch 48 MB) as portable engine work. Measured lean-probe baseline: `jyut6ping3_mobile` steady `~298 MB` / peak `~482 MB`, loaded at `create_session` (deploy is ~11 MB); ~44 MB classified heap, ~235 MB un-owned. Plan: [`plans/active/m47-plan-ios-budget-native-memory-reduction.md`](./plans/active/m47-plan-ios-budget-native-memory-reduction.md). |
+| M47 | Active (Phase 0 attributed) | iOS-budget native memory reduction: drive single-active-schema native working set under an iOS keyboard-extension budget (steady ≤ 48 MB, peak ≤ 64 MB; stretch 48 MB) as portable engine work. Phase 0 Windows `PrivateUsage`/working-set evidence attributes the old un-owned bucket as mostly live retained heap / process-private memory, not allocator-retained-free. Current default-list run: steady `301.2 MB`, peak `485.1 MB`, private `284.7 MB`; isolated `jyut6ping3_mobile` default: steady `223.9 MB`, peak `231.5 MB`, private `202.4 MB`. First reduction branch: lazy/optional dictionary-panel/reverse/comment payloads (`dictionary_lookup_filter.lookup_records`, compact `lookup_records`, `luna_pinyin_yune_reverse`). Evidence: [`reports/evidence/m47-ios-budget-native-memory-attribution-2026-06-28/`](./reports/evidence/m47-ios-budget-native-memory-attribution-2026-06-28/). Plan: [`plans/active/m47-plan-ios-budget-native-memory-reduction.md`](./plans/active/m47-plan-ios-budget-native-memory-reduction.md). |
 
 WEB-03 latency addendum: a 2026-06-28 follow-up bounds compact-path fallback
 expansion after the phrase-composition repair and restores local browser
