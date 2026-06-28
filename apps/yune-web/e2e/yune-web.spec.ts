@@ -3367,7 +3367,7 @@ test.describe("yune-web Browser E2E", () => {
           text: row.getAttribute("data-candidate-text"),
           rowText: row.textContent?.replace(/\s+/g, " ").trim() ?? "",
           hasDictionaryIcon: Boolean(
-            row.querySelector('[aria-label="dictionary details"]'),
+            row.querySelector(".candidate-info [aria-label]"),
           ),
         })),
       );

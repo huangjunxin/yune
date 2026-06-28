@@ -1,6 +1,6 @@
 # Yune vs upstream librime performance dashboard
 
-Date: 2026-06-27
+Date: 2026-06-28
 
 This report separates native-engine comparison evidence from browser-harness
 evidence. Native Track A claims remain native-engine only; browser/WASM claims
@@ -144,6 +144,16 @@ steady WASM memory all at `160.0 MiB`. The schema-switch run covers
 `jyut6ping3_mobile`, `cangjie5`, and `luna_pinyin`, returning the expected
 smoke candidates with zero worker action errors and a max observed WASM value
 of `160.0 MiB`.
+
+Post-closeout correction: the memory remeasure at `d4d84203` was real, but the
+byte-backed Jyutping path still had a phrase-composition regression that the
+memory-only closeout did not disclose. The follow-up fix restores compact-path
+prism alias lookups for sentence substrings and prefix fallback. Full native
+`yune_web` now passes 33/0 with 2 ignored evidence-only tests,
+`cantonese_parity` passes 37/0, the WEB-03 byte-backed guard asserts
+`ngogokdak -> 我覺得`, and a rebuilt public-demo browser smoke proves both
+`ngogokdak -> 我覺得` and the `zouhapci` visible lookup rows. Evidence:
+[`./evidence/web03-three-schema-launch-readiness/phrase-composition-regression-fix/final-gates.md`](./evidence/web03-three-schema-launch-readiness/phrase-composition-regression-fix/final-gates.md).
 
 This is a browser-harness/public-demo compiled-asset fix, not a native-engine
 memory win and not a broad product speed claim. The synthetic `extras` row in

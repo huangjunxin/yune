@@ -897,7 +897,10 @@ remaining Jyutping WASM high-water as outside the WEB-01 harness-only scope.
 The engine fix landed separately in `3ffd4b21`; regenerated launch assets landed
 in `ef37bfe9`. The final browser remeasure shows the shipping Jyutping launch
 path at `160.0 MiB` ready/peak/steady WASM. The old `893.1 MiB` value remains
-only for the synthetic no-launch-assets `extras` negative-control row.
+only for the synthetic no-launch-assets `extras` negative-control row. A
+post-closeout follow-up restores byte-backed Jyutping phrase composition
+(`ngogokdak -> 我覺得`) and visible prefix lookup rows in the regenerated compact
+path.
 
 - [x] **WEB03-01**: Clean launch-schema regeneration emits current compiled
   assets for `jyut6ping3_mobile`, imported `jyut6ping3_scolar`,
@@ -924,6 +927,10 @@ only for the synthetic no-launch-assets `extras` negative-control row.
 - [x] **WEB03-07**: Final browser reports, WEB-02 evidence README, public
   READMEs, visuals, and plan closeout are refreshed after WEB03-06 produces the
   new browser numbers.
+- [x] **WEB03-08**: The byte-backed launch guard and browser smoke cover
+  multi-syllable Jyutping composition after regeneration. Evidence asserts
+  `ngogokdak -> 我覺得`, keeps `zouhapci` visible lookup rows on the first page,
+  and passes full native `yune_web` plus `cantonese_parity`.
 
 ## M46 Jyutping Native And WASM Memory Attribution Requirements
 
@@ -1503,4 +1510,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 
-_Requirements defined: 2026-04-28_ _Last updated: 2026-06-27 - M46 is complete with measured blockers: Branch A fixed the product-affecting schema-switch no-candidate bug, but native Track B still peaks at `504,627,200 B`, browser Jyutping still reaches `893.1 MiB`, and named concrete native owners explain only about `59.7 MB`. M46 closes as `schema-switch-correctness-fixed-memory-unchanged` with `measured-no-go-owner-unclassified`, remains the WEB-01 handoff rather than a new WEB-01-style harness plan, and continues to require D-33/M36 reconciliation before any future Track B `rsmarisa` spike plus `cargo test -p yune-core --test cantonese_parity` as the hard TypeDuck behavior gate. WEB-01 is complete with measured browser-harness no-go: the final 64 MiB initial-memory candidate still settles at `160.0 MiB` for Luna and `893.1 MiB` for Jyutping, 48 MiB worsens Luna, and asset-family attribution keeps Jyutping at `893.1 MiB` even for `extras` and `jyutping-core`. M45 remains complete with measured native-engine blockers: no short-key implementation branch was retained, `hao` preserves the M44 pass, `n` and `ni` remain above the `<=3.0x` target, and the real `127,475,712 B` cold-start peak remains a standing blocker. M44 remains complete as a partial native/profile performance owner-reduction milestone; M43 native memory and short-key owner reduction remains complete as a partial structural memory reduction. M42 abbreviation sentence parity and short-key guardrails remain complete with a measured performance blocker; M41 yune-web startup optimization remains complete as a separate browser-harness milestone with production-browser evidence and no native-engine claim. M40 compiled sentence lookup index, M39 long-input engine hardening, M38 engine performance parity, and earlier milestones remain complete as previously recorded._
+_Requirements defined: 2026-04-28_ _Last updated: 2026-06-28 - WEB-03 is complete after the phrase-composition follow-up: the launch path still records `160.0 MiB` browser ready/peak/steady memory from the WEB-03 remeasure, and the byte-backed compact path now gates `ngogokdak -> 我覺得` plus `zouhapci` visible lookup rows with full native `yune_web`, `cantonese_parity`, and browser public-demo smoke evidence. M46 is complete with measured blockers: Branch A fixed the product-affecting schema-switch no-candidate bug, but native Track B still peaks at `504,627,200 B`, browser Jyutping still reaches `893.1 MiB` before WEB-03, and named concrete native owners explain only about `59.7 MB`. M46 closes as `schema-switch-correctness-fixed-memory-unchanged` with `measured-no-go-owner-unclassified`, remains the WEB-01 handoff rather than a new WEB-01-style harness plan, and continues to require D-33/M36 reconciliation before any future Track B `rsmarisa` spike plus `cargo test -p yune-core --test cantonese_parity` as the hard TypeDuck behavior gate. WEB-01 is complete with measured browser-harness no-go: the final 64 MiB initial-memory candidate still settles at `160.0 MiB` for Luna and `893.1 MiB` for Jyutping, 48 MiB worsens Luna, and asset-family attribution keeps Jyutping at `893.1 MiB` even for `extras` and `jyutping-core`. M45 remains complete with measured native-engine blockers: no short-key implementation branch was retained, `hao` preserves the M44 pass, `n` and `ni` remain above the `<=3.0x` target, and the real `127,475,712 B` cold-start peak remains a standing blocker. M44 remains complete as a partial native/profile performance owner-reduction milestone; M43 native memory and short-key owner reduction remains complete as a partial structural memory reduction. M42 abbreviation sentence parity and short-key guardrails remain complete with a measured performance blocker; M41 yune-web startup optimization remains complete as a separate browser-harness milestone with production-browser evidence and no native-engine claim. M40 compiled sentence lookup index, M39 long-input engine hardening, M38 engine performance parity, and earlier milestones remain complete as previously recorded._

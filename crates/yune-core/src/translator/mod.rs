@@ -126,6 +126,12 @@ struct BoundedLookupRequest<'a> {
     include_full_count: bool,
 }
 
+struct LookupPrefixSpec<'a> {
+    input_prefix: &'a str,
+    fetch_code: String,
+    consumed_lookup_len: usize,
+}
+
 fn sentence_piece_quality(raw_quality: f32, word_penalty: f32) -> f32 {
     raw_quality.max(1.0).ln() - word_penalty
 }
@@ -1017,6 +1023,32 @@ impl StaticTableTranslator {
                         specs.push(LookupCodeSpec::exact(candidate_code));
                     }
                 }
+            }
+        }
+        specs
+    }
+
+    fn sentence_lookup_specs(&self, lookup_code: &str) -> Vec<LookupCodeSpec> {
+        let mut specs = vec![LookupCodeSpec::exact(lookup_code)];
+        if let (Some(prism), Some(syllabary_codes)) =
+            (self.prism_payload.as_ref(), self.storage.syllabary_codes())
+        {
+            let prism_start = crate::m37_metrics_enabled().then(Instant::now);
+            let lookups = prism.lookup_canonical_codes(lookup_code, syllabary_codes);
+            if let Some(start) = prism_start {
+                crate::m37_record_prism_lookup(start.elapsed(), lookups.len());
+            }
+            for lookup in lookups {
+                if lookup.correction
+                    || specs.iter().any(|spec| spec.code == lookup.code)
+                    || !self.storage.has_code(lookup.code)
+                {
+                    continue;
+                }
+                specs.push(LookupCodeSpec::alias(
+                    lookup.code.to_owned(),
+                    lookup_code.to_owned(),
+                ));
             }
         }
         specs
@@ -1987,36 +2019,84 @@ impl StaticTableTranslator {
             .map(|candidate| candidate.text.clone())
             .collect::<HashSet<_>>();
         let mut candidates = Vec::new();
+        struct PendingPrefixCandidate<'a> {
+            pending: PendingLookupCandidateRef<'a>,
+            consumed_input_len: usize,
+            recompose_on_default: bool,
+        }
+        let mut pending = Vec::new();
+        let mut emission_order = 0;
         let mut views_visited = 0;
-        for (prefix, consumed_lookup_len) in prefixes {
+        for prefix_spec in &prefixes {
+            let prefix = prefix_spec.input_prefix;
+            let fetch_code = prefix_spec.fetch_code.as_str();
             let consumed_input_len = input
                 .len()
                 .saturating_sub(lookup_code.len())
-                .saturating_add(consumed_lookup_len);
+                .saturating_add(prefix_spec.consumed_lookup_len);
             let exact_start = LookupTimer::start();
             let mut exact_candidates = 0;
-            for candidate in self.storage.exact_candidates(prefix).filter(|candidate| {
-                self.is_dictionary_text_allowed(candidate.text())
-                    && original_code_allows_prefix_fallback(candidate.raw_comment(), prefix)
-                    && (!filter_by_charset || !contains_extended_cjk(candidate.text()))
-            }) {
+            for candidate in self
+                .storage
+                .exact_candidates(fetch_code)
+                .filter(|candidate| {
+                    self.is_dictionary_text_allowed(candidate.text())
+                        && original_code_allows_prefix_fallback(candidate.raw_comment(), prefix)
+                        && (!filter_by_charset || !contains_extended_cjk(candidate.text()))
+                })
+            {
                 views_visited += 1;
                 exact_candidates += 1;
                 let recompose_on_default = consumed_input_len > 1
                     && !self.is_spelling_abbreviation_view(prefix, &candidate);
-                let mut candidate =
-                    self.candidate_for_lookup_view(prefix, &candidate, prefix, None);
-                if !seen_texts.insert(candidate.text.clone()) {
-                    continue;
-                }
-                candidate.source = CandidateSource::PartialTable {
-                    consumed: consumed_input_len,
+                pending.push(PendingPrefixCandidate {
+                    pending: PendingLookupCandidateRef {
+                        entry_code: Cow::Owned(fetch_code.to_owned()),
+                        lookup_code: prefix,
+                        candidate,
+                        correction_distance: None,
+                        spelling_abbreviation: false,
+                        limited_prediction: false,
+                        emission_order,
+                    },
+                    consumed_input_len,
                     recompose_on_default,
-                };
-                candidates.push(candidate);
+                });
+                emission_order += 1;
             }
             self.storage
                 .record_exact_lookup(exact_start.elapsed(), exact_candidates);
+        }
+        pending.sort_by(|left, right| {
+            right
+                .consumed_input_len
+                .cmp(&left.consumed_input_len)
+                .then_with(|| {
+                    self.lookup_candidate_ref_raw_quality(&right.pending)
+                        .partial_cmp(&self.lookup_candidate_ref_raw_quality(&left.pending))
+                        .unwrap_or(Ordering::Equal)
+                })
+                .then_with(|| {
+                    left.pending
+                        .emission_order
+                        .cmp(&right.pending.emission_order)
+                })
+        });
+        for pending in pending {
+            let mut candidate = self.candidate_for_lookup_view(
+                pending.pending.entry_code.as_ref(),
+                &pending.pending.candidate,
+                pending.pending.lookup_code,
+                None,
+            );
+            if !seen_texts.insert(candidate.text.clone()) {
+                continue;
+            }
+            candidate.source = CandidateSource::PartialTable {
+                consumed: pending.consumed_input_len,
+                recompose_on_default: pending.recompose_on_default,
+            };
+            candidates.push(candidate);
         }
         if let Some(start) = fallback_start {
             crate::m37_record_prefix_fallback(start.elapsed(), views_visited, candidates.len());
@@ -2024,7 +2104,7 @@ impl StaticTableTranslator {
         candidates
     }
 
-    fn valid_lookup_prefixes<'a>(&self, lookup_code: &'a str) -> Vec<(&'a str, usize)> {
+    fn valid_lookup_prefixes<'a>(&self, lookup_code: &'a str) -> Vec<LookupPrefixSpec<'a>> {
         let mut boundaries = lookup_code
             .char_indices()
             .map(|(index, _)| index)
@@ -2034,8 +2114,17 @@ impl StaticTableTranslator {
         let mut prefixes = Vec::new();
         for end in boundaries {
             let prefix = &lookup_code[..end];
-            if self.storage.has_code(prefix) {
-                prefixes.push((prefix, end));
+            let mut seen_fetch_codes = HashSet::new();
+            for spec in self.sentence_lookup_specs(prefix) {
+                if !self.storage.has_code(&spec.code) || !seen_fetch_codes.insert(spec.code.clone())
+                {
+                    continue;
+                }
+                prefixes.push(LookupPrefixSpec {
+                    input_prefix: prefix,
+                    fetch_code: spec.code,
+                    consumed_lookup_len: end,
+                });
             }
         }
         prefixes
@@ -2259,9 +2348,10 @@ impl StaticTableTranslator {
                     continue;
                 }
                 let exact_start = crate::m37_metrics_enabled().then(Instant::now);
-                let mut entry_matches = self
-                    .storage
-                    .exact_candidates(entry_code)
+                let sentence_specs = self.sentence_lookup_specs(entry_code);
+                let mut entry_matches = sentence_specs
+                    .iter()
+                    .flat_map(|spec| self.storage.exact_candidates(&spec.code))
                     .collect::<Vec<_>>();
                 if let Some(start) = exact_start {
                     sentence_metrics.exact_lookup_calls += 1;

@@ -1580,6 +1580,21 @@ fn web03_public_demo_launch_schemas_byte_back_compiled_assets() {
             );
         }
 
+        if schema_id == "jyut6ping3_mobile" {
+            drop(response_json(unsafe {
+                yune_web_process_key(state, 0xff1b, 0)
+            }));
+            let phrase = process_input(state, "ngogokdak");
+            let phrase_candidates = phrase["context"]["candidates"]
+                .as_array()
+                .expect("phrase candidate rows should be an array");
+            assert_eq!(
+                phrase_candidates.first().map(|candidate| &candidate["text"]),
+                Some(&Value::String("\u{6211}\u{89ba}\u{5f97}".to_owned())),
+                "{schema_id} should compose multi-syllable phrase ngogokdak byte-backed: {phrase:?}"
+            );
+        }
+
         let storage = &composing["context"]["debug"]["storage"];
         assert_schema_storage_byte_backed(schema_id, storage);
         let selected = storage["selected"]

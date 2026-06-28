@@ -1,11 +1,13 @@
 # WEB-03 Three-Schema Launch Readiness Evidence
 
-Date: 2026-06-27 local
+Date: 2026-06-28 local
 
-Verdict: success for the WEB-03 launch compiled-asset contract. Tasks 2-5 are
-complete: launch assets are regenerated, native diagnostics byte-back all three
-public schemas, and fresh Emscripten/Playwright evidence shows the shipping
-Jyutping launch/full browser rows peak and settle at `160.0 MiB`.
+Verdict: success for the WEB-03 launch compiled-asset contract after the
+phrase-composition follow-up fix. Tasks 2-5 are complete: launch assets are
+regenerated, native diagnostics byte-back all three public schemas, fresh
+Emscripten/Playwright evidence shows the shipping Jyutping launch/full browser
+rows peak and settle at `160.0 MiB`, and the byte-backed path now preserves
+multi-syllable Jyutping phrase composition.
 
 Scope boundary: this is a browser-harness/public-demo compiled-asset fix. It
 does not claim a native-engine memory win, a broad product speed win, or a fair
@@ -24,10 +26,12 @@ assets; it remains a negative control, not the shipped path.
 - `task3-native-byte-backed/compiled-asset-inventory.csv`
 - `visuals/web03-browser-wasm-memory.svg`
 - `visuals/web03-browser-timing.svg`
+- `phrase-composition-regression-fix/final-gates.md`
 - `../../../../apps/yune-web/e2e/results/yune-web-jyutping-memory-attribution/web03-after-byte-backed-assets/summary.csv`
 - `../../../../apps/yune-web/e2e/results/yune-web-jyutping-memory-attribution/web03-after-byte-backed-assets/report.md`
 - `../../../../apps/yune-web/e2e/results/web03-three-schema-launch-readiness/browser-attribution/web03-after-byte-backed-assets/summary.csv`
 - `../../../../apps/yune-web/e2e/results/web03-three-schema-launch-readiness/browser-attribution/web03-after-byte-backed-assets/report.md`
+- `../../../../apps/yune-web/e2e/results/web03-three-schema-launch-readiness/phrase-composition-regression-fix/browser-phrase-smoke/`
 
 ## Regeneration
 
@@ -71,6 +75,37 @@ Native diagnostics pass for all three public-demo launch schemas:
 The guard is behavioral: it asserts `source_fallback=false`, no fallback rows,
 `selected_storage=byte_backed`, positive `byte_source_len`, and deterministic
 smoke candidates for the launch schemas.
+
+## Phrase-Composition Follow-Up
+
+The original browser memory closeout at `d4d84203` correctly measured the
+launch-path memory reduction to `160.0 MiB`, but it did not include the full
+native `yune_web` suite. Re-running that suite exposed two byte-backed Jyutping
+correctness failures:
+
+- `ngogokdak` did not compose the multi-syllable phrase `我覺得`.
+- `zouhapci` did not keep all expected visible dictionary lookup rows on the
+  first page.
+
+The root cause was compact-path alias resolution. The byte-backed table stores
+canonical toneful codes; sentence composition and prefix fallback still probed
+raw tone-stripped substrings/prefixes such as `ngo`, `gok`, `dak`, `zou`, and
+`zouhap`. The fix resolves non-correction prism aliases for those probes and
+orders prefix fallback by longest consumed prefix, dictionary weight, then
+stable emission order.
+
+Follow-up evidence:
+
+- `phrase-composition-regression-fix/final-gates.md`
+- `../../../../apps/yune-web/e2e/results/web03-three-schema-launch-readiness/phrase-composition-regression-fix/browser-phrase-smoke/`
+
+Final follow-up gates:
+
+- Full native `yune_web`: 33 passed, 0 failed, 2 ignored.
+- `cantonese_parity`: 37 passed, 0 failed.
+- WEB-03 byte-backed guard now asserts `ngogokdak -> 我覺得`.
+- Browser smoke against rebuilt public demo: `ngogokdak -> 我覺得` and
+  `zouhapci` visible lookup rows both pass.
 
 ## Browser Remeasure
 
@@ -119,6 +154,8 @@ node apps/yune-web/public-demo/build.mjs
 npm --prefix apps/yune-web run build
 $env:YUNE_WEB_JYUTPING_MEMORY_ATTRIBUTION='1'; $env:YUNE_WEB_JYUTPING_MEMORY_PHASE='web03-after-byte-backed-assets'; $env:YUNE_WEB_JYUTPING_MEMORY_EXPECT_SCHEMA_SWITCH_PASS='1'; npm --prefix apps/yune-web/e2e exec playwright -- test yune-web-jyutping-memory-attribution.spec.ts --config playwright.config.ts --workers=1
 $env:YUNE_WEB_WASM_ATTRIBUTION='1'; $env:YUNE_WEB_WASM_ATTRIBUTION_RESULT_ROOT='web03-three-schema-launch-readiness/browser-attribution'; $env:YUNE_WEB_WASM_ATTRIBUTION_PHASE='web03-after-byte-backed-assets'; npm --prefix apps/yune-web/e2e exec playwright -- test yune-web-wasm-attribution.spec.ts --config playwright.config.ts --workers=1
+cargo test -p yune-rime-api --test yune_web
+$env:YUNE_WEB_APP_URL='http://127.0.0.1:5179/?debug'; $env:YUNE_WEB_EVIDENCE_DIR='results/web03-three-schema-launch-readiness/phrase-composition-regression-fix/browser-phrase-smoke'; npm.cmd exec playwright -- test yune-web.spec.ts --config playwright.config.ts --grep "Default Jyutping composes clean multi-syllable shipped phrase|M25 DOGFOOD-11 visible lookup candidates expose dictionary details" --workers=1
 ```
 
 Results:
@@ -136,7 +173,6 @@ Results:
 - Browser schema-switch memory check: passed; max observed WASM `160.0 MiB`.
 - Browser attribution check: passed; public-demo `full-jyutping` peak and
   steady `160.0 MiB`.
-
-`cargo test -p yune-rime-api --test yune_web` was attempted but exceeded the
-five-minute command window and was stopped. The scoped WEB-03 tests above are
-the recorded web-runtime evidence for this slice.
+- Follow-up full native `yune_web`: 33 passed, 0 failed, 2 ignored.
+- Follow-up browser phrase/lookup smoke: 2 passed against the rebuilt
+  public-demo WASM path.
