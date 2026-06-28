@@ -2194,6 +2194,54 @@ fn yune_web_adapter_browser_app_assets_load_public_mobile_schema() {
 }
 
 #[test]
+fn yune_web_adapter_browser_app_assets_compose_reported_multi_syllable_words() {
+    // Locks down the user-reported live-demo regressions against the committed
+    // public/schema byte-backed assets. A double-array trie collision had dropped
+    // the toneless form of multi-syllable codes from the prism, so these returned
+    // unrelated sentence-path candidates (e.g. litbiu -> 小斑啄木鳥). The expected
+    // first candidates are TypeDuck's, matching the source-fallback/oracle path.
+    let _guard = test_guard();
+    let runtime =
+        YuneWebRuntime::create_with_schema("browser-app-multi-syllable-words", "jyut6ping3_mobile");
+    runtime.write_browser_app_assets();
+
+    let state = unsafe {
+        yune_web_init(
+            runtime.shared_c.as_ptr(),
+            runtime.user_c.as_ptr(),
+            runtime.schema_id_c.as_ptr(),
+        )
+    };
+    assert!(
+        !state.is_null(),
+        "jyut6ping3_mobile should initialize from browser app assets"
+    );
+    assert_eq!(unsafe { yune_web_deploy(state) }, TRUE);
+
+    for (input, expected) in [
+        ("litbiu", "\u{5217}\u{8868}"),            // 列表
+        ("ngojiu", "\u{6211}\u{8981}"),            // 我要
+        ("ngaamngaam", "\u{5571}\u{5571}"),        // 啱啱
+        ("caamhaau", "\u{53c3}\u{8003}"),          // 參考
+        ("waakze", "\u{6216}\u{8005}"),            // 或者
+        ("honangwui", "\u{53ef}\u{80fd}\u{6703}"), // 可能會
+    ] {
+        drop(response_json(unsafe {
+            yune_web_process_key(state, 0xff1b, 0)
+        }));
+        let response = process_input(state, input);
+        assert_eq!(
+            response["context"]["candidates"][0]["text"],
+            Value::String(expected.to_owned()),
+            "committed byte-backed Jyutping assets should map {input} to its canonical word: {response:?}"
+        );
+    }
+
+    unsafe { yune_web_cleanup(state) };
+    runtime.remove();
+}
+
+#[test]
 fn yune_web_adapter_browser_app_assets_load_jyutping_mandarin_pinyin_reverse_lookup() {
     let _guard = test_guard();
     let desktop_schema =
