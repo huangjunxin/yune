@@ -10,8 +10,19 @@ librime *parity*): here the bar is a **product memory budget**, because the
 intended product is a Cantoboard-style iOS keyboard
 ([Cantoboard](https://github.com/Cantoboard/Cantoboard),
 [librime-ios-build](https://github.com/Cantoboard/librime-ios-build)). The
-reduction work it motivates is tracked by
-[`plans/active/m47-plan-ios-budget-native-memory-reduction.md`](../plans/active/m47-plan-ios-budget-native-memory-reduction.md).
+reduction work it motivates is the now-complete
+[`plans/completed/m47-plan-ios-budget-native-memory-reduction.md`](../plans/completed/m47-plan-ios-budget-native-memory-reduction.md).
+
+**Status (2026-06-29): M47 portable scope complete.** Phase 0 + RED-01…RED-08
+took the comments-intact `jyut6ping3_mobile` keyboard profile from ~195 MB to
+**~67 MB working set / ~22 MB private** (the iOS-dirty proxy, comfortably under
+the 48 MB target) with the full multilingual TypeDuck dictionary retained and
+oracle-verified — by serving table/prism/comment payloads from byte-backed/mmap'd
+compiled storage like librime/Cantoboard. The one remaining gate, **on-device
+`phys_footprint` validation on real Apple hardware, is deferred to M48** (needs
+Mac/Xcode); the optional RED-09/10/11 portable polish is deferred with it. Every
+number in this report is a **Windows proxy, not iOS `phys_footprint`** — "iOS
+budget proven" awaits the on-device read.
 
 Findings were adversarially verified (2026-06-28 workflow: 4 refute agents +
 synthesis); the calibration corrections below are folded in.

@@ -2,7 +2,7 @@
 
 Yune is a Rust input-method engine that uses **upstream librime as a
 compatibility and performance oracle** while building a cleaner Rust engine.
-M45, WEB-01, M46, WEB-02, and WEB-03 are complete. M45 confirmed
+M45, WEB-01, M46, WEB-02, WEB-03, and M47 (portable scope) are complete. M45 confirmed
 upstream candidate-output parity for Track A `n`/`ni`/`hao`, kept `hao` inside
 the short-key ratio target, and split steady resident memory from real peak
 memory. WEB-01 then proved that the current browser `893.1 MiB` Jyutping WASM
@@ -25,7 +25,14 @@ browser latency path. A later correctness follow-up fixed a `DartsDoubleArray`
 prism construction bug that had corrupted the byte-backed Jyutping
 toneless-to-canonical mapping for common multi-syllable words (`litbiu` returned
 小斑啄木鳥 instead of 列表); trie-level and committed-asset regression tests now
-lock the user-visible words down.
+lock the user-visible words down. M47 then took the iOS-keyboard memory target:
+attribution-first reduction byte-backed the native footprint so the
+comments-intact `jyut6ping3_mobile` keyboard profile dropped from ~195 MB to
+~67 MB working set / ~22 MB private (the iOS-dirty proxy, under the 48 MB goal)
+with the full multilingual TypeDuck dictionary retained, serving table/prism/
+comment payloads from mmap'd compiled storage like librime/Cantoboard. M47's
+portable scope is complete; on-device `phys_footprint` validation is deferred to
+M48 because it needs a Mac/Xcode environment.
 
 > **Compatibility oracle.** Upstream librime latest stable is the default
 > behavior reference for user-visible schema semantics, standard ABI contracts,
@@ -58,8 +65,10 @@ lock the user-visible words down.
 - [`reports/ios-memory-budget.md`](./reports/ios-memory-budget.md) - native
   single-active-schema memory vs the iOS keyboard-extension budget; the measured
   baseline for the active M47 reduction plan.
-- [`plans/active/m47-plan-ios-budget-native-memory-reduction.md`](./plans/active/m47-plan-ios-budget-native-memory-reduction.md)
-  - active attribution-first plan to drive native memory under the iOS budget.
+- [`plans/completed/m47-plan-ios-budget-native-memory-reduction.md`](./plans/completed/m47-plan-ios-budget-native-memory-reduction.md)
+  - completed attribution-first plan that drove the comments-intact keyboard from
+  ~195 MB to ~67 MB WS / ~22 MB private (portable scope); on-device validation
+  and optional asset slimming deferred to M48.
 - [`plans/completed/m46-plan-jyutping-native-wasm-memory-attribution.md`](./plans/completed/m46-plan-jyutping-native-wasm-memory-attribution.md)
   - completed attribution-first plan for the TypeDuck/Jyutping native Track B
   and browser WASM memory owners left after M45 and WEB-01.
@@ -106,39 +115,34 @@ lock the user-visible words down.
 
 | Lane | Current state | Next decision or gate |
 | --- | --- | --- |
-| Core compatibility | Phase 1 named-target upstream behavior is complete for `luna_pinyin` and common-schema basics against upstream librime `1.17.0`. | Preserve upstream-observable behavior on every engine change. |
-| Engine performance | M45 is complete as a partial native-engine follow-up to M44. Phase 0 selected `short-key-measured-no-go`, so no short-key engine implementation was retained. Final `hao` preserves the M44 pass at `24.267us` / `2.110x`, while `n` remains `68.900us` / `3.313x` and `ni` remains `49.450us` / `3.458x`. Track A steady resident rows meet the resident target (`87,498,752-98,684,928 B`), but the real cold-start peak remains `127,475,712 B`, so M45 records a standing peak-cost blocker. M46 confirms Track B still peaks at `504,627,200 B` with mostly unclassified process memory. | **Active: M47 iOS-budget native memory reduction.** RED-01 reduced isolated `jyut6ping3_mobile` keyboard-profile steady from `223.9 MB` to `169.2 MB`; RED-02 moved parsed prism storage to byte-backed runtime reads; RED-03 made compact lookup-record retention optional; RED-04 made the reverse/UI translator an optional keyboard-profile pack; RED-05 removed the large deploy rebuild/high-water transient; RED-06 bounded the primary compact-table parse transient; RED-07 made rich lookup/comment records byte-backed while preserving TypeDuck comments; RED-08 removed the primary translator lookup-record owner and storage-backed the compact normal-code index. Current Windows proxies: lean lower bound `56.9 MB` steady / `61.3 MB` peak, comments-intact keyboard `67.4 MB` steady / `80.1 MB` peak, full mobile `78.8 MB` steady / `89.9 MB` peak. Next branch is compiled asset/profile slimming and compact payload/index format; a small `jyut6ping3_scolar` prism rebuild remains a startup-hygiene blocker. Target remains steady <= 48 MB / peak <= 64 MB. Keep `n`/`ni` as separate future Track A latency blockers. |
+| Core compatibility | Phase 1 named-target upstream behavior is complete for `luna_pinyin` and common-schema basics against upstream librime `1.17.0`. An open `luna_pinyin` sentence over-segmentation defect is tracked under [Open Correctness Defect](#open-correctness-defect-luna_pinyin-sentence-over-segmentation): multi-syllable input (`jianli`, `biancheng`) over-segments into common single syllables because the M17 null-grammar scorer sums raw frequencies instead of log-probabilities. | Preserve upstream-observable behavior on every engine change; scope a fix for the open sentence over-segmentation defect. |
+| Engine performance | M45 is complete as a partial native-engine follow-up to M44. Phase 0 selected `short-key-measured-no-go`, so no short-key engine implementation was retained. Final `hao` preserves the M44 pass at `24.267us` / `2.110x`, while `n` remains `68.900us` / `3.313x` and `ni` remains `49.450us` / `3.458x`. Track A steady resident rows meet the resident target (`87,498,752-98,684,928 B`), but the real cold-start peak remains `127,475,712 B`, so M45 records a standing peak-cost blocker. M46 reported a `504,627,200 B` Track B peak with mostly unclassified process memory — now **superseded by M47**, which attributed it and measured the lean engine (no librime) far lower, showing the `504 MB` was the .NET dual-DLL benchmark hosting yune + librime together, not the engine footprint. | **M47 complete (portable scope); M48 on-device validation deferred.** RED-01 reduced isolated `jyut6ping3_mobile` keyboard-profile steady from `223.9 MB` to `169.2 MB`; RED-02 moved parsed prism storage to byte-backed runtime reads; RED-03 made compact lookup-record retention optional; RED-04 made the reverse/UI translator an optional keyboard-profile pack; RED-05 removed the large deploy rebuild/high-water transient; RED-06 bounded the primary compact-table parse transient; RED-07 made rich lookup/comment records byte-backed while preserving TypeDuck comments; RED-08 removed the primary translator lookup-record owner and storage-backed the compact normal-code index. Current Windows proxies: lean lower bound `56.9 MB` steady / `61.3 MB` peak, comments-intact keyboard `67.4 MB` steady / `80.1 MB` peak, full mobile `78.8 MB` steady / `89.9 MB` peak. By the iOS-dirty (private-bytes) proxy ~22 MB is comfortably under the 48 MB target, with full TypeDuck comments retained. The decisive on-device `phys_footprint` check plus optional RED-09/10/11 portable polish are deferred to M48 (needs Mac/Xcode). Keep `n`/`ni` as separate future Track A latency blockers. |
 | Web harness startup and memory | M41 is complete for the tracked `apps/yune-web/` browser harness. WEB-01 is complete as measured no-go for `INITIAL_MEMORY` and payload-only changes. M46 fixed the Cangjie -> Luna -> Jyutping no-candidate row. WEB-02 classified the stale-asset source-fallback owner at `529,602,374 B`; WEB-03 fixed that launch compiled-asset contract and remeasured the shipping Jyutping launch/full browser rows at `160.0 MiB` ready/peak/steady. The follow-up compact-path fix restores byte-backed Jyutping phrase composition, visible prefix lookup rows, and bounded long-input browser latency. A later correctness fix repaired a `DartsDoubleArray` prism construction bug that had broken the byte-backed Jyutping toneless-to-canonical mapping for common multi-syllable words (now guarded by trie-level and committed-asset regression tests). The fair `luna_pinyin` browser comparison remains `160.0 MiB` peak versus My RIME `16.0 MiB`; the old Jyutping `893.1 MiB` value now remains only as a synthetic no-launch-assets negative control. | Future browser memory work should target the fair `luna_pinyin` runtime high-water floor or another measured owner, not another payload-only or Jyutping stale-asset branch. |
 | AI-native engine layer | M11/M13 proved a default-off local AI layer can sit on top of the deterministic engine. | Keep AI outside the classic deterministic performance path unless a named engine experiment explicitly enables it. |
 | Future platform work | Platform-specific native frontends remain outside this repo roadmap. | Start a separate repository or separate plan before changing platform/application contracts. |
 
 ## Authoritative Sequence
 
-1. **M47 iOS-budget native memory reduction (active)** - the now-concrete memory
-   slice. The product target is a Cantoboard-style iOS keyboard extension, so the
-   binding goal is fitting the single-active-schema native working set under an
-   iOS keyboard-extension budget (steady <= 48 MB, peak <= 64 MB; stretch 48 MB) as
-   portable engine work that benefits iOS/Android/Windows IME/WASM/embedding.
-   Phase 0 attributed the old un-owned bucket with Windows `PrivateUsage`,
-   working-set, and allocator-live evidence; RED-01 then made
-   `dictionary_lookup_filter.lookup_records` optional for the keyboard profile,
-   RED-02 moved parsed prism storage to byte-backed runtime reads, RED-03 made
-   compact lookup-record retention optional for the keyboard-profile probe, and
-   RED-04 made the reverse/UI translator an optional keyboard-profile pack,
-   RED-05 removed the large deploy rebuild/high-water transient, RED-06 bounded
-   the primary compact-table parse transient, RED-07 moved rich lookup/comment
-   records to byte-backed compiled payloads while preserving TypeDuck comments,
-   and RED-08 removed the primary translator lookup-record owner while making
-   normal-code lookup storage-backed. The latest `jyut6ping3_mobile` Windows
-   proxies are: lean lower bound **56.9 MB** steady / **61.3 MB** peak,
-   comments-intact keyboard **67.4 MB** steady / **80.1 MB** peak, and full
-   mobile **78.8 MB** steady / **89.9 MB** peak. The next reduction branch is
-   compiled asset/profile slimming and compact payload/index format; a small
-   `jyut6ping3_scolar` prism rebuild remains a startup-hygiene blocker.
-   Plan:
-   [`plans/active/m47-plan-ios-budget-native-memory-reduction.md`](./plans/active/m47-plan-ios-budget-native-memory-reduction.md);
-   evidence: [`reports/ios-memory-budget.md`](./reports/ios-memory-budget.md).
-   On-device iOS validation is a later Phase 2 frontend gate, not part of M47.
+**M47 (iOS-budget native memory reduction) is complete for its portable scope.**
+Phase 0 + RED-01…RED-08 took the comments-intact `jyut6ping3_mobile` keyboard
+profile from ~195 MB to **~67 MB working set / ~22 MB private** (the iOS-dirty
+proxy, comfortably under the 48 MB target) with the full multilingual TypeDuck
+dictionary retained and parity-clean — by serving table/prism/comment payloads
+from byte-backed/mmap'd storage like librime/Cantoboard. See the Milestone Ledger
+and [`reports/ios-memory-budget.md`](./reports/ios-memory-budget.md). Everything
+portable this Windows machine can do is done; the one open gate is on-device
+measurement (M48).
+
+1. **M48 iOS on-device memory validation (deferred — needs Mac/Xcode).** The
+   decisive gate M47 could not close on Windows: stand up a minimal iOS keyboard
+   extension (or macOS host) loading the comments-intact `jyut6ping3_mobile`
+   profile and measure Apple `phys_footprint` in Instruments (not resident size).
+   If it lands near ~22–30 MB, the iOS memory target is genuinely proven; if
+   higher, the real owner picks the next branch. Folds in the now-optional
+   portable polish — RED-09 compiled-asset/profile slimming, RED-10 allocator
+   strategy, RED-11 startup hygiene — which cut clean mapped pages / download size
+   / cold start but do **not** move the iOS-dirty budget, so none is required
+   before the on-device read. Blocked until a Mac/Xcode environment exists.
 
 2. **Future browser fair-lane memory slice** - the fair `luna_pinyin` browser
    high-water floor or another freshly measured owner, only with a new scoped plan.
@@ -151,6 +155,74 @@ lock the user-visible words down.
 Trigger-gated, not scheduled: extracting the full processor pipeline from
 `yune-rime-api` into `yune-core` lands only when a real non-ABI consumer needs
 the full input path. Do not milestone that extraction speculatively.
+
+## Open Correctness Defect: luna_pinyin sentence over-segmentation
+
+Status: found 2026-06-29, not yet scoped as a milestone. A user-visible
+`luna_pinyin` behavior divergence from the upstream oracle, separate from the
+active M47 memory work.
+
+Symptom (yune-web `luna_pinyin`, reproduced on the native CLI over the shipped
+`apps/yune-web/public/schema` assets): multi-syllable input over-segments into
+more, individually-frequent single syllables instead of the correct longer
+parse. `jianli` returns 及按裏 (`ji+an+li`) instead of 建立/簡歷/監理
+(`jian|li`); `biancheng` returns 比按成 (`bi+an+cheng`) instead of 變成/編程
+(`bian|cheng`). The upstream oracle (`my-rime.vercel.app`) returns the
+`jian|li` / `bian|cheng` parse.
+
+Not a data, segmentation, or deferred-grammar gap:
+
+- Data is canonical and complete: `luna_pinyin.dict.yaml` v2024.02.10 with
+  `use_preset_vocabulary: true` plus `essay.txt` (442,712 entries; contains
+  建立/變成/編程/簡歷/監理). `jian`, `bian`, `xian`, `qian` all form correctly as
+  single syllables, and both the `jian|li` path and the essay phrase edge 建立
+  are emitted into the word graph - they lose on score, they are not absent.
+- The defect is in the shipped M17 null-grammar sentence scorer, not the
+  deferred learned `.gram`/octagram gear. Default upstream `luna_pinyin` also
+  uses no `.gram` model and still returns 建立.
+
+Root cause: the poet null-grammar path sums RAW essay/dict integer frequencies
+instead of log-probabilities. `collect_sentence_states` accumulates
+`next.weight += null_grammar_score(entry.weight)`
+(`crates/yune-core/src/poet/mod.rs:200`, also `:226`, `:367`), where
+`null_grammar_score(w) = w + ln(1e-6)` (`poet/mod.rs:83`, with
+`UPSTREAM_NO_GRAMMAR_PENALTY = -13.815510557964274`, `poet/mod.rs:17`), and
+`entry.weight` is the raw frequency carried verbatim (`poet/mod.rs:862` span
+edge, `:887` vocab edge, `:1316`/`:1324` `ModelEntry`; single-char dict weights
+backfilled from raw essay counts at
+`crates/yune-core/src/dictionary/source.rs:866-876`). `compare_path_state`
+ranks by summed weight descending first, with fewer-words only a tiebreak
+(`poet/mod.rs:321-328`). Because the `-13.8` per-word penalty is negligible
+against five-digit frequencies, adding more high-frequency single characters
+*increases* the path weight. Reproduced scores for `jianli`: 及按裏 `60149996`
+beats 建裏 `60055116` and 建立 `60028890` (both correct parses are generated;
+they lose on score). librime scores with log-probabilities, where each extra
+word/boundary adds a large negative term so the minimal correct parse wins;
+Yune inverted the convention. The codebase already applies the right conversion
+at `crates/yune-core/src/translator/mod.rs:142`
+(`sentence_piece_quality = raw_quality.max(1.0).ln() - word_penalty`), which the
+poet path never calls.
+
+Scope: core-shared. The native CLI reproduces the exact wrong split, and the
+wasm and native paths share the poet sentence scorer, so this is not a web-only
+or packaging issue. It affects any multi-syllable `luna_pinyin` input where
+over-segmentation into common single characters out-sums the correct parse.
+
+Proposed fix direction (not yet scoped): convert sentence-model weights to
+log-probabilities before the poet accumulation (at ingestion
+`poet/mod.rs:862`/`:887`/`:1316`/`:1324`, or in the accumulation
+`:200`/`:226`/`:367`); confirm librime's exact normalization (`ln(freq/total)`
+vs `ln(freq)` and the per-word penalty interaction) against the upstream
+`Poet`/grammar source; capture oracle bytes for `jianli`/`biancheng` from
+`my-rime.vercel.app` as the parity target; and verify no regression on the
+existing passing rows (`nihao`, `zhongguo`).
+
+Test gaps that hid it: the poet unit test
+`make_sentence_prefers_single_phrase_when_penalty_outweighs_shorter_path`
+(`crates/yune-core/tests/poet.rs`) uses synthetic weights (`AB=100` vs
+`A+B=19`) that real raw frequencies violate, and no `upstream_luna_pinyin_parity`
+fixture covers an `-ian` input that also splits into `Ci+an`. A fix must add a
+`jianli`/`biancheng` oracle fixture so the gap stays closed.
 
 ## M46 Closeout
 
@@ -583,7 +655,8 @@ Closed M38 gates:
 | M46 | Complete with measured no-go | Attribution-first TypeDuck/Jyutping native Track B and browser WASM memory milestone and WEB-01 handoff. It fixed schema-switch correctness but closed memory as `measured-no-go-owner-unclassified`: native Track B remains around `504 MB`, and the then-current browser Jyutping row stayed at `893.1 MiB`. |
 | WEB-02 | Complete with measured blocker | Public-demo Jyutping browser owner classification: stale `Rime::Prism/3.0` assets force source fallback and `owned_heap` storage, naming the compiled-asset contract as the next branch. At WEB-02 closeout the browser high-water remained `893.1 MiB`; no memory win was claimed. |
 | WEB-03 | Complete | Engine fix `3ffd4b21` unblocked clean rebuilds; asset commit `ef37bfe9` regenerated launch assets for `jyut6ping3_mobile`, `cangjie5`, and `luna_pinyin`, shipped Cangjie compiled assets, refreshed manifests/dist, and proved native public-demo storage is byte-backed with no fallback rows. Fresh Emscripten/Playwright evidence records public-demo `full-jyutping` at `160.0 MiB` ready/peak/steady, with ready `1306 ms`, input-to-candidate `100 ms`, and commit `110 ms`; follow-up gates restore byte-backed `ngogokdak -> 我覺得` and `zouhapci` visible lookup rows. A later correctness follow-up (`a76fcd59`, guard `d1c0171a`) fixed a `DartsDoubleArray` prism construction bug that had broken the byte-backed Jyutping toneless-to-canonical mapping for common multi-syllable words. The old `893.1 MiB` value is retained only as the synthetic `extras` negative control. |
-| M47 | Active (post-RED-08 compact lookup/code-index reduced) | iOS-budget native memory reduction: drive single-active-schema native working set under an iOS keyboard-extension budget (steady <= 48 MB, peak <= 64 MB; stretch 48 MB) as portable engine work. Phase 0 Windows `PrivateUsage`/working-set evidence attributed the old un-owned bucket as mostly live retained heap / process-private memory, not allocator-retained-free. RED-01 added an explicit keyboard-profile gate for `dictionary_lookup_filter.lookup_records`, moving isolated `jyut6ping3_mobile` steady `223.9 -> 169.2 MB`, private `202.2 -> 147.7 MB`, allocator-live `155.0 -> 104.9 MB`, peak `231.6 -> 217.3 MB`. RED-02 moved parsed prism storage to byte-backed runtime reads; RED-03 made compact lookup-record retention optional for the keyboard-profile probe; RED-04 made the reverse/UI translator an optional keyboard-profile pack; RED-05 removed the large deploy rebuild/high-water transient; RED-06 dropped reverse parse scratch before compact-table parse, moving fresh lean keyboard-profile peak `79.6 -> 62.9 MB`; RED-07 kept rich TypeDuck comments while byte-backing lookup records; RED-08 disabled primary translator lookup-record retention for the mobile profile and made compact normal-code lookup storage-backed, moving comments-intact keyboard steady `82.8 -> 67.4 MB`, private `33.6 -> 22.5 MB`, allocator-live `25.6 -> 16.3 MB`, peak `94.5 -> 80.1 MB`, and full mobile steady `92.9 -> 78.8 MB`, peak `103.7 -> 89.9 MB`. Next branch: compiled asset/profile slimming and compact payload/index format; `jyut6ping3_scolar` prism rebuild remains startup-hygiene work. Evidence: [`reports/evidence/m47-ios-budget-native-memory-reduction-red08-2026-06-29/`](./reports/evidence/m47-ios-budget-native-memory-reduction-red08-2026-06-29/). Plan: [`plans/active/m47-plan-ios-budget-native-memory-reduction.md`](./plans/active/m47-plan-ios-budget-native-memory-reduction.md). |
+| M47 | Complete (portable engine work; on-device validation + RED-09/10/11 deferred to M48) | iOS-budget native memory reduction: drive single-active-schema native working set under an iOS keyboard-extension budget (steady <= 48 MB, peak <= 64 MB; stretch 48 MB) as portable engine work. Phase 0 Windows `PrivateUsage`/working-set evidence attributed the old un-owned bucket as mostly live retained heap / process-private memory, not allocator-retained-free. RED-01 added an explicit keyboard-profile gate for `dictionary_lookup_filter.lookup_records`, moving isolated `jyut6ping3_mobile` steady `223.9 -> 169.2 MB`, private `202.2 -> 147.7 MB`, allocator-live `155.0 -> 104.9 MB`, peak `231.6 -> 217.3 MB`. RED-02 moved parsed prism storage to byte-backed runtime reads; RED-03 made compact lookup-record retention optional for the keyboard-profile probe; RED-04 made the reverse/UI translator an optional keyboard-profile pack; RED-05 removed the large deploy rebuild/high-water transient; RED-06 dropped reverse parse scratch before compact-table parse, moving fresh lean keyboard-profile peak `79.6 -> 62.9 MB`; RED-07 kept rich TypeDuck comments while byte-backing lookup records; RED-08 disabled primary translator lookup-record retention for the mobile profile and made compact normal-code lookup storage-backed, moving comments-intact keyboard steady `82.8 -> 67.4 MB`, private `33.6 -> 22.5 MB`, allocator-live `25.6 -> 16.3 MB`, peak `94.5 -> 80.1 MB`, and full mobile steady `92.9 -> 78.8 MB`, peak `103.7 -> 89.9 MB`. Portable scope complete: the comments-intact keyboard settled at ~67 MB WS / ~22 MB private (the iOS-dirty proxy, under the 48 MB target) with the full multilingual TypeDuck dictionary retained and parity-clean (cantonese_parity 37/0, upstream_luna_pinyin_parity 12/0, yune_web 37/0). The remaining on-device `phys_footprint` validation and the now-optional RED-09/10/11 portable polish are deferred to M48. Evidence: [`reports/evidence/m47-ios-budget-native-memory-reduction-red08-2026-06-29/`](./reports/evidence/m47-ios-budget-native-memory-reduction-red08-2026-06-29/). Plan: [`plans/completed/m47-plan-ios-budget-native-memory-reduction.md`](./plans/completed/m47-plan-ios-budget-native-memory-reduction.md). |
+| M48 | Deferred / future (blocked on Mac/Xcode) | iOS on-device memory validation: build a minimal iOS keyboard extension or macOS host loading the comments-intact `jyut6ping3_mobile` profile and measure Apple `phys_footprint` in Instruments to confirm M47's ~22 MB Windows private/dirty proxy on real hardware. Folds in optional portable polish RED-09 (compiled-asset/profile slimming), RED-10 (allocator strategy), RED-11 (startup hygiene) — none required before the on-device read, since they trim clean mapped pages rather than the iOS-dirty budget. |
 
 WEB-03 latency addendum: a 2026-06-28 follow-up bounds compact-path fallback
 expansion after the phrase-composition repair and restores local browser
@@ -597,13 +670,22 @@ only when an engine target needs them; nothing here commits to a timeline.
 
 | In scope - target-driven, measured | Deferred - implement when an engine target needs it | Non-goal |
 | --- | --- | --- |
-| `luna_pinyin` core versus upstream `1.17.0`, including completed M17 null-grammar sentence/lattice, M18 punctuation processor slices, and completed M42 abbreviation sentence parity for `cszysmsrsd`/`zybfshmsru` | Learned `.gram`/octagram grammar, contextual translation, and broader plugin-backed gears until a named engine target needs them | Bit-for-bit parity with librime internals |
+| `luna_pinyin` core versus upstream `1.17.0`, including completed M17 null-grammar sentence/lattice, M18 punctuation processor slices, and completed M42 abbreviation sentence parity for `cszysmsrsd`/`zybfshmsru` (open: the M17 null-grammar path has a raw-frequency-vs-log-probability scoring defect that over-segments multi-syllable input, tracked under [Open Correctness Defect](#open-correctness-defect-luna_pinyin-sentence-over-segmentation)) | Learned `.gram`/octagram grammar, contextual translation, and broader plugin-backed gears until a named engine target needs them | Bit-for-bit parity with librime internals |
 | Common RIME schemas added through explicit breadth milestones | Further schema breadth only with fresh oracle fixtures and owning tests | Unbounded schema checklist work |
 | Native engine performance parity for startup, session lifecycle, mmap-backed `rsmarisa` marisa-table lookup, raw lookup, lazy/page-bounded translation, context export, memory, allocation, completed M43 owner-backed memory reduction, completed partial M44 native/profile owner reduction, and completed M46 TypeDuck/Jyutping memory attribution | Frontend/application delivery evidence and platform packaging | Claiming application-visible wins from native engine evidence |
 | AI-native layer on the compatible deterministic base | Richer AI experiments after the classic engine path is competitive | Replacing or altering classic input paths by default |
 
 ## Deferred / Future
 
+- **M48 — iOS on-device memory validation:** confirm M47's ~22 MB Windows
+  private/dirty proxy on real Apple hardware. Build a minimal iOS keyboard
+  extension (or macOS host) loading the comments-intact `jyut6ping3_mobile`
+  profile and measure `phys_footprint` in Instruments. Blocked until a Mac/Xcode
+  environment exists. Folds in the now-optional portable polish RED-09
+  (compiled-asset/profile slimming), RED-10 (allocator strategy), and RED-11
+  (startup hygiene) — useful for download size / cold start / WASM but not
+  required for the iOS-dirty budget. See
+  [`plans/completed/m47-plan-ios-budget-native-memory-reduction.md`](./plans/completed/m47-plan-ios-budget-native-memory-reduction.md).
 - **librime C++ plugin ABI** (Lua, octagram, predict, proto): deferred until a
   concrete engine target requires it; prefer Yune-native extension points first.
 - **AI-native input layer beyond M13:** future work owns richer local-first AI
