@@ -18,11 +18,11 @@ took the comments-intact `jyut6ping3_mobile` keyboard profile from ~195 MB to
 **~67 MB working set / ~22 MB private** (the iOS-dirty proxy, comfortably under
 the 48 MB target) with the full multilingual TypeDuck dictionary retained and
 oracle-verified — by serving table/prism/comment payloads from byte-backed/mmap'd
-compiled storage like librime/Cantoboard. The one remaining gate, **on-device
-`phys_footprint` validation on real Apple hardware, is deferred to M48** (needs
-Mac/Xcode); the optional RED-09/10/11 portable polish is deferred with it. Every
-number in this report is a **Windows proxy, not iOS `phys_footprint`** — "iOS
-budget proven" awaits the on-device read.
+compiled storage like librime/Cantoboard. A future, unnumbered Apple-hardware
+validation gate will need on-device **`phys_footprint` validation** (needs
+Mac/Xcode); optional RED-09/10/11 portable polish remains future engine work,
+not a newly opened milestone. Every number in this report is a **Windows proxy,
+not iOS `phys_footprint`** — "iOS budget proven" awaits the on-device read.
 
 Findings were adversarially verified (2026-06-28 workflow: 4 refute agents +
 synthesis); the calibration corrections below are folded in.

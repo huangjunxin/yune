@@ -37,9 +37,10 @@ See `decisions.md` D-24 (oracle precedence) and D-25 (target-driven scope).
   profile from `~298 MB` to `~67 MB` working set / `~22 MB` private (the iOS-dirty
   proxy, under the 48 MB target) with the full multilingual TypeDuck dictionary
   retained and parity-clean. **All numbers are Windows proxies, not iOS
-  `phys_footprint` — "iOS budget proven" is not claimed.** The one remaining gate,
-  on-device measurement, plus the optional RED-09/10/11 polish, are deferred to
-  **M48** (needs Mac/Xcode). Completed plan:
+  `phys_footprint` — "iOS budget proven" is not claimed.** On-device measurement
+  remains a far-future platform validation gate, and RED-09/10/11 remain optional
+  future engine-optimization candidates; none is a newly opened numbered
+  milestone. Completed plan:
   `docs/plans/completed/m47-plan-ios-budget-native-memory-reduction.md`; report:
   `docs/reports/ios-memory-budget.md`. Lean probe: `crates/yune-rime-api/tests/native_memory_probe.rs`.
 - **AI foundation exists.** M11 completed the core/CLI AI layer. M13 exposed it
