@@ -1716,6 +1716,11 @@ fn load_schema_compiled_dictionary(
         yune_core::TableDictionaryAdvancedData::default(),
     )
     .with_merged_advanced_data_from(&reverse_dictionary);
+    drop(reverse_dictionary);
+    drop(reverse_bytes);
+    memory_probe_mark(format!(
+        "m47:compiled_dictionary:{dictionary_name}:after_reverse_advanced_merge_drop"
+    ));
     if let Some(prism_payload) = prism_payload.as_ref() {
         advanced_dictionary = advanced_dictionary.with_merged_advanced_data_from(
             &TableDictionary::with_advanced_data(

@@ -985,6 +985,65 @@ fn config_bool_like(value: &Value) -> Option<bool> {
     })
 }
 
+fn patch_browser_app_keyboard_profile(runtime: &YuneWebRuntime) {
+    for relative_path in [
+        "template.yaml",
+        "jyut6ping3.schema.yaml",
+        "jyut6ping3_mobile.schema.yaml",
+        "build/jyut6ping3.schema.yaml",
+        "build/jyut6ping3_mobile.schema.yaml",
+    ] {
+        let path = if relative_path.starts_with("build/") {
+            runtime.user.join(relative_path)
+        } else {
+            runtime.shared.join(relative_path)
+        };
+        if !path.is_file() {
+            continue;
+        }
+        let text = fs::read_to_string(&path).expect("schema config should be readable");
+        let text = patch_dictionary_lookup_records_opt_out(&text);
+        let text = patch_namespace_lookup_records_opt_out(&text, "translator");
+        let text = patch_namespace_lookup_records_opt_out(&text, "luna_pinyin");
+        let text = patch_namespace_bool_opt_out(&text, "luna_pinyin", "load_translator", false);
+        fs::write(&path, text).expect("keyboard profile config patch should be written");
+    }
+}
+
+fn patch_dictionary_lookup_records_opt_out(text: &str) -> String {
+    if text.contains("dictionary_lookup_filter/load_lookup_records") {
+        return text.to_owned();
+    }
+    if text.contains("dictionary_lookup_filter:\n  dictionary: jyut6ping3_scolar\n  load_lookup_records: false\n")
+    {
+        return text.to_owned();
+    }
+    text.replace(
+        "dictionary_lookup_filter:\n  dictionary: jyut6ping3_scolar\n",
+        "dictionary_lookup_filter:\n  dictionary: jyut6ping3_scolar\n  load_lookup_records: false\n",
+    )
+}
+
+fn patch_namespace_lookup_records_opt_out(text: &str, namespace: &str) -> String {
+    patch_namespace_bool_opt_out(text, namespace, "load_lookup_records", false)
+}
+
+fn patch_namespace_bool_opt_out(text: &str, namespace: &str, key: &str, value: bool) -> String {
+    let marker = format!("{namespace}:\n");
+    let Some(block_start) = text.find(&marker).map(|index| index + marker.len()) else {
+        return text.to_owned();
+    };
+    let block_end = text[block_start..]
+        .find("\n\n")
+        .map(|offset| block_start + offset)
+        .unwrap_or(text.len());
+    if text[block_start..block_end].contains(&format!("{key}:")) {
+        return text.to_owned();
+    }
+    let insertion = format!("{marker}  {key}: {value}\n");
+    text.replacen(&marker, &insertion, 1)
+}
+
 struct YuneWebRuntime {
     root: PathBuf,
     shared: PathBuf,
@@ -2236,6 +2295,100 @@ fn yune_web_adapter_browser_app_assets_compose_reported_multi_syllable_words() {
             "committed byte-backed Jyutping assets should map {input} to its canonical word: {response:?}"
         );
     }
+
+    unsafe { yune_web_cleanup(state) };
+    runtime.remove();
+}
+
+#[test]
+fn yune_web_adapter_keyboard_profile_optouts_keep_jyutping_core_behavior() {
+    let _guard = test_guard();
+    let fixture: Value = serde_json::from_str(M28_UPSTREAM_JYUTPING_COMPOSITION)
+        .expect("M28 follow-up upstream Jyutping fixture should parse");
+    let m28_input = fixture["capture"]["target_input"]
+        .as_str()
+        .expect("fixture should capture target input");
+    let m28_expected = fixture["auto_composition_on"]["candidate_rows"][0]["text"]
+        .as_str()
+        .expect("fixture should capture top M28 candidate");
+
+    let runtime = YuneWebRuntime::create_with_schema(
+        "browser-app-keyboard-profile-optouts",
+        "jyut6ping3_mobile",
+    );
+    runtime.write_browser_app_assets();
+    patch_browser_app_keyboard_profile(&runtime);
+
+    let state = unsafe {
+        yune_web_init(
+            runtime.shared_c.as_ptr(),
+            runtime.user_c.as_ptr(),
+            runtime.schema_id_c.as_ptr(),
+        )
+    };
+    assert!(
+        !state.is_null(),
+        "jyut6ping3_mobile should initialize from keyboard-profile assets"
+    );
+    assert_eq!(unsafe { yune_web_deploy(state) }, TRUE);
+
+    let composing = process_input(state, "cak");
+    assert_eq!(
+        composing["context"]["candidates"][0]["text"],
+        Value::String("\u{6e2c}".to_owned()),
+        "keyboard profile should keep normal Jyutping candidate output"
+    );
+
+    drop(response_json(unsafe {
+        yune_web_process_key(state, 0xff1b, 0)
+    }));
+    let phrase = process_input(state, "ngogokdak");
+    assert_eq!(
+        phrase["context"]["candidates"][0]["text"],
+        Value::String("\u{6211}\u{89ba}\u{5f97}".to_owned()),
+        "keyboard profile should keep multi-syllable sentence composition"
+    );
+
+    for (input, expected) in [
+        ("litbiu", "\u{5217}\u{8868}"),
+        ("ngojiu", "\u{6211}\u{8981}"),
+        ("honangwui", "\u{53ef}\u{80fd}\u{6703}"),
+    ] {
+        drop(response_json(unsafe {
+            yune_web_process_key(state, 0xff1b, 0)
+        }));
+        let response = process_input(state, input);
+        assert_eq!(
+            response["context"]["candidates"][0]["text"],
+            Value::String(expected.to_owned()),
+            "keyboard profile should preserve reported matching regression guard for {input}: {response:?}"
+        );
+    }
+
+    drop(response_json(unsafe {
+        yune_web_process_key(state, 0xff1b, 0)
+    }));
+    let m28_response = process_input(state, m28_input);
+    assert_eq!(
+        m28_response["context"]["candidates"][0]["text"],
+        Value::String(m28_expected.to_owned()),
+        "keyboard profile should preserve M28 follow-up phrase/ranking guard"
+    );
+
+    drop(response_json(unsafe {
+        yune_web_process_key(state, 0xff1b, 0)
+    }));
+    let lookup = process_input(state, "zouhapci");
+    let candidates = lookup["context"]["candidates"]
+        .as_array()
+        .expect("candidate page should be an array");
+    let rich_lookup_marker = "\u{000c}\r1,";
+    assert!(
+        candidates.iter().all(|candidate| candidate["comment"]
+            .as_str()
+            .is_none_or(|comment| !comment.contains(rich_lookup_marker))),
+        "keyboard profile intentionally drops TypeDuck dictionary-panel rich comments: {lookup:?}"
+    );
 
     unsafe { yune_web_cleanup(state) };
     runtime.remove();

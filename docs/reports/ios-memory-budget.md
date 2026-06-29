@@ -1,6 +1,6 @@
 # iOS-Budget Native Memory Report
 
-Date: 2026-06-28
+Date: 2026-06-29
 
 This report measures Yune's **native single-active-schema memory** against an iOS
 keyboard-extension budget (hard **64 MB**, target **48 MB**). It is a different
@@ -24,12 +24,12 @@ three different numbers; only one is the iOS proxy:
 | Source | jyut6ping3_mobile | What it is |
 | --- | ---: | --- |
 | Initial lean native probe | **~298 MB steady / 482 MB peak** | Original M47 baseline: real `RimeApi`, mmap path, prebuilt assets, one schema per fresh Rust process |
-| Current lean native probe after RED-05 | **56.9 MB steady / 78.4 MB peak** | Current Windows proxy after RED-01 side lookup opt-out, RED-02 prism byte-backed runtime storage, RED-03 compact lookup-record opt-out, RED-04 optional reverse/UI pack omission, and RED-05 no-rebuild deploy hygiene |
+| Current lean native probe after RED-06 | **58.0 MB steady / 62.9 MB peak** | Current Windows proxy after RED-01 side lookup opt-out, RED-02 prism byte-backed runtime storage, RED-03 compact lookup-record opt-out, RED-04 optional reverse/UI pack omission, RED-05 no-rebuild deploy hygiene, and RED-06 reverse-parse scratch lifetime bounding |
 | .NET in-process benchmark (Track B) | ~436 MB after-ready / 504 MB peak | A .NET process hosting **both** Yune *and* librime DLLs — polluted upper bound, **not** the iOS number |
 | Browser WASM | 160 MiB | WASM linear memory, **no mmap**, owned tables — a different deployment |
 
 The earlier "Jyutping native ~504 MB" headline was the dual-DLL harness; the
-iOS-relevant steady was initially **~298 MB** and is now **56.9 MB** after RED-05.
+iOS-relevant steady was initially **~298 MB** and is now **58.0 MB** after RED-06.
 
 ## Methodology
 
@@ -378,15 +378,81 @@ remaining peak occurs during `create_session()`, at
 high-water **35.4 MB**. The next measured branch is therefore the primary
 `jyut6ping3` compact-table load/parse transient, not deploy or allocator decay.
 
+## Profile pin and RED-06 closeout (Windows-measured, 2026-06-29)
+
+Evidence:
+[`evidence/m47-ios-keyboard-profile-pin-2026-06-29/`](./evidence/m47-ios-keyboard-profile-pin-2026-06-29/)
+and
+[`evidence/m47-ios-budget-native-memory-reduction-red06-2026-06-29/`](./evidence/m47-ios-budget-native-memory-reduction-red06-2026-06-29/)
+from the same native probe. These are Windows `WorkingSetSize` /
+`PrivateUsage` measurements, not iOS `phys_footprint`.
+
+The profile names are now pinned:
+
+| Profile | Probe config | Steady WS after RED-06 | Peak WS after RED-06 | Product meaning |
+| --- | --- | ---: | ---: | --- |
+| Committed default workspace | `default.yaml` first schema (`jyut6ping3`), then active `jyut6ping3` | **268.6 MB** | **487.7 MB** | Full committed workspace default. It is not the iOS keyboard budget profile. |
+| Full mobile profile | `YUNE_MEM_DEFAULT=jyut6ping3_mobile`, no memory opt-outs | **195.2 MB** | **202.7 MB** | Full mobile TypeDuck-style behavior with dictionary lookup/comment and reverse/UI packs eager. |
+| Lean keyboard profile proxy | `YUNE_MEM_DEFAULT=jyut6ping3_mobile` plus RED-01/RED-03/RED-04 opt-outs | **58.0 MB** | **62.9 MB** | Current M47 iOS-keyboard budget profile: normal Jyutping typing retained; dictionary-panel rich comments and grave-prefix Mandarin reverse UI omitted. |
+
+The lean keyboard profile uses these explicit opt-outs in the temporary probe
+schema: `dictionary_lookup_filter/load_lookup_records: false`,
+`translator/load_lookup_records: false`, `luna_pinyin/load_lookup_records: false`,
+and `luna_pinyin/load_translator: false`. It is therefore wrong to describe the
+`~58 MB` row as the full product. It is the current memory-light keyboard
+profile. Normal table candidate comments remain; TypeDuck rich dictionary-panel
+comment bytes are intentionally absent from this profile and remain covered on
+the full/default eager path.
+
+The new browser-shaped keyboard-profile gate
+`yune_web_adapter_keyboard_profile_optouts_keep_jyutping_core_behavior` proves
+that the opt-out profile still produces normal Jyutping output (`cak`), a
+multi-syllable phrase (`ngogokdak`), reported matching-regression rows
+(`litbiu`, `ngojiu`, `honangwui`), and the M28 follow-up phrase/ranking guard.
+It also asserts the product trade-off: rich `dictionary_lookup_filter` comment
+bytes are omitted in the lean keyboard profile.
+
+RED-06 bounds the primary `create_session()` parse transient by dropping the
+primary reverse `.bin` byte buffer and parsed reverse dictionary immediately
+after their advanced data has been merged. Default/full behavior is unchanged:
+the full mobile and committed-default rows stayed essentially flat.
+
+| Metric | Fresh RED-05 lean baseline | After RED-06 | Delta |
+| --- | ---: | ---: | ---: |
+| Steady WS | **58.1 MB** | **58.0 MB** | **-0.1 MB** |
+| Steady private | **23.3 MB** | **23.3 MB** | **0.0 MB** |
+| Steady allocator live | **16.0 MB** | **16.0 MB** | **0.0 MB** |
+| Peak WS | **79.6 MB** | **62.9 MB** | **-16.7 MB** |
+| Allocator high-water | **35.4 MB** | **22.7 MB** | **-12.7 MB** |
+
+The event trace proves the old peak was a temporary overlap, not a retained
+steady owner:
+
+| Event | Before RED-06 WS / peak / allocator live | After RED-06 WS / peak / allocator live |
+| --- | ---: | ---: |
+| after reverse dictionary parse | 42.8 / 42.8 / 16.4 MB | 42.6 / 42.6 / 16.4 MB |
+| after reverse advanced merge drop | n/a | 26.1 / 42.6 / 3.7 MB |
+| after table advanced payload parse | 53.8 / 53.8 / 16.4 MB | 37.0 / 42.6 / 3.7 MB |
+| after compact table store parse | 70.3 / 79.6 / 27.7 MB | 53.4 / 62.9 / 14.9 MB |
+| after `normal_codes` HashSet | 56.5 / 79.6 / 16.1 MB | 56.3 / 62.9 / 16.1 MB |
+
+RED-06 closes the peak blocker for the current lean keyboard proxy against the
+64 MB hard budget on this Windows harness. It does **not** close M47: steady is
+still **58.0 MB**, about **1.21x** over the 48 MB target. The next measured
+branch should target steady retained data after the compact parse, especially
+the `normal_codes` HashSet and unnamed compact-table descriptor heap, not
+allocator decay.
+
 ## Verdict (Windows-measured)
 
 Against the 64 MB hard budget, the original isolated `jyut6ping3_mobile` baseline
 was **~4.7x over** the 48 MB steady target and **~3.6x over** the 64 MB peak
-target. After RED-05, the keyboard-profile run is still **~1.19x over** steady and
-**~1.23x over** peak. Cangjie5 remains ~1.5x over at steady; luna_pinyin is
+target. After RED-06, the keyboard-profile run is still **~1.21x over** the steady
+target but is **under** the 64 MB peak hard budget on the Windows proxy. Cangjie5 remains ~1.5x over at steady; luna_pinyin is
 borderline-under at steady but ~4.6x over at peak. Even a small-schema base is
-~60-95 MB before profile-specific UI deferral. The multilingual Jyutping keyboard
-**does not fit** in its current shape, and closing the gap remains
+~60-95 MB before profile-specific UI deferral. The memory-light Jyutping keyboard
+profile **does not fit the 48 MB steady target** in its current shape, and closing
+the remaining steady gap remains
 **architecture-level work, not tuning**. The portable levers (bound transients,
 slim the mobile profile, then revisit remaining named heap) are
 Windows-implementable and benefit every platform. **No
@@ -394,12 +460,13 @@ Windows-implementable and benefit every platform. **No
 
 ## Next work
 
-RED-01 through RED-05 are complete. Start the next branch with the primary
-`jyut6ping3` compact-table load/parse transient: the current RED-05 peak is still
-**78.4 MB** even though steady is **56.9 MB**, and deploy now peaks only
-**12.4 MB**. Keep both steady and peak visible. Do not use allocator changes as
-the next branch unless a later allocator-specific probe shows a steady
-live-vs-resident gap that Phase 0/RED-01/RED-02/RED-03/RED-04/RED-05 did not show.
+RED-01 through RED-06 are complete. Start the next branch with steady retained
+data after compact loading: the current lean keyboard proxy peaks at **62.9 MB**
+but steadies at **58.0 MB**, and the `normal_codes` HashSet row raises allocator
+live back to **16.1 MB** after parse scratch is gone. Keep both steady and peak
+visible. Do not use allocator changes as the next branch unless a later
+allocator-specific probe shows a steady live-vs-resident gap that Phase
+0/RED-01/RED-02/RED-03/RED-04/RED-05/RED-06 did not show.
 
 ## Evidence
 
@@ -421,4 +488,8 @@ live-vs-resident gap that Phase 0/RED-01/RED-02/RED-03/RED-04/RED-05 did not sho
   [`evidence/m47-ios-budget-native-memory-reduction-red04-2026-06-28/`](./evidence/m47-ios-budget-native-memory-reduction-red04-2026-06-28/)
 - M47 RED-05 deploy transient reduction:
   [`evidence/m47-ios-budget-native-memory-reduction-red05-2026-06-28/`](./evidence/m47-ios-budget-native-memory-reduction-red05-2026-06-28/)
+- M47 profile pin:
+  [`evidence/m47-ios-keyboard-profile-pin-2026-06-29/`](./evidence/m47-ios-keyboard-profile-pin-2026-06-29/)
+- M47 RED-06 compact-table parse transient reduction:
+  [`evidence/m47-ios-budget-native-memory-reduction-red06-2026-06-29/`](./evidence/m47-ios-budget-native-memory-reduction-red06-2026-06-29/)
 - Probe: [`crates/yune-rime-api/tests/native_memory_probe.rs`](../../crates/yune-rime-api/tests/native_memory_probe.rs)
