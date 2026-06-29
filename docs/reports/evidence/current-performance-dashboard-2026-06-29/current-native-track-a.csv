@@ -1,0 +1,10 @@
+dimension,workload,input,yune_median_us,librime_median_us,ratio_yune_over_librime,yune_peak_working_set_mb,librime_peak_working_set_mb,status
+startup,startup_warm_shared_assets_runtime_ready,,24427.800,31474.400,0.776,105.9,14.6,faster_or_equal
+session,session_create_select_destroy,,24967.500,31992.900,0.780,105.9,14.9,faster_or_equal
+ni,key_sequence_process_with_context,ni,50.250,14.300,3.514,105.9,14.9,blocker
+hao,key_sequence_process_with_context,hao,25.033,11.733,2.134,105.9,15.0,watch
+zhongguo,key_sequence_process_with_context,zhongguo,62.350,177.237,0.352,105.9,15.0,faster_or_equal
+37-char pinyin,key_sequence_process_with_context,ceshiyixiachangjushuruxingnengzenyang,285.103,303.241,0.940,105.9,17.2,faster_or_equal
+59-char pinyin,key_sequence_process_with_context,zhegeyinqingqishiyinggaizhichichaochangjuzishurucainengyong,498.625,694.305,0.718,105.9,18.8,faster_or_equal
+abbr 10-char,key_sequence_process_with_context,cszysmsrsd,559.620,1258.790,0.445,105.9,18.8,faster_or_equal
+abbr 8-char,key_sequence_process_with_context,zybfshmsru,545.390,873.490,0.624,105.9,18.8,faster_or_equal
