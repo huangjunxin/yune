@@ -1,35 +1,35 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="960" height="349" viewBox="0 0 960 349" role="img" aria-labelledby="title desc">
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="980" height="360" viewBox="0 0 980 360" role="img" aria-labelledby="title desc">
   <title id="title">Current memory high-water by lane</title>
-  <desc id="desc">Native MB working set (re-measured 2026-06-29); browser MiB WASM heap carried from 2026-06-28. Jyutping browser row is guard-only.</desc>
-  <rect width="960" height="349" fill="#FCFCFD"/>
-  <text x="32" y="34" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="700" fill="#1F2430" text-anchor="start">Current memory high-water by lane</text>
-  <text x="32" y="58" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#6F768A" text-anchor="start">Native MB working set (re-measured 2026-06-29); browser MiB WASM heap carried from 2026-06-28. Jyutping browser row is guard-only.</text>
-  <line x1="250.0" y1="78" x2="250.0" y2="292" stroke="#E6E8F0" stroke-width="1"/>
-  <text x="250.0" y="312" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" fill="#6F768A" text-anchor="middle">0.0</text>
-  <line x1="416.5" y1="78" x2="416.5" y2="292" stroke="#E6E8F0" stroke-width="1"/>
-  <text x="416.5" y="312" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" fill="#6F768A" text-anchor="middle">42.5</text>
-  <line x1="583.0" y1="78" x2="583.0" y2="292" stroke="#E6E8F0" stroke-width="1"/>
-  <text x="583.0" y="312" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" fill="#6F768A" text-anchor="middle">85.0</text>
-  <line x1="749.5" y1="78" x2="749.5" y2="292" stroke="#E6E8F0" stroke-width="1"/>
-  <text x="749.5" y="312" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" fill="#6F768A" text-anchor="middle">127.5</text>
-  <line x1="916.0" y1="78" x2="916.0" y2="292" stroke="#E6E8F0" stroke-width="1"/>
-  <text x="916.0" y="312" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" fill="#6F768A" text-anchor="middle">170.0</text>
-  <text x="238" y="107" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="500" fill="#1F2430" text-anchor="end">Native Track A peak: Yune</text>
-  <rect x="250" y="93" width="414.9" height="18" rx="2" fill="#A3BEFA" stroke="#2E4780" stroke-width="1"/>
-  <text x="670.9" y="107" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="600" fill="#1F2430" text-anchor="start">105.90</text>
-  <text x="238" y="141" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="500" fill="#1F2430" text-anchor="end">Native Track A peak: librime</text>
-  <rect x="250" y="127" width="73.7" height="18" rx="2" fill="#E2E5EA" stroke="#464C55" stroke-width="1"/>
-  <text x="329.7" y="141" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="600" fill="#1F2430" text-anchor="start">18.80</text>
-  <text x="238" y="175" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="500" fill="#1F2430" text-anchor="end">Browser Luna peak: Yune</text>
-  <rect x="250" y="161" width="250.7" height="18" rx="2" fill="#A3BEFA" stroke="#2E4780" stroke-width="1"/>
-  <text x="506.7" y="175" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="600" fill="#1F2430" text-anchor="start">64.00</text>
-  <text x="238" y="209" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="500" fill="#1F2430" text-anchor="end">Browser Luna peak: My RIME</text>
-  <rect x="250" y="195" width="62.7" height="18" rx="2" fill="#E2E5EA" stroke="#464C55" stroke-width="1"/>
-  <text x="318.7" y="209" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="600" fill="#1F2430" text-anchor="start">16.00</text>
-  <text x="238" y="243" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="500" fill="#1F2430" text-anchor="end">Browser Jyutping peak: Yune guard</text>
-  <rect x="250" y="229" width="626.8" height="18" rx="2" fill="#A3BEFA" stroke="#2E4780" stroke-width="1"/>
-  <text x="882.8" y="243" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="600" fill="#1F2430" text-anchor="start">160.00</text>
-  <text x="238" y="277" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="500" fill="#1F2430" text-anchor="end">Browser Jyutping peak: My RIME guard</text>
-  <rect x="250" y="263" width="266.4" height="18" rx="2" fill="#E2E5EA" stroke="#464C55" stroke-width="1"/>
-  <text x="522.4" y="277" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="600" fill="#1F2430" text-anchor="start">68.00</text>
+  <desc id="desc">Native MB working set refreshed 2026-06-29; browser MiB WASM heap carried from 2026-06-28.</desc>
+  <rect width="980" height="360" fill="#FCFCFD"/>
+  <text x="32" y="34" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="700" fill="#1F2430">Current memory high-water by lane</text>
+  <text x="32" y="58" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#6F768A">Native MB working set refreshed 2026-06-29; browser MiB WASM heap carried from 2026-06-28.</text>
+  <line x1="280" y1="78" x2="280" y2="315" stroke="#E6E8F0" stroke-width="1"/>
+  <text x="280" y="335" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#6F768A" text-anchor="middle">0</text>
+  <line x1="444" y1="78" x2="444" y2="315" stroke="#E6E8F0" stroke-width="1"/>
+  <text x="444" y="335" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#6F768A" text-anchor="middle">50</text>
+  <line x1="608" y1="78" x2="608" y2="315" stroke="#E6E8F0" stroke-width="1"/>
+  <text x="608" y="335" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#6F768A" text-anchor="middle">100</text>
+  <line x1="772" y1="78" x2="772" y2="315" stroke="#E6E8F0" stroke-width="1"/>
+  <text x="772" y="335" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#6F768A" text-anchor="middle">150</text>
+  <line x1="936" y1="78" x2="936" y2="315" stroke="#E6E8F0" stroke-width="1"/>
+  <text x="936" y="335" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#6F768A" text-anchor="middle">200</text>
+  <text x="268" y="107" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="500" fill="#1F2430" text-anchor="end">Native Track A peak: Yune</text>
+  <rect x="280" y="93" width="617.6" height="18" rx="2" fill="#F0986E" stroke="#804126" stroke-width="1"/>
+  <text x="903.6" y="107" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="600" fill="#1F2430">188.30</text>
+  <text x="268" y="141" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="500" fill="#1F2430" text-anchor="end">Native Track A peak: librime</text>
+  <rect x="280" y="127" width="57.7" height="18" rx="2" fill="#E2E5EA" stroke="#464C55" stroke-width="1"/>
+  <text x="343.7" y="141" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="600" fill="#1F2430">17.60</text>
+  <text x="268" y="175" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="500" fill="#1F2430" text-anchor="end">Browser Luna peak: Yune</text>
+  <rect x="280" y="161" width="209.9" height="18" rx="2" fill="#F0986E" stroke="#804126" stroke-width="1"/>
+  <text x="495.9" y="175" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="600" fill="#1F2430">64.00</text>
+  <text x="268" y="209" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="500" fill="#1F2430" text-anchor="end">Browser Luna peak: My RIME</text>
+  <rect x="280" y="195" width="52.5" height="18" rx="2" fill="#E2E5EA" stroke="#464C55" stroke-width="1"/>
+  <text x="338.5" y="209" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="600" fill="#1F2430">16.00</text>
+  <text x="268" y="243" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="500" fill="#1F2430" text-anchor="end">Browser Jyutping peak: Yune guard</text>
+  <rect x="280" y="229" width="524.8" height="18" rx="2" fill="#E2E5EA" stroke="#464C55" stroke-width="1"/>
+  <text x="810.8" y="243" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="600" fill="#1F2430">160.00</text>
+  <text x="268" y="277" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="500" fill="#1F2430" text-anchor="end">Browser Jyutping peak: My RIME guard</text>
+  <rect x="280" y="263" width="223" height="18" rx="2" fill="#E2E5EA" stroke="#464C55" stroke-width="1"/>
+  <text x="509" y="277" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="600" fill="#1F2430">68.00</text>
 </svg>

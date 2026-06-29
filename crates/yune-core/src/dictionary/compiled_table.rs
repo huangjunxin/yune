@@ -1231,11 +1231,19 @@ struct MarisaPendingCandidate {
 enum MarisaTraversalFrame {
     Node {
         ids: Vec<usize>,
+        code: String,
         node_offset: usize,
         level: MarisaNodeLevel,
     },
+    Entries {
+        code: String,
+        entries_offset: usize,
+        entry_count: usize,
+        cursor: usize,
+    },
     Tail {
         ids: Vec<usize>,
+        code: String,
         tail_offset: usize,
         tail_count: usize,
         cursor: usize,
@@ -1366,35 +1374,72 @@ impl<'a> CompactPrefixCandidates<'a> {
             match frame {
                 MarisaTraversalFrame::Node {
                     ids,
+                    code,
                     node_offset,
                     level,
                 } => {
-                    let code = marisa_code_string(&self.store.syllabary_codes, &ids)?;
                     if !marisa_code_prefix_compatible(&code, self.prefix) {
                         continue;
-                    }
-                    if code.starts_with(self.prefix) {
-                        push_marisa_node_entries(
-                            &mut self.marisa_pending,
-                            string_table.as_ref(),
-                            source.bytes(),
-                            &code,
-                            node_offset,
-                            level,
-                        );
                     }
                     push_marisa_child_frames(
                         &mut self.marisa_stack,
                         source.bytes(),
                         &self.store.syllabary_codes,
                         &ids,
+                        &code,
                         node_offset,
                         level,
                         self.prefix,
                     );
+                    if code.starts_with(self.prefix) {
+                        push_marisa_node_entry_frame(
+                            &mut self.marisa_stack,
+                            source.bytes(),
+                            code,
+                            node_offset,
+                            level,
+                        );
+                    }
+                }
+                MarisaTraversalFrame::Entries {
+                    code,
+                    entries_offset,
+                    entry_count,
+                    mut cursor,
+                } => {
+                    if cursor >= entry_count {
+                        continue;
+                    }
+                    let Some(entry_offset) = entries_offset.checked_add(cursor * 8) else {
+                        continue;
+                    };
+                    cursor += 1;
+                    if cursor < entry_count {
+                        self.marisa_stack.push(MarisaTraversalFrame::Entries {
+                            code: code.clone(),
+                            entries_offset,
+                            entry_count,
+                            cursor,
+                        });
+                    }
+                    let Some(text_id) = read_u32_le(source.bytes(), entry_offset).ok() else {
+                        continue;
+                    };
+                    let Some(weight) = read_f32_le(source.bytes(), entry_offset + 4).ok() else {
+                        continue;
+                    };
+                    let Some(text) = string_table.get(text_id) else {
+                        continue;
+                    };
+                    let raw_comment = code.clone();
+                    return Some(LookupCandidateEntry::new(
+                        code,
+                        LookupCandidate::new(text, raw_comment, weight, CandidateSource::Table),
+                    ));
                 }
                 MarisaTraversalFrame::Tail {
                     ids,
+                    code,
                     tail_offset,
                     tail_count,
                     mut cursor,
@@ -1409,13 +1454,14 @@ impl<'a> CompactPrefixCandidates<'a> {
                         else {
                             continue;
                         };
-                        let mut full_ids = ids.clone();
-                        full_ids.extend(extra_ids);
-                        let Some(code) = marisa_code_string(&self.store.syllabary_codes, &full_ids)
-                        else {
+                        let Some(full_code) = marisa_code_string_with_extra_ids(
+                            &code,
+                            &self.store.syllabary_codes,
+                            &extra_ids,
+                        ) else {
                             continue;
                         };
-                        if !code.starts_with(self.prefix) {
+                        if !full_code.starts_with(self.prefix) {
                             continue;
                         }
                         let Some(text_id) = read_u32_le(source.bytes(), entry_offset + 8).ok()
@@ -1429,17 +1475,18 @@ impl<'a> CompactPrefixCandidates<'a> {
                         let Some(text) = string_table.get(text_id) else {
                             continue;
                         };
-                        let raw_comment = code.clone();
+                        let raw_comment = full_code.clone();
                         if cursor < tail_count {
                             self.marisa_stack.push(MarisaTraversalFrame::Tail {
                                 ids,
+                                code,
                                 tail_offset,
                                 tail_count,
                                 cursor,
                             });
                         }
                         return Some(LookupCandidateEntry::new(
-                            code,
+                            full_code,
                             LookupCandidate::new(text, raw_comment, weight, CandidateSource::Table),
                         ));
                     }
@@ -1491,26 +1538,28 @@ impl<'a> Iterator for CompactAllCodes<'a> {
                 match frame {
                     MarisaTraversalFrame::Node {
                         ids,
+                        code,
                         node_offset,
                         level,
                     } => {
                         if marisa_node_has_entries(bytes, node_offset, level) {
-                            if let Some(code) = marisa_code_string(syllabary_codes, &ids) {
-                                pending.push(code);
-                            }
+                            pending.push(code.clone());
                         }
                         push_marisa_child_frames(
                             stack,
                             bytes,
                             syllabary_codes,
                             &ids,
+                            &code,
                             node_offset,
                             level,
                             "",
                         );
                     }
+                    MarisaTraversalFrame::Entries { .. } => {}
                     MarisaTraversalFrame::Tail {
                         ids,
+                        code,
                         tail_offset,
                         tail_count,
                         mut cursor,
@@ -1525,18 +1574,21 @@ impl<'a> Iterator for CompactAllCodes<'a> {
                             else {
                                 continue;
                             };
-                            let mut full_ids = ids.clone();
-                            full_ids.extend(extra_ids);
-                            if let Some(code) = marisa_code_string(syllabary_codes, &full_ids) {
+                            if let Some(full_code) = marisa_code_string_with_extra_ids(
+                                &code,
+                                syllabary_codes,
+                                &extra_ids,
+                            ) {
                                 if cursor < tail_count {
                                     stack.push(MarisaTraversalFrame::Tail {
                                         ids,
+                                        code,
                                         tail_offset,
                                         tail_count,
                                         cursor,
                                     });
                                 }
-                                return Some(Cow::Owned(code));
+                                return Some(Cow::Owned(full_code));
                             }
                         }
                     }
@@ -2046,6 +2098,7 @@ fn marisa_initial_prefix_frames(
         };
         frames.push(MarisaTraversalFrame::Node {
             ids: vec![syllable_id],
+            code: code.clone(),
             node_offset,
             level: MarisaNodeLevel::Head,
         });
@@ -2057,9 +2110,13 @@ fn marisa_code_prefix_compatible(code: &str, prefix: &str) -> bool {
     code.starts_with(prefix) || prefix.starts_with(code)
 }
 
-fn marisa_code_string(syllabary_codes: &[String], ids: &[usize]) -> Option<String> {
-    let mut code = String::new();
-    for id in ids {
+fn marisa_code_string_with_extra_ids(
+    base: &str,
+    syllabary_codes: &[String],
+    extra_ids: &[usize],
+) -> Option<String> {
+    let mut code = String::from(base);
+    for id in extra_ids {
         code.push_str(syllabary_codes.get(*id)?);
     }
     Some(code)
@@ -2073,11 +2130,10 @@ fn marisa_node_has_entries(bytes: &[u8], node_offset: usize, level: MarisaNodeLe
     read_count(bytes, entry_count_offset).is_ok_and(|count| count > 0)
 }
 
-fn push_marisa_node_entries(
-    pending: &mut Vec<MarisaPendingCandidate>,
-    string_table: &dyn CompactMarisaStringTable,
+fn push_marisa_node_entry_frame(
+    stack: &mut Vec<MarisaTraversalFrame>,
     bytes: &[u8],
-    code: &str,
+    code: String,
     node_offset: usize,
     level: MarisaNodeLevel,
 ) {
@@ -2088,27 +2144,15 @@ fn push_marisa_node_entries(
     let Some((entries_offset, entry_count)) = entry_list else {
         return;
     };
-    let mut rows = Vec::new();
-    for index in 0..entry_count {
-        let Some(entry_offset) = entries_offset.checked_add(index * 8) else {
-            break;
-        };
-        let Some(text_id) = read_u32_le(bytes, entry_offset).ok() else {
-            continue;
-        };
-        let Some(weight) = read_f32_le(bytes, entry_offset + 4).ok() else {
-            continue;
-        };
-        let Some(text) = string_table.get(text_id) else {
-            continue;
-        };
-        rows.push(MarisaPendingCandidate {
-            code: code.to_owned(),
-            text,
-            weight,
-        });
+    if entry_count == 0 {
+        return;
     }
-    pending.extend(rows.into_iter().rev());
+    stack.push(MarisaTraversalFrame::Entries {
+        code,
+        entries_offset,
+        entry_count,
+        cursor: 0,
+    });
 }
 
 fn push_marisa_child_frames(
@@ -2116,6 +2160,7 @@ fn push_marisa_child_frames(
     bytes: &[u8],
     syllabary_codes: &[String],
     ids: &[usize],
+    code: &str,
     node_offset: usize,
     level: MarisaNodeLevel,
     prefix: &str,
@@ -2131,15 +2176,14 @@ fn push_marisa_child_frames(
         let Ok(tail_count) = read_count(bytes, next_index) else {
             return;
         };
-        if let Some(code) = marisa_code_string(syllabary_codes, ids) {
-            if marisa_code_prefix_compatible(&code, prefix) {
-                stack.push(MarisaTraversalFrame::Tail {
-                    ids: ids.to_vec(),
-                    tail_offset: next_index,
-                    tail_count,
-                    cursor: 0,
-                });
-            }
+        if marisa_code_prefix_compatible(code, prefix) {
+            stack.push(MarisaTraversalFrame::Tail {
+                ids: ids.to_vec(),
+                code: code.to_owned(),
+                tail_offset: next_index,
+                tail_count,
+                cursor: 0,
+            });
         }
         return;
     }
@@ -2160,16 +2204,20 @@ fn push_marisa_child_frames(
         else {
             continue;
         };
-        let mut child_ids = ids.to_vec();
-        child_ids.push(key);
-        let Some(code) = marisa_code_string(syllabary_codes, &child_ids) else {
+        let Some(child_code_part) = syllabary_codes.get(key) else {
             continue;
         };
-        if !marisa_code_prefix_compatible(&code, prefix) {
+        let mut child_code = String::with_capacity(code.len() + child_code_part.len());
+        child_code.push_str(code);
+        child_code.push_str(child_code_part);
+        if !marisa_code_prefix_compatible(&child_code, prefix) {
             continue;
         }
+        let mut child_ids = ids.to_vec();
+        child_ids.push(key);
         stack.push(MarisaTraversalFrame::Node {
             ids: child_ids,
+            code: child_code,
             node_offset: child_offset,
             level: MarisaNodeLevel::Trunk,
         });

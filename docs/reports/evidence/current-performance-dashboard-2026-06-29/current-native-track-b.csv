@@ -1,8 +1,8 @@
 measurement,workload,unit,yune_2026_06_28,yune_2026_06_29,read
-private bytes,key_sequence_process_with_context,MB,420.0,181.4,M47 lookup-record/comment byte-backing (RED-07/08) collapsed the owned heap
-private bytes,session_create_select_destroy,MB,405.8,176.3,steady private bytes dropped with byte-backed records
-median working set,key_sequence_process_with_context,MB,440.1,253.9,resident working set fell with the owned-heap reduction
-peak working set high-water,process,MB,504.4,505.2,flat; dominated by the in-process deploy/compile transient for both dictionaries
-key_sequence latency,key_sequence_process_with_context,us,341.674,326.597,product key-processing latency essentially unchanged
-session create latency,session_create_select_destroy,us,141590.400,93669.300,session create faster with byte-backed records
-startup latency,startup_warm_shared_assets_runtime_ready,us,124505.300,96774.500,warm startup faster with byte-backed records
+private bytes,key_sequence_process_with_context,MB,420.0,179.0,M47 lookup-record/comment byte-backing (RED-07/08) collapsed the owned heap
+private bytes,session_create_select_destroy,MB,405.8,173.9,steady private bytes dropped with byte-backed records
+median working set,key_sequence_process_with_context,MB,440.1,252.1,resident working set fell with the owned-heap reduction
+peak working set high-water,process,MB,504.4,503.7,flat; dominated by the in-process deploy/compile transient for both dictionaries
+key_sequence latency,key_sequence_process_with_context,us,341.674,349.231,product key-processing latency essentially unchanged
+session create latency,session_create_select_destroy,us,141590.400,93146.100,session create faster with byte-backed records
+startup latency,startup_warm_shared_assets_runtime_ready,us,124505.300,92569.300,warm startup faster with byte-backed records

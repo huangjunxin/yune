@@ -3,36 +3,29 @@
 Date: 2026-06-29
 
 This report keeps only the current root-cause read. Older milestone narratives,
-WEB-01/WEB-02/WEB-03 closeout detail, and superseded measurements have been
-archived at
+WEB-01/WEB-02/WEB-03 closeout detail, and superseded measurements remain in
 [`history/2026-06-28-yune-vs-librime-root-cause-analysis-pre-current-dashboard.md`](./history/2026-06-28-yune-vs-librime-root-cause-analysis-pre-current-dashboard.md).
 
-The native lane was re-measured 2026-06-29; the browser lane is carried forward
-from the 2026-06-28 Playwright run.
+The native lane was refreshed by the M49 Track A follow-up benchmark on
+2026-06-29; browser rows are carried forward from the 2026-06-28 Playwright run.
 
 ## Technical Summary
 
-- **Current native latency owner**: `ni` (`3.514x`) and `hao` (`2.134x`) are the
-  only remaining Track A latency misses, and both are microsecond-scale
-  short-prefix translator/prefix lookup constant-factor problems — not
-  sentence-model or abbreviation-path regressions. The 37-character pinyin row is
-  no longer a watch row; it is now faster than librime at `0.940x`. This run did
-  not measure the single-character `n` row.
-- **Current native memory owner**: Track A peak working set narrowed to
-  `105.9 MB` (from `128.5 MB`), but it remains well above librime's `18.8 MB` max
-  peer peak. Existing retained-owner rows do not explain a safe further large
-  reduction; the next owner is allocator/transient/private high-water
-  attribution. The `jyut6ping3_mobile` product path saw the larger win: owned
-  heap (private bytes) fell from `420.0 MB` to `181.4 MB` after the M47
-  lookup-record/comment byte-backing.
+- **Current native latency owner**: the M49 follow-up reduced the Track A
+  short-prefix path but did not clear the launch-readiness gate. `n` is now
+  `3.074x` (`62.400 us` vs `20.300 us`) and `ni` is `3.269x` (`46.250 us` vs
+  `14.150 us`). `hao` remains under the 3x gate at `2.248x`.
+- **Current long-row owner**: M48's full Luna preset vocabulary introduced a
+  large sentence-model scan cost. M49's transient vocabulary-code prefilter
+  reduced the 37-character row from `9.670x` to `3.094x`, but it remains just
+  above the 3x gate. The 59-character row is now under gate at `2.280x`.
+- **Current native memory owner**: Track A peak working set is now `188.3 MB`
+  versus librime's `17.6 MB` max peer peak. This is the post-M48 full
+  `luna_pinyin` preset-vocabulary shape, not the M47 TypeDuck keyboard profile.
 - **Current browser fair memory owner**: the fair `luna_pinyin` browser gap is
   `64.0 MiB` Yune public demo versus `16.0 MiB` My RIME (carried 2026-06-28).
-  This is the clean browser memory target because it uses the same schema and
-  avoids Jyutping dictionary confounds.
 - **Current Jyutping launch state**: the shipping public-demo Jyutping path is
   byte-backed at `160.0 MiB`, not the old `893.1 MiB` source-fallback shape.
-  Long-input latency and phrase composition are guarded by WEB-03 follow-up
-  tests.
 
 ## Current Gap Map
 
@@ -40,9 +33,10 @@ from the 2026-06-28 Playwright run.
 
 | Area | Current root cause | Evidence | Current status |
 | --- | --- | --- | --- |
-| Native `ni` | Short-prefix translator/prefix lookup constant factor | `50.250 us` vs librime `14.300 us`; `3.514x` | blocker |
-| Native `hao` | Same short-prefix path | `25.033 us` vs librime `11.733 us`; `2.134x` | watch |
-| Native Track A peak memory | High-water peak not explained by easy retained owners | Yune peak `105.9 MB`; librime max peer peak `18.8 MB` | blocker |
+| Native Track A peak memory | Post-M48 full Luna preset-vocabulary/process residency | Yune peak `188.3 MB`; librime max peer peak `17.6 MB` | blocker |
+| Native `ni` | Short-prefix translator/prefix lookup constant factor | `46.250 us` vs librime `14.150 us`; `3.269x` | blocker |
+| Native `n` | Same short-prefix path | `62.400 us` vs librime `20.300 us`; `3.074x` | blocker |
+| Native 37-char pinyin | Preset-vocabulary sentence-model graph rebuild cost | `894.400 us` vs librime `289.043 us`; `3.094x` | blocker |
 | Browser `luna_pinyin` memory | Yune WASM/runtime floor still larger than My RIME | `64.0 MiB` vs `16.0 MiB`; same schema (carried) | blocker |
 | Browser `luna_pinyin` startup | Yune public-demo startup still slower | `1000 ms` vs My RIME `634 ms` (carried) | watch |
 | Browser Jyutping | Larger TypeDuck profile; not a peer-comparable lane | Yune `160.0 MiB`, My RIME Jyutping `68.0 MiB` on different dictionary (carried) | guard only |
@@ -51,91 +45,76 @@ from the 2026-06-28 Playwright run.
 
 ![Current native Track A latency ratios](./evidence/current-performance-dashboard-2026-06-29/visuals/current-native-latency-ratios.svg)
 
-The current native latency problem is narrow. Startup, session create/select,
-`zhongguo`, the 37-character row, the 59-character row, and both abbreviation
-rows are at or faster than same-run upstream librime. The only misses are the two
-short-prefix rows, and both are microsecond-scale:
+M49 changed two owners:
+
+- The MARISA-backed compact-table prefix iterator now stores traversal code on
+  frames and lazily yields entry rows instead of materializing every row under a
+  matching code group up front. That reduced short-prefix cost but not enough to
+  pass the strict `<=3.0x` gate.
+- The normal preset-vocabulary sentence path now performs a transient
+  character-code prefilter before expensive phrase-code derivation. That avoided
+  retaining a large prefix index and reduced the 37/59-character post-M48
+  regression substantially.
+
+Current native latency rows:
 
 | Row | Yune median | librime median | Ratio | Current cause |
 | --- | ---: | ---: | ---: | --- |
-| `ni` | `50.250 us` | `14.300 us` | `3.514x` | short-prefix translator/prefix constant factor |
-| `hao` | `25.033 us` | `11.733 us` | `2.134x` | same owner |
-| 37-char pinyin | `285.103 us` | `303.241 us` | `0.940x` | now faster than librime; no longer a watch row |
+| `n` | `62.400 us` | `20.300 us` | `3.074x` | short-prefix prefix traversal/translator constant factor |
+| `ni` | `46.250 us` | `14.150 us` | `3.269x` | same owner |
+| `hao` | `26.300 us` | `11.700 us` | `2.248x` | under gate |
+| 37-char pinyin | `894.400 us` | `289.043 us` | `3.094x` | preset-vocabulary graph rebuild cost |
+| 59-char pinyin | `1,543.742 us` | `677.066 us` | `2.280x` | under gate |
 
-The current evidence keeps the sentence paths out of this diagnosis. The
-short-key owner counters show no upstream sentence model calls for the short
-rows, and the long-input and abbreviation rows remain green. The next native
-latency diagnostic should isolate prefix lookup and translator dispatch cost
-without widening the full-sentence or TypeDuck-profile behavior surfaces.
+The short-key owner counters show no upstream sentence-model calls for `n`,
+`ni`, or `hao`. The remaining `n`/`ni` work is in prefix traversal and translator
+filter/ranking overhead. The 37-character row is separate: final M37 metrics show
+`3,950` vocabulary entries considered and `22,150.3 us` graph rebuild time on the
+median sample.
 
 ## Native Memory Cause
 
 ![Current memory high-water by lane](./evidence/current-performance-dashboard-2026-06-29/visuals/current-memory-peaks.svg)
 
-Native Track A memory is not solved because the peak remains high, even though it
-narrowed and the steady rows are lower:
+Native Track A memory is again a current blocker in the post-M48 shape:
 
 | Measurement | Current value | Read |
 | --- | ---: | --- |
-| Yune Track A max peak working set | `105.9 MB` | standing high-water blocker (was `128.5 MB`) |
-| librime Track A max peer peak | `18.8 MB` | same-run peer scale |
-| Yune Track A median private-bytes proxy | `54.8 MB` | lower than the peak |
-| Yune Track A session-create row | `48.4 MB` | lowest measured row |
-| Largest retained reducible row | `poet.entries_by_code`, `18.7 MB` | not enough to explain the process peak |
+| Yune Track A max peak working set | `188.3 MB` | post-M48 full Luna preset-vocabulary/process high-water |
+| librime Track A max peer peak | `17.6 MB` | same-run peer scale |
+| Average Track A private-bytes proxy | `193.1 MB` | Windows proxy, not iOS `phys_footprint` |
+| Session-create working set row | `175.8 MB` | not a transient-only spike |
+| Largest retained reducible owner in final run | `poet.entries_by_code`, `18.7 MB` | visible owner but not the whole peak |
 
-The current root cause is therefore not another broad structural-owner rewrite of
-Track A. The next useful step is peak attribution: allocator behavior, transient
-buffers, private bytes, mapped residency, and startup high-water timing.
+This does **not** invalidate M47. M47's comments-intact `jyut6ping3_mobile`
+keyboard profile remains the separate iOS-target lane and reports `~22 MB`
+private in the lean native probe. The `188.3 MB` value here is the full
+`luna_pinyin` Track A peer-comparison harness after M48 loaded the upstream
+preset vocabulary.
 
-The `jyut6ping3_mobile` product path is the place the M47 byte-backing landed:
-owned heap (private bytes) fell from `420.0 MB` (2026-06-28) to `181.4 MB`
-(2026-06-29) in the heavy benchmark harness, with the peak working set flat at
-`~505 MB` because the in-process deploy/compile transient dominates the
-high-water. The lean iOS-proxy probe (separate harness) reports `~22 MB` private
-for the comments-intact keyboard profile; see
-[`ios-memory-budget.md`](./ios-memory-budget.md).
+The `jyut6ping3_mobile` heavy benchmark row still shows the M47 byte-backing win:
+private bytes are `179.0 MB` on the key-load row versus `420.0 MB` in the older
+run, with peak working set flat because deploy/compile transient work dominates
+that harness.
 
 ## Browser Root Cause
 
-Carried forward from the 2026-06-28 Playwright run (not re-measured this pass).
+Carried forward from the 2026-06-28 Playwright run.
 
 ![Current browser memory and payload](./evidence/current-performance-dashboard-2026-06-29/visuals/current-browser-memory-payload.svg)
 
-The fair browser target is `luna_pinyin`, not Jyutping. Current browser peer
-evidence shows:
+The fair browser target is `luna_pinyin`, not Jyutping:
 
 | Scenario | Ready | Input -> candidate | Commit | WASM peak | Resource payload | Read |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
 | Yune public demo `luna_pinyin` | `1000 ms` | `74 ms` | `107 ms` | `64.0 MiB` | `29.5 MiB` | fair Yune row |
 | My RIME live `luna_pinyin` | `634 ms` | `95 ms` | `119 ms` | `16.0 MiB` | `8.5 MiB` | fair peer row |
 
-The current fair gap is `4.0x`, not the earlier `10x` `160 MiB` Luna row. Yune's
-first-input and commit latencies are competitive in this comparator, while
-startup and WASM memory remain the browser-side blockers.
-
-## Jyutping Guard State
-
-Jyutping is currently a guard lane, not a peer lane. The Yune public demo ships
-TypeDuck's larger multilingual `jyut6ping3` profile; My RIME's Jyutping row uses
-a Cantonese-only dictionary. The current Yune state is still important because it
-is the launch path (browser figures carried from 2026-06-28):
-
-| Guard | Current value | Read |
-| --- | ---: | --- |
-| Public-demo Jyutping WASM peak | `160.0 MiB` | byte-backed launch path; old `893.1 MiB` source-fallback row is historical |
-| Ready-to-input | `1347 ms` | current public-demo comparator |
-| First input -> candidate | `103 ms` | current public-demo comparator |
-| Long row `sihaacoenggeoisyujapgecukdou` | `130 ms` exact keydown-to-paint | WEB-03 latency guard |
-| Long row `taihaajyugwodaahoucoenggegeoizigosingnangwuidimjoeng` | `74 ms` exact keydown-to-paint | WEB-03 latency guard |
-
-The root cause of the old `893.1 MiB` path was stale public-demo compiled assets
-causing source fallback. That root cause is fixed on the shipping path. It should
-stay in history, not in the current blocker list.
+The fair gap remains `4.0x`; startup and WASM memory are the browser-side
+blockers. Jyutping remains a launch guard lane, not a peer lane, because the
+dictionary families differ.
 
 ## Current Evidence
-
-The dashboard evidence bundle is
-[`evidence/current-performance-dashboard-2026-06-29/`](./evidence/current-performance-dashboard-2026-06-29/).
 
 Key normalized tables:
 
@@ -145,14 +124,18 @@ Key normalized tables:
 - [`current-browser-peer-comparator.csv`](./evidence/current-performance-dashboard-2026-06-29/current-browser-peer-comparator.csv) (carried 2026-06-28)
 - [`current-yune-browser-input-latency.csv`](./evidence/current-performance-dashboard-2026-06-29/current-yune-browser-input-latency.csv) (carried 2026-06-28)
 
+Fresh native source:
+[`evidence/m49-track-a-short-key-latency/final-native-benchmark/`](./evidence/m49-track-a-short-key-latency/final-native-benchmark/).
+
 ## Next Diagnostic Order
 
 | Rank | Work | Why this is next |
 | ---: | --- | --- |
-| 1 | Browser fair-lane memory floor on `luna_pinyin` | Same-schema browser gap is the cleanest current memory target: `64.0 MiB` vs `16.0 MiB`. |
-| 2 | Native Track A peak attribution | Track A peak is still `105.9 MB`; existing retained-owner rows do not explain it. |
-| 3 | Native short-prefix constant factor | `ni` and `hao` are the only current native latency misses. |
-| 4 | Browser startup phases | Yune public-demo `luna_pinyin` ready-to-input is `1000 ms` vs My RIME `634 ms`. |
+| 1 | Native Track A peak/private attribution | Current full Luna Track A is `188.3 MB` peak / `193.1 MB` average private proxy, far above librime. |
+| 2 | Native short-prefix constant factor | `n` and `ni` improved but still miss the 3x gate. |
+| 3 | Native 37-character sentence-model cost | The prefilter cut the regression, but the row is still `3.094x`. |
+| 4 | Browser fair-lane memory floor on `luna_pinyin` | Same-schema browser gap is `64.0 MiB` vs `16.0 MiB`. |
+| 5 | Browser startup phases | Yune public-demo `luna_pinyin` ready-to-input is `1000 ms` vs My RIME `634 ms`. |
 
 ## History
 

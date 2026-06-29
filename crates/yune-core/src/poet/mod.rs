@@ -881,6 +881,9 @@ impl UpstreamSentenceModel {
                     vocabulary_indices_for_first_code(&self.vocabulary_first_codes, code);
                 for (_, index) in vocabulary_entries {
                     let vocabulary_entry = &self.vocabulary[*index];
+                    if !self.vocabulary_entry_matches_input_prefix(vocabulary_entry, suffix, code) {
+                        continue;
+                    }
                     vocabulary_entries_considered += 1;
                     for phrase_code in
                         self.derive_matching_phrase_codes(vocabulary_entry, suffix, code)
@@ -1086,6 +1089,45 @@ impl UpstreamSentenceModel {
         codes.sort();
         codes.dedup();
         codes
+    }
+
+    fn vocabulary_entry_matches_input_prefix(
+        &self,
+        entry: &ModelVocabularyEntry,
+        input: &str,
+        first_code: &str,
+    ) -> bool {
+        self.vocabulary_chars_match_input_prefix_from(&entry.chars, input, 1, first_code.len())
+    }
+
+    fn vocabulary_chars_match_input_prefix_from(
+        &self,
+        chars: &[char],
+        input: &str,
+        index: usize,
+        offset: usize,
+    ) -> bool {
+        if index == chars.len() {
+            return offset <= input.len();
+        }
+        if offset >= input.len() {
+            return false;
+        }
+        let Some(remaining) = input.get(offset..) else {
+            return false;
+        };
+        let Some(next_codes) = self.character_codes.get(&chars[index]) else {
+            return false;
+        };
+        next_codes.iter().any(|next_code| {
+            remaining.starts_with(next_code)
+                && self.vocabulary_chars_match_input_prefix_from(
+                    chars,
+                    input,
+                    index + 1,
+                    offset + next_code.len(),
+                )
+        })
     }
 
     fn derive_matching_phrase_codes_from(

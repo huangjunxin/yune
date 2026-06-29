@@ -138,6 +138,33 @@ C\tef\t1000
 }
 
 #[test]
+fn upstream_sentence_model_prefilters_irrelevant_vocabulary_codes() {
+    let _guard = super::m37_metrics_test_guard();
+    let entries = [
+        TableEntry::new("a", "A", 1000.0),
+        TableEntry::new("b", "B", 1000.0),
+        TableEntry::new("x", "X", 1000.0),
+    ];
+    let mut vocabulary = vec![PresetVocabularyEntry::new("AB", 1000.0)];
+    for index in 0..1000 {
+        vocabulary.push(PresetVocabularyEntry::new(format!("AX{index}"), 1.0));
+    }
+    let model = UpstreamSentenceModel::from_table_entries(entries, &vocabulary, 10);
+
+    crate::m37_metrics_enable(true);
+    crate::m37_metrics_reset();
+    let candidates = model.candidates_for_input("ab");
+    let metrics = crate::m37_metrics_snapshot();
+    crate::m37_metrics_enable(false);
+
+    assert_eq!(candidates[0].text, "AB");
+    assert!(
+        metrics.upstream_sentence_model_vocabulary_entries_considered <= 1,
+        "sentence model should skip preset vocabulary entries whose following character codes cannot match the input: {metrics:?}"
+    );
+}
+
+#[test]
 fn upstream_sentence_model_memory_profile_accounts_packed_entries() {
     let repeated_code = "sharedsentencemodelcode".repeat(4);
     let entries = (0..64)
