@@ -203,6 +203,25 @@ fn compact_table_memory_owner_rows_cover_m46_payload_owner_set() {
 }
 
 #[test]
+fn compact_table_memory_owner_rows_report_storage_backed_normal_codes() {
+    let dictionary = TableDictionary::new([
+        TableEntry::new("nei", "你", 10.0),
+        TableEntry::new("hou", "好", 9.0),
+    ]);
+    let translator = StaticTableTranslator::from_compact_dictionary(dictionary, None);
+
+    let rows = translator.memory_owner_rows();
+    let owner = rows
+        .iter()
+        .find(|row| row.owner == "translator.normal_codes")
+        .expect("normal code membership owner row should be present");
+
+    assert_eq!(owner.class, MemoryOwnerClass::Shared);
+    assert_eq!(owner.estimated_bytes, 0);
+    assert_eq!(owner.storage, "compact_table.has_code");
+}
+
+#[test]
 fn compact_table_memory_owner_rows_cover_parsed_prism_payload_owner_set() {
     let dictionary = TableDictionary::new([TableEntry::new("nei", "你", 10.0)]);
     let prism_payload = RimePrismBinPayload {

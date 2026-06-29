@@ -1010,6 +1010,29 @@ fn patch_browser_app_keyboard_profile(runtime: &YuneWebRuntime) {
     }
 }
 
+fn patch_browser_app_comments_intact_keyboard_profile(runtime: &YuneWebRuntime) {
+    for relative_path in [
+        "template.yaml",
+        "jyut6ping3.schema.yaml",
+        "jyut6ping3_mobile.schema.yaml",
+        "build/jyut6ping3.schema.yaml",
+        "build/jyut6ping3_mobile.schema.yaml",
+    ] {
+        let path = if relative_path.starts_with("build/") {
+            runtime.user.join(relative_path)
+        } else {
+            runtime.shared.join(relative_path)
+        };
+        if !path.is_file() {
+            continue;
+        }
+        let text = fs::read_to_string(&path).expect("schema config should be readable");
+        let text = patch_namespace_bool_opt_out(&text, "luna_pinyin", "load_translator", false);
+        fs::write(&path, text)
+            .expect("comments-intact keyboard profile config patch should be written");
+    }
+}
+
 fn patch_dictionary_lookup_records_opt_out(text: &str) -> String {
     if text.contains("dictionary_lookup_filter/load_lookup_records") {
         return text.to_owned();
@@ -2805,6 +2828,111 @@ fn yune_web_adapter_browser_app_assets_enrich_visible_lookup_candidates() {
     }
 
     write_red07_comment_evidence_if_requested(candidates);
+
+    unsafe { yune_web_cleanup(state) };
+    runtime.remove();
+}
+
+#[test]
+fn yune_web_adapter_comments_intact_keyboard_profile_skips_translator_lookup_payload() {
+    let _guard = test_guard();
+    let runtime = YuneWebRuntime::create_with_schema(
+        "browser-app-comments-intact-keyboard-red08",
+        "jyut6ping3_mobile",
+    );
+    runtime.write_browser_app_assets();
+    patch_browser_app_comments_intact_keyboard_profile(&runtime);
+
+    let state = unsafe {
+        yune_web_init(
+            runtime.shared_c.as_ptr(),
+            runtime.user_c.as_ptr(),
+            runtime.schema_id_c.as_ptr(),
+        )
+    };
+    assert!(!state.is_null());
+    assert_eq!(unsafe { yune_web_deploy(state) }, TRUE);
+
+    let inspector = CString::new("yune_inspector").expect("option should be valid");
+    assert_eq!(
+        unsafe { yune_web_set_option(state, inspector.as_ptr(), TRUE) },
+        TRUE
+    );
+
+    let composing = process_input(state, "cak");
+    assert_eq!(
+        composing["context"]["candidates"][0]["text"],
+        Value::String("\u{6e2c}".to_owned()),
+        "comments-intact keyboard profile should keep normal Jyutping candidate output"
+    );
+
+    drop(response_json(unsafe {
+        yune_web_process_key(state, 0xff1b, 0)
+    }));
+    let phrase = process_input(state, "ngogokdak");
+    assert_eq!(
+        phrase["context"]["candidates"][0]["text"],
+        Value::String("\u{6211}\u{89ba}\u{5f97}".to_owned()),
+        "comments-intact keyboard profile should keep multi-syllable sentence composition"
+    );
+
+    for (input, expected) in [
+        ("litbiu", "\u{5217}\u{8868}"),
+        ("ngojiu", "\u{6211}\u{8981}"),
+        ("honangwui", "\u{53ef}\u{80fd}\u{6703}"),
+    ] {
+        drop(response_json(unsafe {
+            yune_web_process_key(state, 0xff1b, 0)
+        }));
+        let response = process_input(state, input);
+        assert_eq!(
+            response["context"]["candidates"][0]["text"],
+            Value::String(expected.to_owned()),
+            "comments-intact keyboard profile should preserve matching regression guard for {input}: {response:?}"
+        );
+    }
+
+    drop(response_json(unsafe {
+        yune_web_process_key(state, 0xff1b, 0)
+    }));
+    let composing = process_input(state, "zouhapci");
+    let candidates = composing["context"]["candidates"]
+        .as_array()
+        .expect("candidate page should be an array");
+    let candidate = candidates
+        .iter()
+        .find(|candidate| candidate["text"] == Value::String("\u{7d44}\u{5408}".to_owned()))
+        .unwrap_or_else(|| panic!("組合 should be visible for zouhapci: {candidates:?}"));
+    let comment = candidate["comment"]
+        .as_str()
+        .unwrap_or_else(|| panic!("組合 should have a string comment: {candidate:?}"));
+    assert!(
+        comment.contains("\u{000c}\r1,\u{7d44}\u{5408},zou2hap6,"),
+        "comments-intact keyboard profile should keep rich lookup comment bytes: {comment:?}"
+    );
+
+    let owner_rows = composing["context"]["debug"]["storage"]["memory_owner_rows"]
+        .as_array()
+        .expect("inspector should expose memory owner rows");
+    assert!(
+        owner_rows
+            .iter()
+            .any(|row| row["owner"] == "dictionary_lookup_filter.lookup_records"),
+        "comments-intact profile should keep dictionary lookup records for rich comments: {owner_rows:?}"
+    );
+    let translator_lookup_rows = owner_rows
+        .iter()
+        .filter(|row| row["owner"] == "compact_table.lookup_records")
+        .collect::<Vec<_>>();
+    assert!(
+        !translator_lookup_rows.is_empty(),
+        "comments-intact profile should report translator lookup payload rows: {owner_rows:?}"
+    );
+    assert!(
+        translator_lookup_rows.iter().all(|row| row["class"] == "shared"
+            && row["estimated_bytes"] == Value::from(0)),
+        "comments-intact profile should report no retained translator lookup payload: {owner_rows:?}"
+    );
 
     unsafe { yune_web_cleanup(state) };
     runtime.remove();

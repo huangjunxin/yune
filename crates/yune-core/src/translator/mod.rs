@@ -217,6 +217,13 @@ impl TableStorage {
         }
     }
 
+    fn code_count(&self) -> usize {
+        match self {
+            Self::Heap(entries) => entries.len(),
+            Self::Compact(store) => store.code_count(),
+        }
+    }
+
     fn record_exact_lookup(&self, duration: Duration, candidates: usize) {
         match self {
             Self::Heap(_) => crate::m37_record_heap_exact_lookup(duration, candidates),
@@ -350,6 +357,51 @@ impl TableStorage {
     }
 }
 
+enum NormalCodeIndex {
+    Eager(HashSet<String>),
+    StorageBackedCompact,
+}
+
+impl NormalCodeIndex {
+    fn eager(codes: HashSet<String>) -> Self {
+        Self::Eager(codes)
+    }
+
+    fn contains(&self, storage: &TableStorage, code: &str) -> bool {
+        match self {
+            Self::Eager(codes) => codes.contains(code),
+            Self::StorageBackedCompact => storage.has_code(code),
+        }
+    }
+
+    fn memory_owner_row(&self, storage: &TableStorage) -> MemoryOwnerRow {
+        match self {
+            Self::Eager(codes) => MemoryOwnerRow::new(
+                "translator.normal_codes",
+                MemoryOwnerClass::HeapOwnedReducible,
+                estimate_string_hash_set_bytes(codes),
+                codes.len(),
+                "HashSet<String>",
+                "normal code membership retained for spelling correction gating",
+            ),
+            Self::StorageBackedCompact => MemoryOwnerRow::new(
+                "translator.normal_codes",
+                MemoryOwnerClass::Shared,
+                0,
+                storage.code_count(),
+                "compact_table.has_code",
+                "normal code membership delegated to compact storage lookup",
+            ),
+        }
+    }
+}
+
+fn estimate_string_hash_set_bytes(values: &HashSet<String>) -> usize {
+    mem::size_of::<HashSet<String>>()
+        .saturating_add(values.capacity().saturating_mul(mem::size_of::<String>()))
+        .saturating_add(values.iter().map(String::capacity).sum::<usize>())
+}
+
 fn estimate_entries_by_code_bytes(entries: &BTreeMap<String, Vec<Candidate>>) -> usize {
     mem::size_of::<BTreeMap<String, Vec<Candidate>>>().saturating_add(
         entries
@@ -414,7 +466,7 @@ pub struct StaticTableTranslator {
     storage: TableStorage,
     prism_payload: Option<RimePrismRuntimePayload>,
     spelling_abbreviation_entries: HashSet<(String, String, String)>,
-    normal_codes: HashSet<String>,
+    normal_codes: NormalCodeIndex,
     enable_completion: bool,
     enable_correction: bool,
     dynamic_correction_lookup: bool,
@@ -465,7 +517,7 @@ impl StaticTableTranslator {
             })
             .collect();
         let entries_by_code = entries_by_code(&entries);
-        let normal_codes = normal_codes(&entries);
+        let normal_codes = NormalCodeIndex::eager(normal_codes(&entries));
         Self {
             source_entries: Some(entries),
             storage: TableStorage::Heap(entries_by_code),
@@ -522,7 +574,7 @@ impl StaticTableTranslator {
             })
             .collect();
         let entries_by_code = entries_by_code(&entries);
-        let normal_codes = normal_codes(&entries);
+        let normal_codes = NormalCodeIndex::eager(normal_codes(&entries));
         Self {
             source_entries: Some(entries),
             storage: TableStorage::Heap(entries_by_code),
@@ -567,11 +619,7 @@ impl StaticTableTranslator {
         let preset_vocabulary = dictionary.preset_vocabulary_entries().to_vec();
         let corrections = dictionary.corrections().to_vec();
         let tolerance_rules = dictionary.tolerance_rules().to_vec();
-        let normal_codes = dictionary
-            .entries()
-            .iter()
-            .map(|entry| entry.code.clone())
-            .collect::<HashSet<_>>();
+        let normal_codes = NormalCodeIndex::StorageBackedCompact;
         Self {
             source_entries: None,
             storage: TableStorage::Compact(Box::new(CompactTableStore::from_dictionary(
@@ -630,14 +678,10 @@ impl StaticTableTranslator {
         let preset_vocabulary = advanced.preset_vocabulary.clone();
         let corrections = advanced.corrections.clone();
         let tolerance_rules = advanced.tolerance_rules.clone();
-        let normal_codes = store
-            .all_codes()
-            .map(Cow::into_owned)
-            .collect::<HashSet<_>>();
-        crate::memory_probe_mark(format!(
-            "m47:compact_table:after_all_codes_normal_codes_hashset:normal_codes={}",
-            normal_codes.len()
-        ));
+        crate::memory_probe_mark(
+            "m47:compact_table:after_storage_backed_normal_codes:index=compact_table_has_code",
+        );
+        let normal_codes = NormalCodeIndex::StorageBackedCompact;
         Self {
             source_entries: None,
             storage: TableStorage::Compact(Box::new(store)),
@@ -885,7 +929,7 @@ impl StaticTableTranslator {
                 .map(|entry| (entry.code, entry.candidate))
                 .collect::<Vec<_>>();
             self.storage = TableStorage::Heap(entries_by_code_from_entries(entries));
-            self.normal_codes = normal_codes;
+            self.normal_codes = NormalCodeIndex::eager(normal_codes);
             self.single_letter_sentence_guard_enabled = has_single_letter_abbreviations;
         } else if self.source_entries.is_some() && !self.storage.has_code("") {
             let source_entries = self.source_entries.take().unwrap_or_default();
@@ -965,7 +1009,7 @@ impl StaticTableTranslator {
             if self.enable_correction {
                 for correction in &self.corrections {
                     if correction.observed_input != lookup_code
-                        || !self.normal_codes.contains(&correction.canonical_code)
+                        || !self.normal_code_contains(&correction.canonical_code)
                     {
                         continue;
                     }
@@ -2962,6 +3006,7 @@ impl Translator for StaticTableTranslator {
 
     fn memory_owner_rows(&self) -> Vec<MemoryOwnerRow> {
         let mut rows = self.storage.memory_owner_rows();
+        rows.push(self.normal_codes.memory_owner_row(&self.storage));
         if let Some(prism_payload) = &self.prism_payload {
             rows.extend(prism_payload.memory_owner_rows());
         }
@@ -3411,6 +3456,12 @@ impl Translator for HistoryTranslator {
                 quality: self.initial_quality,
             })
             .collect()
+    }
+}
+
+impl StaticTableTranslator {
+    fn normal_code_contains(&self, code: &str) -> bool {
+        self.normal_codes.contains(&self.storage, code)
     }
 }
 

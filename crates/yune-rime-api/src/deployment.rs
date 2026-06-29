@@ -1056,16 +1056,26 @@ fn file_size_bytes(path: &Path) -> Option<u64> {
 fn schema_config_signature(schema_config: &Value, dictionary_id: &str) -> Vec<u8> {
     let mut normalized = schema_config.clone();
     if let Value::Mapping(mapping) = &mut normalized {
-        mapping.remove(Value::String("__build_info".to_owned()));
-        if let Some(Value::Mapping(filter_config)) =
-            mapping.get_mut(Value::String("dictionary_lookup_filter".to_owned()))
-        {
-            filter_config.remove(Value::String("load_lookup_records".to_owned()));
+        remove_mapping_key_preserve_order(mapping, "__build_info");
+        for value in mapping.values_mut() {
+            if let Value::Mapping(namespace_config) = value {
+                remove_mapping_key_preserve_order(namespace_config, "load_lookup_records");
+            }
         }
     }
     serde_yaml::to_string(&normalized)
         .unwrap_or_else(|_| dictionary_id.to_owned())
         .into_bytes()
+}
+
+fn remove_mapping_key_preserve_order(mapping: &mut serde_yaml::Mapping, key: &str) {
+    let mut filtered = serde_yaml::Mapping::new();
+    for (existing_key, value) in std::mem::take(mapping) {
+        if existing_key.as_str() != Some(key) {
+            filtered.insert(existing_key, value);
+        }
+    }
+    *mapping = filtered;
 }
 
 fn schema_dictionary_checksum(bytes: impl AsRef<[u8]>) -> u32 {
@@ -1655,6 +1665,45 @@ dictionary_lookup_filter:
 ",
         )
         .expect("gated schema config should parse");
+        let translator_gated: Value = serde_yaml::from_str(
+            r"
+translator:
+  dictionary: jyut6ping3
+  load_lookup_records: false
+dictionary_lookup_filter:
+  dictionary: jyut6ping3_scolar
+",
+        )
+        .expect("translator-gated schema config should parse");
+        let deployed_order_base: Value = serde_yaml::from_str(
+            r"
+translator:
+  dictionary: jyut6ping3
+  prism: jyut6ping3_mobile
+  prediction_candidate_limit: 1
+  prefix_fallback: true
+  preedit_format:
+    - xform/1/v/
+dictionary_lookup_filter:
+  dictionary: jyut6ping3_scolar
+",
+        )
+        .expect("deployed-order base schema config should parse");
+        let deployed_order_gated: Value = serde_yaml::from_str(
+            r"
+translator:
+  dictionary: jyut6ping3
+  prism: jyut6ping3_mobile
+  load_lookup_records: false
+  prediction_candidate_limit: 1
+  prefix_fallback: true
+  preedit_format:
+    - xform/1/v/
+dictionary_lookup_filter:
+  dictionary: jyut6ping3_scolar
+",
+        )
+        .expect("deployed-order gated schema config should parse");
         let changed: Value = serde_yaml::from_str(
             r"
 translator:
@@ -1671,6 +1720,16 @@ dictionary_lookup_filter:
             schema_config_signature(&base, "jyut6ping3"),
             schema_config_signature(&gated, "jyut6ping3"),
             "lookup-record loading is a runtime/UI side-dictionary gate, not a primary prism input"
+        );
+        assert_eq!(
+            schema_config_signature(&base, "jyut6ping3"),
+            schema_config_signature(&translator_gated, "jyut6ping3"),
+            "translator lookup-record loading is a runtime retention gate, not a compiled artifact input"
+        );
+        assert_eq!(
+            schema_config_signature(&deployed_order_base, "jyut6ping3"),
+            schema_config_signature(&deployed_order_gated, "jyut6ping3"),
+            "normalization must preserve YAML key order when dropping runtime-only gates"
         );
         assert_ne!(
             schema_config_signature(&base, "jyut6ping3"),

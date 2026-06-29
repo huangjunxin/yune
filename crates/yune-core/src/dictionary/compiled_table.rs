@@ -425,6 +425,18 @@ impl CompactTableStore {
     }
 
     #[must_use]
+    pub fn code_count(&self) -> usize {
+        match &self.storage {
+            CompactTableStorage::Owned { code_groups, .. } => code_groups.len(),
+            CompactTableStorage::ByteBacked { code_groups, .. } => code_groups.len(),
+            CompactTableStorage::MarisaBacked {
+                syllable_ids_by_code,
+                ..
+            } => syllable_ids_by_code.len(),
+        }
+    }
+
+    #[must_use]
     pub fn advanced_data(&self) -> TableDictionaryAdvancedData {
         self.advanced.clone()
     }
@@ -811,6 +823,15 @@ fn advanced_memory_owner_rows(advanced: &TableDictionaryAdvancedData) -> Vec<Mem
                 records.estimated_index_bytes()
             ),
             "dictionary lookup records retained as an indexed compiled payload instead of an eager HashMap",
+        )
+    } else if advanced.lookup_records.is_empty() {
+        MemoryOwnerRow::new(
+            "compact_table.lookup_records",
+            MemoryOwnerClass::Shared,
+            0,
+            0,
+            "none",
+            "no lookup-record payload retained for this compact table",
         )
     } else {
         MemoryOwnerRow::new(

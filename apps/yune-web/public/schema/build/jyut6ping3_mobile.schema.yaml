@@ -275,6 +275,7 @@ translator:
     - "xform/^/\\f/"
   dictionary: jyut6ping3
   dictionary_exclude: []
+  load_lookup_records: false
   enable_completion: true
   enable_correction: false
   enable_sentence: true

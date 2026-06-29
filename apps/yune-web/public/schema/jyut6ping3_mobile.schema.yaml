@@ -41,6 +41,7 @@ menu:
 
 translator:
   prism: jyut6ping3_mobile
+  load_lookup_records: false
   __patch: include:/letter_to_tone
   enable_completion: true
   enable_correction: false

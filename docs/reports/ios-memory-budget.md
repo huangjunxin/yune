@@ -25,14 +25,15 @@ three different numbers; only one is the iOS proxy:
 | --- | ---: | --- |
 | Initial lean native probe | **~298 MB steady / 482 MB peak** | Original M47 baseline: real `RimeApi`, mmap path, prebuilt assets, one schema per fresh Rust process |
 | Current lean lower-bound probe after RED-07 | **56.9 MB steady / 61.3 MB peak** | Memory-light lower bound after RED-01/RED-03/RED-04 opt-outs plus RED-05/RED-06/RED-07 storage work; it intentionally omits rich TypeDuck dictionary comments and reverse UI |
-| Current comments-intact keyboard probe after RED-07 | **78.7 MB steady / 89.1 MB peak** | Product-honest keyboard proxy with rich TypeDuck comments retained and grave-prefix reverse UI omitted |
+| Current comments-intact keyboard probe after RED-08 | **67.4 MB steady / 80.1 MB peak** | Product-honest keyboard proxy with rich TypeDuck comments retained and grave-prefix reverse UI omitted |
+| Current full mobile probe after RED-08 | **78.8 MB steady / 89.9 MB peak** | Full `jyut6ping3_mobile` profile, including grave-prefix reverse UI |
 | .NET in-process benchmark (Track B) | ~436 MB after-ready / 504 MB peak | A .NET process hosting **both** Yune *and* librime DLLs — polluted upper bound, **not** the iOS number |
 | Browser WASM | 160 MiB | WASM linear memory, **no mmap**, owned tables — a different deployment |
 
 The earlier "Jyutping native ~504 MB" headline was the dual-DLL harness; the
-iOS-relevant steady was initially **~298 MB**. After RED-07, the lean lower
-bound is **56.9 MB** steady / **61.3 MB** peak, while the comments-intact
-keyboard proxy is **78.7 MB** steady / **89.1 MB** peak.
+iOS-relevant steady was initially **~298 MB**. After RED-08, the lean lower
+bound remains **56.9 MB** steady / **61.3 MB** peak, while the comments-intact
+keyboard proxy is **67.4 MB** steady / **80.1 MB** peak.
 
 ## Methodology
 
@@ -513,15 +514,52 @@ unprefixed Jyutping candidate generation. The separate
 `dictionary_lookup_filter.lookup_records` owner from `jyut6ping3_scolar` is
 dictionary-panel/comment enrichment, not plain candidate text generation.
 
+## RED-08 compact lookup/code-index closeout (Windows-measured, 2026-06-29)
+
+Evidence:
+[`evidence/m47-ios-budget-native-memory-reduction-red08-2026-06-29/`](./evidence/m47-ios-budget-native-memory-reduction-red08-2026-06-29/).
+RED-08 keeps rich TypeDuck comments and normal Jyutping typing behavior. It
+sets `translator/load_lookup_records: false` for the mobile profile's primary
+translator, keeps `dictionary_lookup_filter` comment enrichment, replaces the
+compact-table `all_codes()` -> `normal_codes` `HashSet<String>` with
+storage-backed compact-table code lookup, and preserves reuse of the large
+primary/reverse prebuilt prisms with order-preserving checksum normalization for
+runtime-only lookup gates. It does **not** close all startup hygiene:
+`jyut6ping3_scolar` still rebuilds its tiny prism during deploy, producing the
+remaining near-80 MB deploy peak in this Windows proxy.
+
+| Profile | Before RED-08 steady / peak | After RED-08 steady / peak | After private | After allocator live / high | Named owners | Heap named | Clean mmap estimate | Shared/overlap rows |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Comments-intact keyboard | **82.8 / 94.5 MB** | **67.4 / 80.1 MB** | **22.5 MB** | **16.3 / 59.9 MB** | `58,873,628 B` | `4,195,278 B` | `34,602,818 B` | `20,073,545 B` |
+| Full mobile | **92.9 / 103.7 MB** | **78.8 / 89.9 MB** | **28.1 MB** | **22.1 / 59.9 MB** | `71,905,737 B` | `4,856,616 B` | `40,740,505 B` | `26,306,629 B` |
+
+RED-08 removed the measured primary `compact_table.lookup_records` retention
+row: `14,219,092 B` from both product profiles. For the comments-intact keyboard
+profile, the remaining top owners are `dictionary_lookup_filter.lookup_records`
+(`17,498,253 B`, rich comment lookup payload), `compact_table.storage`
+(`15,248,382 B`, mmap/file-backed primary table), `prism.spelling_map`
+(`10,965,828 B`), `prism.double_array_units` (`8,388,608 B`), and
+`compact_table.syllabary_codes` (`4,189,674 B`, heap). Full mobile remains
+higher because it also keeps the secondary grave-prefix reverse UI lookup
+payload (`compact_table.lookup_records` `5,536,522 B`) and table/prism storage.
+
+RED-08 verdict: this is a real product-profile reduction, but M47 is still not
+closed. The remaining gap is dominated by clean/file-backed and
+shared/overlapping compiled assets, not allocator-retained free memory. The next
+branch should target compiled asset/profile slimming and compact payload/index
+format; startup hygiene still has the measured `jyut6ping3_scolar` prism rebuild
+blocker. Do not claim iOS readiness until the later on-device
+`phys_footprint`/`vmmap` gate.
+
 ## Verdict (Windows-measured)
 
 Against the 64 MB hard budget, the original isolated `jyut6ping3_mobile` baseline
 was **~4.7x over** the 48 MB steady target and **~3.6x over** the 64 MB peak
-target. After RED-07, the lean lower-bound run is still **~1.19x over** the
+target. After RED-08, the lean lower-bound run is still **~1.19x over** the
 steady target but is **under** the 64 MB peak hard budget on the Windows proxy.
-The comments-intact keyboard proxy is **~1.64x over** the steady target and
-**~1.39x over** the 64 MB peak hard budget; full mobile is **~1.90x over**
-steady and **~1.60x over** peak. Cangjie5 remains ~1.5x over at steady;
+The comments-intact keyboard proxy is **~1.41x over** the steady target and
+**~1.25x over** the 64 MB peak hard budget; full mobile is **~1.64x over**
+steady and **~1.40x over** peak. Cangjie5 remains ~1.5x over at steady;
 luna_pinyin is borderline-under at steady but ~4.6x over at peak. Even a
 small-schema base is ~60-95 MB before profile-specific UI deferral. The
 memory-light Jyutping lower bound and the comments-intact keyboard profile
@@ -534,15 +572,14 @@ Windows-implementable and benefit every platform. **No
 
 ## Next work
 
-RED-01 through RED-07 are complete. Start the next branch with steady retained
-data after compact loading and product-profile payload size. For the lean lower
-bound, the remaining gap is steady compact-table/code-index ownership after
-`create_session`. For the comments-intact keyboard profile, the first measured
-blocker is now the remaining shared/overlapping compiled lookup/table payload
-and compact index footprint, not eager lookup-record heap. Keep both steady and
-peak visible. Do not use allocator changes as the next branch unless a later
-allocator-specific probe shows a steady live-vs-resident gap that Phase
-0/RED-01/RED-02/RED-03/RED-04/RED-05/RED-06/RED-07 did not show.
+RED-01 through RED-08 are complete. Start the next branch with compiled
+asset/profile slimming and compact payload/index format. For the comments-intact
+keyboard profile, the first measured blocker is now the remaining
+shared/overlapping compiled lookup/table payload and mmap/file-backed table/prism
+footprint, not eager lookup-record heap. Keep both steady and peak visible. Do
+not use allocator changes as the next branch unless a later allocator-specific
+probe shows a steady live-vs-resident gap that Phase
+0/RED-01/RED-02/RED-03/RED-04/RED-05/RED-06/RED-07/RED-08 did not show.
 
 ## Evidence
 
@@ -572,4 +609,6 @@ allocator-specific probe shows a steady live-vs-resident gap that Phase
   [`evidence/m47-ios-budget-native-memory-reduction-red07-comments-2026-06-29/`](./evidence/m47-ios-budget-native-memory-reduction-red07-comments-2026-06-29/)
 - M47 Phase 0 attribution refresh:
   [`evidence/m47-ios-budget-native-memory-phase0-refresh-2026-06-29/`](./evidence/m47-ios-budget-native-memory-phase0-refresh-2026-06-29/)
+- M47 RED-08 compact lookup/code-index reduction:
+  [`evidence/m47-ios-budget-native-memory-reduction-red08-2026-06-29/`](./evidence/m47-ios-budget-native-memory-reduction-red08-2026-06-29/)
 - Probe: [`crates/yune-rime-api/tests/native_memory_probe.rs`](../../crates/yune-rime-api/tests/native_memory_probe.rs)

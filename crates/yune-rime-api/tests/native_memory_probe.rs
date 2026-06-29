@@ -447,7 +447,11 @@ fn native_memory_probe_reports_working_set() {
         );
     }
 
-    let _ = fs::remove_dir_all(&root);
+    if std::env::var("YUNE_MEM_KEEP_TEMP").is_ok() {
+        eprintln!("YUNE_MEM_TEMP_ROOT={}", root.display());
+    } else {
+        let _ = fs::remove_dir_all(&root);
+    }
 }
 
 fn patch_schema_disable_dictionary_lookup_records(path: &Path) {
