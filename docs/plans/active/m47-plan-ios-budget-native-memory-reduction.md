@@ -61,6 +61,18 @@ guarded. Evidence:
 
 The original Phase 0 blocker was **~235 MB of the 298 MB steady un-owned**. Phase 0 is now closed by [`../../reports/evidence/m47-ios-budget-native-memory-attribution-2026-06-28/`](../../reports/evidence/m47-ios-budget-native-memory-attribution-2026-06-28/): the old bucket is mostly live retained heap / process-private memory, not primarily allocator-retained-free memory. RED-01 is now closed by [`../../reports/evidence/m47-ios-budget-native-memory-reduction-red01-2026-06-28/`](../../reports/evidence/m47-ios-budget-native-memory-reduction-red01-2026-06-28/). The post-RED-01 owner correction is closed by [`../../reports/evidence/m47-ios-budget-native-memory-prism-attribution-2026-06-28/`](../../reports/evidence/m47-ios-budget-native-memory-prism-attribution-2026-06-28/); Phase 1+ continues with the next measured owners below.
 
+2026-06-29 refresh evidence on current `main`:
+[`../../reports/evidence/m47-ios-budget-native-memory-phase0-refresh-2026-06-29/`](../../reports/evidence/m47-ios-budget-native-memory-phase0-refresh-2026-06-29/).
+This refresh did **not** start a reduction branch. It confirms that after
+RED-07 the comments-intact keyboard profile is **82.8 MB** steady /
+**94.5 MB** peak WS with **33.6 MB** private and **25.6 MB** allocator live,
+while full mobile is **92.9 MB** steady / **103.7 MB** peak WS with
+**41.5 MB** private and **32.3 MB** allocator live. Named heap is only
+`4,195,278 B` / `4,856,616 B`; the remaining resident blocker is mapped/shared
+compiled table, prism, lookup payload, and compact index/code rows. Windows
+cannot prove the exact iOS `phys_footprint` charge for clean file-backed
+mappings; on-device proof remains a later Phase 2 gate.
+
 - [x] **M47-ATTR-01:** Add an allocator/private-byte instrument to the lean probe — a counting `#[global_allocator]` wrapper (live bytes + high-water) and/or per-phase `PROCESS_MEMORY_COUNTERS_EX` private bytes — to split the 298 MB into **live retained heap** vs **allocator-retained-free** vs **mmap'd-clean file pages**. Closed with Windows `PrivateUsage`, working set, peak working set, allocator live, and allocator high-water in the M47 evidence folder.
 - [x] **M47-ATTR-02:** Bisect the +283 MB `create_session` jump with phase probes *inside* the load: after table mmap, after `read_yune_table_advanced_payload` (`lookup_records`), after the `all_codes()`→`normal_codes` HashSet build, and after the secondary/reverse dictionary load. Closed by ordered `create-session-events.csv` rows for table byte-source open, advanced lookup payload parse, compact store parse, `normal_codes` HashSet, reverse dictionary parse, and filter install.
 - [x] **M47-ATTR-03:** Confirm the **double dictionary load** (31.9 MB + 8.1 MB `lookup_records`): identify the secondary/reverse dictionary, whether it is required on the keyboard path, and whether the two loads can share one byte source. Closed with updated owner names: primary `jyut6ping3` `lookup_records` (**31.9 MB**), secondary `luna_pinyin_yune_reverse` `lookup_records` (**13.8 MB**), and `dictionary_lookup_filter.lookup_records` from `jyut6ping3_scolar` (**50.7 MB**). The secondary/reverse dictionary is for grave-prefix reverse UI behavior, and the lookup filter is dictionary-panel/comment enrichment; neither generates normal unprefixed Jyutping candidate text.

@@ -487,6 +487,32 @@ index. M47 is still not closed: comments-intact keyboard remains above both the
 full mobile remains higher because it also keeps the grave-prefix reverse UI
 path. No iOS-ready claim is made.
 
+## Phase 0 attribution refresh (Windows-measured, 2026-06-29)
+
+Evidence:
+[`evidence/m47-ios-budget-native-memory-phase0-refresh-2026-06-29/`](./evidence/m47-ios-budget-native-memory-phase0-refresh-2026-06-29/)
+reruns the Phase 0 style owner split on current `main` after RED-07, without
+starting a reduction branch. The probe is still Windows
+`PROCESS_MEMORY_COUNTERS_EX.WorkingSetSize` / `PrivateUsage` plus the test-local
+allocator wrapper, not iOS `phys_footprint`.
+
+| Profile | Steady WS | Peak WS | Private | Alloc live / high | Named owners | Heap named | Clean mmap estimate | Shared/overlap lookup rows |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Comments-intact keyboard | **82.8 MB** | **94.5 MB** | **33.6 MB** | **25.6 / 59.9 MB** | `73,092,720 B` | `4,195,278 B` | `34,602,818 B` | `31,717,345 B` |
+| Full mobile | **92.9 MB** | **103.7 MB** | **41.5 MB** | **32.3 / 59.9 MB** | `86,124,829 B` | `4,856,616 B` | `40,740,505 B` | `37,253,867 B` |
+
+Refresh verdict: the old Phase 0 conclusion still holds, and the current
+post-RED-07 profile has no large allocator-retained/free-memory bucket.
+`PrivateUsage` is already below the 48 MB steady target for both current
+profiles, while working set and peak remain over target. The remaining measured
+blocker is resident mapped/shared compiled data and compact lookup/index/payload
+footprint. The full-mobile double dictionary load is confirmed as primary
+`jyut6ping3` plus secondary `luna_pinyin_yune_reverse`; the secondary/reverse
+dictionary is for grave-prefix Mandarin reverse UI behavior, not normal
+unprefixed Jyutping candidate generation. The separate
+`dictionary_lookup_filter.lookup_records` owner from `jyut6ping3_scolar` is
+dictionary-panel/comment enrichment, not plain candidate text generation.
+
 ## Verdict (Windows-measured)
 
 Against the 64 MB hard budget, the original isolated `jyut6ping3_mobile` baseline
@@ -544,4 +570,6 @@ allocator-specific probe shows a steady live-vs-resident gap that Phase
   [`evidence/m47-ios-budget-native-memory-reduction-red06-2026-06-29/`](./evidence/m47-ios-budget-native-memory-reduction-red06-2026-06-29/)
 - M47 RED-07 comments-intact lookup storage reduction:
   [`evidence/m47-ios-budget-native-memory-reduction-red07-comments-2026-06-29/`](./evidence/m47-ios-budget-native-memory-reduction-red07-comments-2026-06-29/)
+- M47 Phase 0 attribution refresh:
+  [`evidence/m47-ios-budget-native-memory-phase0-refresh-2026-06-29/`](./evidence/m47-ios-budget-native-memory-phase0-refresh-2026-06-29/)
 - Probe: [`crates/yune-rime-api/tests/native_memory_probe.rs`](../../crates/yune-rime-api/tests/native_memory_probe.rs)
