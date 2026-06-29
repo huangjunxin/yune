@@ -2,7 +2,7 @@
 
 Yune is a Rust input-method engine that uses **upstream librime as a
 compatibility and performance oracle** while building a cleaner Rust engine.
-M45, WEB-01, M46, WEB-02, WEB-03, and M47 (portable scope) are complete. M45 confirmed
+M45, WEB-01, M46, WEB-02, WEB-03, M47 (portable scope), and M48 are complete. M45 confirmed
 upstream candidate-output parity for Track A `n`/`ni`/`hao`, kept `hao` inside
 the short-key ratio target, and split steady resident memory from real peak
 memory. WEB-01 then proved that the current browser `893.1 MiB` Jyutping WASM
@@ -33,7 +33,10 @@ with the full multilingual TypeDuck dictionary retained, serving table/prism/
 comment payloads from mmap'd compiled storage like librime/Cantoboard. M47's
 portable scope is complete; on-device `phys_footprint` validation is parked as a
 far-future platform proof because it needs a Mac/Xcode environment, not opened as
-the next numbered milestone.
+the next numbered milestone. M48 then closed the `luna_pinyin` sentence
+over-segmentation defect by matching librime's fixed-scale log dictionary
+weights in the poet path and by loading the full upstream Luna preset vocabulary
+for the shipped compact runtime path.
 
 > **Compatibility oracle.** Upstream librime latest stable is the default
 > behavior reference for user-visible schema semantics, standard ABI contracts,
@@ -66,9 +69,10 @@ the next numbered milestone.
 - [`reports/ios-memory-budget.md`](./reports/ios-memory-budget.md) - native
   single-active-schema memory vs the iOS keyboard-extension budget; the measured
   baseline for the active M47 reduction plan.
-- [`plans/active/m48-plan-luna-pinyin-sentence-over-segmentation.md`](./plans/active/m48-plan-luna-pinyin-sentence-over-segmentation.md)
-  - active oracle-driven correctness plan for the M48 `luna_pinyin` sentence
-  over-segmentation fix (log-scale the poet null-grammar weights).
+- [`plans/completed/m48-plan-luna-pinyin-sentence-over-segmentation.md`](./plans/completed/m48-plan-luna-pinyin-sentence-over-segmentation.md)
+  - completed oracle-driven correctness plan for the M48 `luna_pinyin` sentence
+  over-segmentation fix (librime-scaled log poet weights plus compact runtime
+  preset vocabulary).
 - [`plans/completed/m47-plan-ios-budget-native-memory-reduction.md`](./plans/completed/m47-plan-ios-budget-native-memory-reduction.md)
   - completed attribution-first plan that drove the comments-intact keyboard from
   ~195 MB to ~67 MB WS / ~22 MB private (portable scope); Apple-device
@@ -120,7 +124,7 @@ the next numbered milestone.
 
 | Lane | Current state | Next decision or gate |
 | --- | --- | --- |
-| Core compatibility | Phase 1 named-target upstream behavior is complete for `luna_pinyin` and common-schema basics against upstream librime `1.17.0`. A `luna_pinyin` sentence over-segmentation defect is scoped as active **M48** under [Open Correctness Defect](#open-correctness-defect-luna_pinyin-sentence-over-segmentation): multi-syllable input (`jianli`, `biancheng`) over-segments into common single syllables because the M17 null-grammar scorer sums raw frequencies instead of log-probabilities. | Preserve upstream-observable behavior on every engine change; **M48** fixes the open sentence over-segmentation defect. |
+| Core compatibility | Phase 1 named-target upstream behavior remains complete for `luna_pinyin` and common-schema basics against upstream librime `1.17.0`. **M48 is complete:** `jianli` and `biancheng` now match the upstream first page after the poet path converts raw dictionary weights to librime's fixed-scale log entry weights and the shipped compact `luna_pinyin` path loads the required preset vocabulary. | Preserve upstream-observable behavior on every engine change; no active core-compatibility milestone is open. |
 | Engine performance | M45 is complete as a partial native-engine follow-up to M44. Phase 0 selected `short-key-measured-no-go`, so no short-key engine implementation was retained. Final `hao` preserves the M44 pass at `24.267us` / `2.110x`, while `n` remains `68.900us` / `3.313x` and `ni` remains `49.450us` / `3.458x`. Track A steady resident rows meet the resident target (`87,498,752-98,684,928 B`), but the real cold-start peak remains `127,475,712 B`, so M45 records a standing peak-cost blocker. M46 reported a `504,627,200 B` Track B peak with mostly unclassified process memory — now **superseded by M47**, which attributed it and measured the lean engine (no librime) far lower, showing the `504 MB` was the .NET dual-DLL benchmark hosting yune + librime together, not the engine footprint. | **M47 complete (portable scope); Apple-device proof parked for later.** RED-01 reduced isolated `jyut6ping3_mobile` keyboard-profile steady from `223.9 MB` to `169.2 MB`; RED-02 moved parsed prism storage to byte-backed runtime reads; RED-03 made compact lookup-record retention optional; RED-04 made the reverse/UI translator an optional keyboard-profile pack; RED-05 removed the large deploy rebuild/high-water transient; RED-06 bounded the primary compact-table parse transient; RED-07 made rich lookup/comment records byte-backed while preserving TypeDuck comments; RED-08 removed the primary translator lookup-record owner and storage-backed the compact normal-code index. Current Windows proxies: lean lower bound `56.9 MB` steady / `61.3 MB` peak, comments-intact keyboard `67.4 MB` steady / `80.1 MB` peak, full mobile `78.8 MB` steady / `89.9 MB` peak. By the iOS-dirty (private-bytes) proxy ~22 MB is comfortably under the 48 MB target, with full TypeDuck comments retained. Future engine optimization can pick RED-09/10/11 only if their measured owners become the priority; the real Apple `phys_footprint` check is unnumbered far-future platform validation. Keep `n`/`ni` as separate future Track A latency blockers. |
 | Web harness startup and memory | M41 is complete for the tracked `apps/yune-web/` browser harness. WEB-01 is complete as measured no-go for `INITIAL_MEMORY` and payload-only changes. M46 fixed the Cangjie -> Luna -> Jyutping no-candidate row. WEB-02 classified the stale-asset source-fallback owner at `529,602,374 B`; WEB-03 fixed that launch compiled-asset contract and remeasured the shipping Jyutping launch/full browser rows at `160.0 MiB` ready/peak/steady. The follow-up compact-path fix restores byte-backed Jyutping phrase composition, visible prefix lookup rows, and bounded long-input browser latency. A later correctness fix repaired a `DartsDoubleArray` prism construction bug that had broken the byte-backed Jyutping toneless-to-canonical mapping for common multi-syllable words (now guarded by trie-level and committed-asset regression tests). The fair `luna_pinyin` browser comparison remains `160.0 MiB` peak versus My RIME `16.0 MiB`; the old Jyutping `893.1 MiB` value now remains only as a synthetic no-launch-assets negative control. | Future browser memory work should target the fair `luna_pinyin` runtime high-water floor or another measured owner, not another payload-only or Jyutping stale-asset branch. |
 | AI-native engine layer | M11/M13 proved a default-off local AI layer can sit on top of the deterministic engine. | Keep AI outside the classic deterministic performance path unless a named engine experiment explicitly enables it. |
@@ -139,21 +143,20 @@ portable this Windows machine can do for M47 is done. Apple `phys_footprint`
 measurement is deliberately unnumbered far-future platform validation, not the
 next milestone.
 
-1. **M48 luna_pinyin sentence over-segmentation fix (active, next).** The next
-   unblocked engine correctness slice. The M17 null-grammar poet scorer sums raw
-   essay/dict frequencies, so multi-syllable input over-segments into common
-   single syllables (`jianli` -> 及按裏 instead of 建立; `biancheng` -> 比按成
-   instead of 變成); the upstream oracle returns the phrase parse. Convert poet
-   sentence weights to log-scaled values (`entry.weight.max(1.0).ln()`,
-   epsilon-floored, no `/total`), matching librime and Yune's own non-poet path
-   (`translator/mod.rs:142`). Phase 0 captures upstream oracle bytes for
-   `jianli`/`biancheng`, adds a failing `upstream_luna_pinyin_parity` fixture, and
-   replaces the masking poet unit test (`src/tests/poet.rs:14`); the gate is the
-   new `-ian` fixture passing with `nihao`/`zhongguo` unchanged and
-   `cantonese_parity`/`yune_web` green. Public-demo visible and core-shared. Full
-   detail under [Open Correctness Defect](#open-correctness-defect-luna_pinyin-sentence-over-segmentation).
+1. **M48 luna_pinyin sentence over-segmentation fix is complete.** The M17
+   null-grammar poet path now converts raw dictionary/essay weights to librime's
+   fixed-scale entry weight (`ln(raw_or_epsilon) - ln(1e8)`) before applying the
+   null-grammar penalty, and the shipped compact upstream `luna_pinyin` path
+   loads the full preset vocabulary for normal sentence ranking while keeping
+   the abbreviation vocabulary bounded. Production native CLI now returns
+   `jianli` -> `建立`, `簡歷`, `監理`, `監利`, `剪力` and `biancheng` ->
+   `變成`, `編程`, `便成`, `編成`, `邊城`. The closeout gate passed
+   `upstream_luna_pinyin_parity`, `poet`, `cantonese_parity`, `yune_web`, and
+   `cargo fmt --check`; broad clippy remains blocked by an unrelated
+   `compiled_prism.rs:430` `clippy::ref_option` lint. Full detail under
+   [Closed Correctness Defect](#closed-correctness-defect-luna_pinyin-sentence-over-segmentation).
    Plan:
-   [`plans/active/m48-plan-luna-pinyin-sentence-over-segmentation.md`](./plans/active/m48-plan-luna-pinyin-sentence-over-segmentation.md).
+   [`plans/completed/m48-plan-luna-pinyin-sentence-over-segmentation.md`](./plans/completed/m48-plan-luna-pinyin-sentence-over-segmentation.md).
    Other unscoped candidates remain but are not active: Track A `n`/`ni` latency,
    and optional M47 RED-09 compiled-asset/profile slimming, RED-10 allocator
    strategy, RED-11 startup hygiene if a fresh measurement makes one the top owner.
@@ -169,81 +172,43 @@ Trigger-gated, not scheduled: extracting the full processor pipeline from
 `yune-rime-api` into `yune-core` lands only when a real non-ABI consumer needs
 the full input path. Do not milestone that extraction speculatively.
 
-## Open Correctness Defect: luna_pinyin sentence over-segmentation
+## Closed Correctness Defect: luna_pinyin sentence over-segmentation
 
-Status: found 2026-06-29; scoped as **M48** (active - see the
-[Authoritative Sequence](#authoritative-sequence) and Milestone Ledger; plan:
-[`plans/active/m48-plan-luna-pinyin-sentence-over-segmentation.md`](./plans/active/m48-plan-luna-pinyin-sentence-over-segmentation.md)).
-A user-visible `luna_pinyin` behavior divergence from the upstream oracle,
-independent of the completed M47 memory work.
+Status: found and closed 2026-06-29 as **M48**. Plan:
+[`plans/completed/m48-plan-luna-pinyin-sentence-over-segmentation.md`](./plans/completed/m48-plan-luna-pinyin-sentence-over-segmentation.md).
 
-Symptom (yune-web `luna_pinyin`, reproduced on the native CLI over the shipped
-`apps/yune-web/public/schema` assets): multi-syllable input over-segments into
-more, individually-frequent single syllables instead of the correct longer
-parse. `jianli` returns 及按裏 (`ji+an+li`) instead of 建立/簡歷/監理
-(`jian|li`); `biancheng` returns 比按成 (`bi+an+cheng`) instead of 變成/編程
-(`bian|cheng`). The upstream oracle (`my-rime.vercel.app`) returns the
-`jian|li` / `bian|cheng` parse.
+The defect was a user-visible `luna_pinyin` divergence from upstream librime
+`1.17.0`, independent of M47 memory work: multi-syllable inputs such as
+`jianli` and `biancheng` over-segmented into common shorter syllables rather
+than ranking the upstream phrase parse first. Phase 0 proved the oracle target
+before the fix: upstream first pages are `jianli` -> `建立`, `簡歷`, `監理`,
+`監利`, `剪力`; `biancheng` -> `變成`, `編程`, `便成`, `編成`, `邊城`.
 
-Not a data, segmentation, or deferred-grammar gap:
+Root cause: the M17 null-grammar poet path accumulated raw dictionary/essay
+integer frequencies, while librime feeds the poet path with fixed-scale log
+entry weights. Upstream `dict_compiler.cc` stores `log(raw_weight)` with a
+`DBL_EPSILON` floor, `DictEntryIterator::Peek()` subtracts `log(1e8)`, and
+`Grammar::Evaluate(...)` then adds the null grammar penalty. There is no
+corpus-total `/total` normalization.
 
-- Data is canonical and complete: `luna_pinyin.dict.yaml` v2024.02.10 with
-  `use_preset_vocabulary: true` plus `essay.txt` (442,712 entries; contains
-  建立/變成/編程/簡歷/監理). `jian`, `bian`, `xian`, `qian` all form correctly as
-  single syllables, and both the `jian|li` path and the essay phrase edge 建立
-  are emitted into the word graph - they lose on score, they are not absent.
-- The defect is in the shipped M17 null-grammar sentence scorer, not the
-  deferred learned `.gram`/octagram gear. Default upstream `luna_pinyin` also
-  uses no `.gram` model and still returns 建立.
+M48 fixed the shared core path by converting normal poet table and vocabulary
+edges to `ln(raw_or_epsilon) - ln(1e8)` at graph ingestion, preserving the
+existing abbreviation-specific raw-span bonus path, and by loading the full
+upstream Luna `essay` vocabulary for normal sentence ranking in the shipped
+compact runtime path while keeping the historical M42 abbreviation vocabulary
+bounded. The old masking poet test was replaced with realistic raw-frequency
+over-segmentation coverage, and `upstream_luna_pinyin_parity` now locks
+`jianli`/`biancheng` alongside the existing `nihao`/`zhongguo` rows.
 
-Root cause: the poet null-grammar path sums RAW essay/dict integer frequencies
-instead of log-probabilities. `collect_sentence_states` accumulates
-`next.weight += null_grammar_score(entry.weight)`
-(`crates/yune-core/src/poet/mod.rs:200`, also `:226`, `:367`), where
-`null_grammar_score(w) = w + ln(1e-6)` (`poet/mod.rs:83`, with
-`UPSTREAM_NO_GRAMMAR_PENALTY = -13.815510557964274`, `poet/mod.rs:17`), and
-`entry.weight` is the raw frequency carried verbatim (`poet/mod.rs:862` span
-edge, `:887` vocab edge, `:1316`/`:1324` `ModelEntry`; single-char dict weights
-backfilled from raw essay counts at
-`crates/yune-core/src/dictionary/source.rs:866-876`). `compare_path_state`
-ranks by summed weight descending first, with fewer-words only a tiebreak
-(`poet/mod.rs:321-328`). Because the `-13.8` per-word penalty is negligible
-against five-digit frequencies, adding more high-frequency single characters
-*increases* the path weight. Reproduced scores for `jianli`: 及按裏 `60149996`
-beats 建裏 `60055116` and 建立 `60028890` (both correct parses are generated;
-they lose on score). librime scores with log-probabilities, where each extra
-word/boundary adds a large negative term so the minimal correct parse wins;
-Yune inverted the convention. The codebase already applies the right conversion
-at `crates/yune-core/src/translator/mod.rs:142`
-(`sentence_piece_quality = raw_quality.max(1.0).ln() - word_penalty`), which the
-poet path never calls.
-
-Scope: core-shared. The native CLI reproduces the exact wrong split, and the
-wasm and native paths share the poet sentence scorer, so this is not a web-only
-or packaging issue. It affects any multi-syllable `luna_pinyin` input where
-over-segmentation into common single characters out-sums the correct parse.
-
-Fix direction (convention confirmed by independent review against librime
-`1.17.0` source): feed log-scaled entry weights into the poet accumulation
-instead of raw counts - `entry.weight.max(1.0).ln()`, epsilon-floored, with NO
-`/total` normalization. This matches librime's `dict_compiler.cc` (stores
-`log(raw_weight)` with an epsilon floor) plus `Grammar::Evaluate`
-(`entry_weight + null_penalty`), and matches the conversion Yune already applies
-in the sibling non-poet path at `crates/yune-core/src/translator/mod.rs:142`.
-Apply at ingestion (`poet/mod.rs:862`/`:887`/`:1316`/`:1324`) or in the
-accumulation (`:200`/`:226`/`:367`); the existing `-13.815510557964274` per-word
-penalty (`poet/mod.rs:17`) then dominates correctly. Worked ranking for `jianli`
-after the fix: 建立 `-3.54` > `jian|li` (建+裏) `-7.71` > `ji+an+li` (及+按+裏)
-`-9.27`, so the phrase parse wins. Capture oracle bytes for `jianli`/`biancheng`
-from `my-rime.vercel.app` as the parity target, and verify no regression on the
-existing passing rows (`nihao`, `zhongguo`).
-
-Test gaps that hid it: the poet unit test
-`make_sentence_prefers_single_phrase_when_penalty_outweighs_shorter_path`
-(`crates/yune-core/src/tests/poet.rs:14`) uses synthetic weights (`AB=100` vs
-`A+B=19`) that real raw frequencies violate, and no `upstream_luna_pinyin_parity`
-fixture covers an `-ian` input that also splits into `Ci+an`. A fix must add a
-`jianli`/`biancheng` oracle fixture so the gap stays closed.
+Closeout evidence: production native CLI over `apps/yune-web/public/schema`
+returns `jianli` -> `建立`, `簡歷`, `監理`, `監利`, `剪力` and `biancheng` ->
+`變成`, `編程`, `便成`, `編成`, `邊城`. Passing gates:
+`cargo test -p yune-core --test upstream_luna_pinyin_parity`,
+`cargo test -p yune-core poet`, `cargo test -p yune-core --test cantonese_parity`,
+`cargo test -p yune-rime-api --test yune_web`, and `cargo fmt --check`.
+Broad `cargo clippy --workspace --all-targets -- -D warnings` was attempted and
+is blocked by an unrelated existing `compiled_prism.rs:430`
+`clippy::ref_option` lint. No browser-only Playwright claim is made for M48.
 
 ## M46 Closeout
 
@@ -677,7 +642,7 @@ Closed M38 gates:
 | WEB-02 | Complete with measured blocker | Public-demo Jyutping browser owner classification: stale `Rime::Prism/3.0` assets force source fallback and `owned_heap` storage, naming the compiled-asset contract as the next branch. At WEB-02 closeout the browser high-water remained `893.1 MiB`; no memory win was claimed. |
 | WEB-03 | Complete | Engine fix `3ffd4b21` unblocked clean rebuilds; asset commit `ef37bfe9` regenerated launch assets for `jyut6ping3_mobile`, `cangjie5`, and `luna_pinyin`, shipped Cangjie compiled assets, refreshed manifests/dist, and proved native public-demo storage is byte-backed with no fallback rows. Fresh Emscripten/Playwright evidence records public-demo `full-jyutping` at `160.0 MiB` ready/peak/steady, with ready `1306 ms`, input-to-candidate `100 ms`, and commit `110 ms`; follow-up gates restore byte-backed `ngogokdak -> 我覺得` and `zouhapci` visible lookup rows. A later correctness follow-up (`a76fcd59`, guard `d1c0171a`) fixed a `DartsDoubleArray` prism construction bug that had broken the byte-backed Jyutping toneless-to-canonical mapping for common multi-syllable words. The old `893.1 MiB` value is retained only as the synthetic `extras` negative control. |
 | M47 | Complete (portable engine work; Apple-device validation parked for later) | iOS-budget native memory reduction: drive single-active-schema native working set under an iOS keyboard-extension budget (steady <= 48 MB, peak <= 64 MB; stretch 48 MB) as portable engine work. Phase 0 Windows `PrivateUsage`/working-set evidence attributed the old un-owned bucket as mostly live retained heap / process-private memory, not allocator-retained-free. RED-01 added an explicit keyboard-profile gate for `dictionary_lookup_filter.lookup_records`, moving isolated `jyut6ping3_mobile` steady `223.9 -> 169.2 MB`, private `202.2 -> 147.7 MB`, allocator-live `155.0 -> 104.9 MB`, peak `231.6 -> 217.3 MB`. RED-02 moved parsed prism storage to byte-backed runtime reads; RED-03 made compact lookup-record retention optional for the keyboard-profile probe; RED-04 made the reverse/UI translator an optional keyboard-profile pack; RED-05 removed the large deploy rebuild/high-water transient; RED-06 dropped reverse parse scratch before compact-table parse, moving fresh lean keyboard-profile peak `79.6 -> 62.9 MB`; RED-07 kept rich TypeDuck comments while byte-backing lookup records; RED-08 disabled primary translator lookup-record retention for the mobile profile and made compact normal-code lookup storage-backed, moving comments-intact keyboard steady `82.8 -> 67.4 MB`, private `33.6 -> 22.5 MB`, allocator-live `25.6 -> 16.3 MB`, peak `94.5 -> 80.1 MB`, and full mobile steady `92.9 -> 78.8 MB`, peak `103.7 -> 89.9 MB`. Portable scope complete: the comments-intact keyboard settled at ~67 MB WS / ~22 MB private (the iOS-dirty proxy, under the 48 MB target) with the full multilingual TypeDuck dictionary retained and parity-clean (cantonese_parity 37/0, upstream_luna_pinyin_parity 12/0, yune_web 37/0). On-device `phys_footprint` validation is an unnumbered far-future platform gate; RED-09/10/11 remain optional future engine-optimization candidates, not active milestones. Evidence: [`reports/evidence/m47-ios-budget-native-memory-reduction-red08-2026-06-29/`](./reports/evidence/m47-ios-budget-native-memory-reduction-red08-2026-06-29/). Plan: [`plans/completed/m47-plan-ios-budget-native-memory-reduction.md`](./plans/completed/m47-plan-ios-budget-native-memory-reduction.md). |
-| M48 | Active (scoped) | `luna_pinyin` sentence over-segmentation correctness fix: the M17 null-grammar poet scorer sums RAW essay/dict frequencies, so multi-syllable input over-segments into common single syllables (`jianli` -> 及按裏 instead of 建立; `biancheng` -> 比按成 instead of 變成) while the upstream oracle returns the phrase parse. Root cause and reproduced path scores (`及按裏 60149996` > `建裏 60055116` > `建立 60028890`) are recorded under [Open Correctness Defect](#open-correctness-defect-luna_pinyin-sentence-over-segmentation). The fix converts poet sentence weights to log-scaled values (`entry.weight.max(1.0).ln()`, epsilon-floored, no `/total`) at `crates/yune-core/src/poet/mod.rs` ingestion/accumulation, matching librime `dict_compiler.cc`/`Grammar::Evaluate` and the existing non-poet conversion at `crates/yune-core/src/translator/mod.rs:142`. Public-demo visible and core-shared (native CLI reproduces). Gate: a new `jianli`/`biancheng` `upstream_luna_pinyin_parity` oracle fixture passes, the masking poet unit test (`src/tests/poet.rs:14`) is replaced, and `nihao`/`zhongguo`, `cantonese_parity`, and `yune_web` stay green. Plan: [`plans/active/m48-plan-luna-pinyin-sentence-over-segmentation.md`](./plans/active/m48-plan-luna-pinyin-sentence-over-segmentation.md). |
+| M48 | Complete | `luna_pinyin` sentence over-segmentation correctness fix: upstream oracle bytes for `jianli`/`biancheng` were captured first, then Yune's poet path was moved from raw-frequency accumulation to librime's fixed-scale log dictionary entry weight (`ln(raw_or_epsilon) - ln(1e8)`, no `/total`) before `Grammar::Evaluate` adds the null penalty. The compact shipped upstream Luna path now loads full `essay` vocabulary for normal sentence ranking while keeping the M42 abbreviation vocabulary bounded. Production CLI now returns `jianli` -> `建立`, `簡歷`, `監理`, `監利`, `剪力` and `biancheng` -> `變成`, `編程`, `便成`, `編成`, `邊城`. Gates passed: `upstream_luna_pinyin_parity`, `poet`, `cantonese_parity`, `yune_web`, and `cargo fmt --check`; broad clippy is blocked by unrelated `compiled_prism.rs:430` `clippy::ref_option`. Plan: [`plans/completed/m48-plan-luna-pinyin-sentence-over-segmentation.md`](./plans/completed/m48-plan-luna-pinyin-sentence-over-segmentation.md). |
 
 WEB-03 latency addendum: a 2026-06-28 follow-up bounds compact-path fallback
 expansion after the phrase-composition repair and restores local browser
@@ -691,7 +656,7 @@ only when an engine target needs them; nothing here commits to a timeline.
 
 | In scope - target-driven, measured | Deferred - implement when an engine target needs it | Non-goal |
 | --- | --- | --- |
-| `luna_pinyin` core versus upstream `1.17.0`, including completed M17 null-grammar sentence/lattice, M18 punctuation processor slices, and completed M42 abbreviation sentence parity for `cszysmsrsd`/`zybfshmsru` (open: the M17 null-grammar path has a raw-frequency-vs-log-probability scoring defect that over-segments multi-syllable input, tracked under [Open Correctness Defect](#open-correctness-defect-luna_pinyin-sentence-over-segmentation)) | Learned `.gram`/octagram grammar, contextual translation, and broader plugin-backed gears until a named engine target needs them | Bit-for-bit parity with librime internals |
+| `luna_pinyin` core versus upstream `1.17.0`, including completed M17 null-grammar sentence/lattice, M18 punctuation processor slices, completed M42 abbreviation sentence parity for `cszysmsrsd`/`zybfshmsru`, and completed M48 `jianli`/`biancheng` over-segmentation parity | Learned `.gram`/octagram grammar, contextual translation, and broader plugin-backed gears until a named engine target needs them | Bit-for-bit parity with librime internals |
 | Common RIME schemas added through explicit breadth milestones | Further schema breadth only with fresh oracle fixtures and owning tests | Unbounded schema checklist work |
 | Native engine performance parity for startup, session lifecycle, mmap-backed `rsmarisa` marisa-table lookup, raw lookup, lazy/page-bounded translation, context export, memory, allocation, completed M43 owner-backed memory reduction, completed partial M44 native/profile owner reduction, and completed M46 TypeDuck/Jyutping memory attribution | Frontend/application delivery evidence and platform packaging | Claiming application-visible wins from native engine evidence |
 | AI-native layer on the compatible deterministic base | Richer AI experiments after the classic engine path is competitive | Replacing or altering classic input paths by default |

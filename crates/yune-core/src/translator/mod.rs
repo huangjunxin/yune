@@ -493,6 +493,7 @@ pub struct StaticTableTranslator {
     sentence_word_penalty: f32,
     spelling_algebra_formulas: Vec<String>,
     preset_vocabulary: Vec<PresetVocabularyEntry>,
+    abbreviation_preset_vocabulary: Vec<PresetVocabularyEntry>,
     upstream_sentence_model: Option<UpstreamSentenceModel>,
 }
 
@@ -550,6 +551,7 @@ impl StaticTableTranslator {
             sentence_word_penalty: DEFAULT_SENTENCE_WORD_PENALTY,
             spelling_algebra_formulas: Vec::new(),
             preset_vocabulary: Vec::new(),
+            abbreviation_preset_vocabulary: Vec::new(),
             upstream_sentence_model: None,
         }
     }
@@ -557,6 +559,7 @@ impl StaticTableTranslator {
     #[must_use]
     pub fn from_dictionary(dictionary: TableDictionary) -> Self {
         let preset_vocabulary = dictionary.preset_vocabulary_entries().to_vec();
+        let abbreviation_preset_vocabulary: Vec<PresetVocabularyEntry> = Vec::new();
         let corrections = dictionary.corrections().to_vec();
         let tolerance_rules = dictionary.tolerance_rules().to_vec();
         let entries: Vec<(String, Candidate)> = dictionary
@@ -607,6 +610,7 @@ impl StaticTableTranslator {
             sentence_word_penalty: DEFAULT_SENTENCE_WORD_PENALTY,
             spelling_algebra_formulas: Vec::new(),
             preset_vocabulary,
+            abbreviation_preset_vocabulary,
             upstream_sentence_model: None,
         }
     }
@@ -617,6 +621,7 @@ impl StaticTableTranslator {
         prism_payload: Option<RimePrismBinPayload>,
     ) -> Self {
         let preset_vocabulary = dictionary.preset_vocabulary_entries().to_vec();
+        let abbreviation_preset_vocabulary: Vec<PresetVocabularyEntry> = Vec::new();
         let corrections = dictionary.corrections().to_vec();
         let tolerance_rules = dictionary.tolerance_rules().to_vec();
         let normal_codes = NormalCodeIndex::StorageBackedCompact;
@@ -654,6 +659,7 @@ impl StaticTableTranslator {
             sentence_word_penalty: DEFAULT_SENTENCE_WORD_PENALTY,
             spelling_algebra_formulas: Vec::new(),
             preset_vocabulary,
+            abbreviation_preset_vocabulary,
             upstream_sentence_model: None,
         }
     }
@@ -676,6 +682,7 @@ impl StaticTableTranslator {
     ) -> Self {
         let advanced = store.advanced_data();
         let preset_vocabulary = advanced.preset_vocabulary.clone();
+        let abbreviation_preset_vocabulary: Vec<PresetVocabularyEntry> = Vec::new();
         let corrections = advanced.corrections.clone();
         let tolerance_rules = advanced.tolerance_rules.clone();
         crate::memory_probe_mark(
@@ -714,6 +721,7 @@ impl StaticTableTranslator {
             sentence_word_penalty: DEFAULT_SENTENCE_WORD_PENALTY,
             spelling_algebra_formulas: Vec::new(),
             preset_vocabulary,
+            abbreviation_preset_vocabulary,
             upstream_sentence_model: None,
         }
     }
@@ -849,11 +857,34 @@ impl StaticTableTranslator {
     }
 
     #[must_use]
+    pub fn with_preset_vocabulary(
+        mut self,
+        vocabulary: impl IntoIterator<Item = PresetVocabularyEntry>,
+    ) -> Self {
+        self.preset_vocabulary = vocabulary.into_iter().collect();
+        self
+    }
+
+    #[must_use]
+    pub fn with_abbreviation_preset_vocabulary(
+        mut self,
+        vocabulary: impl IntoIterator<Item = PresetVocabularyEntry>,
+    ) -> Self {
+        self.abbreviation_preset_vocabulary = vocabulary.into_iter().collect();
+        self
+    }
+
+    #[must_use]
     pub fn with_upstream_sentence_model(mut self, max_candidates: usize) -> Self {
+        let abbreviation_vocabulary = if self.abbreviation_preset_vocabulary.is_empty() {
+            self.preset_vocabulary.as_slice()
+        } else {
+            self.abbreviation_preset_vocabulary.as_slice()
+        };
         let build_abbreviation_model = matches!(self.storage, TableStorage::Compact(_))
             && self.prism_payload.is_some()
             && self.single_letter_sentence_guard_enabled
-            && !self.preset_vocabulary.is_empty();
+            && !abbreviation_vocabulary.is_empty();
         if let Some(entries) = self.source_entries.take() {
             let table_entries = entries
                 .into_iter()
@@ -865,16 +896,12 @@ impl StaticTableTranslator {
                 max_candidates,
             ));
         } else {
-            let full_pinyin_vocabulary = if build_abbreviation_model {
-                &[][..]
-            } else {
-                self.preset_vocabulary.as_slice()
-            };
+            let full_pinyin_vocabulary = self.preset_vocabulary.as_slice();
             self.upstream_sentence_model = Some(if build_abbreviation_model {
                 UpstreamSentenceModel::from_table_entries_with_abbreviation_vocabulary(
                     self.storage.table_entry_iter(),
                     full_pinyin_vocabulary,
-                    &self.preset_vocabulary,
+                    abbreviation_vocabulary,
                     max_candidates,
                 )
             } else {

@@ -791,6 +791,59 @@ C	ef	1000
 }
 
 #[test]
+fn compact_abbreviation_translator_uses_preset_vocabulary_for_full_pinyin_sentence_ranking() {
+    let _guard = super::m37_metrics_test_guard();
+    let dictionary = TableDictionary::parse_rime_dict_yaml_with_imports_packs_and_vocabulary(
+        r#"
+---
+name: compact_full_pinyin_sentence
+version: "0.1"
+sort: by_weight
+use_preset_vocabulary: true
+...
+
+A	jian	20000
+B	li	20000
+X	jian	30000
+Y	li	30000
+"#,
+        std::iter::empty::<&str>(),
+        |_| None,
+        |name| (name == "essay").then(|| "AB\t20000\n".to_owned()),
+    )
+    .expect("dictionary should parse");
+    let syllabary = ["jian", "li"].map(str::to_owned);
+    let formulas = vec!["abbrev/^([a-z]).+$/$1/".to_owned()];
+    let prism = parse_rime_prism_bin_payload(build_prism_bin(&syllabary, &formulas, 1, 2))
+        .expect("test prism should parse");
+    let translator = StaticTableTranslator::from_compact_dictionary(dictionary, Some(prism))
+        .with_sentence(true)
+        .with_spelling_algebra(&formulas)
+        .with_upstream_sentence_model(10);
+
+    crate::m37_metrics_enable(true);
+    crate::m37_metrics_reset();
+    let result = translator.translate_with_context_and_request(
+        "jianli",
+        &Status::default(),
+        &HashMap::new(),
+        &Context::default(),
+        CandidateRequest::bounded(5),
+    );
+    let metrics = crate::m37_metrics_snapshot();
+    crate::m37_metrics_enable(false);
+
+    assert_eq!(result.candidates[0].text, "AB");
+    assert_eq!(result.candidates[0].source, CandidateSource::Sentence);
+    assert!(
+        metrics.upstream_sentence_model_vocabulary_entries_considered > 0,
+        "full-pinyin compact sentence lookup must consider preset phrase vocabulary"
+    );
+    assert_eq!(metrics.abbreviation_span_discovery_calls, 0);
+    assert_eq!(metrics.abbreviation_code_span_graph_build_ns, 0);
+}
+
+#[test]
 fn bounded_compact_translator_uses_prism_abbreviation_spans_for_sentence_model() {
     let _guard = super::m37_metrics_test_guard();
     let dictionary = TableDictionary::parse_rime_dict_yaml_with_imports_packs_and_vocabulary(
@@ -836,8 +889,8 @@ D	yi	100
 
     assert_eq!(full_pinyin_result.candidates[0].text, "ABCD");
     assert_eq!(
-        full_pinyin_metrics.upstream_sentence_model_vocabulary_entries_considered, 0,
-        "full-pinyin sentence lookup must stay on the M40 model without abbreviation vocabulary"
+        full_pinyin_metrics.upstream_sentence_model_vocabulary_entries_considered, 1,
+        "full-pinyin sentence lookup must consider the normal preset vocabulary"
     );
     assert_eq!(
         full_pinyin_metrics.abbreviation_span_discovery_calls, 0,

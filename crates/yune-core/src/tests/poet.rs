@@ -1,5 +1,5 @@
 use crate::{
-    make_sentence, make_sentences, null_grammar_score, CandidateSource, SentenceCodeSpan,
+    make_sentences, null_grammar_score, CandidateSource, PresetVocabularyEntry, SentenceCodeSpan,
     StaticTableTranslator, TableDictionary, TableEntry, Translator, UpstreamSentenceModel,
     WordGraph, WordGraphEntry, UPSTREAM_NO_GRAMMAR_PENALTY,
 };
@@ -11,31 +11,32 @@ fn null_grammar_score_applies_upstream_penalty() {
 }
 
 #[test]
-fn make_sentence_prefers_single_phrase_when_penalty_outweighs_shorter_path() {
-    let mut graph = WordGraph::new();
-    graph
-        .entry(0)
-        .or_default()
-        .entry(4)
-        .or_default()
-        .push(WordGraphEntry::new("AB", "abcd", 100.0));
-    graph
-        .entry(0)
-        .or_default()
-        .entry(2)
-        .or_default()
-        .push(WordGraphEntry::new("A", "ab", 10.0));
-    graph
-        .entry(2)
-        .or_default()
-        .entry(4)
-        .or_default()
-        .push(WordGraphEntry::new("B", "cd", 9.0));
+fn upstream_sentence_model_scales_raw_weights_like_librime_entries_before_null_grammar_scoring() {
+    let entries = [
+        TableEntry::new("a", "A", 20_000.0),
+        TableEntry::new("b", "B", 20_000.0),
+        TableEntry::new("a", "X", 30_000.0),
+        TableEntry::new("b", "Y", 30_000.0),
+    ];
+    let vocabulary = [PresetVocabularyEntry::new("AB", 20_000.0)];
+    let model = UpstreamSentenceModel::from_table_entries(entries, &vocabulary, 10);
 
-    let sentence = make_sentence(&graph, 4).expect("sentence should be available");
+    let candidates = model.candidates_for_input("ab");
 
-    assert_eq!(sentence.text, "AB");
-    assert_eq!(sentence.word_lengths, [4]);
+    assert_eq!(candidates[0].text, "AB");
+    assert_eq!(candidates[0].source, CandidateSource::Sentence);
+
+    let entries = [
+        TableEntry::new("a", "A", 78_069.0),
+        TableEntry::new("bc", "BC", 26_997.0),
+        TableEntry::new("abc", "ABC", 1_679.0),
+    ];
+    let model = UpstreamSentenceModel::from_table_entries(entries, &[], 10);
+
+    let candidates = model.candidates_for_input("abc");
+
+    assert_eq!(candidates[0].text, "ABC");
+    assert_eq!(candidates[0].source, CandidateSource::Sentence);
 }
 
 #[test]

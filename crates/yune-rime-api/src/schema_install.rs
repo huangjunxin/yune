@@ -455,6 +455,13 @@ fn install_schema_dictionary_translator_from_config(
         translator = translator.with_prediction_candidate_limit(limit);
     }
     if is_upstream_luna_pinyin_profile {
+        let (sentence_vocabulary, abbreviation_vocabulary) = load_luna_pinyin_preset_vocabularies();
+        if !sentence_vocabulary.is_empty() {
+            translator = translator.with_preset_vocabulary(sentence_vocabulary);
+        }
+        if !abbreviation_vocabulary.is_empty() {
+            translator = translator.with_abbreviation_preset_vocabulary(abbreviation_vocabulary);
+        }
         translator = translator.with_upstream_sentence_model(100);
     }
     if is_typeduck_jyut6ping3_profile {
@@ -1837,10 +1844,6 @@ fn load_schema_compiled_dictionary(
             table_lookup_texts,
             table_lookup_records
         ));
-        if dictionary_name == "luna_pinyin" && table_advanced.preset_vocabulary.is_empty() {
-            let _trace = startup_trace::span("compiled_table_preset_vocabulary_load");
-            table_advanced.preset_vocabulary = load_m42_luna_pinyin_abbreviation_vocabulary();
-        }
         advanced_dictionary = TableDictionary::with_advanced_data(Vec::new(), table_advanced)
             .with_merged_advanced_data_from(&advanced_dictionary);
         let compact_store = {
@@ -1980,6 +1983,16 @@ fn load_schema_preset_vocabulary(vocabulary_name: &str) -> Vec<yune_core::Preset
         return Vec::new();
     };
     yune_core::parse_rime_preset_vocabulary_entries(&source)
+}
+
+fn load_luna_pinyin_preset_vocabularies() -> (
+    Vec<yune_core::PresetVocabularyEntry>,
+    Vec<yune_core::PresetVocabularyEntry>,
+) {
+    (
+        load_schema_preset_vocabulary("essay"),
+        load_m42_luna_pinyin_abbreviation_vocabulary(),
+    )
 }
 
 fn load_m42_luna_pinyin_abbreviation_vocabulary() -> Vec<yune_core::PresetVocabularyEntry> {

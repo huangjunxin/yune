@@ -15,8 +15,9 @@ use index::SentenceLookupIndex;
 /// Upstream `grammar.h` null-grammar penalty (`ln(1e-6)`) used when no `.gram`
 /// language model is configured.
 pub const UPSTREAM_NO_GRAMMAR_PENALTY: f64 = -13.815510557964274;
+const UPSTREAM_DICT_ENTRY_WEIGHT_SCALE: f64 = 18.420680743952367;
 
-const CODE_LENGTH_QUALITY_BAND: f32 = 10_000_000.0;
+const CODE_LENGTH_QUALITY_BAND: f32 = 1_000.0;
 const MAX_WORD_GRAPH_ENTRIES_PER_SPAN: usize = 7;
 const MAX_DERIVED_PHRASE_CODES_PER_VOCABULARY_ENTRY: usize = 16;
 const ABBREVIATION_VOCABULARY_RAW_SPAN_BONUS: f64 = 500_000.0;
@@ -82,6 +83,15 @@ pub struct SentencePath {
 #[must_use]
 pub fn null_grammar_score(entry_weight: f64) -> f64 {
     entry_weight + NullGrammar.query("", "", false)
+}
+
+fn upstream_dictionary_weight(raw_weight: f64) -> f64 {
+    let weight = if raw_weight > 0.0 {
+        raw_weight.ln()
+    } else {
+        f64::EPSILON.ln()
+    };
+    weight - UPSTREAM_DICT_ENTRY_WEIGHT_SCALE
 }
 
 fn build_model_vocabulary_index(
@@ -859,7 +869,7 @@ impl UpstreamSentenceModel {
                         .push(WordGraphEntry::new(
                             entry.text(&self.entry_texts).to_owned(),
                             entry.code(&self.entry_codes).to_owned(),
-                            f64::from(entry.weight),
+                            upstream_dictionary_weight(f64::from(entry.weight)),
                         ));
                     graph_edges += 1;
                     inserted_edge = true;
@@ -884,7 +894,7 @@ impl UpstreamSentenceModel {
                             .push(WordGraphEntry::new(
                                 vocabulary_entry.text.clone(),
                                 phrase_code,
-                                f64::from(vocabulary_entry.weight),
+                                upstream_dictionary_weight(f64::from(vocabulary_entry.weight)),
                             ));
                         graph_edges += 1;
                         if let Ok(end_index) = boundaries.binary_search(&end) {

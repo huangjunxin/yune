@@ -1,8 +1,8 @@
 # M48 luna_pinyin Sentence Over-Segmentation Fix Plan
 
-> **Status:** Active — scoped, not started. - **Track:** Core compatibility (engine correctness; null-grammar sentence path) - **Created:** 2026-06-29 - **Type:** oracle-driven correctness fix (Phase 0 proves the upstream target before any code change)
+> **Status:** Complete · **Milestone:** M48 (luna_pinyin sentence over-segmentation fix) · **Closed:** 2026-06-29 · **Type:** execution plan
 >
-> **For agentic workers:** this is oracle-driven. Capture expected bytes from the **external oracle** (upstream librime `1.17.0`, the pinned target), run Yune's real production path, assert it matches. **Never derive expected values from Yune.** The read-only diagnosis is already done and recorded in [`../../roadmap.md`](../../roadmap.md) under "Open Correctness Defect: luna_pinyin sentence over-segmentation"; do not re-litigate it. Steps use checkbox (`- [ ]`) syntax. Land Phase 0 (a *failing* fixture) before the fix.
+> **For agentic workers:** this is oracle-driven. Capture expected bytes from the **external oracle** (upstream librime `1.17.0`, the pinned target), run Yune's real production path, assert it matches. **Never derive expected values from Yune.** The read-only diagnosis and closeout are recorded in [`../../roadmap.md`](../../roadmap.md) under "Closed Correctness Defect: luna_pinyin sentence over-segmentation"; do not re-litigate it. Steps use checkbox (`- [ ]`) syntax. Phase 0 landed a *failing* fixture before the fix.
 
 ## Goal
 
@@ -58,10 +58,11 @@ poet scorer, so M48 is a core-shared fix, not web-only.
 
 ## Boundary
 
-- **In scope:** converting the poet sentence-model weights to log-scaled values
-  before path accumulation, the matching unit-test fix, and the new oracle parity
-  fixture. Keep the change inside `yune-core` (the poet / sentence-model build),
-  behavior-preserving for non-sentence lookups.
+- **In scope:** converting the poet sentence-model weights to librime-scaled
+  log values before path accumulation, the matching unit-test fix, the compact
+  `luna_pinyin` preset-vocabulary hydration needed by the shipped runtime path,
+  and the new oracle parity fixture. Keep the behavior change scoped to the
+  upstream `luna_pinyin` sentence/poet path.
 - **Out of scope:** the deferred learned `.gram`/octagram grammar, contextual
   translation, any short-key latency work, Track B / TypeDuck profiles, ABI
   changes, and web/packaging changes. No default-ABI widening.
@@ -72,56 +73,81 @@ poet scorer, so M48 is a core-shared fix, not web-only.
 
 ## Phase 0 — Prove the upstream target (mandatory, lands a FAILING fixture)
 
-- [ ] Capture upstream librime `1.17.0` first-page candidates, comments, order,
+- [x] Capture upstream librime `1.17.0` first-page candidates, comments, order,
       context preedit, and commit preview for `jianli` and `biancheng` on
       `luna_pinyin`, in the same shape as the existing
       `crates/yune-core/tests/fixtures/upstream-1.17.0/luna-pinyin-*.json`
       fixtures. Cross-check against `https://my-rime.vercel.app/`.
-- [ ] Add `jianli` and `biancheng` cases to `upstream_luna_pinyin_parity`
+- [x] Add `jianli` and `biancheng` cases to `upstream_luna_pinyin_parity`
       (`crates/yune-core/tests/upstream_luna_pinyin_parity.rs`) wired to the new
       fixtures. Confirm they **fail** today (Yune returns 及按裏 / 比按成), proving
       the defect is captured by an oracle, not by Yune's own output.
-- [ ] Confirm the upstream weight convention from librime `1.17.0` source:
+- [x] Confirm the upstream weight convention from librime `1.17.0` source:
       `dict_compiler.cc` stores `log(raw_weight)` with an epsilon floor, and
-      `Grammar::Evaluate(...)` returns `entry_weight + null_penalty` (no
-      `/total` normalization). Record the exact epsilon/floor used so Yune
-      matches rather than approximates.
+      `DictEntryIterator::Peek()` subtracts librime's fixed `log(1e8)` scale
+      before `Grammar::Evaluate(...)` returns `entry_weight + null_penalty`.
+      There is no corpus-total `/total` normalization. Zero/negative weights
+      use librime's `DBL_EPSILON` floor.
 
 ## Phase 1 — Fix (log-scale the poet weights)
 
-- [ ] Feed log-scaled entry weights into the poet accumulation instead of raw
-      counts: `entry.weight.max(1.0).ln()`, epsilon-floored, **no** `/total`
+- [x] Feed log-scaled entry weights into the poet accumulation instead of raw
+      counts: `ln(raw_or_epsilon) - ln(1e8)`, epsilon-floored, **no** `/total`
       normalization. Prefer converting **at ingestion** so every
       `WordGraphEntry`/`ModelEntry` weight is already log-scaled before
       `compare_path_state` sees it (`crates/yune-core/src/poet/mod.rs:862`,
       `:887`, `:1316`, `:1324`); alternatively convert in the accumulation
       (`:200`, `:226`, `:367`). The existing `-13.815510557964274` per-word
       penalty (`poet/mod.rs:17`) then dominates correctly.
-- [ ] Confirm the post-fix ranking on the worked example: `建立 ≈ -3.54` >
-      `jian|li (建+裏) ≈ -7.71` > `ji+an+li (及+按+裏) ≈ -9.27`, so the phrase
-      parse wins.
-- [ ] Replace the masking poet unit test
+- [x] Confirm the post-fix ranking on the worked examples: `jianli` now returns
+      `建立`, `簡歷`, `監理`, `監利`, `剪力`; `biancheng` now returns
+      `變成`, `編程`, `便成`, `編成`, `邊城`, so the phrase parse wins.
+- [x] Replace the masking poet unit test
       `make_sentence_prefers_single_phrase_when_penalty_outweighs_shorter_path`
       (`crates/yune-core/src/tests/poet.rs:14`): its synthetic `AB=100` vs
       `A+B=19` weights do not model real log-scaled frequencies. Re-express it (or
       add a sibling) so it asserts the over-segmentation invariant with
       realistic log-scaled weights.
-- [ ] Keep the change behavior-preserving for non-sentence/exact lookups
+- [x] Keep the change behavior-preserving for non-sentence/exact lookups
       (ordering there only needs monotonicity; log is monotonic, so ranking is
       unchanged — verify no fixture moves).
 
 ## Gate (definition of done)
 
-- [ ] New `jianli` / `biancheng` `upstream_luna_pinyin_parity` fixtures pass.
-- [ ] Existing parity rows unchanged: `nihao`, `renmin`, `tiantian`, `woshi`,
+- [x] New `jianli` / `biancheng` `upstream_luna_pinyin_parity` fixtures pass.
+- [x] Existing parity rows unchanged: `nihao`, `renmin`, `tiantian`, `woshi`,
       `zhongguo`, `ni`, `hao`, `guo`, `zhong` still match upstream.
-- [ ] `cargo test -p yune-core --test upstream_luna_pinyin_parity` green.
-- [ ] `cargo test -p yune-core --test cantonese_parity` green (TypeDuck v1.1.2
+- [x] `cargo test -p yune-core --test upstream_luna_pinyin_parity` green.
+- [x] `cargo test -p yune-core --test cantonese_parity` green (TypeDuck v1.1.2
       unaffected).
-- [ ] `cargo test -p yune-rime-api --test yune_web` green (ABI contract intact).
-- [ ] `cargo fmt --check` and `cargo clippy --workspace --all-targets -- -D warnings`.
-- [ ] Browser cross-check on the public demo: `jianli` → 建立 and `biancheng` →
-      變成 on `yune-web` (Playwright evidence per the web-claim rule).
+- [x] `cargo test -p yune-rime-api --test yune_web` green (ABI contract intact).
+- [x] `cargo fmt --check` green.
+- [ ] `cargo clippy --workspace --all-targets -- -D warnings` currently blocks
+      on an unrelated existing lint in
+      `crates/yune-core/src/dictionary/compiled_prism.rs:430`
+      (`clippy::ref_option`).
+- [ ] Browser cross-check on the public demo was not run; M48 closeout makes no
+      browser-visible claim beyond the native/shared-core CLI and `yune_web`
+      integration evidence.
+
+## Closeout Evidence (2026-06-29)
+
+- Upstream oracle fixture regenerated with `scripts/capture-upstream-m17-poet.ps1`
+  against pinned librime `1.17.0`. The fixture locks `jianli` as
+  `建立`, `簡歷`, `監理`, `監利`, `剪力`, and `biancheng` as
+  `變成`, `編程`, `便成`, `編成`, `邊城`.
+- Production CLI over `apps/yune-web/public/schema` after the fix:
+  `jianli` -> `建立`, `簡歷`, `監理`, `監利`, `剪力`;
+  `biancheng` -> `變成`, `編程`, `便成`, `編成`, `邊城`.
+- Targeted verification passed:
+  `cargo test -p yune-core --test upstream_luna_pinyin_parity`;
+  `cargo test -p yune-core poet`;
+  `cargo test -p yune-core --test cantonese_parity`;
+  `cargo test -p yune-rime-api --test yune_web`;
+  `cargo fmt --check`.
+- Broad clippy was attempted and failed only on the unrelated pre-existing
+  `compiled_prism.rs:430` `clippy::ref_option` lint; M48 did not change that
+  file.
 
 ## Risks / watch-items
 

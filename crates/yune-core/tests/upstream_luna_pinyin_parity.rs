@@ -134,6 +134,21 @@ fn zhongguo_phrase_mechanics_matches_upstream_sentence_fixture() {
             actual, expected,
             "first sentence page should match for {input}"
         );
+        assert_engine_snapshot_matches(&engine, case, None);
+        assert_highlighted_commit_preview_matches(&engine, case);
+        for (actual, expected_candidate) in engine
+            .context()
+            .candidates
+            .iter()
+            .zip(selected_candidates(case))
+        {
+            assert_eq!(
+                actual.comment.as_str(),
+                expected_candidate["comment"].as_str().unwrap_or_default(),
+                "candidate comment should match for {input} {}",
+                actual.text
+            );
+        }
         assert_eq!(
             engine.context().candidates[0].source,
             CandidateSource::Sentence,

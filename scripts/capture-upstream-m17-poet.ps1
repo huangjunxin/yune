@@ -86,7 +86,7 @@ if ($LASTEXITCODE -ne 0) {
 
 Add-Type -Path $ProbeSource
 $Modules = [string[]]@("default")
-$Inputs = [string[]]@("zhongguo", "nihao", "woshi", "tiantian", "renmin")
+$Inputs = [string[]]@("zhongguo", "nihao", "woshi", "tiantian", "renmin", "jianli", "biancheng")
 $Cases = [RimeProbe]::Capture($Shared, $User, $Build, "luna_pinyin", $Modules, $Inputs)
 $CasesJson = Join-Path $OracleRoot "m17-luna-pinyin-sentence-cases.json"
 $Cases | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $CasesJson -Encoding UTF8
@@ -155,12 +155,18 @@ const candidateTerms = (items) => {
   }
   return terms;
 };
+const overSegmentationCompetitorTerms = new Set([
+  '\u53ca', '\u6309', '\u88cf', '\u91cc', '\u4ffa', '\u5b89',
+  '\u6bd4', '\u6210', '\u7a31', '\u6848'
+]);
 const observedCodes = new Set([
   'zhong', 'guo', 'gu',
   'ni', 'hao',
   'wo', 'shi',
   'tian',
-  'ren', 'min'
+  'ren', 'min',
+  'jian', 'ji', 'an', 'li',
+  'bian', 'bi', 'cheng'
 ]);
 
 const oracle = {
@@ -172,7 +178,7 @@ const oracle = {
     'rime-33e7814-Windows-msvc-x64.7z',
     'rime-deps-33e7814-Windows-msvc-x64.7z'
   ],
-  capture_date: '2026-06-21',
+  capture_date: '2026-06-29',
   capture_command: 'powershell -ExecutionPolicy Bypass -File scripts/capture-upstream-m17-poet.ps1 -OracleRoot target/upstream-oracle/1.17.0'
 };
 const dependencyRepositories = {
@@ -195,7 +201,11 @@ const lunaDict = path.join(root, 'schema-src/rime-luna-pinyin/luna_pinyin.dict.y
 const essayTxt = path.join(root, 'schema-src/rime-essay/essay.txt');
 const cases = JSON.parse(readUtf8(path.join(root, 'm17-luna-pinyin-sentence-cases.json')));
 const snapshots = JSON.parse(readUtf8(path.join(root, 'm17-luna-pinyin-lattice-snapshots.json')));
-const terms = new Set([...candidateTerms(cases), ...candidateTerms(snapshots)]);
+const terms = new Set([
+  ...candidateTerms(cases),
+  ...candidateTerms(snapshots),
+  ...overSegmentationCompetitorTerms
+]);
 const dictionaryRows = rowsForExactCodes(lunaDict, observedCodes);
 const vocabularyRows = rowsForTerms(essayTxt, terms);
 
