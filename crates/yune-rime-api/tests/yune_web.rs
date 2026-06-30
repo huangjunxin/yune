@@ -1,4 +1,5 @@
 use std::{
+    collections::BTreeSet,
     ffi::{CStr, CString},
     fs, mem,
     path::{Path, PathBuf},
@@ -47,12 +48,71 @@ const M28_UPSTREAM_JYUTPING_COMPOSITION: &str = include_str!(
     "../../yune-core/tests/fixtures/upstream-jyutping/jyutping-m28-followup-composition.json"
 );
 
+fn repo_root() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .and_then(Path::parent)
+        .expect("crate should live under repo/crates/yune-rime-api")
+        .to_path_buf()
+}
+
+fn read_repo_file(path: &str) -> String {
+    fs::read_to_string(repo_root().join(path)).unwrap_or_else(|error| {
+        panic!("{path} should be readable from the repository root: {error}");
+    })
+}
+
 fn test_guard() -> MutexGuard<'static, ()> {
     static TEST_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
     TEST_LOCK
         .get_or_init(|| Mutex::new(()))
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
+#[test]
+fn yune_web_export_allowlist_matches_rust_anchor_and_ts_runtime() {
+    let allowlist = read_repo_file("scripts/yune-web-exports.txt")
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .map(str::to_owned)
+        .collect::<Vec<_>>();
+    assert_eq!(
+        allowlist.len(),
+        14,
+        "M51 freezes exactly 14 yune_web_* exports"
+    );
+    assert!(
+        allowlist
+            .iter()
+            .all(|symbol| symbol.starts_with("yune_web_")),
+        "export allowlist must contain only yune_web_* symbols"
+    );
+
+    let web_runtime_exports = collect_no_mangle_yune_web_functions(&read_repo_file(
+        "crates/yune-rime-api/src/web_runtime.rs",
+    ));
+    assert_eq!(
+        web_runtime_exports, allowlist,
+        "web_runtime.rs no_mangle exports must match scripts/yune-web-exports.txt"
+    );
+
+    let linker_anchor_exports = collect_prefixed_yune_web_symbols(
+        &read_repo_file("crates/yune-rime-api/src/bin/yune_web_module.rs"),
+        "yune_rime_api::",
+    );
+    assert_eq!(
+        linker_anchor_exports, allowlist,
+        "yune_web_module.rs must keep every allowlisted export linked for Emscripten"
+    );
+
+    let ts_runtime_exports =
+        collect_quoted_yune_web_symbols(&read_repo_file("packages/yune-web-runtime/src/module.ts"));
+    assert_eq!(
+        ts_runtime_exports, allowlist,
+        "TypeScript runtime bindings must stay synchronized with the export allowlist"
+    );
 }
 
 fn empty_rime_traits() -> RimeTraits {
@@ -70,6 +130,65 @@ fn empty_rime_traits() -> RimeTraits {
         prebuilt_data_dir: ptr::null(),
         staging_dir: ptr::null(),
     }
+}
+
+fn collect_no_mangle_yune_web_functions(source: &str) -> Vec<String> {
+    let mut exports = Vec::new();
+    let mut pending_no_mangle = false;
+    for line in source.lines().map(str::trim) {
+        if line == "#[no_mangle]" {
+            pending_no_mangle = true;
+            continue;
+        }
+        if let Some(rest) = line.strip_prefix("pub unsafe extern \"C\" fn ") {
+            if let Some(name) = rest
+                .split('(')
+                .next()
+                .filter(|name| name.starts_with("yune_web_"))
+            {
+                assert!(
+                    pending_no_mangle,
+                    "{name} must be exported with #[no_mangle]"
+                );
+                exports.push(name.to_owned());
+            }
+        }
+        pending_no_mangle = false;
+    }
+    exports
+}
+
+fn collect_prefixed_yune_web_symbols(source: &str, prefix: &str) -> Vec<String> {
+    let mut seen = BTreeSet::new();
+    let mut exports = Vec::new();
+    for (index, _) in source.match_indices(prefix) {
+        let rest = &source[index + prefix.len()..];
+        let symbol = rest
+            .chars()
+            .take_while(|ch| ch.is_ascii_alphanumeric() || *ch == '_')
+            .collect::<String>();
+        if symbol.starts_with("yune_web_") && seen.insert(symbol.clone()) {
+            exports.push(symbol);
+        }
+    }
+    exports
+}
+
+fn collect_quoted_yune_web_symbols(source: &str) -> Vec<String> {
+    let mut seen = BTreeSet::new();
+    let mut exports = Vec::new();
+    for (index, _) in source.match_indices("\"yune_web_") {
+        let rest = &source[index + 1..];
+        let symbol = rest.chars().take_while(|ch| *ch != '"').collect::<String>();
+        if symbol
+            .chars()
+            .all(|ch| ch.is_ascii_alphanumeric() || ch == '_')
+            && seen.insert(symbol.clone())
+        {
+            exports.push(symbol);
+        }
+    }
+    exports
 }
 
 fn state_label_text(label: *const std::os::raw::c_char) -> String {
