@@ -67,6 +67,12 @@ This clean rerun confirms M46's byte-backed Track B memory conclusion and
 replaces the invalid Track B rows from `native-track-a/` for current product
 Track B discussion.
 
+Visuals:
+
+- [`native-track-b-clean/visuals/track-b-clean-memory-scale.svg`](./native-track-b-clean/visuals/track-b-clean-memory-scale.svg)
+- [`native-track-b-clean/visuals/track-b-clean-owner-scale.svg`](./native-track-b-clean/visuals/track-b-clean-owner-scale.svg)
+- [`native-track-b-clean/visuals/track-b-clean-latency-profile.svg`](./native-track-b-clean/visuals/track-b-clean-latency-profile.svg)
+
 ## Browser Comparator Snapshot
 
 Evidence:

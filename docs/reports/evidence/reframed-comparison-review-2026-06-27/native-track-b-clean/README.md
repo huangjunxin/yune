@@ -12,3 +12,12 @@ Track B validity: this run used `-DeployProductBeforeBenchmark`.
 `selected_storage=byte_backed`, table/prism `mmap`, and `source_fallback=false`
 for both `jyut6ping3` dictionaries. Use this directory as the clean
 2026-06-27 Track B rerun.
+
+## Visuals
+
+- [`visuals/track-b-clean-memory-scale.svg`](./visuals/track-b-clean-memory-scale.svg)
+  shows the clean process memory scale against the named rows.
+- [`visuals/track-b-clean-owner-scale.svg`](./visuals/track-b-clean-owner-scale.svg)
+  shows why the named rows do not explain the headline peak.
+- [`visuals/track-b-clean-latency-profile.svg`](./visuals/track-b-clean-latency-profile.svg)
+  shows the Yune-only Track B short-row latency profile.
