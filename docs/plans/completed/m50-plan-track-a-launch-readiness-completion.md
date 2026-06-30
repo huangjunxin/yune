@@ -2,6 +2,14 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+**Closeout:** M50 closed on 2026-06-29 as a measured partial. Broad clippy was
+restored, `n` finished inside the `<=3.0x` gate at `61.000 us` / `2.877x`, and
+the remaining measured blockers are `ni` (`45.450 us` / `3.156x`), the
+37-character `luna_pinyin` row (`890.689 us` / `3.074x`), and full Luna Track A
+memory (`188.4 MB` peak / `197.2 MB` max-summary private, with
+`poet.vocabulary` and process unclassified lower bound named). Evidence:
+[`../../reports/evidence/m50-track-a-launch-readiness/`](../../reports/evidence/m50-track-a-launch-readiness/).
+
 **Goal:** Close, or re-close as measured blockers, the remaining native Track A `luna_pinyin` launch-readiness gaps left by M49: `n`, `ni`, the 37-character pinyin row, and full `luna_pinyin` memory attribution.
 
 **Architecture:** This is a native-engine-only, attribution-first milestone. First restore broad clippy as a usable gate, then capture a fresh M50 baseline, then reduce the named latency owners only when the owner evidence points at a bounded implementation, and finally attribute the full `luna_pinyin` memory peak/private shape without conflating it with the M47 TypeDuck keyboard-profile memory work.
@@ -68,8 +76,7 @@ Evidence root to compare against:
   - M50 verdict and next sequence.
 - Modify on closeout: `docs/ledgers/milestone-history.md`
   - Completed M50 row if M50 is closed.
-- Move on closeout: `docs/plans/active/m50-plan-track-a-launch-readiness-completion.md`
-  to `docs/plans/completed/m50-plan-track-a-launch-readiness-completion.md`.
+- Moved on closeout into `docs/plans/completed/m50-plan-track-a-launch-readiness-completion.md`.
 
 ## Task 0: Restore Broad Clippy As A Gate
 
@@ -419,8 +426,7 @@ Reduce in M50 only if the owner is clearly in-scope, dirty/private, and reducibl
 - Modify: `docs/reports/yune-vs-librime-root-cause-analysis.md`
 - Modify: `docs/roadmap.md`
 - Modify: `docs/ledgers/milestone-history.md`
-- Move: `docs/plans/active/m50-plan-track-a-launch-readiness-completion.md`
-  to `docs/plans/completed/m50-plan-track-a-launch-readiness-completion.md`
+- Moved: this plan now lives under `docs/plans/completed/`
 
 - [ ] **Step 5.1: Run final native benchmark**
 
@@ -467,4 +473,4 @@ git commit -m "Close M50 Track A launch-readiness"
 git push origin main
 ```
 
-If the plan remains partial and should not move to completed yet, keep it under `docs/plans/active/` and commit the partial evidence with a message that says `partial`.
+If the plan had remained too incomplete to close, it would have stayed in the active plan set with a `partial` commit message.
