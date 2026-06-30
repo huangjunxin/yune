@@ -5,8 +5,8 @@ use std::{
 };
 
 use yune_rime_api::{
-    rime_get_api, rime_get_yune_windows_profile_api, RimeApi, RimeConfig,
-    RimeYuneWindowsProfileApi, FALSE, TRUE,
+    rime_get_api, rime_get_typeduck_profile_api, rime_get_yune_windows_profile_api, RimeApi,
+    RimeConfig, RimeTypeDuckProfileApi, RimeYuneWindowsProfileApi, FALSE, TRUE,
 };
 
 #[test]
@@ -40,6 +40,18 @@ fn default_rime_api_stays_upstream_sized_while_yune_windows_profile_is_larger() 
     assert_eq!(append_int, append_bool + slot_size);
     assert_eq!(append_double, append_int + slot_size);
     assert_eq!(append_string, append_double + slot_size);
+}
+
+#[test]
+fn yune_windows_profile_accessor_aliases_current_profile_table() {
+    let typeduck_profile = unsafe { &*rime_get_typeduck_profile_api() };
+    let windows_profile = unsafe { &*rime_get_yune_windows_profile_api() };
+
+    assert_eq!(
+        typeduck_profile as *const RimeTypeDuckProfileApi as usize,
+        windows_profile as *const RimeYuneWindowsProfileApi as usize,
+        "Yune Windows profile accessor must remain a parallel accessor for the current profile table"
+    );
 }
 
 #[test]
@@ -105,6 +117,106 @@ fn yune_windows_profile_append_string_slot_creates_and_extends_lists() {
         .as_deref(),
         Some("zh_HK")
     );
+    assert_eq!(unsafe { config_close(&mut config) }, TRUE);
+}
+
+#[test]
+fn yune_windows_profile_append_scalar_slots_round_trip_through_profile_table() {
+    let profile_api = unsafe { &*rime_get_yune_windows_profile_api() };
+    let config_init = profile_api
+        .upstream
+        .config_init
+        .expect("profile table should keep upstream config_init");
+    let config_close = profile_api
+        .upstream
+        .config_close
+        .expect("profile table should keep upstream config_close");
+    let config_get_bool = profile_api
+        .upstream
+        .config_get_bool
+        .expect("profile table should keep upstream config_get_bool");
+    let config_get_int = profile_api
+        .upstream
+        .config_get_int
+        .expect("profile table should keep upstream config_get_int");
+    let config_get_double = profile_api
+        .upstream
+        .config_get_double
+        .expect("profile table should keep upstream config_get_double");
+    let append_bool = profile_api
+        .config_list_append_bool
+        .expect("profile table should expose config_list_append_bool");
+    let append_int = profile_api
+        .config_list_append_int
+        .expect("profile table should expose config_list_append_int");
+    let append_double = profile_api
+        .config_list_append_double
+        .expect("profile table should expose config_list_append_double");
+    let append_string = profile_api
+        .config_list_append_string
+        .expect("profile table should expose config_list_append_string");
+
+    let mut config = RimeConfig {
+        ptr: std::ptr::null_mut(),
+    };
+    assert_eq!(unsafe { config_init(&mut config) }, TRUE);
+
+    let settings = CString::new("settings").expect("key should be valid");
+    let bool_item = CString::new("settings/@0").expect("key should be valid");
+    let int_item = CString::new("settings/@1").expect("key should be valid");
+    let double_item = CString::new("settings/@2").expect("key should be valid");
+    let string_item = CString::new("settings/@3").expect("key should be valid");
+    let text = CString::new("profile").expect("value should be valid");
+
+    assert_eq!(
+        unsafe { append_bool(&mut config, settings.as_ptr(), TRUE) },
+        TRUE
+    );
+    assert_eq!(
+        unsafe { append_int(&mut config, settings.as_ptr(), 7) },
+        TRUE
+    );
+    assert_eq!(
+        unsafe { append_double(&mut config, settings.as_ptr(), 1.25) },
+        TRUE
+    );
+    assert_eq!(
+        unsafe { append_string(&mut config, settings.as_ptr(), text.as_ptr()) },
+        TRUE
+    );
+
+    let mut bool_value = FALSE;
+    let mut int_value = 0;
+    let mut double_value = 0.0;
+
+    assert_eq!(
+        unsafe { config_get_bool(&mut config, bool_item.as_ptr(), &mut bool_value) },
+        TRUE
+    );
+    assert_eq!(bool_value, TRUE);
+    assert_eq!(
+        unsafe { config_get_int(&mut config, int_item.as_ptr(), &mut int_value) },
+        TRUE
+    );
+    assert_eq!(int_value, 7);
+    assert_eq!(
+        unsafe { config_get_double(&mut config, double_item.as_ptr(), &mut double_value) },
+        TRUE
+    );
+    assert_eq!(double_value, 1.25);
+    assert_eq!(
+        config_string(
+            &mut config,
+            string_item.as_c_str().to_str().unwrap(),
+            profile_api
+                .upstream
+                .config_get_string
+                .expect("profile table should keep upstream config_get_string")
+        )
+        .as_deref(),
+        Some("profile")
+    );
+
     assert_eq!(unsafe { config_close(&mut config) }, TRUE);
 }
 

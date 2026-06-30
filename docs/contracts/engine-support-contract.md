@@ -46,26 +46,36 @@ Default upstream ABI rules:
   require a new named upstream target, header evidence, layout tests, and a
   roadmap/requirement update.
 
-## TypeDuck Profile ABI Contract
+## TypeDuck And Yune Windows Profile ABI Contract
 
-TypeDuck fork-only ABI support is opt-in. The named profile accessor is:
+TypeDuck fork-only ABI support is opt-in. The named TypeDuck profile accessor
+is:
 
 ```c
 rime_get_typeduck_profile_api()
 ```
 
-The TypeDuck profile table starts with the upstream Yune `RimeApi` prefix and
-advertises a larger `data_size`. The current TypeDuck profile delta is the
-fork-only list-append family in this order:
+Yune Windows packaging exposes the same current profile table through the
+Windows/profile accessor:
+
+```c
+rime_get_yune_windows_profile_api()
+```
+
+`rime_get_yune_windows_profile_api()` is a parallel profile accessor for the
+current Windows package/header lane; it does not widen default `rime_get_api()`.
+Both profile tables start with the upstream Yune `RimeApi` prefix and advertise
+a larger `data_size`. The current profile delta is the fork-only list-append
+family in this order:
 
 - `config_list_append_bool`
 - `config_list_append_int`
 - `config_list_append_double`
 - `config_list_append_string`
 
-These slots must stay behind the TypeDuck profile accessor. New TypeDuck profile
-slots require fresh TypeDuck fork-header evidence, a named profile contract
-update, package/header evidence when packaging is affected, and focused tests.
+These slots must stay behind the named profile accessors. New profile slots
+require fresh fork/header evidence, a named profile contract update,
+package/header evidence when packaging is affected, and focused tests.
 
 ## Yune Web WASM ABI Contract
 

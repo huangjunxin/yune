@@ -43,13 +43,15 @@ fn upstream_sentence_model_scales_raw_weights_like_librime_entries_before_null_g
 fn make_sentences_keeps_weight_ordered_beam() {
     let mut graph = WordGraph::new();
     graph.entry(0).or_default().entry(2).or_default().extend([
-        WordGraphEntry::new("A", "ab", 10.0),
-        WordGraphEntry::new("X", "ab", 9.0),
+        WordGraphEntry::new("A", 10.0),
+        WordGraphEntry::new("X", 9.0),
     ]);
-    graph.entry(2).or_default().entry(4).or_default().extend([
-        WordGraphEntry::new("B", "cd", 9.0),
-        WordGraphEntry::new("Y", "cd", 7.0),
-    ]);
+    graph
+        .entry(2)
+        .or_default()
+        .entry(4)
+        .or_default()
+        .extend([WordGraphEntry::new("B", 9.0), WordGraphEntry::new("Y", 7.0)]);
 
     let sentences = make_sentences(&graph, 4, 3)
         .into_iter()

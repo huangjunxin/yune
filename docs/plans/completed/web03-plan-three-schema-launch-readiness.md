@@ -199,8 +199,10 @@ Updated:
 
 ## Remaining Measured Blockers
 
-- The fair browser memory comparison still belongs to the `luna_pinyin` lane:
-  Yune is `160.0 MiB` versus My RIME `16.0 MiB`.
+- The fair browser memory comparison belongs to the `luna_pinyin` lane:
+  current dashboards report Yune `64.0 MiB` versus My RIME `16.0 MiB`.
+  WEB-03's Jyutping `160.0 MiB` row remains a byte-backed launch guard, not a
+  peer comparison.
 - Native Track B memory remains the M46 result: around `504 MB` peak and mostly
   unclassified process memory. WEB-03 does not alter that native result.
 - The WEB-03 `extras` attribution row remains `893.1 MiB` when launch compiled

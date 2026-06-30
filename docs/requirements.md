@@ -1113,6 +1113,23 @@ required evidence and closeout gates.
   dominated by a profile-specific path such as prefix fallback, dynamic
   correction, or another measured bucket.
 
+### M50 Track A Launch Readiness Completion
+
+- [x] **M50-ENGINE-01**: Broad workspace clippy is restored after the Task 0
+  blocker and recorded as a required closeout gate.
+- [x] **M50-ENGINE-02**: Fresh same-run Track A baseline and final benchmark
+  evidence are captured under
+  `docs/reports/evidence/m50-track-a-launch-readiness/`.
+- [x] **M50-ENGINE-03**: The `n` short-key row is inside the `<=3.0x` same-run
+  librime gate in final evidence.
+- [x] **M50-ENGINE-04**: The `ni` short-key row and 37-character Luna row are
+  closed as measured blockers when the final run misses the `<=3.0x` gate.
+- [x] **M50-ENGINE-05**: Full Luna Track A memory is attributed as a measured
+  blocker without conflating it with the M47 TypeDuck keyboard-profile memory
+  result.
+- [x] **M50-ENGINE-06**: M50 remains native Track A scoped and makes no web,
+  browser, product, package, deployment, or iOS-device claim.
+
 ### M51 Engine Support Contract And ABI Freeze
 
 - [x] **M51-CONTRACT-01**: The engine support contract exists at
@@ -1121,6 +1138,8 @@ required evidence and closeout gates.
   `RimeCandidate` layout remain locked by focused ABI tests.
 - [x] **M51-ABI-02**: TypeDuck fork-only ABI slots remain profile-scoped behind
   `rime_get_typeduck_profile_api()` and are covered by profile-table tests.
+  Post-M51 cleanup documents and guards `rime_get_yune_windows_profile_api()`
+  as a parallel accessor for the same current profile table.
 - [x] **M51-ABI-03**: The `yune_web_*` exported-symbol ABI remains synchronized
   with `scripts/yune-web-exports.txt`, Rust `#[no_mangle]` exports, the
   Emscripten linker anchor, and TypeScript runtime bindings.
@@ -1257,9 +1276,15 @@ Which phases cover which requirements. Updated during roadmap creation.
 | M19-BREADTH-03 | M19 | Complete - `cangjie5` upstream 1.17.0 fixture and owning parity test added |
 | M19-BREADTH-04 | M19 | Complete - `bopomofo` upstream 1.17.0 fixture and owning parity test added |
 | M19-ABI-01 | M19 | Complete - named TypeDuck-profile ABI accessor exposes list-append slots while default `rime_get_api()` remains upstream-shaped |
+| M50-ENGINE-01 | M50 | Complete - broad workspace clippy restored and retained as a closeout gate |
+| M50-ENGINE-02 | M50 | Complete - fresh baseline and final same-run Track A benchmark evidence captured |
+| M50-ENGINE-03 | M50 | Complete - final `n` row is inside the `<=3.0x` same-run librime gate |
+| M50-ENGINE-04 | M50 | Complete with measured blockers - final `ni` and 37-character rows miss the `<=3.0x` gate and remain measured blockers |
+| M50-ENGINE-05 | M50 | Complete with measured blocker - full Luna Track A memory is attributed separately from M47 TypeDuck keyboard-profile memory |
+| M50-ENGINE-06 | M50 | Complete - scope stayed native Track A only with no web, product, package, deployment, or iOS-device claim |
 | M51-CONTRACT-01 | M51 | Complete - contract document exists and conventions link to it |
 | M51-ABI-01 | M51 | Complete - default upstream ABI layout and `RimeCandidate` are locked by focused ABI tests |
-| M51-ABI-02 | M51 | Complete - TypeDuck fork-only slots remain profile-scoped and round-trip through profile-table tests |
+| M51-ABI-02 | M51 | Complete - TypeDuck fork-only slots remain profile-scoped and round-trip through profile-table tests; post-M51 cleanup adds Yune Windows accessor coverage for the same current profile table |
 | M51-ABI-03 | M51 | Complete - `yune_web_*` export allowlist is synchronized across Rust exports, linker anchor, and TypeScript runtime |
 | M51-EVIDENCE-01 | M51 | Complete - engine support contract requires separate native/browser/product/platform evidence lanes |
 | M22-PLAY-01 | M22 Bucket 2 | Complete - opt-in read-only inspector exposes engine debug data in the TypeDuck-Web playground |
@@ -1548,10 +1573,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 - WEB-01 yune-web WASM heap and payload requirements: 11 total, 8 complete, 3 complete with measured blocker/no-go, 0 active
 - M46 Jyutping native and WASM memory attribution requirements: 14 total, 9 complete, 3 complete with measured blocker/no-go, 2 closed by no-go, 0 active
 - Post-M38 engine performance follow-up requirements: 9 total, 9 complete, 0 draft
+- M50 Track A launch-readiness completion requirements: 6 total, 4 complete, 2 complete with measured blocker, 0 active
 - M51 engine support contract and ABI-freeze requirements: 5 total, 5 complete, 0 active
-- Mapped to phases: 362
+- Mapped to phases: 368
 - Unmapped: 0
 
 ---
 
-_Requirements defined: 2026-04-28_ _Last updated: 2026-06-28 - WEB-03 is complete after the phrase-composition follow-up: the launch path still records `160.0 MiB` browser ready/peak/steady memory from the WEB-03 remeasure, and the byte-backed compact path now gates `ngogokdak -> 我覺得` plus `zouhapci` visible lookup rows with full native `yune_web`, `cantonese_parity`, and browser public-demo smoke evidence. M46 is complete with measured blockers: Branch A fixed the product-affecting schema-switch no-candidate bug, but native Track B still peaks at `504,627,200 B`, browser Jyutping still reaches `893.1 MiB` before WEB-03, and named concrete native owners explain only about `59.7 MB`. M46 closes as `schema-switch-correctness-fixed-memory-unchanged` with `measured-no-go-owner-unclassified`, remains the WEB-01 handoff rather than a new WEB-01-style harness plan, and continues to require D-33/M36 reconciliation before any future Track B `rsmarisa` spike plus `cargo test -p yune-core --test cantonese_parity` as the hard TypeDuck behavior gate. WEB-01 is complete with measured browser-harness no-go: the final 64 MiB initial-memory candidate still settles at `160.0 MiB` for Luna and `893.1 MiB` for Jyutping, 48 MiB worsens Luna, and asset-family attribution keeps Jyutping at `893.1 MiB` even for `extras` and `jyutping-core`. M45 remains complete with measured native-engine blockers: no short-key implementation branch was retained, `hao` preserves the M44 pass, `n` and `ni` remain above the `<=3.0x` target, and the real `127,475,712 B` cold-start peak remains a standing blocker. M44 remains complete as a partial native/profile performance owner-reduction milestone; M43 native memory and short-key owner reduction remains complete as a partial structural memory reduction. M42 abbreviation sentence parity and short-key guardrails remain complete with a measured performance blocker; M41 yune-web startup optimization remains complete as a separate browser-harness milestone with production-browser evidence and no native-engine claim. M40 compiled sentence lookup index, M39 long-input engine hardening, M38 engine performance parity, and earlier milestones remain complete as previously recorded._
+_Requirements defined: 2026-04-28_ _Last updated: 2026-06-29 - M50 is complete as a measured partial for native Track A: broad clippy is restored, fresh baseline/final same-run evidence is recorded, `n` is inside the `<=3.0x` gate, and `ni`, the 37-character Luna row, and full Luna Track A memory remain measured blockers. M51 is complete for contract/ABI guard work: default upstream ABI stays unchanged, TypeDuck profile append slots remain opt-in, and `yune_web_*` exports stay synchronized with their allowlist. This post-M51 cleanup documents and guards the Yune Windows profile accessor as a parallel accessor for the same current profile table. Current browser fair-lane memory remains the dashboard `64.0 MiB` Luna row versus My RIME `16.0 MiB`; WEB-03 Jyutping `160.0 MiB` and old Jyutping `893.1 MiB` values stay historical or lane-specific, not the current fair Luna number._

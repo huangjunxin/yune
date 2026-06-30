@@ -38,25 +38,14 @@ impl Grammar for NullGrammar {
 #[derive(Clone, Debug, PartialEq)]
 pub struct WordGraphEntry {
     pub text: String,
-    pub code: String,
     pub weight: f64,
 }
 
 impl WordGraphEntry {
     #[must_use]
-    pub fn new(text: impl Into<String>, code: impl Into<String>, weight: f64) -> Self {
+    pub fn new(text: impl Into<String>, weight: f64) -> Self {
         Self {
             text: text.into(),
-            code: code.into(),
-            weight,
-        }
-    }
-
-    #[must_use]
-    fn without_retained_code(text: impl Into<String>, weight: f64) -> Self {
-        Self {
-            text: text.into(),
-            code: String::new(),
             weight,
         }
     }
@@ -885,7 +874,7 @@ impl UpstreamSentenceModel {
                         .or_default()
                         .entry(span.end)
                         .or_default()
-                        .push(WordGraphEntry::without_retained_code(
+                        .push(WordGraphEntry::new(
                             entry.text(&self.entry_texts).to_owned(),
                             upstream_dictionary_weight(f64::from(entry.weight)),
                         ));
@@ -912,7 +901,7 @@ impl UpstreamSentenceModel {
                             .or_default()
                             .entry(end)
                             .or_default()
-                            .push(WordGraphEntry::without_retained_code(
+                            .push(WordGraphEntry::new(
                                 vocabulary_entry.text.clone(),
                                 upstream_dictionary_weight(f64::from(vocabulary_entry.weight)),
                             ));
@@ -1019,7 +1008,7 @@ impl UpstreamSentenceModel {
                         .or_default()
                         .entry(span.end)
                         .or_default()
-                        .push(WordGraphEntry::without_retained_code(
+                        .push(WordGraphEntry::new(
                             entry.text(&self.entry_texts).to_owned(),
                             f64::from(entry.weight),
                         ));
@@ -1048,7 +1037,7 @@ impl UpstreamSentenceModel {
                             .or_default()
                             .entry(phrase_end)
                             .or_default()
-                            .push(WordGraphEntry::without_retained_code(
+                            .push(WordGraphEntry::new(
                                 vocabulary_entry.text.clone(),
                                 f64::from(vocabulary_entry.weight)
                                     + ABBREVIATION_VOCABULARY_RAW_SPAN_BONUS

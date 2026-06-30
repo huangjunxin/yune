@@ -78,6 +78,12 @@ candidates, and `27.450 us` short-key filter time for the two-key sequence. The
 37-character row is separate: final M37 metrics show `3,950` vocabulary entries
 considered and `22,206.150 us` graph rebuild time on the median sample.
 
+Metric comparability note: M50 narrowed what
+`m37_record_owned_candidate_materialization` records for the optimized
+`LookupCandidate` path. The related diagnostic columns remain useful inside the
+M50 evidence lane, but they are not directly comparable with pre-M50 runs. The
+same-run end-to-end benchmark rows are the authority for latency claims.
+
 ## Native Memory Cause
 
 ![Current memory high-water by lane](./evidence/current-performance-dashboard-2026-06-29/visuals/current-memory-peaks.svg)
