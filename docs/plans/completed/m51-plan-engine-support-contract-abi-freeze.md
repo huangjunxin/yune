@@ -2,6 +2,14 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+**Closeout:** M51 closed on 2026-06-29 as complete. The engine support
+contract exists, conventions and requirements link the support boundary, default
+upstream ABI and TypeDuck profile ABI expectations are guarded, the `yune_web_*`
+export family is synchronized with `scripts/yune-web-exports.txt`, and final
+fmt, clippy, ABI/config/profile/yune_web, upstream Luna, and Cantonese gates
+passed. Evidence:
+[`../../reports/evidence/m51-engine-support-contract-abi-freeze/`](../../reports/evidence/m51-engine-support-contract-abi-freeze/).
+
 **Goal:** Write and enforce the engine support contract for Yune's launch-ready engine surface: supported profiles, schema behavior targets, storage/runtime expectations, and ABI freeze rules.
 
 **Architecture:** M51 is a contract-and-guard milestone after M50. It does not add product/frontends or widen ABI; it consolidates the rules already spread across `AGENTS.md`, `docs/conventions.md`, M10/M19 reference docs, requirements, and ABI tests into one support contract, then adds narrow tests/scripts that fail when the default upstream ABI, TypeDuck profile boundary, or `yune_web_*` export family drifts.
@@ -339,7 +347,8 @@ git push origin main
 **Files:**
 
 - Modify: `docs/ledgers/milestone-history.md`
-- Move: `docs/plans/active/m51-plan-engine-support-contract-abi-freeze.md`
+- Moved: this plan now lives at
+  `docs/plans/completed/m51-plan-engine-support-contract-abi-freeze.md`
   to `docs/plans/completed/m51-plan-engine-support-contract-abi-freeze.md`
 - Create: `docs/reports/evidence/m51-engine-support-contract-abi-freeze/final-gates.md`
 
