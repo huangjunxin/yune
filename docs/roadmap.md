@@ -2,7 +2,7 @@
 
 Yune is a Rust input-method engine that uses **upstream librime as a
 compatibility and performance oracle** while building a cleaner Rust engine.
-M45, WEB-01, M46, WEB-02, WEB-03, M47 (portable scope), M48, M49, M50, and M51 are complete. M45 confirmed
+M45, WEB-01, M46, WEB-02, WEB-03, M47 (portable scope), M48, M49, M50, M51, and M52 are complete. M45 confirmed
 upstream candidate-output parity for Track A `n`/`ni`/`hao`, kept `hao` inside
 the short-key ratio target, and split steady resident memory from real peak
 memory. WEB-01 then proved that the WEB-01-era browser `893.1 MiB` Jyutping
@@ -50,12 +50,12 @@ conventions link to it, focused guards lock default upstream ABI layout,
 TypeDuck profile slots, and the `yune_web_*` export allowlist, and final gates
 passed without widening the default upstream ABI. A post-M51 review cleanup
 documents and guards the parallel Yune Windows profile accessor against the same
-current profile table. **M52 is the active milestone:** it freezes the native
-Track A `luna_pinyin` performance guardrails and dispositions the M50 measured
-blockers - the `ni` and 37-character latency rows (improve under `<=3.0x` or
-close as a bounded-microsecond ceiling) and the full Luna memory peak (reduce a
-named owner or close with a precise product-profile-relevance statement) -
-without reopening web/frontend/iOS work.
+current profile table. M52 then froze the native Track A `luna_pinyin`
+regression guardrail and dispositioned the remaining M50 blockers without
+reopening web/frontend/iOS work: final `n`, `hao`, and the 59-character Luna row
+  pass strict ratio thresholds, `ni` and the 37-character row close as
+bounded-microsecond ceilings, and full Luna memory closes as a guardrailed
+comparison-lane watch with product-profile relevance named.
 
 > **Compatibility oracle.** Upstream librime latest stable is the default
 > behavior reference for user-visible schema semantics, standard ABI contracts,
@@ -103,6 +103,10 @@ without reopening web/frontend/iOS work.
   - completed engine contract milestone documenting supported engine
   targets, runtime storage expectations, default upstream ABI boundaries, the
   TypeDuck profile ABI freeze, and the `yune_web_*` exported-symbol family.
+- [`plans/completed/m52-plan-track-a-guardrails-and-disposition.md`](./plans/completed/m52-plan-track-a-guardrails-and-disposition.md)
+  - completed native Track A guardrail and disposition milestone; committed
+  latency/memory thresholds now gate `n`, `ni`, `hao`, the 37-character row,
+  the 59-character row, and the full Luna peak.
 - [`plans/completed/m47-plan-ios-budget-native-memory-reduction.md`](./plans/completed/m47-plan-ios-budget-native-memory-reduction.md)
   - completed attribution-first plan that drove the comments-intact keyboard from
   ~195 MB to ~67 MB WS / ~22 MB private (portable scope); Apple-device
@@ -155,7 +159,7 @@ without reopening web/frontend/iOS work.
 | Lane | Current state | Next decision or gate |
 | --- | --- | --- |
 | Core compatibility | Phase 1 named-target upstream behavior remains complete for `luna_pinyin` and common-schema basics against upstream librime `1.17.0`. **M51 is complete:** `docs/contracts/engine-support-contract.md` records supported targets, oracle precedence, default upstream ABI rules, profile ABI rules, `yune_web_*` export rules, storage expectations, and evidence-lane rules. M51 focused guards lock default `RimeApi`/`RimeCandidate`, TypeDuck profile append slots, and `yune_web_*` synchronization with `scripts/yune-web-exports.txt`; post-M51 cleanup adds explicit Yune Windows profile accessor alias/scalar-slot coverage for the same current profile table. | Future engine work must preserve the contract or update it with named oracle/header evidence and focused tests. |
-| Engine performance | **M50 is complete as a measured partial Track A launch-readiness closeout.** Broad clippy is restored. Final same-run native rows put `n` inside the `<=3.0x` gate at `61.000us` / `2.877x`, while `ni` remains `45.450us` / `3.156x` and the 37-character row remains `890.689us` / `3.074x`; the intermediate sentence-row run measured the 37-character row inside gate at `860.011us` / `2.920x`, but the final closeout run is authoritative. Full `luna_pinyin` Track A memory is attributed but still a blocker at `188.4 MB` peak / `197.2 MB` max-summary private versus librime `17.1 MB` peak. Named owners include `poet.vocabulary` at `53.6 MB` and process unclassified lower bound at `106.2 MB`; no retained heap prefix index was added. M47 remains complete for portable TypeDuck keyboard memory and is not conflated with this full Luna Track A row. | **M52 (active)** takes these measured blockers: it freezes a same-run latency + memory regression guardrail (promoting the existing 59-character Luna row into the gate), attempts the `ni` and 37-character gates but may close them as bounded-microsecond ceilings (the absolute gaps are `~31 us` and `~601 us`), and either reduces the full Luna memory peak or dispositions its product-profile relevance. Apple `phys_footprint` proof remains unnumbered far-future platform validation. |
+| Engine performance | **M52 is complete for native Track A guardrails and blocker disposition.** The committed threshold artifact and fail-on-regression benchmark gate cover `n`, `ni`, `hao`, the 37-character Luna row, the existing 59-character Luna row, and full Luna peak memory. Final same-run rows are startup `24,139.200us` / `1.113x`, session `23,404.000us` / `1.001x`, `n` `60.300us` / `2.818x`, `ni` `44.950us` / `3.143x`, `hao` `24.967us` / `2.146x`, 37-character `895.178us` / `3.053x`, and 59-character `1,545.754us` / `2.247x`. Full Luna Track A memory is `188.4 MB` peak / `194.3 MB` max-summary private versus librime `17.3 MB` max peer peak; named owners include `poet.vocabulary` `53.6 MB`, `poet.entries_by_code` `18.7 MB`, and process unclassified lower bound `105.6 MB`. `ni` and 37-character latency close as bounded-microsecond ceilings, and full Luna memory closes as a guardrailed comparison-lane watch, not a native TypeDuck product blocker. | Future native Track A work should only reopen these rows with a new owner-evidenced plan. Apple `phys_footprint` proof remains unnumbered far-future platform validation. |
 | Web harness startup and memory | M41 is complete for the tracked `apps/yune-web/` browser harness. WEB-01 is complete as measured no-go for `INITIAL_MEMORY` and payload-only changes. M46 fixed the Cangjie -> Luna -> Jyutping no-candidate row. WEB-02 classified the stale-asset source-fallback owner at `529,602,374 B`; WEB-03 fixed that launch compiled-asset contract and remeasured the shipping Jyutping launch/full browser rows at `160.0 MiB` ready/peak/steady. The follow-up compact-path fix restores byte-backed Jyutping phrase composition, visible prefix lookup rows, and bounded long-input browser latency. A later correctness fix repaired a `DartsDoubleArray` prism construction bug that had broken the byte-backed Jyutping toneless-to-canonical mapping for common multi-syllable words (now guarded by trie-level and committed-asset regression tests). The current dashboard fair `luna_pinyin` browser comparison is `64.0 MiB` peak versus My RIME `16.0 MiB`; the old Jyutping `893.1 MiB` value now remains only as a synthetic no-launch-assets negative control. | Future browser memory work should target the fair `luna_pinyin` runtime high-water floor or another measured owner, not another payload-only or Jyutping stale-asset branch. |
 | AI-native engine layer | M11/M13 proved a default-off local AI layer can sit on top of the deterministic engine. | Keep AI outside the classic deterministic performance path unless a named engine experiment explicitly enables it. |
 | Future platform work | Platform-specific native frontends remain outside this repo roadmap. | Start a separate repository or separate plan before changing platform/application contracts. |
@@ -213,18 +217,18 @@ next milestone.
    pass, and no default ABI widening is in scope. M51 depends on M50's
    clippy-green/stable-ABI baseline, not M50 latency success. Plan:
    [`plans/completed/m51-plan-engine-support-contract-abi-freeze.md`](./plans/completed/m51-plan-engine-support-contract-abi-freeze.md).
-5. **M52 Track A performance guardrails and blocker disposition is the active
-   milestone.** It freezes a committed same-run Track A regression guardrail
-   (`n`, `ni`, short prefixes, the 37-character row, and the existing
-   59-character Luna row) plus a memory-peak ceiling gate, then dispositions the
-   M50 measured
-   blockers: each latency row is improved under `<=3.0x` or closed with a
-   bounded-absolute-microsecond ceiling rationale, and the full Luna Track A
-   memory peak is either reduced with named owner movement or closed with a
-   precise product-profile-relevance statement naming what loads
-   `poet.vocabulary`. Native Track A only; no web/frontend/iOS reopen and no
+5. **M52 Track A performance guardrails and blocker disposition is complete.**
+   It froze a committed same-run Track A regression guardrail (`n`, `ni`, `hao`,
+   the 37-character row, and the existing 59-character Luna row) plus a
+   memory-peak ceiling gate. The final threshold check passes with `n` `2.818x`
+   <= `3.050x`, `ni` `3.143x` <= `3.223x`, `hao` `2.146x` <= `2.287x`,
+   37-character `3.053x` <= `3.267x`, 59-character `2.247x` <= `2.447x`, and
+   Track A peak `188,383,232 B` <= `198,000,000 B`. `ni` and the 37-character
+   row close as bounded-microsecond ceilings, and the full Luna peak closes as
+   a guardrailed comparison-lane watch with the native TypeDuck product-profile
+   boundary named. Native Track A only; no web/frontend/iOS reopen and no
    default ABI change. Plan:
-   [`plans/active/m52-plan-track-a-guardrails-and-disposition.md`](./plans/active/m52-plan-track-a-guardrails-and-disposition.md).
+   [`plans/completed/m52-plan-track-a-guardrails-and-disposition.md`](./plans/completed/m52-plan-track-a-guardrails-and-disposition.md).
 6. **Future browser fair-lane memory slice** - the fair `luna_pinyin` browser
    high-water floor or another freshly measured owner, only with a new scoped plan.
 7. **Future AI-native engine experiments** - later, and only after classic
@@ -687,7 +691,7 @@ Closed M38 gates:
 
 | Track | Scope | Current source of truth |
 | --- | --- | --- |
-| Engine performance | Native engine startup, schema/session lifecycle, mmap-backed `rsmarisa` marisa-table lookup, lazy/page-bounded translation, context export, memory, allocation, completed M40 sentence lookup indexing, completed M42 abbreviation sentence parity/short-key guardrails, completed M43 memory-owner reduction, completed partial M44 native/profile performance owner reduction, and completed M46 TypeDuck/Jyutping Track B memory attribution | Completed M46 plan: [`plans/completed/m46-plan-jyutping-native-wasm-memory-attribution.md`](./plans/completed/m46-plan-jyutping-native-wasm-memory-attribution.md). Completed M44 plan: [`plans/completed/m44-plan-native-performance-owner-reduction.md`](./plans/completed/m44-plan-native-performance-owner-reduction.md). Completed M43 plan: [`plans/completed/m43-plan-native-memory-short-key-owner-reduction.md`](./plans/completed/m43-plan-native-memory-short-key-owner-reduction.md). Completed M42 plan: [`plans/completed/m42-plan-abbreviation-sentence-parity-short-key-guardrails.md`](./plans/completed/m42-plan-abbreviation-sentence-parity-short-key-guardrails.md). Completed M40 plan: [`plans/completed/m40-plan-compiled-sentence-lookup-index.md`](./plans/completed/m40-plan-compiled-sentence-lookup-index.md). |
+| Engine performance | Native engine startup, schema/session lifecycle, mmap-backed `rsmarisa` marisa-table lookup, lazy/page-bounded translation, context export, memory, allocation, completed M40 sentence lookup indexing, completed M42 abbreviation sentence parity/short-key guardrails, completed M43 memory-owner reduction, completed partial M44 native/profile performance owner reduction, completed M46 TypeDuck/Jyutping Track B memory attribution, and completed M52 Track A guardrails/disposition | Completed M52 plan: [`plans/completed/m52-plan-track-a-guardrails-and-disposition.md`](./plans/completed/m52-plan-track-a-guardrails-and-disposition.md). Completed M50 plan: [`plans/completed/m50-plan-track-a-launch-readiness-completion.md`](./plans/completed/m50-plan-track-a-launch-readiness-completion.md). Completed M46 plan: [`plans/completed/m46-plan-jyutping-native-wasm-memory-attribution.md`](./plans/completed/m46-plan-jyutping-native-wasm-memory-attribution.md). Completed M44 plan: [`plans/completed/m44-plan-native-performance-owner-reduction.md`](./plans/completed/m44-plan-native-performance-owner-reduction.md). Completed M43 plan: [`plans/completed/m43-plan-native-memory-short-key-owner-reduction.md`](./plans/completed/m43-plan-native-memory-short-key-owner-reduction.md). Completed M42 plan: [`plans/completed/m42-plan-abbreviation-sentence-parity-short-key-guardrails.md`](./plans/completed/m42-plan-abbreviation-sentence-parity-short-key-guardrails.md). Completed M40 plan: [`plans/completed/m40-plan-compiled-sentence-lookup-index.md`](./plans/completed/m40-plan-compiled-sentence-lookup-index.md). |
 | Web harness startup and memory | Tracked `apps/yune-web/` production build, public-demo dist, browser shell, asset/cache delivery, worker/WASM startup, persistence, schema selection, first key-to-paint, Chromium memory, and completed WEB-03 compiled-asset contract follow-up | Completed WEB-03 plan: [`plans/completed/web03-plan-three-schema-launch-readiness.md`](./plans/completed/web03-plan-three-schema-launch-readiness.md). Completed WEB-02 owner classification: [`plans/completed/web02-plan-jyutping-wasm-memory-attribution.md`](./plans/completed/web02-plan-jyutping-wasm-memory-attribution.md). Completed WEB-01 measured-no-go plan: [`plans/completed/web01-plan-yune-web-wasm-heap-payload-optimization.md`](./plans/completed/web01-plan-yune-web-wasm-heap-payload-optimization.md). Completed M41 plan: [`plans/completed/m41-plan-yune-web-startup-optimization.md`](./plans/completed/m41-plan-yune-web-startup-optimization.md); final evidence under [`apps/yune-web/e2e/results/m41-yune-web-startup-optimization/`](../apps/yune-web/e2e/results/m41-yune-web-startup-optimization/). |
 | Core compatibility | Upstream behavior fixtures and standard ABI-observable behavior | [`requirements.md`](./requirements.md), [`decisions.md`](./decisions.md), and per-milestone plans. |
 | AI-native engine research | Default-off AI behavior layered above the deterministic engine | Future explicit engine experiments only. |
@@ -715,6 +719,7 @@ Closed M38 gates:
 | M49 | Complete with measured blockers | Track A short-key latency follow-up: MARISA prefix traversal and transient preset-vocabulary prefiltering improved `n` to `62.400us` / `3.074x`, `ni` to `46.250us` / `3.269x`, and the 37-character row to `894.400us` / `3.094x`, but all three still miss the strict `<=3.0x` launch-readiness gate. Current full `luna_pinyin` Track A memory is also a blocker at `188.3 MB` peak versus librime `17.6 MB`. Plan: [`plans/completed/m49-plan-track-a-short-key-latency-followup.md`](./plans/completed/m49-plan-track-a-short-key-latency-followup.md). |
 | M50 | Complete with measured blockers | Track A launch-readiness completion: broad clippy is restored, final `n` is inside gate at `61.000us` / `2.877x`, and the remaining tracked blockers are measured as `ni` `45.450us` / `3.156x`, 37-character row `890.689us` / `3.074x`, and full Luna Track A memory `188.4 MB` peak / `197.2 MB` max-summary private. Memory attribution names `poet.vocabulary` (`53.6 MB`) and process unclassified lower bound (`106.2 MB`); no retained heap prefix index, web/frontend/product, or iOS-device claim is made. Plan: [`plans/completed/m50-plan-track-a-launch-readiness-completion.md`](./plans/completed/m50-plan-track-a-launch-readiness-completion.md). |
 | M51 | Complete | Engine support contract and ABI freeze: `docs/contracts/engine-support-contract.md` is linked from conventions; default upstream `RimeApi`/`RimeCandidate`, TypeDuck profile append slots, and the `yune_web_*` exported-symbol family are covered by focused M51 guards. Post-M51 cleanup documents and tests `rime_get_yune_windows_profile_api()` as a parallel accessor for the same current profile table. Final M51 fmt, clippy, ABI/config/profile/yune_web, upstream Luna, and Cantonese gates pass. No ABI widening, browser performance claim, or platform frontend work is in scope. Plan: [`plans/completed/m51-plan-engine-support-contract-abi-freeze.md`](./plans/completed/m51-plan-engine-support-contract-abi-freeze.md). |
+| M52 | Complete | Native Track A guardrails and blocker disposition: the committed threshold artifact and benchmark regression gate cover `n`, `ni`, `hao`, the 37-character row, the 59-character row, and full Luna peak memory. Final gate passes with Track A peak `188,383,232 B` <= `198,000,000 B`; `ni` (`44.950us` / `3.143x`, `30.650us` gap) and the 37-character row (`895.178us` / `3.053x`, `601.967us` gap) close as bounded-microsecond ceilings, and full Luna memory closes as a guardrailed comparison-lane watch. No retained heap index, ABI widening, web/frontend/product, package, deployment, or iOS-device claim is made. Plan: [`plans/completed/m52-plan-track-a-guardrails-and-disposition.md`](./plans/completed/m52-plan-track-a-guardrails-and-disposition.md). |
 
 WEB-03 latency addendum: a 2026-06-28 follow-up bounds compact-path fallback
 expansion after the phrase-composition repair and restores local browser
@@ -730,7 +735,7 @@ only when an engine target needs them; nothing here commits to a timeline.
 | --- | --- | --- |
 | `luna_pinyin` core versus upstream `1.17.0`, including completed M17 null-grammar sentence/lattice, M18 punctuation processor slices, completed M42 abbreviation sentence parity for `cszysmsrsd`/`zybfshmsru`, and completed M48 `jianli`/`biancheng` over-segmentation parity | Learned `.gram`/octagram grammar, contextual translation, and broader plugin-backed gears until a named engine target needs them | Bit-for-bit parity with librime internals |
 | Common RIME schemas added through explicit breadth milestones | Further schema breadth only with fresh oracle fixtures and owning tests | Unbounded schema checklist work |
-| Native engine performance parity for startup, session lifecycle, mmap-backed `rsmarisa` marisa-table lookup, raw lookup, lazy/page-bounded translation, context export, memory, allocation, completed M43 owner-backed memory reduction, completed partial M44 native/profile owner reduction, and completed M46 TypeDuck/Jyutping memory attribution | Frontend/application delivery evidence and platform packaging | Claiming application-visible wins from native engine evidence |
+| Native engine performance parity for startup, session lifecycle, mmap-backed `rsmarisa` marisa-table lookup, raw lookup, lazy/page-bounded translation, context export, memory, allocation, completed M43 owner-backed memory reduction, completed partial M44 native/profile owner reduction, completed M46 TypeDuck/Jyutping memory attribution, and completed M52 Track A regression guardrails/disposition | Frontend/application delivery evidence and platform packaging | Claiming application-visible wins from native engine evidence |
 | AI-native layer on the compatible deterministic base | Richer AI experiments after the classic engine path is competitive | Replacing or altering classic input paths by default |
 
 ## Deferred / Future

@@ -7,7 +7,10 @@ param(
     [int]$KeyIterations = 80,
     [string]$TrackAInputs = "ni,hao,zhongguo,ceshiyixiachangjushuruxingnengzenyang,zhegeyinqingqishiyinggaizhichichaochangjuzishurucainengyong,cszysmsrsd,zybfshmsru",
     [string]$TrackBInputs = "neigojangingkeisatjinggoiziwunciucoenggeoizisyujapsinhojijung",
-    [switch]$DeployProductBeforeBenchmark
+    [switch]$DeployProductBeforeBenchmark,
+    [switch]$SkipTrackB,
+    [string]$TrackAThresholds,
+    [switch]$FailOnRegression
 )
 
 $ErrorActionPreference = "Stop"
@@ -155,6 +158,144 @@ function Run-NativeBench(
     Invoke-Logged "$OutputName-native-inprocess" $BenchArgs $LogPath (($RunRoot, $ExtraPath) -join ";")
 }
 
+function Write-TrackAComparison($Rows, $DestinationPath) {
+    $YuneRows = @{}
+    $LibrimeRows = @{}
+    foreach ($Row in $Rows) {
+        if ($Row.track -ne "track-a-comparison" -or $Row.schema_id -ne "luna_pinyin") {
+            continue
+        }
+        $Key = "$($Row.workload)|$($Row.input)"
+        if ($Row.engine -eq "yune") {
+            $YuneRows[$Key] = $Row
+        } elseif ($Row.engine -eq "librime-1.17.0") {
+            $LibrimeRows[$Key] = $Row
+        }
+    }
+
+    $Comparison = foreach ($Key in ($YuneRows.Keys | Sort-Object)) {
+        if (-not $LibrimeRows.ContainsKey($Key)) {
+            continue
+        }
+        $Yune = $YuneRows[$Key]
+        $Librime = $LibrimeRows[$Key]
+        $YuneMedian = [double]$Yune.median_us
+        $LibrimeMedian = [double]$Librime.median_us
+        $Ratio = if ($LibrimeMedian -eq 0.0) { [double]::PositiveInfinity } else { $YuneMedian / $LibrimeMedian }
+        [pscustomobject]@{
+            track = $Yune.track
+            schema_id = $Yune.schema_id
+            workload = $Yune.workload
+            input = $Yune.input
+            yune_median_us_raw = $YuneMedian
+            librime_median_us_raw = $LibrimeMedian
+            yune_librime_median_ratio_raw = $Ratio
+            absolute_gap_us_raw = $YuneMedian - $LibrimeMedian
+            yune_median_us = "{0:F3}" -f $YuneMedian
+            librime_median_us = "{0:F3}" -f $LibrimeMedian
+            yune_librime_median_ratio = "{0:F3}" -f $Ratio
+            absolute_gap_us = "{0:F3}" -f ($YuneMedian - $LibrimeMedian)
+            yune_max_peak_working_set_bytes = $Yune.max_peak_working_set_bytes
+            librime_max_peak_working_set_bytes = $Librime.max_peak_working_set_bytes
+            yune_median_private_bytes = $Yune.median_private_bytes
+            librime_median_private_bytes = $Librime.median_private_bytes
+        }
+    }
+
+    $Comparison |
+        Select-Object track, schema_id, workload, input, yune_median_us, librime_median_us, yune_librime_median_ratio, absolute_gap_us, yune_max_peak_working_set_bytes, librime_max_peak_working_set_bytes, yune_median_private_bytes, librime_median_private_bytes |
+        Export-Csv -LiteralPath $DestinationPath -NoTypeInformation -Encoding UTF8
+    return @($Comparison)
+}
+
+function Invoke-TrackAThresholdCheck($ComparisonRows, $MemoryOwnerRows, $ThresholdPath, $DestinationPath, [switch]$Fail) {
+    if ([string]::IsNullOrWhiteSpace($ThresholdPath)) {
+        if ($Fail) {
+            throw "-FailOnRegression requires -TrackAThresholds"
+        }
+        return
+    }
+    $ResolvedThresholdPath = [System.IO.Path]::GetFullPath($ThresholdPath)
+    Assert-Path $ResolvedThresholdPath "Track A thresholds"
+
+    $ThresholdRows = Import-Csv -LiteralPath $ResolvedThresholdPath
+    $YunePeakOwner = $MemoryOwnerRows |
+        Where-Object {
+            $_.engine -eq "yune" -and
+            $_.track -eq "track-a-comparison" -and
+            $_.schema_id -eq "luna_pinyin" -and
+            $_.owner_id -eq "process.peak_working_set_high_water"
+        } |
+        Select-Object -First 1
+    $SummaryPeak = ($ComparisonRows |
+        ForEach-Object { [UInt64]$_.yune_max_peak_working_set_bytes } |
+        Measure-Object -Maximum).Maximum
+    $ObservedPeak = if ($null -ne $YunePeakOwner) { [UInt64]$YunePeakOwner.retained_estimate_bytes } else { [UInt64]$SummaryPeak }
+
+    $Results = foreach ($Threshold in $ThresholdRows) {
+        $Observed = $null
+        if ($Threshold.kind -eq "latency_ratio") {
+            $Match = $ComparisonRows |
+                Where-Object {
+                    $_.workload -eq $Threshold.workload -and
+                    $_.input -eq $Threshold.input
+                } |
+                Select-Object -First 1
+            if ($null -eq $Match) {
+                [pscustomobject]@{
+                    kind = $Threshold.kind
+                    workload = $Threshold.workload
+                    input = $Threshold.input
+                    metric = $Threshold.metric
+                    observed = ""
+                    ceiling = $Threshold.ceiling
+                    unit = $Threshold.unit
+                    status = "missing"
+                    notes = $Threshold.notes
+                }
+                continue
+            }
+            $Observed = [double]$Match.yune_librime_median_ratio_raw
+        } elseif ($Threshold.kind -eq "memory_peak") {
+            $Observed = [double]$ObservedPeak
+        } else {
+            [pscustomobject]@{
+                kind = $Threshold.kind
+                workload = $Threshold.workload
+                input = $Threshold.input
+                metric = $Threshold.metric
+                observed = ""
+                ceiling = $Threshold.ceiling
+                unit = $Threshold.unit
+                status = "unknown-kind"
+                notes = $Threshold.notes
+            }
+            continue
+        }
+
+        $Ceiling = [double]$Threshold.ceiling
+        $Status = if ($Observed -le $Ceiling) { "pass" } else { "fail" }
+        [pscustomobject]@{
+            kind = $Threshold.kind
+            workload = $Threshold.workload
+            input = $Threshold.input
+            metric = $Threshold.metric
+            observed = if ($Threshold.unit -eq "bytes") { "{0:F0}" -f $Observed } else { "{0:F3}" -f $Observed }
+            ceiling = $Threshold.ceiling
+            unit = $Threshold.unit
+            status = $Status
+            notes = $Threshold.notes
+        }
+    }
+
+    $Results | Export-Csv -LiteralPath $DestinationPath -NoTypeInformation -Encoding UTF8
+    $Failures = @($Results | Where-Object { $_.status -ne "pass" })
+    if ($Fail -and $Failures.Count -gt 0) {
+        $FailureSummary = ($Failures | ForEach-Object { "$($_.metric)[$($_.input)] observed=$($_.observed) ceiling=$($_.ceiling) status=$($_.status)" }) -join "; "
+        throw "Track A threshold regression detected: $FailureSummary"
+    }
+}
+
 Clear-DirectoryUnder $EvidenceRoot $OutputRoot
 Clear-DirectoryUnder (Join-Path $RepoRoot "target\native-inprocess") $WorkRoot
 
@@ -162,7 +303,9 @@ Assert-Path $UpstreamOracleRoot "upstream oracle root"
 Assert-Path $SharedSource "upstream shared data"
 Assert-Path $BuildSource "upstream prebuilt build data"
 Assert-Path $UpstreamDll "upstream rime.dll"
-Assert-Path $ProductSchemaRoot "TypeDuck-Web product schema assets"
+if (-not $SkipTrackB) {
+    Assert-Path $ProductSchemaRoot "TypeDuck-Web product schema assets"
+}
 
 Push-Location $RepoRoot
 try {
@@ -174,11 +317,14 @@ Assert-Path $YuneDll "Yune release DLL"
 
 $TrackAYuneRun = Prepare-UpstreamRun "track-a-yune" $YuneDll
 $TrackALibrimeRun = Prepare-UpstreamRun "track-a-librime-1.17.0" $UpstreamDll
-$TrackBProductRun = Prepare-ProductRun "track-b-yune-product" $YuneDll
+if (-not $SkipTrackB) {
+    $TrackBProductRun = Prepare-ProductRun "track-b-yune-product" $YuneDll
+}
 
+$BenchmarkCommand = "powershell -ExecutionPolicy Bypass -File scripts\benchmark-native-rime-inprocess.ps1 -OutputRoot $OutputRoot -Iterations $Iterations -SessionIterations $SessionIterations -KeyIterations $KeyIterations -TrackAInputs $TrackAInputs -TrackBInputs $TrackBInputs$(if ($DeployProductBeforeBenchmark) { ' -DeployProductBeforeBenchmark' } else { '' })$(if ($SkipTrackB) { ' -SkipTrackB' } else { '' })$(if (-not [string]::IsNullOrWhiteSpace($TrackAThresholds)) { " -TrackAThresholds $TrackAThresholds" } else { '' })$(if ($FailOnRegression) { ' -FailOnRegression' } else { '' })"
 $Commands = @(
     "cargo build --release -p yune-rime-api",
-    "powershell -ExecutionPolicy Bypass -File scripts\benchmark-native-rime-inprocess.ps1 -OutputRoot $OutputRoot -Iterations $Iterations -SessionIterations $SessionIterations -KeyIterations $KeyIterations -TrackAInputs $TrackAInputs -TrackBInputs $TrackBInputs$(if ($DeployProductBeforeBenchmark) { ' -DeployProductBeforeBenchmark' } else { '' })"
+    $BenchmarkCommand
 )
 $Commands | Set-Content -LiteralPath (Join-Path $OutputRoot "commands.txt") -Encoding UTF8
 
@@ -193,6 +339,9 @@ $Identity = @(
     "transient_work_root=$WorkRoot",
     "managed_runtime=false",
     "deploy_product_before_benchmark=$($DeployProductBeforeBenchmark.IsPresent)",
+    "skip_track_b=$($SkipTrackB.IsPresent)",
+    "track_a_thresholds=$TrackAThresholds",
+    "fail_on_regression=$($FailOnRegression.IsPresent)",
     "track_a_inputs=$TrackAInputs",
     "track_b_inputs=$TrackBInputs",
     "iterations=$Iterations",
@@ -203,7 +352,9 @@ $Identity | Set-Content -LiteralPath (Join-Path $OutputRoot "environment.txt") -
 
 Run-NativeBench "yune" "track-a-comparison" "luna_pinyin" $TrackAYuneRun $UpstreamDistLib $TrackAInputs "track-a-yune"
 Run-NativeBench "librime-1.17.0" "track-a-comparison" "luna_pinyin" $TrackALibrimeRun (($UpstreamDistLib, $UpstreamBin, $UpstreamDistBin) -join ";") $TrackAInputs "track-a-librime-1.17.0"
-Run-NativeBench "yune" "track-b-product" "jyut6ping3_mobile" $TrackBProductRun $RepoRoot $TrackBInputs "track-b-yune-product" -DeployBeforeBenchmark:$DeployProductBeforeBenchmark.IsPresent
+if (-not $SkipTrackB) {
+    Run-NativeBench "yune" "track-b-product" "jyut6ping3_mobile" $TrackBProductRun $RepoRoot $TrackBInputs "track-b-yune-product" -DeployBeforeBenchmark:$DeployProductBeforeBenchmark.IsPresent
+}
 
 $CombinedSummary = @()
 $CombinedSamples = @()
@@ -241,13 +392,20 @@ $CombinedStartupSessionTrace | Export-Csv -LiteralPath (Join-Path $OutputRoot "s
 $CombinedRawLookupMicrobench | Export-Csv -LiteralPath (Join-Path $OutputRoot "raw_lookup_microbench.csv") -NoTypeInformation -Encoding UTF8
 $CombinedMemoryOwnerProfile | Export-Csv -LiteralPath (Join-Path $OutputRoot "memory-owner-profile.csv") -NoTypeInformation -Encoding UTF8
 
+$TrackAComparison = Write-TrackAComparison $CombinedSummary (Join-Path $OutputRoot "summary-comparison.csv")
+Invoke-TrackAThresholdCheck $TrackAComparison $CombinedMemoryOwnerProfile $TrackAThresholds (Join-Path $OutputRoot "threshold-check.csv") -Fail:$($FailOnRegression.IsPresent)
+
+$TrackBReadme = if ($SkipTrackB) { "skipped for this run." } else { "jyut6ping3_mobile, Yune Cantonese profile/product path." }
+$ThresholdReadme = if ([string]::IsNullOrWhiteSpace($TrackAThresholds)) { "not run." } else { "threshold-check.csv against $TrackAThresholds." }
 @"
 # Native In-Process Benchmark
 
-This run uses the Rust `native_inprocess_benchmark` bench and loads each engine DLL directly in the measured process. It does not use the historical managed `.NET`/PInvoke benchmark host.
+This run uses the Rust native_inprocess_benchmark bench and loads each engine DLL directly in the measured process. It does not use the historical managed .NET/PInvoke benchmark host.
 
-- Track A: `luna_pinyin`, Yune versus librime `1.17.0`.
-- Track B: `jyut6ping3_mobile`, Yune Cantonese profile/product path.
-- Track A inputs: `$TrackAInputs`.
-- Track B inputs: `$TrackBInputs`.
+- Track A: luna_pinyin, Yune versus librime 1.17.0.
+- Track B: $TrackBReadme
+- Track A inputs: $TrackAInputs.
+- Track B inputs: $TrackBInputs.
+- Summary comparison: summary-comparison.csv.
+- Threshold gate: $ThresholdReadme
 "@ | Set-Content -LiteralPath (Join-Path $OutputRoot "README.md") -Encoding UTF8

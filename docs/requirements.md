@@ -1147,6 +1147,22 @@ required evidence and closeout gates.
   cite their own evidence lanes; Windows working-set/private proxies are not
   Apple `phys_footprint`.
 
+### M52 Track A Guardrails And Blocker Disposition
+
+- [x] **M52-ENGINE-01**: A committed Track A latency regression guardrail covers
+  `n`, `ni`, `hao`, the 37-character row, and the existing 59-character Luna
+  row, with a fail-on-regression gate.
+- [x] **M52-ENGINE-02**: A committed Track A memory-peak attribution/ceiling
+  gate prevents silent regression or reframing of the Luna peak.
+- [x] **M52-ENGINE-03**: The `ni` latency row is improved under `<=3.0x` or
+  closed with a bounded-microsecond ceiling rationale.
+- [x] **M52-ENGINE-04**: The 37-character Luna latency row is improved under
+  `<=3.0x` or closed with a bounded-microsecond ceiling rationale.
+- [x] **M52-ENGINE-05**: The full Luna Track A memory peak is reduced with named
+  owner movement or closed with a precise product-profile-relevance statement.
+- [x] **M52-ENGINE-06**: M52 stays native Track A scoped and makes no web,
+  browser, product, package, deployment, iOS-device, or ABI claim.
+
 ## Out of Scope
 
 Explicitly excluded from the current milestone.
@@ -1287,6 +1303,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | M51-ABI-02 | M51 | Complete - TypeDuck fork-only slots remain profile-scoped and round-trip through profile-table tests; post-M51 cleanup adds Yune Windows accessor coverage for the same current profile table |
 | M51-ABI-03 | M51 | Complete - `yune_web_*` export allowlist is synchronized across Rust exports, linker anchor, and TypeScript runtime |
 | M51-EVIDENCE-01 | M51 | Complete - engine support contract requires separate native/browser/product/platform evidence lanes |
+| M52-ENGINE-01 | M52 | Complete - committed Track A thresholds cover `n`, `ni`, `hao`, 37-character, and 59-character rows, and the final fail-on-regression gate passes |
+| M52-ENGINE-02 | M52 | Complete - committed memory ceiling covers Track A peak `188,383,232 B` under the `198,000,000 B` threshold |
+| M52-ENGINE-03 | M52 | Complete - `ni` closes as a bounded-microsecond ceiling at `44.950us` / `3.143x` with a `30.650us` absolute gap and threshold pass |
+| M52-ENGINE-04 | M52 | Complete - 37-character Luna closes as a bounded-microsecond ceiling at `895.178us` / `3.053x` with a `601.967us` absolute gap and threshold pass |
+| M52-ENGINE-05 | M52 | Complete - full Luna Track A memory closes as a guardrailed comparison-lane watch with `poet.vocabulary` and product-profile relevance named |
+| M52-ENGINE-06 | M52 | Complete - scope stayed native Track A only with no web, browser, product, package, deployment, iOS-device, or ABI claim |
 | M22-PLAY-01 | M22 Bucket 2 | Complete - opt-in read-only inspector exposes engine debug data in the TypeDuck-Web playground |
 | M22-PLAY-02 | M22 Bucket 2 | Complete - inspector is default-off, response-identity tested, browser-evidenced, and ABI-layout neutral |
 | M22-PLAY-03 | M22 Bucket 1 | Complete - traditionalization, disabled, extended_charset, and dictionary_exclude have browser evidence; ascii_punct remains absent without browser-visible before/after evidence |
@@ -1575,9 +1597,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 - Post-M38 engine performance follow-up requirements: 9 total, 9 complete, 0 draft
 - M50 Track A launch-readiness completion requirements: 6 total, 4 complete, 2 complete with measured blocker, 0 active
 - M51 engine support contract and ABI-freeze requirements: 5 total, 5 complete, 0 active
-- Mapped to phases: 368
+- M52 Track A guardrails and blocker disposition requirements: 6 total, 6 complete, 0 active
+- Mapped to phases: 374
 - Unmapped: 0
 
 ---
 
-_Requirements defined: 2026-04-28_ _Last updated: 2026-06-29 - M50 is complete as a measured partial for native Track A: broad clippy is restored, fresh baseline/final same-run evidence is recorded, `n` is inside the `<=3.0x` gate, and `ni`, the 37-character Luna row, and full Luna Track A memory remain measured blockers. M51 is complete for contract/ABI guard work: default upstream ABI stays unchanged, TypeDuck profile append slots remain opt-in, and `yune_web_*` exports stay synchronized with their allowlist. This post-M51 cleanup documents and guards the Yune Windows profile accessor as a parallel accessor for the same current profile table. Current browser fair-lane memory remains the dashboard `64.0 MiB` Luna row versus My RIME `16.0 MiB`; WEB-03 Jyutping `160.0 MiB` and old Jyutping `893.1 MiB` values stay historical or lane-specific, not the current fair Luna number._
+_Requirements defined: 2026-04-28_ _Last updated: 2026-06-30 - M52 is complete for native Track A guardrails and blocker disposition: committed thresholds and the final regression gate cover the tracked latency rows and full Luna peak memory, `ni` and the 37-character row close as bounded-microsecond ceilings, and full Luna Track A memory closes as a guardrailed comparison-lane watch with product-profile relevance named. Current browser fair-lane memory remains the dashboard `64.0 MiB` Luna row versus My RIME `16.0 MiB`; WEB-03 Jyutping `160.0 MiB` and old Jyutping `893.1 MiB` values stay historical or lane-specific, not the current fair Luna number._
