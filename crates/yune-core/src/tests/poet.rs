@@ -195,6 +195,37 @@ fn upstream_sentence_model_memory_profile_accounts_packed_entries() {
 }
 
 #[test]
+fn upstream_sentence_model_memory_profile_accounts_normal_vocabulary_without_prefix_index() {
+    let entries = [
+        TableEntry::new("a", "A", 1000.0),
+        TableEntry::new("b", "B", 1000.0),
+        TableEntry::new("x", "X", 1000.0),
+    ];
+    let vocabulary = std::iter::once(PresetVocabularyEntry::new("AB", 1000.0))
+        .chain((0..128).map(|index| PresetVocabularyEntry::new(format!("AX{index}"), 1.0)))
+        .collect::<Vec<_>>();
+    let model = UpstreamSentenceModel::from_table_entries(entries, &vocabulary, 10);
+    let owners = model.memory_owner_rows();
+
+    assert!(
+        owners.iter().all(|row| !row.owner.contains("prefix_index")),
+        "normal vocabulary should not reintroduce a retained prefix index: {owners:?}"
+    );
+
+    let owner = owners
+        .iter()
+        .find(|row| row.owner == "poet.vocabulary")
+        .expect("normal sentence vocabulary owner should be reported");
+    assert_eq!(owner.item_count, vocabulary.len());
+    assert_eq!(owner.storage, "Vec<ModelVocabularyEntry>");
+    assert!(
+        owner.estimated_bytes < 1_000_000,
+        "synthetic vocabulary owner should stay small without a retained prefix index: {}",
+        owner.estimated_bytes
+    );
+}
+
+#[test]
 fn upstream_sentence_model_records_m40_lookup_index_counters() {
     let _guard = super::m37_metrics_test_guard();
     let dictionary = TableDictionary::parse_rime_dict_yaml(

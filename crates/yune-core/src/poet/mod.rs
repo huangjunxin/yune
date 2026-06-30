@@ -51,6 +51,15 @@ impl WordGraphEntry {
             weight,
         }
     }
+
+    #[must_use]
+    fn without_retained_code(text: impl Into<String>, weight: f64) -> Self {
+        Self {
+            text: text.into(),
+            code: String::new(),
+            weight,
+        }
+    }
 }
 
 pub type WordGraph = BTreeMap<usize, BTreeMap<usize, Vec<WordGraphEntry>>>;
@@ -620,6 +629,16 @@ impl UpstreamSentenceModel {
                 "sorted code-range index used by M40 sentence lookup",
             ),
             MemoryOwnerRow::new(
+                "poet.vocabulary",
+                MemoryOwnerClass::HeapOwnedReducible,
+                estimate_model_vocabulary_bytes(&self.vocabulary).saturating_add(
+                    estimate_string_usize_pairs_bytes(&self.vocabulary_first_codes),
+                ),
+                self.vocabulary.len(),
+                "Vec<ModelVocabularyEntry>",
+                "normal preset vocabulary used by upstream sentence graph",
+            ),
+            MemoryOwnerRow::new(
                 "poet.abbreviation_vocabulary",
                 MemoryOwnerClass::HeapOwnedReducible,
                 estimate_model_vocabulary_bytes(&self.abbreviation_vocabulary).saturating_add(
@@ -866,9 +885,8 @@ impl UpstreamSentenceModel {
                         .or_default()
                         .entry(span.end)
                         .or_default()
-                        .push(WordGraphEntry::new(
+                        .push(WordGraphEntry::without_retained_code(
                             entry.text(&self.entry_texts).to_owned(),
-                            entry.code(&self.entry_codes).to_owned(),
                             upstream_dictionary_weight(f64::from(entry.weight)),
                         ));
                     graph_edges += 1;
@@ -894,9 +912,8 @@ impl UpstreamSentenceModel {
                             .or_default()
                             .entry(end)
                             .or_default()
-                            .push(WordGraphEntry::new(
+                            .push(WordGraphEntry::without_retained_code(
                                 vocabulary_entry.text.clone(),
-                                phrase_code,
                                 upstream_dictionary_weight(f64::from(vocabulary_entry.weight)),
                             ));
                         graph_edges += 1;
@@ -1002,9 +1019,8 @@ impl UpstreamSentenceModel {
                         .or_default()
                         .entry(span.end)
                         .or_default()
-                        .push(WordGraphEntry::new(
+                        .push(WordGraphEntry::without_retained_code(
                             entry.text(&self.entry_texts).to_owned(),
-                            entry.code(&self.entry_codes).to_owned(),
                             f64::from(entry.weight),
                         ));
                     graph_edges += 1;
@@ -1020,7 +1036,7 @@ impl UpstreamSentenceModel {
                 for (_, index) in vocabulary_entries {
                     let vocabulary_entry = &self.abbreviation_vocabulary[*index];
                     vocabulary_entries_considered += 1;
-                    for (phrase_code, phrase_end, phrase_end_index) in self
+                    for (_phrase_code, phrase_end, phrase_end_index) in self
                         .derive_matching_phrase_codes_from_spans(
                             vocabulary_entry,
                             &spans_by_start,
@@ -1032,9 +1048,8 @@ impl UpstreamSentenceModel {
                             .or_default()
                             .entry(phrase_end)
                             .or_default()
-                            .push(WordGraphEntry::new(
+                            .push(WordGraphEntry::without_retained_code(
                                 vocabulary_entry.text.clone(),
-                                phrase_code,
                                 f64::from(vocabulary_entry.weight)
                                     + ABBREVIATION_VOCABULARY_RAW_SPAN_BONUS
                                         * (phrase_end - start).pow(2) as f64,
@@ -1079,13 +1094,8 @@ impl UpstreamSentenceModel {
         first_code: &str,
     ) -> Vec<String> {
         let mut codes = Vec::new();
-        self.derive_matching_phrase_codes_from(
-            &entry.chars,
-            input,
-            1,
-            first_code.to_owned(),
-            &mut codes,
-        );
+        let mut current = first_code.to_owned();
+        self.derive_matching_phrase_codes_from(&entry.chars, input, 1, &mut current, &mut codes);
         codes.sort();
         codes.dedup();
         codes
@@ -1135,12 +1145,12 @@ impl UpstreamSentenceModel {
         chars: &[char],
         input: &str,
         index: usize,
-        current: String,
+        current: &mut String,
         codes: &mut Vec<String>,
     ) {
         if index == chars.len() {
-            if input.starts_with(&current) {
-                codes.push(current);
+            if input.starts_with(current.as_str()) {
+                codes.push(current.clone());
             }
             return;
         }
@@ -1148,10 +1158,12 @@ impl UpstreamSentenceModel {
             return;
         };
         for next_code in next_codes {
-            let next = format!("{current}{next_code}");
-            if input.starts_with(&next) {
-                self.derive_matching_phrase_codes_from(chars, input, index + 1, next, codes);
+            let original_len = current.len();
+            current.push_str(next_code);
+            if input.starts_with(current.as_str()) {
+                self.derive_matching_phrase_codes_from(chars, input, index + 1, current, codes);
             }
+            current.truncate(original_len);
         }
     }
 
