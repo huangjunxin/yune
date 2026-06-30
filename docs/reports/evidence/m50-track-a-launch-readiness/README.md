@@ -11,6 +11,7 @@ Scope: native Track A `luna_pinyin` only. This folder must not be used for brows
 | Sentence row reduction | complete | `sentence-row/` |
 | Short-prefix reduction | measured partial | `short-prefix-final/` |
 | Full Track A memory attribution | measured blocker | `memory-attribution/` |
+| Final native closeout benchmark | measured partial | `final-native-benchmark/` |
 
 ## Current Decision Order
 
@@ -84,3 +85,31 @@ classes is `103,021,319 B`, and the benchmark's process owner row reports
 Verdict: memory is attributed with a named measured blocker. M50 does not reduce
 the remaining process-level unclassified/private gap and does not claim iOS
 `phys_footprint`.
+
+## Final Closeout
+
+Evidence: `final-native-benchmark/`.
+
+The final native benchmark reran the full plan-shaped command after the focused
+M50 reductions and final gates. M50 closes as measured partial:
+
+- `n`: `61.000 us` vs librime `21.200 us`, `2.877x`, inside the `<=3.0x` gate.
+- `ni`: `45.450 us` vs librime `14.400 us`, `3.156x`, measured blocker.
+- 37-character `luna_pinyin` row: `890.689 us` vs librime `289.773 us`,
+  `3.074x`, measured blocker.
+- 59-character row: `1543.071 us` vs librime `677.731 us`, `2.277x`.
+- Full Luna Track A memory: Yune peak working set `188,432,384 B`, max summary
+  median private `197,189,632 B`, and process private row `193,249,280 B` versus
+  same-run librime peak `17,137,664 B`.
+- Named memory blockers: `poet.vocabulary` `53,644,752 B`,
+  `poet.entries_by_code` `18,694,662 B`, and
+  `process.after_ready_working_set_unclassified_lower_bound` `106,190,735 B`.
+
+Final gates passed before this closeout:
+
+- `cargo fmt --check`
+- `cargo clippy --workspace --all-targets -- -D warnings`
+- `cargo test -p yune-core short_key`
+- `cargo test -p yune-core poet`
+- `cargo test -p yune-core --test upstream_luna_pinyin_parity`
+- `cargo test -p yune-core --test cantonese_parity`
