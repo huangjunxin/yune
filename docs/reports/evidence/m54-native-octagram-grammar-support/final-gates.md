@@ -91,4 +91,14 @@ is attached. No timing or memory number here is a public performance claim.
 
 RIME-LMDG remains a pinned real-world validation lane. Its LTS models are about
 420 MB each and are CC-BY-4.0, so they remain external by URL/checksum/license
-evidence rather than checked-in model data.
+evidence rather than checked-in model data. The evidence records the explicit
+attribution notice: RIME-LMDG by amzxyz, source
+`https://github.com/amzxyz/RIME-LMDG`, licensed CC-BY-4.0.
+
+## Post-Closeout Residual Cleanup
+
+The post-merge residual cleanup aligns Yune's octagram lookup with librime's
+raw `GramDb::kMaxResults` behavior by searching from the matched context node
+and limiting raw Darts prefix results before scoring. It also makes the
+RIME-LMDG CC-BY attribution explicit in the fixture and evidence metadata,
+despite not vendoring the full model.

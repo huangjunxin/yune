@@ -174,22 +174,12 @@ impl Grammar for OctagramGrammar {
         for (index, suffix_start) in context_starts.iter().enumerate() {
             let context_len = context_starts.len() - index;
             let context_suffix = &context_query[*suffix_start..];
-            let mut key = Vec::with_capacity(context_suffix.len() + word_query.len());
-            key.extend_from_slice(context_suffix);
-            key.extend_from_slice(&word_query);
-            let mut valid_results = 0usize;
-            for matched in self.trie.common_prefix_search_bytes(&key) {
-                if matched.length <= context_suffix.len() {
-                    continue;
-                }
-                valid_results += 1;
-                if valid_results > MAX_RESULTS {
-                    break;
-                }
-                let word_match_bytes = matched.length - context_suffix.len();
-                if word_match_bytes > word_query.len() {
-                    continue;
-                }
+            for matched in self.trie.common_prefix_search_bytes_from_prefix_with_limit(
+                context_suffix,
+                &word_query,
+                MAX_RESULTS,
+            ) {
+                let word_match_bytes = matched.length;
                 let Some(word_match_len) = encoded_prefix_char_count(&word_query, word_match_bytes)
                 else {
                     continue;

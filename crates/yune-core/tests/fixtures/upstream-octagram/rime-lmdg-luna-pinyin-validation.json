@@ -47,6 +47,13 @@
     "model_file": "wanxiang-lts-zh-hant.gram",
     "model_sha256": "48085c1f87ca1a33ace42ffec13a3113f67606621586e25453e1a62ac55e1684",
     "model_bytes": 421967916,
+    "attribution": {
+      "project": "RIME-LMDG",
+      "author": "amzxyz",
+      "license": "CC-BY-4.0",
+      "source_url": "https://github.com/amzxyz/RIME-LMDG",
+      "notice": "RIME-LMDG by amzxyz is licensed under CC-BY-4.0. M54 references the LTS release by URL/checksum and commits oracle output bytes only; the full model is not vendored."
+    },
     "vendoring": "external reference only; full .gram is not checked in"
   },
   "schema_patch": {

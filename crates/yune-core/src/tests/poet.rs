@@ -601,6 +601,32 @@ fn octagram_empty_context_rear_boundary_matches_librime_oracle_fixture() {
 }
 
 #[test]
+fn octagram_grammar_caps_raw_prefix_matches_like_librime_lookup() {
+    let context_key = encode_octagram_key("C");
+    let word_key = encode_octagram_key("中中中中中");
+    let mut entries = Vec::new();
+    for byte_len in 1..=8 {
+        let mut key = context_key.clone();
+        key.extend_from_slice(&word_key[..byte_len]);
+        entries.push((key, 1));
+    }
+    let mut ignored_key = context_key;
+    ignored_key.extend_from_slice(&word_key[..10]);
+    entries.push((ignored_key, 1_000_000));
+
+    let grammar = OctagramGrammar::from_bytes(
+        &synthetic_octagram_gram_from_encoded_entries(&entries),
+        OctagramGrammarConfig {
+            collocation_max_length: 6,
+            ..OctagramGrammarConfig::default()
+        },
+    )
+    .expect("valid synthetic gram");
+
+    assert!(grammar.query("C", "中中中中中", false) < 0.0);
+}
+
+#[test]
 fn octagram_grammar_rejects_invalid_gram_headers() {
     assert_eq!(
         OctagramGrammar::from_bytes(b"short", OctagramGrammarConfig::default()).unwrap_err(),
@@ -781,8 +807,12 @@ fn synthetic_octagram_gram(entries: &[(&str, u32)]) -> Vec<u8> {
         .iter()
         .map(|(key, value)| (encode_octagram_key(key), *value))
         .collect::<Vec<_>>();
+    synthetic_octagram_gram_from_encoded_entries(&encoded_entries)
+}
+
+fn synthetic_octagram_gram_from_encoded_entries(entries: &[(Vec<u8>, u32)]) -> Vec<u8> {
     let double_array =
-        DartsDoubleArray::build_bytes(&encoded_entries).expect("synthetic gram keys should build");
+        DartsDoubleArray::build_bytes(entries).expect("synthetic gram keys should build");
     let mut bytes = vec![0; 44];
     bytes[.."Rime::Grammar/1.0".len()].copy_from_slice(b"Rime::Grammar/1.0");
     bytes[36..40].copy_from_slice(&(double_array.units().len() as u32).to_le_bytes());

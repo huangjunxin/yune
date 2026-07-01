@@ -121,6 +121,24 @@ fn upstream_octagram_fixtures_have_non_circular_source_provenance_and_verificati
         lmdg["schema_patch"]["patch"]["translator/contextual_suggestions"],
         false
     );
+    assert_eq!(
+        lmdg["grammar_model"]["attribution"]["project"], "RIME-LMDG",
+        "{lmdg_path:?}"
+    );
+    assert_eq!(
+        lmdg["grammar_model"]["attribution"]["author"], "amzxyz",
+        "{lmdg_path:?}"
+    );
+    assert_eq!(
+        lmdg["grammar_model"]["attribution"]["license"], "CC-BY-4.0",
+        "{lmdg_path:?}"
+    );
+    assert!(
+        lmdg["grammar_model"]["attribution"]["notice"]
+            .as_str()
+            .is_some_and(|notice| notice.contains("RIME-LMDG by amzxyz")),
+        "{lmdg_path:?} should include an explicit CC-BY attribution notice"
+    );
     assert_non_empty_array(&lmdg_path, &lmdg, &["observed_octagram_differences"]);
     assert_non_empty_array(&lmdg_path, &lmdg, &["null_grammar_control"]);
 

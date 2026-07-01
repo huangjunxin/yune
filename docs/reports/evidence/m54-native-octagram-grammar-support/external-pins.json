@@ -78,6 +78,12 @@
     "head_commit": "f00fc2bf2b9b393f7a5c335a7067fa80a1f24f13",
     "license": "CC-BY-4.0",
     "license_sha256": "cbd5af318286b74656f145dff5091907cc23d6d8c9ad09e0291ec2497792ba41",
+    "attribution": {
+      "project": "RIME-LMDG",
+      "author": "amzxyz",
+      "source_url": "https://github.com/amzxyz/RIME-LMDG",
+      "notice": "RIME-LMDG by amzxyz is licensed under CC-BY-4.0. M54 uses it as an external validation input pinned by URL/checksum and does not vendor the full model."
+    },
     "selected_release": {
       "tag": "LTS",
       "tag_commit": "c78463a521aee2681db6cd6424a75a9b413237a3",

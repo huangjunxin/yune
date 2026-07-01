@@ -30,7 +30,7 @@ Verified from the current repository `LICENSE` files on 2026-07-01:
 | Source | License | Evidence |
 | --- | --- | --- |
 | `lotem/rime-octagram-data` | LGPL-3.0 | `LICENSE` file SHA-256 `ea7d049c7705dc13afc202dd18e1827f3484f8212fd3fa7b82fc4a0c363432c9` |
-| `amzxyz/RIME-LMDG` | CC-BY-4.0 | `LICENSE` file SHA-256 `cbd5af318286b74656f145dff5091907cc23d6d8c9ad09e0291ec2497792ba41` |
+| `amzxyz/RIME-LMDG` | CC-BY-4.0 | `LICENSE` file SHA-256 `cbd5af318286b74656f145dff5091907cc23d6d8c9ad09e0291ec2497792ba41`; attribution notice: RIME-LMDG by amzxyz, source `https://github.com/amzxyz/RIME-LMDG` |
 | `lotem/librime-octagram` | GPL-3.0 | `LICENSE` confirms GPL-3.0; plugin source is oracle/build reference only and must not be copied into Yune implementation |
 
 ## Model Checksums
@@ -109,7 +109,7 @@ M54 keeps contextual translation out of scope. Oracle capture must use same-sess
 ## Vendoring Decision
 
 - Do not vendor full lotem `.gram` files into routine Yune fixtures. They are external canonical oracle inputs pinned by branch commit and SHA-256. Commit oracle output bytes and fixture manifests instead.
-- Do not vendor RIME-LMDG LTS `.gram` files. The selected validation assets are about 420 MB each and are CC-BY-4.0 with attribution obligations. Pin release URL/digest and commit output evidence instead.
+- Do not vendor RIME-LMDG LTS `.gram` files. The selected validation assets are about 420 MB each and are CC-BY-4.0 with attribution obligations. Pin release URL/digest, record the explicit amzxyz/RIME-LMDG attribution notice, and commit output evidence instead.
 - Yune-owned unit tests should use generated synthetic tiny `.gram` data for parser/scoring tests. Synthetic fixtures must be generated from Yune code or checked-in Yune-owned bytes, not copied from third-party `.gram` models.
 
 ## M54 Numbering

@@ -87,6 +87,25 @@ fn darts_double_array_supports_non_utf8_binary_keys() {
 }
 
 #[test]
+fn darts_double_array_prefix_search_starts_after_matched_context() {
+    let double_array = DartsDoubleArray::build_bytes(&[
+        (b"c".to_vec(), 1),
+        (b"ca".to_vec(), 2),
+        (b"cab".to_vec(), 3),
+        (b"cabc".to_vec(), 4),
+    ])
+    .expect("prefix keys should build");
+
+    let prefixes = double_array
+        .common_prefix_search_bytes_from_prefix_with_limit(b"c", b"abc", 2)
+        .into_iter()
+        .map(|matched| (matched.value, matched.length))
+        .collect::<Vec<_>>();
+
+    assert_eq!(prefixes, [(2, 1), (3, 2)]);
+}
+
+#[test]
 fn build_prism_bin_round_trips_multi_syllable_toneless_spellings() {
     // Regression for a double-array construction bug: a parent node validated its
     // child slots as free but did not reserve them before recursing, so one child's

@@ -132,15 +132,44 @@ impl DartsDoubleArray {
 
     #[must_use]
     pub fn common_prefix_search_bytes(&self, key: &[u8]) -> Vec<DartsMatch> {
+        self.common_prefix_search_bytes_from_prefix_with_limit(&[], key, usize::MAX)
+    }
+
+    #[must_use]
+    pub(crate) fn common_prefix_search_bytes_from_prefix_with_limit(
+        &self,
+        prefix: &[u8],
+        key: &[u8],
+        limit: usize,
+    ) -> Vec<DartsMatch> {
         let mut matches = Vec::new();
+        if limit == 0 {
+            return matches;
+        }
         let mut node_pos = 0usize;
         let Some(mut unit) = self.units.get(node_pos).copied() else {
             return matches;
         };
-        let Ok(root_offset) = usize::try_from(Self::offset(unit)) else {
+        let Ok(offset) = usize::try_from(Self::offset(unit)) else {
             return matches;
         };
-        node_pos ^= root_offset;
+        node_pos ^= offset;
+
+        for byte in prefix {
+            node_pos ^= usize::from(*byte);
+            let Some(next_unit) = self.units.get(node_pos).copied() else {
+                return matches;
+            };
+            unit = next_unit;
+            if Self::label(unit) != u32::from(*byte) {
+                return matches;
+            }
+            let Ok(offset) = usize::try_from(Self::offset(unit)) else {
+                return matches;
+            };
+            node_pos ^= offset;
+        }
+
         for (index, byte) in key.iter().enumerate() {
             node_pos ^= usize::from(*byte);
             let Some(next_unit) = self.units.get(node_pos).copied() else {
@@ -160,6 +189,9 @@ impl DartsDoubleArray {
                         value: Self::value(*leaf),
                         length: index + 1,
                     });
+                    if matches.len() >= limit {
+                        break;
+                    }
                 }
             }
         }

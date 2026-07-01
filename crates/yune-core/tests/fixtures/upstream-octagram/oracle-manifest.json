@@ -12,7 +12,7 @@
     {
       "path": "rime-lmdg-luna-pinyin-validation.json",
       "lane": "real-world validation",
-      "sha256": "57f0960f1b52a3076b54c6cd16cd7d5d0dd4cb75a70771fa31b2919f26faa8ec",
+      "sha256": "0ed9e2f24b9a79bcfbd62a4d239e6ce8d6fb6f1a341f3383b8fdba824803bcd6",
       "model_vendored": false
     },
     {
