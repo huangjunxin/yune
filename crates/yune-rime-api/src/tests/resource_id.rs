@@ -310,6 +310,99 @@ grammar:
 }
 
 #[test]
+fn schema_octagram_loading_allows_named_web04_luna_pinyin_octagram_profile() {
+    let _guard = test_guard();
+    let (temp, shared, staging, user) = write_luna_octagram_test_runtime(
+        "resource-id-web04-grammar-load",
+        "luna_pinyin_octagram",
+        Some("m54_test"),
+    );
+    fs::write(
+        shared.join("m54_test.gram"),
+        synthetic_octagram_gram(&[("\u{4eca}\u{5929}\u{6703}\u{8b70}", 500_000)]),
+    )
+    .expect("write synthetic gram");
+    setup_test_runtime_paths(&shared, &staging, &user);
+
+    let mut session = SessionState::default();
+    session
+        .engine
+        .set_schema("luna_pinyin_octagram", "luna_pinyin_octagram");
+    install_schema_translator_chain(&mut session, "luna_pinyin_octagram");
+    session.engine.process_sequence("jtyh");
+
+    let top_sentence = session
+        .engine
+        .context()
+        .candidates
+        .iter()
+        .find(|candidate| candidate.source == CandidateSource::Sentence)
+        .map(|candidate| candidate.text.as_str());
+    assert_eq!(top_sentence, Some("\u{4eca}\u{5929}\u{6703}\u{8b70}"));
+    assert!(session
+        .remaining_gear_deferrals
+        .iter()
+        .all(|deferral| deferral.gear != "grammar"));
+    let _ = fs::remove_dir_all(temp);
+}
+
+#[test]
+fn schema_octagram_loading_does_not_sweep_random_luna_pinyin_family_schema() {
+    let _guard = test_guard();
+    let (temp, shared, staging, user) = write_luna_octagram_test_runtime(
+        "resource-id-random-luna-family",
+        "luna_pinyin_experimental",
+        Some("m54_test"),
+    );
+    fs::write(
+        shared.join("m54_test.gram"),
+        synthetic_octagram_gram(&[("\u{4eca}\u{5929}\u{6703}\u{8b70}", 500_000)]),
+    )
+    .expect("write synthetic gram");
+    setup_test_runtime_paths(&shared, &staging, &user);
+
+    let mut session = SessionState::default();
+    session
+        .engine
+        .set_schema("luna_pinyin_experimental", "luna_pinyin_experimental");
+    install_schema_translator_chain(&mut session, "luna_pinyin_experimental");
+    session.engine.process_sequence("jtyh");
+
+    assert_ne!(
+        session
+            .engine
+            .context()
+            .candidates
+            .first()
+            .map(|candidate| candidate.text.as_str()),
+        Some("\u{4eca}\u{5929}\u{6703}\u{8b70}")
+    );
+    assert!(session
+        .remaining_gear_deferrals
+        .iter()
+        .all(|deferral| deferral.gear != "grammar"));
+    let _ = fs::remove_dir_all(temp);
+}
+
+#[test]
+fn plain_luna_pinyin_without_grammar_language_keeps_null_grammar_behavior() {
+    let _guard = test_guard();
+    let (temp, shared, staging, user) =
+        write_luna_octagram_test_runtime("resource-id-luna-null-grammar", "luna_pinyin", None);
+    setup_test_runtime_paths(&shared, &staging, &user);
+
+    let mut session = SessionState::default();
+    session.engine.set_schema("luna_pinyin", "luna_pinyin");
+    install_schema_translator_chain(&mut session, "luna_pinyin");
+
+    assert!(session
+        .remaining_gear_deferrals
+        .iter()
+        .all(|deferral| deferral.gear != "grammar"));
+    let _ = fs::remove_dir_all(temp);
+}
+
+#[test]
 fn levers_custom_settings_reject_unsafe_config_ids() {
     let _guard = test_guard();
     let unsafe_config_id = CString::new("../evil").expect("config id C string");
@@ -432,6 +525,45 @@ sort: by_weight
 ",
     )
     .expect("write luna dictionary");
+}
+
+fn write_luna_octagram_test_runtime(
+    temp_name: &str,
+    schema_id: &str,
+    grammar_language: Option<&str>,
+) -> (
+    std::path::PathBuf,
+    std::path::PathBuf,
+    std::path::PathBuf,
+    std::path::PathBuf,
+) {
+    let temp = unique_temp_dir(temp_name);
+    let shared = temp.join("shared");
+    let staging = temp.join("staging");
+    let user = temp.join("user");
+    fs::create_dir_all(&shared).expect("create shared dir");
+    fs::create_dir_all(&staging).expect("create staging dir");
+    fs::create_dir_all(&user).expect("create user dir");
+    let grammar = grammar_language
+        .map(|language| format!("grammar:\n  language: {language}\n"))
+        .unwrap_or_default();
+    fs::write(
+        staging.join(format!("{schema_id}.schema.yaml")),
+        format!(
+            "\
+schema:
+  schema_id: {schema_id}
+engine:
+  translators:
+    - script_translator
+translator:
+  dictionary: luna_pinyin
+{grammar}",
+        ),
+    )
+    .expect("write schema");
+    write_luna_test_dictionary(&shared);
+    (temp, shared, staging, user)
 }
 
 fn synthetic_octagram_gram(entries: &[(&str, u32)]) -> Vec<u8> {

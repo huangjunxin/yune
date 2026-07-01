@@ -864,7 +864,18 @@ fn is_upstream_luna_pinyin_profile(
     }
     find_config_value(schema_config, "schema/schema_id")
         .and_then(config_scalar_string)
-        .is_some_and(|schema_id| schema_id == "luna_pinyin")
+        .is_some_and(|schema_id| {
+            schema_id == "luna_pinyin"
+                || is_web04_luna_pinyin_octagram_profile(schema_config, &schema_id)
+        })
+}
+
+fn is_web04_luna_pinyin_octagram_profile(schema_config: &Value, schema_id: &str) -> bool {
+    schema_id == "luna_pinyin_octagram"
+        && schema_octagram_language(schema_config)
+            .as_deref()
+            .and_then(validate_data_resource_id)
+            .is_some()
 }
 
 fn spelling_algebra_for_dictionary(schema_config: &Value, name_space: &str) -> Vec<String> {
