@@ -66,6 +66,10 @@ fixes above. The substantive invariants all held with no drift: default
 fork-only slots stay behind their named profile accessors, `yune_web_*` is a
 separate WASM ABI with exactly 14 exports, the M52 guardrail numbers reconcile,
 all evidence links resolve, and no doc implies Yune is broadly faster than
-librime. The only real defects were stale public-facing performance claims in
-`README.md` and one linked archived report, now corrected to the M52 lane-specific
-numbers.
+librime. The only real defects were public-facing claim drift in `README.md`
+(and one linked archived report), spanning three kinds of wording: stale M45-era
+performance claims, an oracle-precedence conflation (Cantonese `jyut6ping3`
+attributed to upstream 1.17.0 rather than TypeDuck-HK/librime `v1.1.2`), and an
+overstated TypeDuck-Windows frontend-validation claim - all corrected to
+contract-accurate, M52 lane-specific wording (the latter two surfaced by the
+follow-up review recorded above).

@@ -9,9 +9,14 @@ downstream engine consumers. A five-dimension parallel audit (support-contract
 consistency, ABI-wording-vs-code, M52 guardrail freshness, public claim wording,
 link/evidence integrity), with each finding adversarially re-verified, found the
 substantive invariants clean and no ABI/guardrail/link drift. The only real
-defects were stale M45-era "faster than librime" claims and a `127 MB` memory
-figure on `README.md` (plus one linked archived report), which were corrected to
-the M52 (2026-06-30) lane-specific numbers. Evidence:
+defects were public-facing claim drift on `README.md` (plus one linked archived
+report) across three kinds of wording - stale M45-era "faster than librime"
+performance claims and a `127 MB` memory figure, an oracle-precedence conflation
+(Cantonese `jyut6ping3` attributed to upstream 1.17.0 rather than
+TypeDuck-HK/librime `v1.1.2`), and an overstated TypeDuck-Windows
+frontend-validation claim - all corrected to contract-accurate, M52
+(2026-06-30) lane-specific wording (the latter two surfaced by follow-up
+review). Evidence:
 [`../../reports/evidence/m53-engine-release-readiness-audit/`](../../reports/evidence/m53-engine-release-readiness-audit/).
 
 **Goal:** Confirm the engine's launch-facing docs and evidence are internally
@@ -64,10 +69,14 @@ Out of scope:
   release-ready - all headline numbers reconcile to the committed CSVs; the
   manual `-TrackAThresholds ... -FailOnRegression` command shape is canonical in
   the roadmap.
-- [x] **Task 4: Sweep public performance-claim wording.** Result: the two live
-  reports and roadmap were already lane-specific; `README.md` and one linked
-  archived report carried stale M45-era overclaims and were corrected to the M52
-  numbers.
+- [x] **Task 4: Sweep public claim wording.** Result: the two live reports and
+  roadmap were already lane-specific; `README.md` (and one linked archived
+  report) carried claim drift corrected across three kinds of wording - stale
+  M45-era performance overclaims, an oracle-precedence conflation (`jyut6ping3`
+  vs TypeDuck-HK/librime `v1.1.2`), and an overstated TypeDuck-Windows frontend
+  claim. The performance sweep landed in the initial pass; the oracle and
+  frontend items were surfaced by follow-up review, a reminder that this sweep
+  must cover compatibility/oracle/frontend wording, not just performance.
 - [x] **Task 5: Verify link/evidence integrity and adopt the visuals.** Result:
   all links/anchors resolve; the 2026-06-30 dashboard-visuals folder is complete
   and embedded; the reports/roadmap/visuals edits are adopted by this milestone.
@@ -96,8 +105,10 @@ Added to `docs/requirements.md` on closeout:
   and exactly 14 `yune_web_*` exports.
 - **M53-AUDIT-03**: M52 guardrail evidence is fresh and numerically consistent
   across the docs; the manual regression-gate command is canonical.
-- **M53-AUDIT-04**: Public performance claims are lane-specific; stale broad
-  "faster than librime" wording in `README.md` and the linked archived report
-  was corrected to the `zhongguo` + abbreviation-only scope.
+- **M53-AUDIT-04**: Public claims are contract-accurate; `README.md` (and one
+  linked archived report) claim drift was corrected across performance ("faster
+  than librime" scoped to `zhongguo` + the two abbreviation rows), oracle
+  precedence (`jyut6ping3` vs TypeDuck-HK/librime `v1.1.2`, not upstream 1.17.0),
+  and TypeDuck-Windows frontend-validation scope.
 - **M53-AUDIT-05**: All engine-doc evidence links/anchors resolve and the
   2026-06-30 dashboard visuals are adopted.

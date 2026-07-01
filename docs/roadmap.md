@@ -183,8 +183,9 @@ portable technique that also lowers the Track B product, WASM, and iOS lanes.
    (support-contract consistency, ABI-wording-vs-code, M52 guardrail freshness,
    public claim wording, link/evidence integrity) found the substantive
    invariants clean with no ABI/guardrail/link drift; the only real defects were
-   stale `README.md`/archived "faster than librime" claims, now corrected to the
-   M52 lane-specific numbers. Evidence:
+   public-facing claim drift in `README.md` (and one linked archived report)
+   across performance, oracle-precedence, and frontend-validation wording, now
+   corrected to contract-accurate, M52 lane-specific wording. Evidence:
    [`reports/evidence/m53-engine-release-readiness-audit/`](./reports/evidence/m53-engine-release-readiness-audit/).
    Plan:
    [`plans/completed/m53-plan-engine-release-readiness-audit.md`](./plans/completed/m53-plan-engine-release-readiness-audit.md).
