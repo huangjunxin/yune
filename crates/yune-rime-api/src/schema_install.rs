@@ -1,12 +1,15 @@
 use std::{
     collections::{HashMap, HashSet},
-    fmt, fs,
+    fs,
     io::Read,
     os::raw::c_int,
     path::Path,
     sync::{Arc, Mutex, OnceLock},
     time::UNIX_EPOCH,
 };
+
+#[cfg(not(target_arch = "wasm32"))]
+use std::fmt;
 
 use regex::Regex;
 use serde_yaml::{Mapping, Value};

@@ -1722,12 +1722,11 @@ test.describe("yune-web Browser E2E", () => {
 
     const loadedSharedAssets = startup?.marker.loadedSharedAssets ?? [];
     expect(startup?.marker.m31EvidenceVersion).toBe(
-      "m31-yune-web-public-demo-v2",
+      "web03-three-schema-launch-v1",
     );
     expect(startup?.marker.publicDemo).toBe(true);
     expect(loadedSharedAssets).toContain("jyut6ping3.schema.yaml");
     expect(loadedSharedAssets).toContain("cangjie5.schema.yaml");
-    expect(loadedSharedAssets).toContain("luna_pinyin.schema.yaml");
     expect(loadedSharedAssets).toContain("opencc/t2hkf.json");
     expect(loadedSharedAssets).toContain("opencc/HKVariantsFull.txt");
     expect(loadedSharedAssets).toContain("opencc/hk2s.json");

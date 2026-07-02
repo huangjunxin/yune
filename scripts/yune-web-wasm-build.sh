@@ -268,6 +268,55 @@ const createModule = require(jsArtifact);
 NODE
 }
 
+patch_textdecoder_resizable_memory() {
+  JS_ARTIFACT=$1
+
+  if ! NODE=$(find_tool node); then
+    echo "Yune web WASM build failed: node is required to patch generated Emscripten JS glue." >&2
+    exit 1
+  fi
+
+  # Chrome rejects TextDecoder views backed by growable WASM memory.
+  JS_FOR_NODE=$(node_path "$JS_ARTIFACT")
+  "$NODE" - "$JS_FOR_NODE" <<'NODE'
+const fs = require("fs");
+
+const jsArtifact = process.argv[2];
+let source = fs.readFileSync(jsArtifact, "utf8");
+
+const replacements = [
+  [
+    "UTF8Decoder.decode(heapOrArray.subarray(idx,endPtr))",
+    "UTF8Decoder.decode(heapOrArray.buffer instanceof ArrayBuffer&&!heapOrArray.buffer.resizable?heapOrArray.subarray(idx,endPtr):heapOrArray.slice(idx,endPtr))",
+  ],
+  [
+    "UTF8Decoder.decode(HEAPU8.subarray(ptr,end))",
+    "UTF8Decoder.decode(HEAPU8.buffer instanceof ArrayBuffer&&!HEAPU8.buffer.resizable?HEAPU8.subarray(ptr,end):HEAPU8.slice(ptr,end))",
+  ],
+  [
+    "UTF16Decoder.decode(HEAPU16.subarray(idx,endIdx))",
+    "UTF16Decoder.decode(HEAPU16.buffer instanceof ArrayBuffer&&!HEAPU16.buffer.resizable?HEAPU16.subarray(idx,endIdx):HEAPU16.slice(idx,endIdx))",
+  ],
+];
+
+let applied = 0;
+for (const [needle, replacement] of replacements) {
+  if (source.includes(needle)) {
+    source = source.replaceAll(needle, replacement);
+    applied += 1;
+  }
+}
+
+if (applied === 0) {
+  console.error("Yune web WASM build failed: generated JS glue did not contain the expected TextDecoder fast path.");
+  process.exit(1);
+}
+
+fs.writeFileSync(jsArtifact, source);
+console.log(`Yune web Emscripten JS glue patched for growable-memory TextDecoder compatibility (${applied} path(s)).`);
+NODE
+}
+
 (cd "$REPO_ROOT" && cargo build -p yune-rime-api)
 NATIVE_LIBRARY=$(find_native_library) || {
   echo "Yune web WASM build failed: could not locate yune-rime-api native dynamic library under target/debug" >&2
@@ -339,6 +388,7 @@ JS_ARTIFACT="$ARTIFACT_DIR/yune-web.js"
 WASM_ARTIFACT="$ARTIFACT_DIR/yune-web.wasm"
 cp "$BROWSER_JS_ARTIFACT" "$JS_ARTIFACT"
 cp "$BROWSER_WASM_ARTIFACT" "$WASM_ARTIFACT"
+patch_textdecoder_resizable_memory "$JS_ARTIFACT"
 
 if WASM_OPT=$(find_tool wasm-opt); then
   if "$WASM_OPT" -O3 --enable-bulk-memory --enable-exception-handling "$WASM_ARTIFACT" -o "$WASM_ARTIFACT.optimized" >/dev/null 2>&1; then
